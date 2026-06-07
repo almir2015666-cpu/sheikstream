@@ -110,7 +110,7 @@ function makeCSS(C: typeof DARK) {
   .sk-dot-1 { animation: sk-dot 1.4s infinite 0s; }
   .sk-dot-2 { animation: sk-dot 1.4s infinite 0.2s; }
   .sk-dot-3 { animation: sk-dot 1.4s infinite 0.4s; }
-  .sk-theme-overlay { animation: sk-circle-expand 0.62s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  .sk-theme-overlay { animation: sk-circle-expand 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
   `
 }
 
@@ -426,7 +426,7 @@ export default function Home() {
     setTimeout(() => {
       setTheme(newTheme)
       setOverlay(o => ({ ...o, active: false }))
-    }, 580)
+    }, 1020)
   }
 
   async function sendChat() {
