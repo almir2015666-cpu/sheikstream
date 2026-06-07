@@ -47,10 +47,11 @@ const NAV: Item[] = [
   { id: 'dashboard',   label: 'Dashboard',   href: '/dashboard',              icon: I.dash },
   { id: 'plataformas', label: 'Plataformas', href: '/dashboard/plataformas', icon: I.plat, badge: 'NOVO',
     children: [
-      { id: 'p-twitch',  label: 'Twitch',   href: '/dashboard/plataformas/twitch' },
-      { id: 'p-youtube', label: 'YouTube',  href: '/dashboard/plataformas/youtube' },
-      { id: 'p-kick',    label: 'Kick',     href: '/dashboard/plataformas/kick' },
-      { id: 'p-tiktok',  label: 'TikTok',  href: '/dashboard/plataformas/tiktok' },
+      { id: 'p-twitch',   label: 'Twitch',   href: '/dashboard/plataformas/twitch' },
+      { id: 'p-youtube',  label: 'YouTube',  href: '/dashboard/plataformas/youtube' },
+      { id: 'p-kick',     label: 'Kick',     href: '/dashboard/plataformas/kick' },
+      { id: 'p-tiktok',   label: 'TikTok',  href: '/dashboard/plataformas/tiktok' },
+      { id: 'p-livepix',  label: 'Livepix',  href: '/dashboard/conexoes' },
     ]
   },
   { id: 'sorteios',    label: 'Sorteios',    href: '/dashboard/sorteios',    icon: I.sort,

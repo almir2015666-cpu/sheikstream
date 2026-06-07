@@ -46,7 +46,7 @@ export default function OverlaysPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.9rem' }}>
         {CATALOG.map(item => (
-          <div key={item.type} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.2rem', position: 'relative', opacity: item.live ? 1 : 0.6 }}>
+          <div key={item.type} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.2rem', position: 'relative' }}>
             <Link
               href={`/dashboard/overlays/${item.type}`}
               style={{ position: 'absolute', top: '0.8rem', right: '0.8rem', padding: '0.3rem 0.35rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '6px', display: 'flex', alignItems: 'center', color: C.dim, textDecoration: 'none' }}

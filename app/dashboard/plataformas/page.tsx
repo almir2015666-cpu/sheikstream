@@ -32,6 +32,12 @@ const PLATS = [
     features: ['Gifts', 'Likes', 'Inscrições', 'LIVE diamonds', 'Comentários'],
     href: '/dashboard/plataformas/tiktok', badge: null,
   },
+  {
+    id: 'livepix', label: 'Livepix', color: '#ff69b4', bg: 'rgba(255,105,180,0.08)',
+    desc: 'Doações, histórico de transações e integração com sorteios',
+    features: ['Doações recebidas', 'Histórico', 'Sorteios', 'Vaquinhas'],
+    href: '/dashboard/conexoes', badge: null,
+  },
 ]
 
 export default function PlataformasPage() {
