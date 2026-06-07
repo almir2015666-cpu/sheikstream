@@ -14,6 +14,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${BASE}/login?error=oauth_failed`)
   }
 
+  // ── 1. Exchange code for token ──────────────────────────────────────────
+  let access_token: string
   try {
     const tokenRes = await fetch('https://id.twitch.tv/oauth2/token', {
       method: 'POST',
@@ -26,35 +28,45 @@ export async function GET(req: NextRequest) {
         redirect_uri: REDIRECT_URI,
       }),
     })
+    if (!tokenRes.ok) return NextResponse.redirect(`${BASE}/login?error=token_failed`)
+    const tokenData = await tokenRes.json()
+    access_token = tokenData.access_token
+  } catch {
+    return NextResponse.redirect(`${BASE}/login?error=token_failed`)
+  }
 
-    if (!tokenRes.ok) {
-      return NextResponse.redirect(`${BASE}/login?error=token_failed`)
-    }
-
-    const { access_token } = await tokenRes.json()
-
+  // ── 2. Fetch Twitch user ────────────────────────────────────────────────
+  let tw: { id: string; display_name: string; email?: string; profile_image_url?: string }
+  try {
     const userRes = await fetch('https://api.twitch.tv/helix/users', {
       headers: {
         Authorization: `Bearer ${access_token}`,
         'Client-Id': process.env.TWITCH_CLIENT_ID!,
       },
     })
-
-    if (!userRes.ok) {
-      return NextResponse.redirect(`${BASE}/login?error=user_failed`)
-    }
-
+    if (!userRes.ok) return NextResponse.redirect(`${BASE}/login?error=user_failed`)
     const { data } = await userRes.json()
-    const tw = data[0]
-    if (!tw) return NextResponse.redirect(`${BASE}/login?error=no_user`)
+    if (!data?.[0]) return NextResponse.redirect(`${BASE}/login?error=no_user`)
+    tw = data[0]
+  } catch {
+    return NextResponse.redirect(`${BASE}/login?error=user_failed`)
+  }
 
+  // ── 3. Waitlist gate (DB errors default to /pending, never block completely) ──
+  let approved = false
+  try {
     const db = getSupabaseAdmin()
-    const { data: existing } = await db
+    const { data: existing, error: fetchErr } = await db
       .from('waitlist')
       .select('id, status')
       .eq('platform', 'Twitch')
       .eq('platform_username', tw.display_name)
       .maybeSingle()
+
+    if (fetchErr) {
+      console.error('[twitch/callback] waitlist select error:', fetchErr)
+      return NextResponse.redirect(`${BASE}/pending`)
+    }
 
     if (existing?.status === 'banned') {
       return NextResponse.redirect(`${BASE}/login?error=banned`)
@@ -65,35 +77,41 @@ export async function GET(req: NextRequest) {
     }
 
     if (!existing) {
-      await db.from('waitlist').insert({
+      const { error: insertErr } = await db.from('waitlist').insert({
         platform: 'Twitch',
         platform_username: tw.display_name,
         email: tw.email ?? '',
         status: 'pending',
       })
+      if (insertErr) console.error('[twitch/callback] waitlist insert error:', insertErr)
       return NextResponse.redirect(`${BASE}/pending`)
     }
 
-    // status === 'approved' — set session and allow in
-    const user: SessionUser = {
-      id: tw.id,
-      name: tw.display_name,
-      email: tw.email ?? '',
-      image: tw.profile_image_url ?? '',
-      platform: 'Twitch',
-    }
-
-    const token = encodeSession(user)
-    const res = NextResponse.redirect(`${BASE}/dashboard`)
-    res.cookies.set(COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    })
-    return res
-  } catch {
-    return NextResponse.redirect(`${BASE}/login?error=server_error`)
+    // existing.status === 'approved'
+    approved = true
+  } catch (dbErr) {
+    console.error('[twitch/callback] DB exception:', dbErr)
+    return NextResponse.redirect(`${BASE}/pending`)
   }
+
+  if (!approved) return NextResponse.redirect(`${BASE}/pending`)
+
+  // ── 4. Issue session cookie ─────────────────────────────────────────────
+  const user: SessionUser = {
+    id: tw.id,
+    name: tw.display_name,
+    email: tw.email ?? '',
+    image: tw.profile_image_url ?? '',
+    platform: 'Twitch',
+  }
+  const token = encodeSession(user)
+  const res = NextResponse.redirect(`${BASE}/dashboard`)
+  res.cookies.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+  })
+  return res
 }
