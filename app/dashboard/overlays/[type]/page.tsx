@@ -1,6 +1,7 @@
 'use client'
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { notify } from '@/app/lib/notify'
 
 // ─── Theme ─────────────────────────────────────────────────────────────────────
 const C = {
@@ -297,6 +298,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
     try { localStorage.setItem(`overlay-cfg-${type}`, JSON.stringify({ style, vis, fontes, bannerUrls, activePreset })) } catch {}
     setSavedOk(true)
     setTimeout(() => setSavedOk(false), 2500)
+    notify('Configurações salvas!', 'success')
   }
 
   function copyUrl() {

@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { notify } from '@/app/lib/notify'
 
 const C = {
   card: '#111219', cardB: 'rgba(255,255,255,0.05)', cardAlt: '#0f1018',
@@ -39,6 +41,8 @@ function Toggle({ label, desc, checked, onChange }: { label: string; desc?: stri
 type Img = { url: string; ativa: boolean; corFundo: number; duracao: number; transicaoEntrada: string }
 
 export default function NovoBannerPage() {
+  const router = useRouter()
+  const [saving, setSaving] = useState(false)
   const [nome, setNome] = useState('')
   const [imgs, setImgs] = useState<Img[]>([{ url: '', ativa: true, corFundo: 50, duracao: 10, transicaoEntrada: 'Fade In' }])
   const [etiqueta, setEtiqueta] = useState(false)
@@ -53,6 +57,31 @@ export default function NovoBannerPage() {
 
   function updateImg(i: number, patch: Partial<Img>) {
     setImgs(p => p.map((img, idx) => idx === i ? { ...img, ...patch } : img))
+  }
+
+  async function salvar() {
+    if (!nome.trim()) { notify('Nome do banner é obrigatório', 'error'); return }
+    const imgsSalvas = imgs.filter(i => i.url.trim())
+    if (imgsSalvas.length === 0) { notify('Adicione pelo menos uma imagem com URL', 'error'); return }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/banners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: nome.trim(), imgs: imgsSalvas, etiqueta, cooldown, intervalo_aleatorio: intervaloAleatorio, transicao_saida: transicaoSaida, vis }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        notify(err.error || 'Erro ao salvar banner', 'error')
+      } else {
+        notify('Banner criado com sucesso!', 'success')
+        router.push('/dashboard/banners')
+      }
+    } catch {
+      notify('Erro ao salvar banner', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -72,8 +101,8 @@ export default function NovoBannerPage() {
           <Link href="/dashboard/banners" style={{ padding: '0.5rem 1.2rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: C.dim, borderRadius: '8px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
             Cancelar
           </Link>
-          <button style={{ padding: '0.5rem 1.5rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-            Salvar banners
+          <button onClick={salvar} disabled={saving} style={{ padding: '0.5rem 1.5rem', background: saving ? 'rgba(155,48,255,0.5)' : C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+            {saving ? 'Salvando...' : 'Salvar banner'}
           </button>
         </div>
       </div>

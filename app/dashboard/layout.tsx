@@ -51,7 +51,8 @@ const NAV: Item[] = [
   { id: 'dashboard',   label: 'Dashboard',   href: '/dashboard',              icon: I.dash },
   { id: 'plataformas', label: 'Plataformas', href: '/dashboard/plataformas', icon: I.plat, badge: 'NOVO',
     children: [
-      { id: 'p-livepix',  label: 'Livepix',  href: '/dashboard/conexoes' },
+      { id: 'p-twitch',  label: 'Twitch',  href: '/dashboard/plataformas/twitch' },
+      { id: 'p-livepix', label: 'Livepix', href: '/dashboard/plataformas/livepix' },
     ]
   },
   { id: 'sorteios',    label: 'Sorteios',    href: '/dashboard/sorteios',    icon: I.sort,
