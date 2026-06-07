@@ -104,6 +104,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const lastTrackedPath = useRef<string | null>(null)
+  const [seenBadges, setSeenBadges] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('sk-seen-badges') || '[]')
+      setSeenBadges(new Set(saved))
+    } catch { /* ignore */ }
+  }, [])
+
+  function dismissBadge(id: string) {
+    setSeenBadges(prev => {
+      if (prev.has(id)) return prev
+      const next = new Set(prev)
+      next.add(id)
+      try { localStorage.setItem('sk-seen-badges', JSON.stringify([...next])) } catch { /* ignore */ }
+      return next
+    })
+  }
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -199,20 +217,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           const hasCh = !!item.children
           return (
             <div key={item.id}>
-              <Link href={hasCh ? '#' : item.href} onClick={hasCh ? (e) => toggle(item.id, e) : () => setMobileOpen(false)}
+              <Link href={hasCh ? '#' : item.href}
+                onClick={hasCh ? (e) => { toggle(item.id, e); if (item.badge) dismissBadge(item.id) } : () => { setMobileOpen(false); if (item.badge) dismissBadge(item.id) }}
                 className="sk-nl"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.44rem 1.1rem', color: isAct ? S.text : S.muted, textDecoration: 'none', fontSize: '0.82rem', fontWeight: isAct ? 600 : 400, background: isAct ? S.primaryBg : 'transparent', borderLeft: `2px solid ${isAct ? S.primary : 'transparent'}`, cursor: 'pointer' }}>
                 <span style={{ color: isAct ? S.primary : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-                {item.badge && <Chip type={item.badge} />}
+                {item.badge && !seenBadges.has(item.id) && <Chip type={item.badge} />}
                 {hasCh && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'none' : 'rotate(-90deg)', transition: 'transform 0.12s' }}>{I.chev}</span>}
               </Link>
               {hasCh && isExp && item.children?.map(ch => {
                 const ca = pathname === ch.href
                 return (
-                  <Link key={ch.id} href={ch.href} onClick={() => setMobileOpen(false)} className="sk-nl" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.34rem 1.1rem 0.34rem 2.6rem', color: ca ? S.text : S.muted, textDecoration: 'none', fontSize: '0.79rem', fontWeight: ca ? 600 : 400, background: ca ? S.primaryBg : 'transparent', borderLeft: `2px solid ${ca ? S.primary : 'transparent'}` }}>
+                  <Link key={ch.id} href={ch.href} onClick={() => { setMobileOpen(false); if (ch.badge) dismissBadge(ch.id) }} className="sk-nl" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.34rem 1.1rem 0.34rem 2.6rem', color: ca ? S.text : S.muted, textDecoration: 'none', fontSize: '0.79rem', fontWeight: ca ? 600 : 400, background: ca ? S.primaryBg : 'transparent', borderLeft: `2px solid ${ca ? S.primary : 'transparent'}` }}>
                     <span style={{ flex: 1 }}>{ch.label}</span>
-                    {ch.badge && <Chip type={ch.badge} />}
+                    {ch.badge && !seenBadges.has(ch.id) && <Chip type={ch.badge} />}
                     {ca && <span style={{ color: S.primary, display: 'flex' }}>{I.arr}</span>}
                   </Link>
                 )
