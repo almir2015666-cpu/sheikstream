@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
 import { SiTwitch, SiYoutube, SiKick } from 'react-icons/si'
 
 const DARK = {
@@ -70,7 +69,7 @@ export default function LoginPage() {
     if (loading) return
     setLoading(platform)
     if (platform === 'Twitch') {
-      signIn('twitch', { callbackUrl: '/dashboard' })
+      window.location.href = '/api/auth/twitch'
       return
     }
     // YouTube and Kick — simulated until OAuth is configured

@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useSession, signOut } from 'next-auth/react'
 
 const SW = 192
 
@@ -73,15 +72,23 @@ function Chip({ type }: { type: Badge }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router   = useRouter()
-  const { data: session, status } = useSession()
+  const [user, setUser] = useState<{ id: string; name: string; email: string; image: string } | null>(null)
+  const [status, setStatus] = useState<'loading' | 'done'>('loading')
   const [open, setOpen] = useState<Set<string>>(new Set(['sorteios']))
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login')
-  }, [status, router])
+    fetch('/api/me')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setUser(data); setStatus('done') })
+      .catch(() => setStatus('done'))
+  }, [])
+
+  useEffect(() => {
+    if (status === 'done' && !user) router.replace('/login')
+  }, [status, user, router])
 
   if (status === 'loading') return <div style={{ background: S.bg, minHeight: '100vh' }} />
-  if (!session) return null
+  if (!user) return null
 
   function active(item: Item) {
     if (item.href === '/dashboard') return pathname === '/dashboard'
@@ -161,17 +168,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* User */}
         <div style={{ padding: '0.75rem 0.95rem', borderTop: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', gap: '0.52rem', flexShrink: 0 }}>
-          {session.user?.image
-            ? <img src={session.user.image} alt="" style={{ width: '29px', height: '29px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          {user.image
+            ? <img src={user.image} alt="" style={{ width: '29px', height: '29px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
             : <div style={{ width: '29px', height: '29px', borderRadius: '50%', background: S.primaryBg, border: `1px solid ${S.borderP}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.primary, fontSize: '0.82rem', fontWeight: 700, flexShrink: 0 }}>
-                {(session.user?.name || 'U')[0].toUpperCase()}
+                {(user.name || 'U')[0].toUpperCase()}
               </div>
           }
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.76rem', fontWeight: 600, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.user?.name || 'Usuário'}</div>
+            <div style={{ fontSize: '0.76rem', fontWeight: 600, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name || 'Usuário'}</div>
             <div style={{ fontSize: '0.6rem', color: S.dim }}>Streamer Beta</div>
           </div>
-          <button onClick={() => signOut({ callbackUrl: '/login' })} title="Sair" className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.2rem', flexShrink: 0, opacity: 0.6 }}>{I.out}</button>
+          <button onClick={() => { window.location.href = '/api/logout' }} title="Sair" className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.2rem', flexShrink: 0, opacity: 0.6 }}>{I.out}</button>
         </div>
       </aside>
 

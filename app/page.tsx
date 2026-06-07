@@ -711,7 +711,7 @@ export default function Home() {
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '4rem' }}>
             <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.9rem 2.3rem', borderRadius: '8px', fontSize: '0.98rem', fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 24px ${C.primaryBgMed}` }}>
-              Começar agora →
+              Entrar
             </button>
             <button onClick={() => scrollToSection('produto')} className="sk-btn-ghost" style={{ background: 'transparent', color: C.muted, border: `1px solid ${C.border}`, padding: '0.9rem 1.9rem', borderRadius: '8px', fontSize: '0.92rem', cursor: 'pointer', fontWeight: 500 }}>
               Ver recursos
@@ -720,7 +720,6 @@ export default function Home() {
 
           {/* Dashboard mockup */}
           <div className="sk-mock-float" style={{ maxWidth: '820px', margin: '0 auto', position: 'relative' }}>
-            <div className="sk-mock-glow" style={{ position: 'absolute', inset: '-40px', background: `radial-gradient(ellipse at 50% 30%, ${C.primary}22, transparent 65%)`, borderRadius: '40px', pointerEvents: 'none' }} />
             <div style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderRadius: '16px', overflow: 'hidden', boxShadow: `0 28px 90px rgba(0,0,0,0.45), 0 0 0 1px ${C.borderFaint}`, position: 'relative' }}>
               <div style={{ background: C.cardBgAlt, padding: '0.65rem 1rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', gap: '5px' }}>
