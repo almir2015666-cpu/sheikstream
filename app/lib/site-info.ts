@@ -8,7 +8,7 @@ export const SITE = {
   description: 'Hub gratuito para streamers brasileiros gerenciarem todas as plataformas de streaming num só lugar.',
   status: 'BETA fechado',
 
-  streamers: ['sheikfabio', 'thierry0800'],
+  streamers: ['sheikfabio', 'thierry0800'] as string[],
 
   platforms: {
     supported: ['Twitch', 'YouTube', 'Kick', 'TikTok'],
@@ -109,3 +109,5 @@ ${issues}
 - Se não souber algo específico, diga honestamente e oriente a aguardar atualizações
 - Use as informações acima como verdade absoluta sobre o site`
 }
+
+export const STREAMERS_USERNAMES: string[] = SITE.streamers

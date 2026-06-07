@@ -227,6 +227,7 @@ export default function Home() {
   const [twIdx, setTwIdx] = useState(0)
   const [twPhase, setTwPhase] = useState<'typing' | 'deleting'>('typing')
   const [userCount, setUserCount] = useState(0)
+  const [streamerImages, setStreamerImages] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (document.cookie.includes('sk-session')) {
@@ -277,6 +278,17 @@ export default function Home() {
     fetch('/api/stats')
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.count != null) setUserCount(d.count) })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/twitch/profiles')
+      .then(r => r.ok ? r.json() : [])
+      .then((profiles: { username: string; image: string }[]) => {
+        const map: Record<string, string> = {}
+        profiles.forEach(p => { map[p.username] = p.image })
+        setStreamerImages(map)
+      })
       .catch(() => {})
   }, [])
 
@@ -766,7 +778,12 @@ export default function Home() {
         <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'1rem' }}>
           {STREAMERS.map(s => (
             <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" className="sk-streamer-card" style={{ background:C.cardBg,border:`1px solid ${C.border}`,borderRadius:'14px',padding:'1.5rem 1rem',textAlign:'center',textDecoration:'none',display:'block',cursor:'pointer' }}>
-              <div style={{ width:'54px',height:'54px',borderRadius:'50%',background:C.primaryBg,border:`1px solid ${C.borderStrong}`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 0.85rem',fontSize:'1.1rem',fontWeight:900,color:C.primary }}>{s.initials}</div>
+              <div style={{ width:'54px',height:'54px',borderRadius:'50%',border:`2px solid ${C.borderStrong}`,margin:'0 auto 0.85rem',overflow:'hidden',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:C.primaryBg }}>
+                {streamerImages[s.name]
+                  ? <img src={streamerImages[s.name]} alt={s.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} />
+                  : <span style={{ fontSize:'1.1rem',fontWeight:900,color:C.primary }}>{s.initials}</span>
+                }
+              </div>
               <div style={{ fontSize:'0.9rem',fontWeight:700,color:C.text,marginBottom:'0.3rem' }}>{s.name}</div>
               <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:'0.3rem' }}><PIcon id={s.platform} color={s.plColor} size={12} /><span style={{ fontSize:'0.72rem',color:C.muted }}>{s.platform}</span></div>
             </a>
