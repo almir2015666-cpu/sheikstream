@@ -89,7 +89,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [authed, setAuthed] = useState(false)
-  const [authChecked, setAuthChecked] = useState(false) // true once we know if session is valid
+  const [authChecked, setAuthChecked] = useState(false)
   const [authError, setAuthError] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
   const [users, setUsers] = useState<User[]>([])
@@ -97,6 +97,7 @@ export default function AdminPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [storedPw, setStoredPw] = useState('')
+  const [isMobile, setIsMobile] = useState(false)
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -126,9 +127,16 @@ export default function AdminPage() {
     }
   }, [])
 
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   // On mount: verify any stored session BEFORE showing anything
   useEffect(() => {
-    setPassword('') // clear any browser-autofilled value
+    setPassword('')
     const saved = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
     if (saved) setTheme(saved)
 
@@ -246,7 +254,7 @@ export default function AdminPage() {
     <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text }}>
       <style>{makeCSS(C)}</style>
 
-      <nav className="sk-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', borderBottom: `1px solid ${C.border}`, background: C.navBg, position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav className="sk-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0.75rem 1rem' : '1rem 2rem', borderBottom: `1px solid ${C.border}`, background: C.navBg, position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <a href="/" style={{ fontSize: '1.4rem', fontWeight: 900, letterSpacing: '0.5px', color: C.text, textDecoration: 'none' }}>
             Sheik<span style={{ color: C.accent }}>STREAM</span>
@@ -317,9 +325,9 @@ export default function AdminPage() {
         </div>
       ) : (
         /* ── Admin dashboard ── */
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2.5rem 2rem' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
           {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
             {([
               { label: 'Total', key: 'all' as const, color: C.primary },
               { label: 'Pendentes', key: 'pending' as const, color: C.primary },
@@ -336,7 +344,7 @@ export default function AdminPage() {
           {/* Table card */}
           <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
             {/* Toolbar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: '0.5rem', padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
               <div style={{ display: 'flex', gap: '0.3rem' }}>
                 {(['all', 'pending', 'approved', 'rejected'] as const).map(f => (
                   <button key={f} onClick={() => setFilter(f)} className={`sk-tab${filter === f ? ' active' : ''}`} style={{ color: filter === f ? C.primary : C.muted }}>
@@ -355,6 +363,7 @@ export default function AdminPage() {
             </div>
 
             {/* Table */}
+            <div style={{ overflowX: 'auto' }}>
             {usersLoading ? (
               <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando usuários...</div>
             ) : filtered.length === 0 ? (
@@ -408,6 +417,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
             )}
+            </div>
           </div>
         </div>
       )}

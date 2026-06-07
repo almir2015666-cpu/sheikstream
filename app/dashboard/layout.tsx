@@ -101,6 +101,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<{ id: string; name: string; email: string; image: string } | null>(null)
   const [status, setStatus] = useState<'loading' | 'done'>('loading')
   const [open, setOpen] = useState<Set<string>>(new Set(['sorteios', 'plataformas']))
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     fetch('/api/me')
@@ -134,94 +143,119 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     .sk-nl:hover{background:rgba(155,48,255,0.08)!important;color:#e8e6f8!important;}
     .sk-signout{transition:opacity 0.08s,color 0.08s;}
     .sk-signout:hover{opacity:1!important;color:#ff4444!important;}
+    .sk-hamburger{transition:opacity 0.08s;}
+    .sk-hamburger:hover{opacity:0.75!important;}
+    .sk-mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:199;backdrop-filter:blur(2px);}
     ::-webkit-scrollbar{width:3px;}
     ::-webkit-scrollbar-thumb{background:rgba(155,48,255,0.2);border-radius:2px;}
+    @keyframes sk-slide-in{from{transform:translateX(-100%);}to{transform:translateX(0);}}
+    .sk-sidebar-mobile{animation:sk-slide-in 0.22s cubic-bezier(0.4,0,0.2,1) forwards;}
   `
+
+  const sidebarContent = (
+    <>
+      {/* Brand */}
+      <div style={{ padding: '1rem 1.1rem 0.85rem', borderBottom: `1px solid ${S.border}`, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={{ width: '30px', height: '30px', borderRadius: '7px', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <Link href="/" style={{ fontSize: '0.9rem', fontWeight: 900, color: S.text, letterSpacing: '0.2px', lineHeight: 1.15, textDecoration: 'none' }} onClick={() => setMobileOpen(false)}>Sheik<span style={{ color: S.accent }}>STREAM</span></Link>
+            <div style={{ fontSize: '0.58rem', color: S.vdim, marginTop: '1px' }}>Painel do Streamer</div>
+          </div>
+          {isMobile && (
+            <button onClick={() => setMobileOpen(false)} style={{ background: 'transparent', border: 'none', color: S.muted, cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem', lineHeight: 1 }}>✕</button>
+          )}
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '0.4rem 0' }}>
+        {NAV.map(item => {
+          const isAct = active(item)
+          const isExp = open.has(item.id)
+          const hasCh = !!item.children
+          return (
+            <div key={item.id}>
+              <Link href={hasCh ? '#' : item.href} onClick={hasCh ? (e) => toggle(item.id, e) : () => setMobileOpen(false)}
+                className="sk-nl"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.44rem 1.1rem', color: isAct ? S.text : S.muted, textDecoration: 'none', fontSize: '0.82rem', fontWeight: isAct ? 600 : 400, background: isAct ? S.primaryBg : 'transparent', borderLeft: `2px solid ${isAct ? S.primary : 'transparent'}`, cursor: 'pointer' }}>
+                <span style={{ color: isAct ? S.primary : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                {item.badge && <Chip type={item.badge} />}
+                {hasCh && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'none' : 'rotate(-90deg)', transition: 'transform 0.12s' }}>{I.chev}</span>}
+              </Link>
+              {hasCh && isExp && item.children?.map(ch => {
+                const ca = pathname === ch.href
+                return (
+                  <Link key={ch.id} href={ch.href} onClick={() => setMobileOpen(false)} className="sk-nl" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.34rem 1.1rem 0.34rem 2.6rem', color: ca ? S.text : S.muted, textDecoration: 'none', fontSize: '0.79rem', fontWeight: ca ? 600 : 400, background: ca ? S.primaryBg : 'transparent', borderLeft: `2px solid ${ca ? S.primary : 'transparent'}` }}>
+                    <span style={{ flex: 1 }}>{ch.label}</span>
+                    {ch.badge && <Chip type={ch.badge} />}
+                    {ca && <span style={{ color: S.primary, display: 'flex' }}>{I.arr}</span>}
+                  </Link>
+                )
+              })}
+            </div>
+          )
+        })}
+      </nav>
+
+      {/* User */}
+      <div style={{ padding: '0.75rem 1.1rem', borderTop: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
+        {user.image
+          ? <img src={user.image} alt="" style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          : <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: S.primaryBg, border: `1px solid ${S.borderP}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.primary, fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>
+              {(user.name || 'U')[0].toUpperCase()}
+            </div>
+        }
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '0.77rem', fontWeight: 600, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name || 'Usuário'}</div>
+          <div style={{ fontSize: '0.6rem', color: S.vdim }}>Streamer · Beta</div>
+        </div>
+        <button onClick={() => { window.location.href = '/api/logout' }} title="Sair" className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.2rem', flexShrink: 0, opacity: 0.6 }}>{I.out}</button>
+      </div>
+    </>
+  )
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: S.bg, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: S.text }}>
       <style>{css}</style>
 
-      {/* ── Sidebar ── */}
-      <aside style={{ width: SW, flexShrink: 0, background: S.bar, borderRight: `1px solid ${S.borderP}`, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100, overflowX: 'hidden' }}>
+      {/* Mobile overlay */}
+      {isMobile && mobileOpen && (
+        <div className="sk-mobile-overlay" onClick={() => setMobileOpen(false)} />
+      )}
 
-        {/* Brand */}
-        <div style={{ padding: '1rem 1.1rem 0.85rem', borderBottom: `1px solid ${S.border}`, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <div style={{ width: '30px', height: '30px', borderRadius: '7px', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-            </div>
-            <div>
-              <Link href="/" style={{ fontSize: '0.9rem', fontWeight: 900, color: S.text, letterSpacing: '0.2px', lineHeight: 1.15, textDecoration: 'none' }}>Sheik<span style={{ color: S.accent }}>STREAM</span></Link>
-              <div style={{ fontSize: '0.58rem', color: S.vdim, marginTop: '1px' }}>Painel do Streamer</div>
-            </div>
-          </div>
-        </div>
+      {/* ── Sidebar desktop ── */}
+      {!isMobile && (
+        <aside style={{ width: SW, flexShrink: 0, background: S.bar, borderRight: `1px solid ${S.borderP}`, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100, overflowX: 'hidden' }}>
+          {sidebarContent}
+        </aside>
+      )}
 
-        {/* Nav */}
-        <nav style={{ flex: 1, overflowY: 'auto', padding: '0.4rem 0' }}>
-          {NAV.map(item => {
-            const isAct = active(item)
-            const isExp = open.has(item.id)
-            const hasCh = !!item.children
-
-            return (
-              <div key={item.id}>
-                <Link
-                  href={hasCh ? '#' : item.href}
-                  onClick={hasCh ? (e) => toggle(item.id, e) : undefined}
-                  className="sk-nl"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.44rem 1.1rem', color: isAct ? S.text : S.muted, textDecoration: 'none', fontSize: '0.82rem', fontWeight: isAct ? 600 : 400, background: isAct ? S.primaryBg : 'transparent', borderLeft: `2px solid ${isAct ? S.primary : 'transparent'}`, cursor: 'pointer' }}
-                >
-                  <span style={{ color: isAct ? S.primary : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-                  {item.badge && <Chip type={item.badge} />}
-                  {hasCh && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'none' : 'rotate(-90deg)', transition: 'transform 0.12s' }}>{I.chev}</span>}
-                </Link>
-
-                {hasCh && isExp && item.children?.map(ch => {
-                  const ca = pathname === ch.href
-                  return (
-                    <Link key={ch.id} href={ch.href} className="sk-nl" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.34rem 1.1rem 0.34rem 2.6rem', color: ca ? S.text : S.muted, textDecoration: 'none', fontSize: '0.79rem', fontWeight: ca ? 600 : 400, background: ca ? S.primaryBg : 'transparent', borderLeft: `2px solid ${ca ? S.primary : 'transparent'}` }}>
-                      <span style={{ flex: 1 }}>{ch.label}</span>
-                      {ch.badge && <Chip type={ch.badge} />}
-                      {ca && <span style={{ color: S.primary, display: 'flex' }}>{I.arr}</span>}
-                    </Link>
-                  )
-                })}
-              </div>
-            )
-          })}
-        </nav>
-
-        {/* User */}
-        <div style={{ padding: '0.75rem 1.1rem', borderTop: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
-          {user.image
-            ? <img src={user.image} alt="" style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-            : <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: S.primaryBg, border: `1px solid ${S.borderP}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.primary, fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>
-                {(user.name || 'U')[0].toUpperCase()}
-              </div>
-          }
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.77rem', fontWeight: 600, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name || 'Usuário'}</div>
-            <div style={{ fontSize: '0.6rem', color: S.vdim }}>Streamer · Beta</div>
-          </div>
-          <button onClick={() => { window.location.href = '/api/logout' }} title="Sair" className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.2rem', flexShrink: 0, opacity: 0.6 }}>{I.out}</button>
-        </div>
-      </aside>
+      {/* ── Sidebar mobile drawer ── */}
+      {isMobile && mobileOpen && (
+        <aside className="sk-sidebar-mobile" style={{ width: SW, background: S.bar, borderRight: `1px solid ${S.borderP}`, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 200, overflowX: 'hidden' }}>
+          {sidebarContent}
+        </aside>
+      )}
 
       {/* ── Main ── */}
-      <div style={{ flex: 1, marginLeft: SW, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <div style={{ flex: 1, marginLeft: isMobile ? 0 : SW, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
         {/* Topbar */}
-        <div style={{ background: S.topbar, borderBottom: `1px solid ${S.borderP}`, padding: '0.7rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50, flexShrink: 0 }}>
+        <div style={{ background: S.topbar, borderBottom: `1px solid ${S.borderP}`, padding: isMobile ? '0.7rem 1rem' : '0.7rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            {isMobile && (
+              <button onClick={() => setMobileOpen(true)} className="sk-hamburger" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.text, fontSize: '1.2rem', padding: '0.2rem 0.4rem', lineHeight: 1, minHeight: '44px', display: 'flex', alignItems: 'center' }}>☰</button>
+            )}
             <h1 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: S.text }}>{pageTitle}</h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{ fontSize: '0.72rem', color: S.vdim, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: S.accent, display: 'inline-block', animation: 'sk-pulse 2s ease-in-out infinite' }} />
-              Beta fechado
+              {!isMobile && 'Beta fechado'}
             </div>
           </div>
         </div>
