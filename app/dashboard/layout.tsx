@@ -182,7 +182,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           </div>
           <div style={{ flex: 1 }}>
-            <Link href="/" style={{ fontSize: '0.9rem', fontWeight: 900, color: S.text, letterSpacing: '0.2px', lineHeight: 1.15, textDecoration: 'none' }} onClick={() => setMobileOpen(false)}>Sheik<span style={{ color: S.accent }}>STREAM</span></Link>
+            <span style={{ fontSize: '0.9rem', fontWeight: 900, color: S.text, letterSpacing: '0.2px', lineHeight: 1.15 }}>Sheik<span style={{ color: S.accent }}>STREAM</span></span>
             <div style={{ fontSize: '0.58rem', color: S.vdim, marginTop: '1px' }}>Painel do Streamer</div>
           </div>
           {isMobile && (

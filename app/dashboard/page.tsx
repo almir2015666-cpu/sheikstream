@@ -42,8 +42,19 @@ const REPASSE = [
   { label: 'PayPal',  color: '#009cde', pct: 97, note: 'pago em R$' },
 ]
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10)
+}
+function daysAgoStr(n: number) {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+
 export default function DashboardPage() {
   const [period, setPeriod] = useState<Period>('30d')
+  const [customFrom, setCustomFrom] = useState(daysAgoStr(30))
+  const [customTo, setCustomTo] = useState(todayStr())
   const [isMobile, setIsMobile] = useState(false)
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
 
@@ -75,12 +86,27 @@ export default function DashboardPage() {
         {/* Cabeçalho + período */}
         <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.1rem' }}>
           <h2 style={{ margin: 0, fontSize: '0.94rem', fontWeight: 600, color: C.text }}>Bot da Live — painel de controle</h2>
-          <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {PERIODS.map(([p, label]) => (
-              <button key={p} onClick={() => setPeriod(p)} style={{ padding: '0.28rem 0.85rem', borderRadius: '6px', border: 'none', background: p === period ? C.primaryBg : 'transparent', color: p === period ? C.primary : C.dim, fontSize: '0.77rem', fontWeight: p === period ? 700 : 400, cursor: 'pointer', transition: 'all 0.08s', outline: p === period ? `1px solid rgba(155,48,255,0.3)` : 'none', outlineOffset: '-1px' }}>
-                {label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              {PERIODS.map(([p, label]) => (
+                <button key={p} onClick={() => setPeriod(p)} style={{ padding: '0.28rem 0.85rem', borderRadius: '6px', border: 'none', background: p === period ? C.primaryBg : 'transparent', color: p === period ? C.primary : C.dim, fontSize: '0.77rem', fontWeight: p === period ? 700 : 400, cursor: 'pointer', transition: 'all 0.08s', outline: p === period ? `1px solid rgba(155,48,255,0.3)` : 'none', outlineOffset: '-1px' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {period === 'custom' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <input
+                  type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(155,48,255,0.25)', borderRadius: '6px', color: C.text, fontSize: '0.77rem', padding: '0.28rem 0.6rem', outline: 'none', colorScheme: 'dark' }}
+                />
+                <span style={{ fontSize: '0.72rem', color: C.dim }}>até</span>
+                <input
+                  type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} min={customFrom}
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(155,48,255,0.25)', borderRadius: '6px', color: C.text, fontSize: '0.77rem', padding: '0.28rem 0.6rem', outline: 'none', colorScheme: 'dark' }}
+                />
+              </div>
+            )}
           </div>
         </div>
 
