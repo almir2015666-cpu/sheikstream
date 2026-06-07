@@ -245,7 +245,7 @@ export default function AdminPage() {
     }
   }
 
-  async function handleAction(id: string, status: 'approved' | 'rejected' | 'banned') {
+  async function handleAction(id: string, status: 'approved' | 'rejected' | 'banned' | 'pending') {
     setActionLoading(id + status)
     try {
       const res = await fetch('/api/admin/users', {
