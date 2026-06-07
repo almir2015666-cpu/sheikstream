@@ -241,6 +241,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
+      {/* Admin link */}
+      <div style={{ padding: '0.3rem 0.7rem', flexShrink: 0 }}>
+        <Link href="/admin" onClick={() => setMobileOpen(false)}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.38rem 0.8rem', borderRadius: '7px', background: 'rgba(255,68,68,0.07)', border: '1px solid rgba(255,68,68,0.18)', textDecoration: 'none', color: '#ff6b6b', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.3px' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Painel Admin
+        </Link>
+      </div>
+
       {/* User */}
       <div style={{ padding: '0.75rem 1.1rem', borderTop: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
         {user.image

@@ -918,8 +918,6 @@ export default function Home() {
             <div style={{ fontSize:'0.73rem',color:C.vdim }}>🇧🇷 Feito no Brasil · © 2025 Sheikstream.</div>
             <div style={{ display:'flex',gap:'1.4rem',alignItems:'center',flexWrap:'wrap',justifyContent:'center' }}>
               {[{ label:'Termos',href:'/termos-e-condicoes' },{ label:'Privacidade',href:'/privacidade' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ fontSize:'0.73rem',color:C.vdim,textDecoration:'none' }}>{l.label}</a>))}
-              <a href="/admin" style={{ fontSize:'0.68rem',color:'#ff4444',textDecoration:'none',background:'rgba(255,68,68,0.1)',border:'1px solid rgba(255,68,68,0.3)',padding:'0.18rem 0.65rem',borderRadius:'999px',fontWeight:700,opacity:0.7 }}
-                onMouseOver={e=>(e.currentTarget.style.opacity='1')} onMouseOut={e=>(e.currentTarget.style.opacity='0.7')}>ADMIN</a>
             </div>
           </div>
         </div>
