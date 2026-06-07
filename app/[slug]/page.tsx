@@ -214,7 +214,7 @@ export default function LegalPage({ params }: { params: Promise<{ slug: string }
   ]
 
   return (
-    <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text }}>
       <style>{makeCSS(C)}</style>
       {themeOverlay}
 

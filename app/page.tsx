@@ -173,12 +173,12 @@ const PLATFORM_COLORS: Record<string, string> = {
 const TW_WORDS = ['sorteios', 'comandos', 'analytics', 'metas', 'notificações', 'streams']
 
 const STREAMERS = [
-  { name: 'GabrielXD',   initials: 'GX', color: '#9b30ff', platform: 'Twitch',  plColor: '#9147ff', followers: '234K' },
-  { name: 'StreamQueen', initials: 'SQ', color: '#ff4488', platform: 'YouTube', plColor: '#ff0000', followers: '189K' },
-  { name: 'NitroGamer',  initials: 'NG', color: '#39ff14', platform: 'Kick',    plColor: '#53fc18', followers: '445K' },
-  { name: 'CaioPlays',   initials: 'CP', color: '#5865f2', platform: 'Twitch',  plColor: '#9147ff', followers: '92K'  },
-  { name: 'LunaStream',  initials: 'LS', color: '#ff6bbd', platform: 'TikTok',  plColor: '#f0eefc', followers: '1.2M' },
-  { name: 'FelipeAO',    initials: 'FA', color: '#00d4ff', platform: 'YouTube', plColor: '#ff0000', followers: '567K' },
+  { name: 'GabrielXD',   initials: 'GX', platform: 'Twitch',  plColor: '#9147ff' },
+  { name: 'StreamQueen', initials: 'SQ', platform: 'YouTube', plColor: '#ff0000' },
+  { name: 'NitroGamer',  initials: 'NG', platform: 'Kick',    plColor: '#53fc18' },
+  { name: 'CaioPlays',   initials: 'CP', platform: 'Twitch',  plColor: '#9147ff' },
+  { name: 'LunaStream',  initials: 'LS', platform: 'TikTok',  plColor: '#f0eefc' },
+  { name: 'FelipeAO',    initials: 'FA', platform: 'YouTube', plColor: '#ff0000' },
 ]
 
 const TESTIMONIALS = [
@@ -239,6 +239,12 @@ export default function Home() {
   const [userCount, setUserCount] = useState(4863)
   const [metricVals, setMetricVals] = useState([0, 0, 0, 0])
   const metricsStarted = useRef(false)
+
+  useEffect(() => {
+    if (document.cookie.includes('sk-session')) {
+      window.location.href = '/dashboard'
+    }
+  }, [])
 
   useEffect(() => {
     const saved = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
@@ -417,11 +423,8 @@ export default function Home() {
   ) : null
 
   const brandLogo = (extraStyle?: React.CSSProperties) => (
-    <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', ...extraStyle }}>
-      <div style={{ width: isMobile ? '28px' : '32px', height: isMobile ? '28px' : '32px', borderRadius: '8px', background: '#ffffff', border: '1.5px solid rgba(57,255,20,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 2px 10px rgba(57,255,20,0.18)` }}>
-        <span style={{ fontSize: isMobile ? '1.05rem' : '1.25rem', fontWeight: 900, color: '#1db300', lineHeight: 1, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", letterSpacing: '-1px' }}>S</span>
-      </div>
-      <span style={{ fontSize: isMobile ? '1.2rem' : '1.55rem', fontWeight: 900, letterSpacing: '0.5px', color: C.text }}>Sheik<span style={{ color: C.accent }}>STREAM</span></span>
+    <a href="/" style={{ fontSize: isMobile ? '1.2rem' : '1.55rem', fontWeight: 900, letterSpacing: '0.5px', color: C.text, textDecoration: 'none', ...extraStyle }}>
+      Sheik<span style={{ color: C.accent }}>STREAM</span>
     </a>
   )
 
@@ -802,10 +805,9 @@ export default function Home() {
         <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'1rem' }}>
           {STREAMERS.map(s => (
             <div key={s.name} className="sk-streamer-card" style={{ background:C.cardBg,border:`1px solid ${C.border}`,borderRadius:'14px',padding:'1.5rem 1rem',textAlign:'center' }}>
-              <div style={{ width:'54px',height:'54px',borderRadius:'50%',background:s.color,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 0.85rem',fontSize:'1.1rem',fontWeight:900,color:'#fff',boxShadow:`0 4px 16px ${s.color}44` }}>{s.initials}</div>
+              <div style={{ width:'54px',height:'54px',borderRadius:'50%',background:C.primaryBg,border:`1px solid ${C.borderStrong}`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 0.85rem',fontSize:'1.1rem',fontWeight:900,color:C.primary }}>{s.initials}</div>
               <div style={{ fontSize:'0.9rem',fontWeight:700,color:C.text,marginBottom:'0.3rem' }}>{s.name}</div>
-              <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:'0.3rem',marginBottom:'0.5rem' }}><PIcon id={s.platform} color={s.plColor} size={12} /><span style={{ fontSize:'0.72rem',color:C.muted }}>{s.platform}</span></div>
-              <div style={{ fontSize:'0.75rem',fontWeight:700,color:C.statColor }}>{s.followers}</div>
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:'0.3rem' }}><PIcon id={s.platform} color={s.plColor} size={12} /><span style={{ fontSize:'0.72rem',color:C.muted }}>{s.platform}</span></div>
             </div>
           ))}
         </div>
