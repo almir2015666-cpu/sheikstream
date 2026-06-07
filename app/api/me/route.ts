@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       const db = getSupabaseAdmin()
       const { data: rows } = await db
         .from('waitlist')
-        .select('status')
+        .select('status, created_at')
         .eq('platform', 'Twitch')
         .ilike('platform_username', user.name)
         .limit(1)
@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
       if (entry?.status === 'pending' || entry?.status === 'rejected') {
         return NextResponse.json({ error: 'pending' }, { status: 403 })
       }
+
+      return NextResponse.json({ ...user, status: entry?.status ?? 'active', createdAt: entry?.created_at ?? null })
     } catch {
       // DB unavailable — allow through
     }
