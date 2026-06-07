@@ -122,6 +122,30 @@ export default function ConexoesPage() {
     }
   }
 
+  function openTwitchPopup() {
+    const w = 500, h = 700
+    const left = window.screen.width - w - 20
+    const top = Math.max(0, (window.screen.height - h) / 2)
+    const popup = window.open(
+      '/api/auth/twitch?popup=1',
+      'twitch_oauth',
+      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
+    )
+    const check = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(check)
+        fetch('/api/tokens/status')
+          .then(r => r.json())
+          .then(s => setTokenStatus(s))
+          .catch(() => {})
+        fetch('/api/me')
+          .then(r => r.ok ? r.json() : null)
+          .then(u => { if (u) setConnectedUser(u.name) })
+          .catch(() => {})
+      }
+    }, 500)
+  }
+
   useEffect(() => {
     fetch('/api/me')
       .then(r => r.ok ? r.json() : null)

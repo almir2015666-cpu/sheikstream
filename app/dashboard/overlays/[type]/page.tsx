@@ -249,8 +249,12 @@ export default function OverlayEditorPage({ params }: Ctx) {
   const [dispSecs, setDispSecs] = useState(10)
   const [banLayout, setBanLayout] = useState<'single' | 'double'>('single')
   const [newBannerUrl, setNewBannerUrl] = useState('')
+  const [subathonActive, setSubathonActive] = useState<boolean | null>(null)
 
   useEffect(() => {
+    if (type === 'subathon') {
+      fetch('/api/subathon').then(r => r.json()).then(d => setSubathonActive(!!d?.is_active)).catch(() => setSubathonActive(false))
+    }
     fetch('/api/me').then(r => r.json()).then(d => { if (d?.id) setUid(d.id) }).catch(() => {})
     try {
       const raw = localStorage.getItem(`overlay-cfg-${type}`)
@@ -355,12 +359,20 @@ export default function OverlayEditorPage({ params }: Ctx) {
       return (
         <Card>
           <Label>Subathon</Label>
-          <div style={{ background: C.inner, border: `1px solid ${C.cardB}`, borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.75rem' }}>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: '#fbbf24' }}>
-              Nenhum subathon ativo — crie um em{' '}
-              <Link href="/dashboard/subathon" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Subathon</Link>.
-            </p>
-          </div>
+          {subathonActive === false && (
+            <div style={{ background: C.inner, border: `1px solid rgba(251,191,36,0.25)`, borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.75rem' }}>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#fbbf24' }}>
+                Nenhum subathon ativo — crie um em{' '}
+                <Link href="/dashboard/subathon" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Subathon</Link>.
+              </p>
+            </div>
+          )}
+          {subathonActive === true && (
+            <div style={{ background: 'rgba(57,255,20,0.06)', border: '1px solid rgba(57,255,20,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#39ff14', display: 'inline-block', flexShrink: 0 }} />
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#39ff14' }}>Subathon ativo — overlay sincronizado.</p>
+            </div>
+          )}
           <Label>Elementos visíveis</Label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
             {[['title','Título'],['tags','Tags de regras'],['lastContrib','Última contribuição']].map(([k,l]) => (

@@ -9,33 +9,9 @@ const C = {
 
 const PLATS = [
   {
-    id: 'twitch', label: 'Twitch', color: '#9147ff', bg: 'rgba(145,71,255,0.1)',
-    desc: 'Sorteios de subs, alertas de follow, cheers e bits',
-    features: ['Sorteios de Subs', 'Gifted Subs', 'Bits/Cheers', 'Follows', 'Raids'],
-    href: '/dashboard/plataformas/twitch', badge: 'Conectado',
-  },
-  {
-    id: 'youtube', label: 'YouTube', color: '#ff0000', bg: 'rgba(255,0,0,0.08)',
-    desc: 'Membros, super chats e alertas de inscrição',
-    features: ['Membros', 'Super Chats', 'Super Thanks', 'Inscrições', 'Estreias'],
-    href: '/dashboard/plataformas/youtube', badge: null,
-  },
-  {
-    id: 'kick', label: 'Kick', color: '#53fc18', bg: 'rgba(83,252,24,0.07)',
-    desc: 'Subs, gifted subs e integração com chat da live',
-    features: ['Subs', 'Gifted Subs', 'Clips', 'Follows', 'Raids'],
-    href: '/dashboard/plataformas/kick', badge: null,
-  },
-  {
-    id: 'tiktok', label: 'TikTok', color: '#69c9d0', bg: 'rgba(105,201,208,0.08)',
-    desc: 'Gifts, inscrições e alertas do LIVE',
-    features: ['Gifts', 'Likes', 'Inscrições', 'LIVE diamonds', 'Comentários'],
-    href: '/dashboard/plataformas/tiktok', badge: null,
-  },
-  {
     id: 'livepix', label: 'Livepix', color: '#ff69b4', bg: 'rgba(255,105,180,0.08)',
-    desc: 'Doações, histórico de transações e integração com sorteios',
-    features: ['Doações recebidas', 'Histórico', 'Sorteios', 'Vaquinhas'],
+    desc: 'Doações, histórico de transações e integração com sorteios e metas',
+    features: ['Doações recebidas', 'Histórico de transações', 'Integração com sorteios', 'Vaquinhas', 'Metas de doação'],
     href: '/dashboard/conexoes', badge: null,
   },
 ]

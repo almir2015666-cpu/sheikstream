@@ -5,20 +5,21 @@ import Link from 'next/link'
 
 const SW = 240
 
-const S = {
-  bg: '#08090d',
-  bar: '#0b0c17',
-  card: '#111219',
-  text: '#e8e6f8',
-  muted: 'rgba(232,230,248,0.5)',
-  dim: 'rgba(232,230,248,0.28)',
-  vdim: 'rgba(232,230,248,0.12)',
-  primary: '#9b30ff',
-  primaryBg: 'rgba(155,48,255,0.1)',
-  accent: '#39ff14',
-  border: 'rgba(255,255,255,0.05)',
-  borderP: 'rgba(155,48,255,0.15)',
-  topbar: '#0d0e1c',
+const DARK_S = {
+  bg: '#08090d', bar: '#0b0c17', card: '#111219', text: '#e8e6f8',
+  muted: 'rgba(232,230,248,0.65)', dim: 'rgba(232,230,248,0.45)',
+  vdim: 'rgba(232,230,248,0.25)', primary: '#9b30ff',
+  primaryBg: 'rgba(155,48,255,0.1)', accent: '#39ff14',
+  border: 'rgba(255,255,255,0.05)', borderP: 'rgba(155,48,255,0.15)',
+  topbar: '#0d0e1c', iconActive: '#c084fc',
+}
+const LIGHT_S = {
+  bg: '#f0effe', bar: '#ffffff', card: '#ffffff', text: '#0f0e24',
+  muted: 'rgba(15,14,36,0.65)', dim: 'rgba(15,14,36,0.45)',
+  vdim: 'rgba(15,14,36,0.25)', primary: '#7b2eff',
+  primaryBg: 'rgba(123,46,255,0.08)', accent: '#059669',
+  border: 'rgba(0,0,0,0.07)', borderP: 'rgba(123,46,255,0.18)',
+  topbar: '#ffffff', iconActive: '#9b30ff',
 }
 
 const I = {
@@ -37,6 +38,8 @@ const I = {
   out:  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   chev: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
   arr:  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
+  sun:  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  moon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
 }
 
 type Badge = 'NOVO' | 'ATUALIZADO'
@@ -47,10 +50,6 @@ const NAV: Item[] = [
   { id: 'dashboard',   label: 'Dashboard',   href: '/dashboard',              icon: I.dash },
   { id: 'plataformas', label: 'Plataformas', href: '/dashboard/plataformas', icon: I.plat, badge: 'NOVO',
     children: [
-      { id: 'p-twitch',   label: 'Twitch',   href: '/dashboard/plataformas/twitch' },
-      { id: 'p-youtube',  label: 'YouTube',  href: '/dashboard/plataformas/youtube' },
-      { id: 'p-kick',     label: 'Kick',     href: '/dashboard/plataformas/kick' },
-      { id: 'p-tiktok',   label: 'TikTok',  href: '/dashboard/plataformas/tiktok' },
       { id: 'p-livepix',  label: 'Livepix',  href: '/dashboard/conexoes' },
     ]
   },
@@ -74,10 +73,6 @@ const NAV: Item[] = [
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/dashboard/plataformas': 'Plataformas',
-  '/dashboard/plataformas/twitch': 'Twitch',
-  '/dashboard/plataformas/youtube': 'YouTube',
-  '/dashboard/plataformas/kick': 'Kick',
-  '/dashboard/plataformas/tiktok': 'TikTok',
   '/dashboard/sorteios': 'Sorteios',
   '/dashboard/sorteios/novo': 'Novo Sorteio',
   '/dashboard/sorteios/tickets': 'Tickets',
@@ -99,6 +94,12 @@ function Chip({ type }: { type: Badge }) {
     : <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: 'rgba(251,191,36,0.15)', color: '#fbbf24', borderRadius: '999px', letterSpacing: '0.4px', flexShrink: 0, border: '1px solid rgba(251,191,36,0.3)' }}>ATUALIZADO</span>
 }
 
+type BannerCfg = {
+  active: boolean; icon: string; text_main: string; text_sub: string; text_note: string
+  action_label: string; action_url: string; color: string
+  amount_current: number; amount_goal: number; supporter_count: number
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router   = useRouter()
@@ -107,15 +108,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [open, setOpen] = useState<Set<string>>(new Set(['sorteios', 'plataformas']))
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const lastTrackedPath = useRef<string | null>(null)
   const [seenBadges, setSeenBadges] = useState<Set<string>>(new Set())
+  const [banner, setBanner] = useState<BannerCfg | null>(null)
+  const [bannerDismissed, setBannerDismissed] = useState(false)
+
+  const S = theme === 'dark' ? DARK_S : LIGHT_S
+  const isDark = theme === 'dark'
 
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('sk-seen-badges') || '[]')
       setSeenBadges(new Set(saved))
     } catch { /* ignore */ }
+    try {
+      const t = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
+      if (t) setTheme(t)
+    } catch { /* ignore */ }
+    fetch('/api/dev-banner').then(r => r.json()).then(d => { if (d?.active) setBanner(d) }).catch(() => {})
   }, [])
+
+  // Auto-dismiss badge when navigating to that page
+  useEffect(() => {
+    const toAdd: string[] = []
+    NAV.forEach(item => {
+      if (item.badge) {
+        const isHere = item.href === '/dashboard' ? pathname === '/dashboard' : pathname === item.href || pathname.startsWith(item.href + '/')
+        if (isHere) toAdd.push(item.id)
+      }
+      item.children?.forEach(ch => {
+        if (ch.badge && pathname === ch.href) toAdd.push(ch.id)
+      })
+    })
+    if (toAdd.length > 0) {
+      setSeenBadges(prev => {
+        const filtered = toAdd.filter(id => !prev.has(id))
+        if (filtered.length === 0) return prev
+        const next = new Set(prev)
+        filtered.forEach(id => next.add(id))
+        try { localStorage.setItem('sk-seen-badges', JSON.stringify([...next])) } catch {}
+        return next
+      })
+    }
+  }, [pathname])
 
   function dismissBadge(id: string) {
     setSeenBadges(prev => {
@@ -125,6 +161,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       try { localStorage.setItem('sk-seen-badges', JSON.stringify([...next])) } catch { /* ignore */ }
       return next
     })
+  }
+
+  function toggleTheme() {
+    const t = isDark ? 'light' : 'dark'
+    setTheme(t)
+    try { localStorage.setItem('sk-theme', t) } catch {}
   }
 
   useEffect(() => {
@@ -165,7 +207,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }).catch(() => {})
   }, [pathname, user])
 
-  if (status === 'loading') return <div style={{ background: S.bg, minHeight: '100vh' }} />
+  if (status === 'loading') return <div style={{ background: DARK_S.bg, minHeight: '100vh' }} />
   if (!user) return null
 
   function active(item: Item) {
@@ -183,11 +225,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const css = `
     *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
     .sk-nl{transition:background 0.12s,color 0.12s;}
-    .sk-nl:hover{background:rgba(255,255,255,0.05)!important;color:#e8e6f8!important;}
+    .sk-nl:hover{background:${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}!important;color:${S.text}!important;}
     .sk-nl-act{transition:background 0.12s,color 0.12s;}
-    .sk-nl-act:hover{filter:brightness(1.08);}
+    .sk-nl-act:hover{filter:brightness(${isDark ? '1.08' : '0.95'});}
     .sk-signout{transition:opacity 0.1s,color 0.1s;}
     .sk-signout:hover{opacity:1!important;color:#ff4444!important;}
+    .sk-theme-btn{transition:transform 0.12s;background:transparent;border:none;cursor:pointer;padding:0.3rem;display:flex;align-items:center;color:${S.dim};}
+    .sk-theme-btn:hover{transform:rotate(15deg) scale(1.15);color:${S.primary};}
     .sk-hamburger{transition:opacity 0.08s;}
     .sk-hamburger:hover{opacity:0.75!important;}
     .sk-mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:199;backdrop-filter:blur(2px);}
@@ -195,6 +239,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ::-webkit-scrollbar-thumb{background:rgba(155,48,255,0.2);border-radius:2px;}
     @keyframes sk-slide-in{from{transform:translateX(-100%);}to{transform:translateX(0);}}
     .sk-sidebar-mobile{animation:sk-slide-in 0.22s cubic-bezier(0.4,0,0.2,1) forwards;}
+    @keyframes sk-pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
   `
 
   const sidebarContent = (
@@ -207,7 +252,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.95rem', fontWeight: 800, color: S.text, letterSpacing: '-0.2px', lineHeight: 1.2 }}>Sheik<span style={{ color: S.accent }}>STREAM</span></div>
-            <div style={{ fontSize: '0.65rem', color: S.dim, marginTop: '1px' }}>Painel do Streamer</div>
+            <div style={{ fontSize: '0.72rem', color: S.muted, marginTop: '1px' }}>Painel do Streamer</div>
           </div>
           {isMobile && (
             <button onClick={() => setMobileOpen(false)} style={{ background: 'transparent', border: 'none', color: S.muted, cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem', lineHeight: 1 }}>✕</button>
@@ -229,24 +274,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className={isAct ? 'sk-nl-act' : 'sk-nl'}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.7rem',
-                  padding: '0.6rem 0.75rem',
-                  borderRadius: '9px',
-                  marginBottom: '2px',
-                  color: isAct ? '#fff' : S.muted,
-                  textDecoration: 'none',
-                  fontSize: '0.9rem',
-                  fontWeight: isAct ? 600 : 400,
-                  background: isAct ? 'linear-gradient(135deg,rgba(155,48,255,0.35),rgba(109,40,217,0.3))' : 'transparent',
-                  border: isAct ? '1px solid rgba(155,48,255,0.3)' : '1px solid transparent',
-                  cursor: 'pointer',
-                  letterSpacing: '-0.1px',
+                  padding: '0.6rem 0.75rem', borderRadius: '9px', marginBottom: '2px',
+                  color: isAct ? '#fff' : S.muted, textDecoration: 'none',
+                  fontSize: '0.9rem', fontWeight: isAct ? 600 : 400,
+                  background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent',
+                  border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent',
+                  cursor: 'pointer', letterSpacing: '-0.1px',
                 }}
               >
-                <span style={{ color: isAct ? '#c084fc' : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
+                <span style={{ color: isAct ? S.iconActive : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
                 {item.badge && !seenBadges.has(item.id) && <Chip type={item.badge} />}
                 {hasCh && !isAct && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>{I.chev}</span>}
-                {isAct && <span style={{ color: '#c084fc', flexShrink: 0, display: 'flex' }}>{I.arr}</span>}
+                {isAct && <span style={{ color: S.iconActive, flexShrink: 0, display: 'flex' }}>{I.arr}</span>}
               </Link>
               {hasCh && isExp && item.children?.map(ch => {
                 const ca = pathname === ch.href
@@ -257,20 +297,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     className={ca ? 'sk-nl-act' : 'sk-nl'}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.5rem',
-                      padding: '0.48rem 0.75rem 0.48rem 2.8rem',
-                      borderRadius: '9px',
-                      marginBottom: '2px',
-                      color: ca ? '#fff' : S.muted,
-                      textDecoration: 'none',
-                      fontSize: '0.84rem',
-                      fontWeight: ca ? 600 : 400,
-                      background: ca ? 'linear-gradient(135deg,rgba(155,48,255,0.28),rgba(109,40,217,0.22))' : 'transparent',
-                      border: ca ? '1px solid rgba(155,48,255,0.25)' : '1px solid transparent',
+                      padding: '0.48rem 0.75rem 0.48rem 2.8rem', borderRadius: '9px', marginBottom: '2px',
+                      color: ca ? '#fff' : S.muted, textDecoration: 'none',
+                      fontSize: '0.84rem', fontWeight: ca ? 600 : 400,
+                      background: ca ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.28),rgba(109,40,217,0.22)' : 'rgba(123,46,255,0.12),rgba(90,30,200,0.08)'})` : 'transparent',
+                      border: ca ? `1px solid ${isDark ? 'rgba(155,48,255,0.25)' : 'rgba(123,46,255,0.2)'}` : '1px solid transparent',
                     }}
                   >
                     <span style={{ flex: 1 }}>{ch.label}</span>
                     {ch.badge && !seenBadges.has(ch.id) && <Chip type={ch.badge} />}
-                    {ca && <span style={{ color: '#c084fc', display: 'flex' }}>{I.arr}</span>}
+                    {ca && <span style={{ color: S.iconActive, display: 'flex' }}>{I.arr}</span>}
                   </Link>
                 )
               })}
@@ -299,9 +335,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '0.82rem', fontWeight: 600, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name || 'Usuário'}</div>
-          <div style={{ fontSize: '0.65rem', color: S.dim }}>Streamer Beta</div>
+          <div style={{ fontSize: '0.68rem', color: S.muted }}>Streamer Beta</div>
         </div>
-        <button onClick={() => { window.location.href = '/api/logout' }} title="Sair" className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.25rem', flexShrink: 0, opacity: 0.55 }}>{I.out}</button>
+        <button onClick={() => { window.location.href = '/api/logout' }} title="Sair" className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.25rem', flexShrink: 0, opacity: 0.7 }}>{I.out}</button>
       </div>
     </>
   )
@@ -310,26 +346,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div style={{ display: 'flex', minHeight: '100vh', background: S.bg, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: S.text }}>
       <style>{css}</style>
 
-      {/* Mobile overlay */}
       {isMobile && mobileOpen && (
         <div className="sk-mobile-overlay" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* ── Sidebar desktop ── */}
       {!isMobile && (
         <aside style={{ width: SW, flexShrink: 0, background: S.bar, borderRight: `1px solid ${S.borderP}`, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100, overflowX: 'hidden' }}>
           {sidebarContent}
         </aside>
       )}
 
-      {/* ── Sidebar mobile drawer ── */}
       {isMobile && mobileOpen && (
         <aside className="sk-sidebar-mobile" style={{ width: SW, background: S.bar, borderRight: `1px solid ${S.borderP}`, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 200, overflowX: 'hidden' }}>
           {sidebarContent}
         </aside>
       )}
 
-      {/* ── Main ── */}
       <div style={{ flex: 1, marginLeft: isMobile ? 0 : SW, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
         {/* Topbar */}
@@ -341,16 +373,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <h1 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: S.text }}>{pageTitle}</h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ fontSize: '0.72rem', color: S.vdim, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: S.accent, display: 'inline-block', animation: 'sk-pulse 2s ease-in-out infinite' }} />
+            <div style={{ fontSize: '0.78rem', color: S.muted, display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500 }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: S.accent, display: 'inline-block', animation: 'sk-pulse 2s ease-in-out infinite', flexShrink: 0 }} />
               {!isMobile && 'Beta fechado'}
             </div>
+            <button onClick={toggleTheme} className="sk-theme-btn" title={isDark ? 'Modo claro' : 'Modo escuro'}>
+              {isDark ? I.sun : I.moon}
+            </button>
           </div>
         </div>
 
         <main style={{ flex: 1 }}>
           {children}
         </main>
+
+        {/* Dev donation banner */}
+        {banner && banner.active && !bannerDismissed && (
+          <div style={{ background: isDark ? `${banner.color}18` : `${banner.color}12`, borderTop: `2px solid ${banner.color}55`, padding: '0.65rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{banner.icon || '☕'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: banner.color }}>{banner.text_main}</span>
+                {banner.text_sub && <span style={{ fontSize: '0.76rem', color: S.muted }}>{banner.text_sub}</span>}
+              </div>
+              {banner.text_note && <div style={{ fontSize: '0.68rem', color: S.dim, marginTop: '0.1rem' }}>{banner.text_note}</div>}
+              {banner.amount_goal > 0 && (
+                <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ flex: 1, maxWidth: 200, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius: 99, height: 4, overflow: 'hidden' }}>
+                    <div style={{ background: banner.color, width: `${Math.min(100, (banner.amount_current / banner.amount_goal) * 100)}%`, height: '100%', borderRadius: 99, transition: 'width 0.5s' }} />
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: banner.color, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    R$ {Number(banner.amount_current).toLocaleString('pt-BR', {minimumFractionDigits: 2})} de R$ {Number(banner.amount_goal).toLocaleString('pt-BR', {minimumFractionDigits: 2})} ({Math.round((banner.amount_current / banner.amount_goal) * 100)}%)
+                  </span>
+                  {banner.supporter_count > 0 && (
+                    <span style={{ fontSize: '0.68rem', color: S.muted, whiteSpace: 'nowrap' }}>
+                      👥 {banner.supporter_count} apoiador{banner.supporter_count !== 1 ? 'es' : ''}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            {banner.action_url && (
+              <a href={banner.action_url} target="_blank" rel="noopener noreferrer"
+                style={{ padding: '0.45rem 1rem', background: `${banner.color}22`, border: `1px solid ${banner.color}55`, color: banner.color, borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {banner.action_label || 'Apoiar'}
+              </a>
+            )}
+            <button onClick={() => setBannerDismissed(true)} style={{ background: 'transparent', border: 'none', color: S.dim, cursor: 'pointer', fontSize: '1rem', padding: '0.2rem', lineHeight: 1, flexShrink: 0 }}>✕</button>
+          </div>
+        )}
       </div>
     </div>
   )

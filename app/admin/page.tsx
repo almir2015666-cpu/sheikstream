@@ -146,7 +146,7 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner'>('users')
   const [logs, setLogs] = useState<Log[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logTab, setLogTab] = useState<'admin' | 'auth' | 'dashboard' | 'feature' | 'errors' | 'system'>('admin')
@@ -156,6 +156,10 @@ export default function AdminPage() {
   const [errorLogsLoading, setErrorLogsLoading] = useState(false)
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([])
   const [systemLogsLoading, setSystemLogsLoading] = useState(false)
+  const [bannerCfg, setBannerCfg] = useState({ active: false, icon: '☕', text_main: 'Apoie o desenvolvimento da plataforma!', text_sub: 'Sua doação vai direto para o desenvolvedor e ajuda a manter tudo gratuito.', text_note: 'Não conta em sorteios ou metas do seu canal.', action_label: 'Apoiar dev', action_url: '', color: '#f59e0b', amount_current: 10, amount_goal: 5000, supporter_count: 1 })
+  const [bannerSaving, setBannerSaving] = useState(false)
+  const [bannerLoading, setBannerLoading] = useState(false)
+  const [bannerSaved, setBannerSaved] = useState(false)
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -238,6 +242,30 @@ export default function AdminPage() {
     if (!confirm('Limpar todos os logs do sistema?')) return
     await fetch('/api/admin/system-logs', { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
     setSystemLogs([])
+  }
+
+  const fetchBanner = useCallback(async (pw: string) => {
+    setBannerLoading(true)
+    try {
+      const res = await fetch('/api/admin/dev-banner', { headers: { 'x-admin-password': pw } })
+      if (res.ok) {
+        const d = await res.json()
+        if (d && Object.keys(d).length > 0) setBannerCfg(prev => ({ ...prev, ...d }))
+      }
+    } catch { /* ignore */ } finally {
+      setBannerLoading(false)
+    }
+  }, [])
+
+  async function saveBanner() {
+    setBannerSaving(true)
+    try {
+      await fetch('/api/admin/dev-banner', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify(bannerCfg) })
+      setBannerSaved(true)
+      setTimeout(() => setBannerSaved(false), 2000)
+    } finally {
+      setBannerSaving(false)
+    }
   }
 
   useEffect(() => {
@@ -473,11 +501,15 @@ export default function AdminPage() {
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
           {/* View switcher */}
           <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem' }}>
-            {(['users', 'logs'] as const).map(v => (
-              <button key={v} onClick={() => { setView(v); if (v === 'logs') fetchLogs(storedPw) }}
+            {([
+              { v: 'users', label: '👥 Usuários' },
+              { v: 'logs',  label: '📋 Logs' },
+              { v: 'banner', label: '🎗 Banner' },
+            ] as const).map(({ v, label }) => (
+              <button key={v} onClick={() => { setView(v); if (v === 'logs') fetchLogs(storedPw); if (v === 'banner') fetchBanner(storedPw) }}
                 className={`sk-tab${view === v ? ' active' : ''}`}
                 style={{ color: view === v ? C.primary : C.muted }}>
-                {{ users: '👥 Usuários', logs: '📋 Logs' }[v]}
+                {label}
               </button>
             ))}
           </div>
@@ -723,6 +755,91 @@ export default function AdminPage() {
                 )}
               </div>
             </>
+          ) : view === 'banner' ? (
+          /* ── Banner view ── */
+          <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: C.text }}>🎗 Banner de Apoio ao Dev</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: C.muted }}>Exibido no rodapé do painel para todos os usuários</p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button onClick={() => fetchBanner(storedPw)} disabled={bannerLoading} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>↺ Atualizar</button>
+                <button onClick={saveBanner} disabled={bannerSaving} style={{ background: bannerSaved ? C.accentBg : C.primaryBg, border: `1px solid ${bannerSaved ? C.accentBorder : C.borderStrong}`, color: bannerSaved ? C.accent : C.primary, padding: '0.35rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
+                  {bannerSaving ? 'Salvando...' : bannerSaved ? '✓ Salvo' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+
+            {/* Enable toggle */}
+            <div onClick={() => setBannerCfg(p => ({ ...p, active: !p.active }))} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', background: bannerCfg.active ? C.accentBg : C.vvdim, border: `1px solid ${bannerCfg.active ? C.accentBorder : C.border}`, borderRadius: '10px', cursor: 'pointer', marginBottom: '1.5rem' }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: bannerCfg.active ? C.accent : C.muted }}>{bannerCfg.active ? '● Banner ativo — visível para todos os usuários' : '○ Banner inativo — não é exibido'}</span>
+              <div style={{ width: 40, height: 22, background: bannerCfg.active ? C.accent : C.vdim, borderRadius: 11, position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
+                <div style={{ position: 'absolute', top: 3, left: bannerCfg.active ? 19 : 3, width: 16, height: 16, background: '#fff', borderRadius: '50%', transition: 'left 0.2s' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
+              {[
+                { label: 'Ícone (emoji)', key: 'icon' as const, placeholder: '☕' },
+                { label: 'Cor do tema (hex)', key: 'color' as const, placeholder: '#f59e0b', type: 'color' },
+                { label: 'Texto principal', key: 'text_main' as const, placeholder: 'Apoie o desenvolvimento...' },
+                { label: 'Texto secundário', key: 'text_sub' as const, placeholder: 'Sua doação vai direto...' },
+                { label: 'Nota (pequena, itálico)', key: 'text_note' as const, placeholder: 'Não conta em sorteios...' },
+                { label: 'Label do botão', key: 'action_label' as const, placeholder: 'Apoiar dev' },
+                { label: 'URL do botão (link externo)', key: 'action_url' as const, placeholder: 'https://...' },
+              ].map(({ label, key, placeholder, type }) => (
+                <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 600, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</label>
+                  {type === 'color' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input type="color" value={bannerCfg[key] as string} onChange={e => setBannerCfg(p => ({ ...p, [key]: e.target.value }))} style={{ width: 36, height: 36, border: 'none', background: 'none', cursor: 'pointer', borderRadius: '6px' }} />
+                      <input value={bannerCfg[key] as string} onChange={e => setBannerCfg(p => ({ ...p, [key]: e.target.value }))} style={{ flex: 1, padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.85rem', outline: 'none' }} />
+                    </div>
+                  ) : (
+                    <input value={bannerCfg[key] as string} onChange={e => setBannerCfg(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder}
+                      style={{ padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.85rem', outline: 'none' }} />
+                  )}
+                </div>
+              ))}
+
+              {[
+                { label: 'Valor arrecadado (R$)', key: 'amount_current' as const },
+                { label: 'Meta total (R$)', key: 'amount_goal' as const },
+                { label: 'Nº de apoiadores', key: 'supporter_count' as const },
+              ].map(({ label, key }) => (
+                <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 600, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</label>
+                  <input type="number" value={bannerCfg[key]} onChange={e => setBannerCfg(p => ({ ...p, [key]: Number(e.target.value) }))}
+                    style={{ padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.85rem', outline: 'none' }} />
+                </div>
+              ))}
+            </div>
+
+            {/* Preview */}
+            <div style={{ marginTop: '1.5rem', borderTop: `1px solid ${C.border}`, paddingTop: '1.25rem' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>Preview</div>
+              <div style={{ background: `${bannerCfg.color}15`, borderTop: `2px solid ${bannerCfg.color}55`, borderRadius: '0 0 10px 10px', padding: '0.65rem 1.2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '1.2rem' }}>{bannerCfg.icon}</span>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: bannerCfg.color }}>{bannerCfg.text_main}</span>
+                    <span style={{ fontSize: '0.76rem', color: C.muted }}>{bannerCfg.text_sub}</span>
+                  </div>
+                  {bannerCfg.text_note && <div style={{ fontSize: '0.68rem', color: C.dim }}>{bannerCfg.text_note}</div>}
+                  {bannerCfg.amount_goal > 0 && (
+                    <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: 120, background: 'rgba(255,255,255,0.08)', borderRadius: 99, height: 4, overflow: 'hidden' }}>
+                        <div style={{ background: bannerCfg.color, width: `${Math.min(100, (bannerCfg.amount_current / bannerCfg.amount_goal) * 100)}%`, height: '100%', borderRadius: 99 }} />
+                      </div>
+                      <span style={{ fontSize: '0.68rem', color: bannerCfg.color, fontWeight: 600 }}>R$ {Number(bannerCfg.amount_current).toLocaleString('pt-BR',{minimumFractionDigits:2})} de R$ {Number(bannerCfg.amount_goal).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+                    </div>
+                  )}
+                </div>
+                {bannerCfg.action_url && <a href="#" style={{ padding: '0.45rem 1rem', background: `${bannerCfg.color}22`, border: `1px solid ${bannerCfg.color}55`, color: bannerCfg.color, borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>{bannerCfg.action_label}</a>}
+              </div>
+            </div>
+          </div>
           ) : (
           /* ── Users view ── */
           <>
