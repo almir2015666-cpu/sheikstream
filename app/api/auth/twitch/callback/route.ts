@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
 
+const BASE = 'https://sheikstream.vercel.app'
+const REDIRECT_URI = `${BASE}/api/auth/twitch/callback`
+
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = req.nextUrl
+  const searchParams = req.nextUrl.searchParams
   const code = searchParams.get('code')
   const error = searchParams.get('error')
 
   if (error || !code) {
-    return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+    return NextResponse.redirect(`${BASE}/login?error=oauth_failed`)
   }
 
   try {
@@ -19,12 +22,12 @@ export async function GET(req: NextRequest) {
         client_secret: process.env.TWITCH_CLIENT_SECRET!,
         code,
         grant_type: 'authorization_code',
-        redirect_uri: `${origin}/api/auth/twitch/callback`,
+        redirect_uri: REDIRECT_URI,
       }),
     })
 
     if (!tokenRes.ok) {
-      return NextResponse.redirect(`${origin}/login?error=token_failed`)
+      return NextResponse.redirect(`${BASE}/login?error=token_failed`)
     }
 
     const { access_token } = await tokenRes.json()
@@ -37,12 +40,12 @@ export async function GET(req: NextRequest) {
     })
 
     if (!userRes.ok) {
-      return NextResponse.redirect(`${origin}/login?error=user_failed`)
+      return NextResponse.redirect(`${BASE}/login?error=user_failed`)
     }
 
     const { data } = await userRes.json()
     const tw = data[0]
-    if (!tw) return NextResponse.redirect(`${origin}/login?error=no_user`)
+    if (!tw) return NextResponse.redirect(`${BASE}/login?error=no_user`)
 
     const user: SessionUser = {
       id: tw.id,
@@ -52,16 +55,16 @@ export async function GET(req: NextRequest) {
     }
 
     const token = encodeSession(user)
-    const res = NextResponse.redirect(`${origin}/dashboard`)
+    const res = NextResponse.redirect(`${BASE}/dashboard`)
     res.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
     return res
   } catch {
-    return NextResponse.redirect(`${origin}/login?error=server_error`)
+    return NextResponse.redirect(`${BASE}/login?error=server_error`)
   }
 }
