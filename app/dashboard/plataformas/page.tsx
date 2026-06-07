@@ -9,6 +9,12 @@ const C = {
 
 const PLATS = [
   {
+    id: 'twitch', label: 'Twitch', color: '#9147ff', bg: 'rgba(145,71,255,0.08)',
+    desc: 'Gestão de subs, gift subs, repasse Twitch e integração com sorteios',
+    features: ['Subs cadastrados', 'Gift subs', 'Estimativa de repasse', 'Ajustar níveis de tier', 'Integração com sorteios'],
+    href: '/dashboard/plataformas/twitch', badge: null,
+  },
+  {
     id: 'livepix', label: 'Livepix', color: '#ff69b4', bg: 'rgba(255,105,180,0.08)',
     desc: 'Doações, histórico de transações e integração com sorteios e metas',
     features: ['Doações recebidas', 'Histórico de transações', 'Integração com sorteios', 'Vaquinhas', 'Metas de doação'],
@@ -28,7 +34,7 @@ export default function PlataformasPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.9rem' }}>
         {PLATS.map(p => (
           <a key={p.id} href={p.href} style={{ textDecoration: 'none' }}>
-            <div style={{ background: C.card, border: `1px solid ${p.badge ? p.color + '30' : C.cardB}`, borderRadius: '14px', padding: '1.4rem', cursor: 'pointer', transition: 'border-color 0.15s', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ background: C.card, border: `1px solid ${p.badge ? p.color + '30' : C.cardB}`, borderRadius: '14px', padding: '1.4rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: p.bg, border: `1px solid ${p.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -39,16 +45,9 @@ export default function PlataformasPage() {
                     <div style={{ fontSize: '0.77rem', color: C.dim }}>{p.desc}</div>
                   </div>
                 </div>
-                {p.badge ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(57,255,20,0.1)', border: '1px solid rgba(57,255,20,0.25)', color: C.accent, fontSize: '0.68rem', fontWeight: 700, padding: '0.22rem 0.65rem', borderRadius: '999px', flexShrink: 0 }}>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />
-                    {p.badge}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '0.72rem', color: C.vdim, padding: '0.22rem 0.65rem', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '999px', flexShrink: 0 }}>
-                    Não conectado
-                  </div>
-                )}
+                <div style={{ fontSize: '0.72rem', color: C.vdim, padding: '0.22rem 0.65rem', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '999px', flexShrink: 0 }}>
+                  Não conectado
+                </div>
               </div>
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '0.9rem' }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 600, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '0.5rem' }}>Funcionalidades</div>

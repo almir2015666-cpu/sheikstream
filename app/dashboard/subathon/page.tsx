@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { notify } from '@/app/lib/notify'
 
 const C = {
   bg: '#08090d', card: '#0f1120', cardB: 'rgba(255,255,255,0.06)',
@@ -24,9 +25,9 @@ type Rule = {
 }
 
 const RULE_OPTIONS = [
-  { id: 'twitch_sub', label: 'Twitch Sub', color: '#9b30ff', defaultSecs: 120 },
+  { id: 'twitch_sub', label: 'Twitch Sub', color: '#9b30ff', defaultSecs: 60 },
   { id: 'twitch_bits', label: 'Bits por 100', color: '#fbbf24', defaultSecs: 30 },
-  { id: 'livepix', label: 'Livepix (R$1)', color: '#39ff14', defaultSecs: 60 },
+  { id: 'livepix', label: 'Livepix (R$1)', color: '#39ff14', defaultSecs: 120 },
 ]
 
 function fmtTimer(secs: number) {
@@ -119,7 +120,11 @@ export default function SubathonPage() {
     setState(data)
     setSaving(false)
     const action = (body as { action?: string }).action
-    if (action) setEvents(p => [{ type: action, ts: new Date().toLocaleTimeString('pt-BR') }, ...p.slice(0, 19)])
+    if (action) {
+      setEvents(p => [{ type: action, ts: new Date().toLocaleTimeString('pt-BR') }, ...p.slice(0, 19)])
+      const msgs: Record<string, string> = { start: 'Subathon iniciado!', pause: 'Subathon pausado', resume: 'Subathon retomado', stop: 'Subathon encerrado', add_time: 'Tempo adicionado!' }
+      if (msgs[action]) notify(msgs[action], action === 'stop' ? 'info' : 'success')
+    }
   }
 
   async function createSubathon() {
@@ -127,7 +132,8 @@ export default function SubathonPage() {
     const initSecs = hours * 3600 + mins * 60 + secs
     const subRule = rules.find(r => r.id === 'twitch_sub')
     const bitsRule = rules.find(r => r.id === 'twitch_bits')
-    await apiAction({ title: name, seconds_per_sub: subRule?.seconds ?? 60, seconds_per_bits100: bitsRule?.seconds ?? 30 })
+    const livepixRule = rules.find(r => r.id === 'livepix')
+    await apiAction({ title: name, seconds_per_sub: subRule?.seconds ?? 60, seconds_per_bits100: bitsRule?.seconds ?? 30, seconds_per_livepix: livepixRule?.seconds ?? 120 })
     await apiAction({ action: 'start', initial_seconds: initSecs || 3600 })
   }
 

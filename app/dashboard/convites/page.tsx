@@ -1,94 +1,148 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { notify } from '@/app/lib/notify'
 
 const C = {
   card: '#111219', cardB: 'rgba(255,255,255,0.05)',
-  text: '#e8e6f8', dim: 'rgba(232,230,248,0.28)', vdim: 'rgba(232,230,248,0.12)',
-  primary: '#9b30ff', primaryBg: 'rgba(155,48,255,0.1)',
-  accent: '#39ff14', accentBg: 'rgba(57,255,20,0.08)',
+  text: '#e8e6f8', dim: 'rgba(232,230,248,0.35)', vdim: 'rgba(232,230,248,0.15)',
+  primary: '#3b82f6', primaryBg: 'rgba(59,130,246,0.1)', primaryB: 'rgba(59,130,246,0.3)',
+  warn: '#fbbf24', warnBg: 'rgba(251,191,36,0.1)', warnB: 'rgba(251,191,36,0.3)',
+  green: '#22c55e', greenBg: 'rgba(34,197,94,0.08)',
 }
 
-const MOCK = [
-  { nome: 'CaféGamer', email: 'cafe@gmail.com', sorteio: 'Meta Dezembro', tickets: 5, status: 'pendente' },
-  { nome: 'LunaPlay', email: 'luna@outlook.com', sorteio: 'Subathon Verão', tickets: 12, status: 'aprovado' },
-  { nome: 'DragonXBR', email: 'dragon@gmail.com', sorteio: 'Meta Dezembro', tickets: 3, status: 'pendente' },
-  { nome: 'PixelNova', email: 'pixel@hotmail.com', sorteio: 'Meta Dezembro', tickets: 8, status: 'rejeitado' },
-]
+const MAX_INVITES = 10
+const inp: React.CSSProperties = { flex: 1, padding: '0.65rem 1rem', background: '#0b0d1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: C.text, fontSize: '0.88rem', outline: 'none' }
 
-const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
-  pendente:  { label: 'Pendente',  bg: 'rgba(251,191,36,0.1)',  color: '#fbbf24' },
-  aprovado:  { label: 'Aprovado',  bg: 'rgba(57,255,20,0.08)',  color: '#39ff14' },
-  rejeitado: { label: 'Rejeitado', bg: 'rgba(255,68,68,0.08)',  color: '#ff6b6b' },
+type Invite = { id: string; inviter_id: string; invitee_username: string; token: string; status: string; created_at: string }
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export default function ConvitesPage() {
-  const [search, setSearch] = useState('')
-  const [copied, setCopied] = useState(false)
-  const conviteLink = 'https://sheikstream.vercel.app/convite/abc123'
+  const [invites, setInvites] = useState<Invite[]>([])
+  const [username, setUsername] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
 
-  function copyLink() {
-    navigator.clipboard.writeText(conviteLink)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const load = useCallback(async () => {
+    setLoading(true)
+    const res = await fetch('/api/convites').catch(() => null)
+    if (res?.ok) setInvites(await res.json())
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function sendInvite() {
+    const u = username.trim().replace(/^@/, '')
+    if (!u) return
+    setSending(true)
+    const res = await fetch('/api/convites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u }) })
+    setSending(false)
+    if (res.ok) {
+      setUsername('')
+      notify(`Convite enviado para @${u}!`, 'success')
+      load()
+    } else {
+      const d = await res.json()
+      notify(d.error || 'Erro ao enviar convite', 'error')
+    }
   }
 
-  const filtered = MOCK.filter(c =>
-    !search || c.nome.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())
-  )
+  function copyLink(token: string) {
+    const url = `${window.location.origin}/convite/${token}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(token)
+      setTimeout(() => setCopied(null), 2000)
+    }).catch(() => {})
+  }
+
+  const used = invites.length
+  const slots = Array.from({ length: MAX_INVITES }, (_, i) => i < used)
 
   return (
     <div style={{ background: '#08090d', minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ margin: '0 0 0.35rem', fontSize: '1.1rem', fontWeight: 800 }}>Convites</h2>
-        <p style={{ margin: 0, fontSize: '0.84rem', color: C.dim }}>Gerencie participantes convidados para sorteios exclusivos</p>
+        <p style={{ margin: 0, fontSize: '0.84rem', color: C.dim }}>Convide outros streamers para a plataforma</p>
       </div>
 
-      {/* Link de convite */}
-      <div style={{ background: C.card, border: `1px solid rgba(155,48,255,0.2)`, borderRadius: '12px', padding: '1.2rem 1.4rem', marginBottom: '1.2rem' }}>
-        <div style={{ fontSize: '0.76rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase' as const, letterSpacing: '0.5px', marginBottom: '0.75rem' }}>Link de convite exclusivo</div>
-        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-          <div style={{ flex: 1, background: '#08090d', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '0.55rem 0.9rem', fontSize: '0.82rem', color: C.vdim, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {conviteLink}
+      {/* Invite card */}
+      <div style={{ background: C.card, border: `1px solid rgba(59,130,246,0.2)`, borderRadius: '14px', padding: '1.4rem', marginBottom: '1.25rem', maxWidth: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', marginBottom: '1.1rem' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '10px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2"><rect x="3" y="8" width="18" height="13" rx="2"/><polyline points="3 8 12 14 21 8"/><path d="M3 8l9-5 9 5"/></svg>
           </div>
-          <button onClick={copyLink} style={{ padding: '0.5rem 1.2rem', background: copied ? accentBg : C.primaryBg, border: `1px solid ${copied ? 'rgba(57,255,20,0.3)' : 'rgba(155,48,255,0.3)'}`, color: copied ? C.accent : C.primary, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-            {copied ? '✓ Copiado!' : 'Copiar link'}
-          </button>
-          <button style={{ padding: '0.5rem 1.2rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: C.dim, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-            Gerar novo
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.2rem' }}>Seus convites</div>
+            <div style={{ fontSize: '0.78rem', color: C.dim }}>Voce pode convidar mais {MAX_INVITES - used} streamer{MAX_INVITES - used !== 1 ? 's' : ''} ({used}/{MAX_INVITES} usados)</div>
+          </div>
+          {/* Slot circles */}
+          <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
+            {slots.map((used, i) => (
+              <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: used ? C.primary : 'rgba(255,255,255,0.1)', border: used ? `1px solid ${C.primaryB}` : '1px solid rgba(255,255,255,0.12)' }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Input */}
+        <div style={{ display: 'flex', gap: '0.6rem' }}>
+          <input
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') sendInvite() }}
+            placeholder="@ usuario_twitch"
+            disabled={used >= MAX_INVITES || sending}
+            style={{ ...inp, opacity: used >= MAX_INVITES ? 0.5 : 1 }}
+          />
+          <button
+            onClick={sendInvite}
+            disabled={!username.trim() || used >= MAX_INVITES || sending}
+            style={{ padding: '0.65rem 1.2rem', background: (!username.trim() || used >= MAX_INVITES) ? 'rgba(59,130,246,0.3)' : C.primary, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.88rem', fontWeight: 700, cursor: (!username.trim() || used >= MAX_INVITES) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            {sending ? 'Enviando...' : 'Convidar'}
           </button>
         </div>
+        {used >= MAX_INVITES && (
+          <div style={{ marginTop: '0.6rem', fontSize: '0.75rem', color: C.warn }}>Limite de {MAX_INVITES} convites atingido.</div>
+        )}
       </div>
 
-      {/* Busca */}
-      <div style={{ marginBottom: '1rem' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail..." style={{ width: '280px', padding: '0.6rem 1rem', background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} />
-      </div>
-
-      {/* Tabela */}
-      <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 90px 120px', gap: '1rem', padding: '0.7rem 1.2rem', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '0.72rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
-          <span>Participante</span><span>Sorteio</span><span>E-mail</span><span>Tickets</span><span>Status</span>
+      {/* Invited list */}
+      {loading ? (
+        <div style={{ color: C.dim, fontSize: '0.85rem' }}>Carregando...</div>
+      ) : invites.length === 0 ? (
+        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '2.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.85rem', color: C.dim }}>Nenhum convite enviado ainda</div>
+          <div style={{ fontSize: '0.75rem', color: C.vdim, marginTop: '0.35rem' }}>Use o campo acima para convidar um streamer pelo username da Twitch</div>
         </div>
-        {filtered.length === 0 ? (
-          <div style={{ padding: '3rem 2rem', textAlign: 'center', fontSize: '0.85rem', color: C.dim }}>Nenhum convite encontrado</div>
-        ) : filtered.map((c, i) => {
-          const s = STATUS_MAP[c.status]
-          return (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 90px 120px', gap: '1rem', padding: '0.85rem 1.2rem', borderBottom: i < filtered.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none', alignItems: 'center' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.87rem', color: C.text }}>{c.nome}</div>
-              <div style={{ fontSize: '0.82rem', color: C.dim }}>{c.sorteio}</div>
-              <div style={{ fontSize: '0.78rem', color: C.dim }}>{c.email}</div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.primary }}>{c.tickets}</div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', padding: '0.22rem 0.65rem', background: s.bg, color: s.color, borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700 }}>
-                {s.label}
+      ) : (
+        <div style={{ maxWidth: 700 }}>
+          <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>Streamer que você convidou</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {invites.map(inv => (
+              <div key={inv.id} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '10px', padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>@{inv.invitee_username}</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: inv.status === 'aceito' ? C.greenBg : C.warnBg, color: inv.status === 'aceito' ? C.green : C.warn, borderRadius: 999, border: `1px solid ${inv.status === 'aceito' ? 'rgba(34,197,94,0.25)' : C.warnB}` }}>
+                      {inv.status}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: C.vdim }}>{fmtDate(inv.created_at)}</div>
+                </div>
+                <button onClick={() => copyLink(inv.token)} style={{ padding: '0.4rem 0.85rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  {copied === inv.token ? '✓ Copiado!' : 'Copiar link'}
+                </button>
               </div>
-            </div>
-          )
-        })}
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
-const accentBg = 'rgba(57,255,20,0.08)'

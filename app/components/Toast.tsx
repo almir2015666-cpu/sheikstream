@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
 
 type ToastType = 'error' | 'success' | 'info'
 type Toast = { id: number; message: string; type: ToastType }
@@ -22,6 +22,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts(prev => [...prev, { id, message, type }])
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000)
   }, [])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { message, type } = (e as CustomEvent<{ message: string; type: ToastType }>).detail
+      show(message, type)
+    }
+    window.addEventListener('sk-toast', handler)
+    return () => window.removeEventListener('sk-toast', handler)
+  }, [show])
 
   const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
     error:   { bg: '#1e0a0a', border: '#7f1d1d', icon: '✕' },

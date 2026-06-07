@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ToastProvider } from '@/app/components/Toast'
 
 const SW = 240
 
@@ -384,7 +385,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <main style={{ flex: 1 }}>
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </main>
 
         {/* Dev donation banner */}

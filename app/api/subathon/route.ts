@@ -13,6 +13,7 @@ const DEFAULT_STATE = {
   paused_remaining: null,
   seconds_per_sub: 60,
   seconds_per_bits100: 30,
+  seconds_per_livepix: 120,
   is_active: false,
   is_paused: false,
 }
@@ -69,6 +70,7 @@ export async function PATCH(req: NextRequest) {
     if (body.title !== undefined) updates.title = String(body.title)
     if (body.seconds_per_sub !== undefined) updates.seconds_per_sub = Number(body.seconds_per_sub)
     if (body.seconds_per_bits100 !== undefined) updates.seconds_per_bits100 = Number(body.seconds_per_bits100)
+    if (body.seconds_per_livepix !== undefined) updates.seconds_per_livepix = Number(body.seconds_per_livepix)
   }
 
   if (existing) {
