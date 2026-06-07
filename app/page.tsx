@@ -1,5 +1,29 @@
 'use client'
 import { useState } from 'react'
+import {
+  SiTwitch, SiYoutube, SiKick, SiTiktok, SiFacebook,
+  SiDiscord, SiInstagram, SiGoogle, SiX, SiWhatsapp,
+} from 'react-icons/si'
+import type { IconType } from 'react-icons'
+
+const PLATFORM_ICONS: Record<string, IconType> = {
+  Twitch: SiTwitch,
+  YouTube: SiYoutube,
+  Kick: SiKick,
+  TikTok: SiTiktok,
+  Facebook: SiFacebook,
+  Discord: SiDiscord,
+  Instagram: SiInstagram,
+  Google: SiGoogle,
+  X: SiX,
+  WhatsApp: SiWhatsapp,
+}
+
+function PIcon({ id, color, size = 18 }: { id: string; color: string; size?: number }) {
+  const Icon = PLATFORM_ICONS[id]
+  if (!Icon) return null
+  return <Icon size={size} color={color} />
+}
 
 export default function Home() {
   const [page, setPage] = useState('landing')
@@ -37,7 +61,7 @@ export default function Home() {
                 ⏳
               </div>
               <h1 style={{ fontSize: '1.65rem', fontWeight: 900, marginBottom: '0.5rem' }}>Lista de espera</h1>
-              <p style={{ fontSize: '0.88rem', color: 'rgba(240,238,252,0.5)', marginBottom: '2rem', lineHeight: 1.7, maxWidth: '320px', margin: '0 auto 2rem' }}>
+              <p style={{ fontSize: '0.88rem', color: 'rgba(240,238,252,0.5)', lineHeight: 1.7, maxWidth: '320px', margin: '0 auto 2rem' }}>
                 O Sheikstream está em beta fechado. Cadastre seu e-mail e avisamos quando sua vaga abrir.
               </p>
               <form onSubmit={handleWaitlistSubmit}>
@@ -74,9 +98,14 @@ export default function Home() {
               <div style={{ background: 'rgba(155,48,255,0.07)', border: '1px solid rgba(155,48,255,0.18)', borderRadius: '10px', padding: '1.2rem', marginBottom: '1.5rem' }}>
                 <div style={{ fontSize: '0.75rem', color: 'rgba(240,238,252,0.38)', marginBottom: '0.7rem' }}>Indique amigos e avance na fila</div>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {['Twitter / X', 'Discord', 'WhatsApp'].map(s => (
-                    <button key={s} style={{ padding: '0.4rem 0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'rgba(240,238,252,0.65)', fontSize: '0.75rem', cursor: 'pointer' }}>
-                      {s}
+                  {[
+                    { label: 'Twitter / X', id: 'X', color: '#e7e9ea' },
+                    { label: 'Discord', id: 'Discord', color: '#5865f2' },
+                    { label: 'WhatsApp', id: 'WhatsApp', color: '#25d366' },
+                  ].map(s => (
+                    <button key={s.id} style={{ padding: '0.4rem 0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'rgba(240,238,252,0.65)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <PIcon id={s.id} color={s.color} size={13} />
+                      {s.label}
                     </button>
                   ))}
                 </div>
@@ -93,6 +122,14 @@ export default function Home() {
 
   // ── LOGIN PAGE ───────────────────────────────────────────────────────────────
   if (page === 'login') {
+    const oauthPlatforms = [
+      { id: 'Twitch',  color: '#9147ff', bg: 'rgba(145,71,255,0.1)',  label: 'Entrar com Twitch' },
+      { id: 'YouTube', color: '#ff0000', bg: 'rgba(255,0,0,0.08)',    label: 'Entrar com YouTube' },
+      { id: 'Kick',    color: '#53fc18', bg: 'rgba(83,252,24,0.08)',  label: 'Entrar com Kick' },
+      { id: 'Discord', color: '#5865f2', bg: 'rgba(88,101,242,0.1)',  label: 'Entrar com Discord' },
+      { id: 'Google',  color: '#4285f4', bg: 'rgba(66,133,244,0.08)', label: 'Entrar com Google' },
+    ]
+
     return (
       <div style={{ fontFamily: 'sans-serif', background: '#08090d', minHeight: '100vh', color: '#f0eefc' }}>
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', borderBottom: '1px solid rgba(155,48,255,0.18)', background: 'rgba(8,9,13,0.97)' }}>
@@ -115,13 +152,7 @@ export default function Home() {
               </div>
             </div>
 
-            {[
-              { id: 'Twitch', color: '#9147ff', bg: 'rgba(145,71,255,0.1)', label: 'Entrar com Twitch' },
-              { id: 'YouTube', color: '#ff0000', bg: 'rgba(255,0,0,0.08)', label: 'Entrar com YouTube' },
-              { id: 'Kick', color: '#53fc18', bg: 'rgba(83,252,24,0.08)', label: 'Entrar com Kick' },
-              { id: 'Discord', color: '#5865f2', bg: 'rgba(88,101,242,0.1)', label: 'Entrar com Discord' },
-              { id: 'Google', color: '#4285f4', bg: 'rgba(66,133,244,0.08)', label: 'Entrar com Google' },
-            ].map((p) => (
+            {oauthPlatforms.map((p) => (
               <button
                 key={p.id}
                 onClick={() => handleOAuth(p.id)}
@@ -134,7 +165,9 @@ export default function Home() {
                   cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
                 }}
               >
-                <div style={{ width: '22px', height: '22px', borderRadius: '5px', background: p.id === 'Kick' ? '#53fc18' : p.id === 'Google' ? '#fff' : p.color, flexShrink: 0 }} />
+                <span style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <PIcon id={p.id} color={p.color} size={20} />
+                </span>
                 <span style={{ flex: 1 }}>{loading === p.id ? 'Conectando...' : p.label}</span>
                 <span style={{ color: 'rgba(240,238,252,0.2)', fontSize: '13px' }}>›</span>
               </button>
@@ -166,6 +199,23 @@ export default function Home() {
   }
 
   // ── LANDING PAGE ─────────────────────────────────────────────────────────────
+  const heroPlatforms = [
+    { id: 'Twitch',   color: '#9147ff' },
+    { id: 'YouTube',  color: '#ff0000' },
+    { id: 'Kick',     color: '#53fc18' },
+    { id: 'TikTok',   color: '#f0eefc' },
+    { id: 'Facebook', color: '#1877f2' },
+  ]
+
+  const socialLinks = [
+    { id: 'X',         name: 'Twitter / X', color: '#e7e9ea' },
+    { id: 'Discord',   name: 'Discord',     color: '#5865f2' },
+    { id: 'Twitch',    name: 'Twitch',      color: '#9147ff' },
+    { id: 'Instagram', name: 'Instagram',   color: '#e1306c' },
+    { id: 'YouTube',   name: 'YouTube',     color: '#ff0000' },
+    { id: 'TikTok',    name: 'TikTok',      color: '#f0eefc' },
+  ]
+
   return (
     <div style={{ fontFamily: 'sans-serif', background: '#08090d', minHeight: '100vh', color: '#f0eefc', display: 'flex', flexDirection: 'column' }}>
       {/* Nav */}
@@ -209,10 +259,10 @@ export default function Home() {
 
       {/* Platform badges */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '0.7rem', flexWrap: 'wrap', padding: '0 2rem 3rem' }}>
-        {['Twitch', 'YouTube', 'Kick', 'TikTok', 'Facebook'].map((p) => (
-          <div key={p} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0f1018', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.82rem', color: 'rgba(240,238,252,0.55)' }}>
-            <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: p === 'Twitch' ? '#9147ff' : p === 'YouTube' ? '#ff0000' : p === 'Kick' ? '#53fc18' : p === 'TikTok' ? '#333' : '#1877f2' }} />
-            {p}
+        {heroPlatforms.map((p) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0f1018', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.82rem', color: 'rgba(240,238,252,0.55)' }}>
+            <PIcon id={p.id} color={p.color} size={14} />
+            {p.id}
           </div>
         ))}
       </div>
@@ -251,7 +301,7 @@ export default function Home() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
           {/* Free plan */}
-          <div style={{ background: '#0f1018', border: '1px solid rgba(57,255,20,0.35)', borderRadius: '14px', padding: '2rem', position: 'relative' }}>
+          <div style={{ background: '#0f1018', border: '1px solid rgba(57,255,20,0.35)', borderRadius: '14px', padding: '2rem' }}>
             <div style={{ display: 'inline-block', background: 'rgba(57,255,20,0.1)', border: '1px solid rgba(57,255,20,0.3)', color: '#39ff14', fontSize: '0.67rem', padding: '0.2rem 0.75rem', borderRadius: '999px', fontWeight: 700, marginBottom: '1.2rem', letterSpacing: '0.5px' }}>
               DISPONÍVEL AGORA
             </div>
@@ -357,21 +407,14 @@ export default function Home() {
             </div>
             {/* Social icons */}
             <div style={{ display: 'flex', gap: '0.6rem' }}>
-              {[
-                { name: 'Twitter / X', symbol: '𝕏', color: '#e7e9ea' },
-                { name: 'Discord', symbol: '◆', color: '#5865f2' },
-                { name: 'Twitch', symbol: '▶', color: '#9147ff' },
-                { name: 'Instagram', symbol: '◉', color: '#e1306c' },
-                { name: 'YouTube', symbol: '▷', color: '#ff0000' },
-                { name: 'TikTok', symbol: '♪', color: '#f0eefc' },
-              ].map(s => (
+              {socialLinks.map(s => (
                 <a
-                  key={s.name}
+                  key={s.id}
                   href="#"
                   title={s.name}
-                  style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, fontSize: '14px', cursor: 'pointer', textDecoration: 'none', transition: 'border-color 0.2s' }}
+                  style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none' }}
                 >
-                  {s.symbol}
+                  <PIcon id={s.id} color={s.color} size={16} />
                 </a>
               ))}
             </div>
