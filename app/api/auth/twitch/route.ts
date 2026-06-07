@@ -8,6 +8,7 @@ export async function GET() {
     redirect_uri: REDIRECT_URI,
     response_type: 'code',
     scope: 'user:read:email',
+    force_verify: 'true',
   })
   return NextResponse.redirect(`https://id.twitch.tv/oauth2/authorize?${params}`)
 }
