@@ -75,6 +75,9 @@ function makeCSS(C: typeof DARK) {
   .sk-btn-ban { transition: all 0.07s; border: 1px solid rgba(255,120,0,0.35); background: rgba(255,120,0,0.1); color: #ff7800; border-radius: 6px; padding: 0.32rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
   .sk-btn-ban:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .sk-btn-ban:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .sk-btn-reset { transition: all 0.07s; border: 1px solid rgba(99,179,237,0.35); background: rgba(59,130,246,0.1); color: #60a5fa; border-radius: 6px; padding: 0.32rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+  .sk-btn-reset:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .sk-btn-reset:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   .sk-tab { transition: all 0.07s; cursor: pointer; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; border: none; background: transparent; }
   .sk-tab.active { background: ${C.primaryBg}; color: ${C.primary}; }
   .sk-tab:not(.active) { color: ${C.muted}; }
@@ -667,6 +670,16 @@ export default function AdminPage() {
                               disabled={actionLoading === u.id + 'approved'}
                             >
                               {actionLoading === u.id + 'approved' ? '...' : '↩ Reativar'}
+                            </button>
+                          )}
+                          {u.status !== 'pending' && (
+                            <button
+                              className="sk-btn-reset"
+                              onClick={() => handleAction(u.id, 'pending')}
+                              disabled={actionLoading === u.id + 'pending'}
+                              title="Volta o usuário para pendente — precisa ser aprovado novamente"
+                            >
+                              {actionLoading === u.id + 'pending' ? '...' : '↺ Resetar'}
                             </button>
                           )}
                         </div>

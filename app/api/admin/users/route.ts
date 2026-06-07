@@ -93,7 +93,7 @@ export async function PATCH(req: NextRequest) {
   if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const { id, status } = await req.json()
-    if (!['approved', 'rejected', 'banned'].includes(status))
+    if (!['approved', 'rejected', 'banned', 'pending'].includes(status))
       return NextResponse.json({ error: 'Status inválido' }, { status: 400 })
     const db = getSupabaseAdmin()
     const { data, error } = await db
