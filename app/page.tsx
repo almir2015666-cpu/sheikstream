@@ -1,22 +1,16 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   SiTwitch, SiYoutube, SiKick, SiTiktok, SiFacebook,
   SiDiscord, SiInstagram, SiGoogle, SiX, SiWhatsapp,
 } from 'react-icons/si'
 import type { IconType } from 'react-icons'
 
+// ── Icon map ─────────────────────────────────────────────────────────────────
 const PLATFORM_ICONS: Record<string, IconType> = {
-  Twitch: SiTwitch,
-  YouTube: SiYoutube,
-  Kick: SiKick,
-  TikTok: SiTiktok,
-  Facebook: SiFacebook,
-  Discord: SiDiscord,
-  Instagram: SiInstagram,
-  Google: SiGoogle,
-  X: SiX,
-  WhatsApp: SiWhatsapp,
+  Twitch: SiTwitch, YouTube: SiYoutube, Kick: SiKick,
+  TikTok: SiTiktok, Facebook: SiFacebook, Discord: SiDiscord,
+  Instagram: SiInstagram, Google: SiGoogle, X: SiX, WhatsApp: SiWhatsapp,
 }
 
 function PIcon({ id, color, size = 18 }: { id: string; color: string; size?: number }) {
@@ -25,11 +19,56 @@ function PIcon({ id, color, size = 18 }: { id: string; color: string; size?: num
   return <Icon size={size} color={color} />
 }
 
+// ── Hover CSS injected once ───────────────────────────────────────────────────
+const HOVER_CSS = `
+  .sk-feature-card { transition: background 0.2s, transform 0.2s, border-color 0.2s; cursor: default; }
+  .sk-feature-card:hover { background: rgba(155,48,255,0.07) !important; transform: translateY(-3px); border-color: rgba(155,48,255,0.35) !important; }
+  .sk-platform { transition: all 0.15s; cursor: pointer; }
+  .sk-platform:hover { border-color: rgba(255,255,255,0.22) !important; background: rgba(255,255,255,0.08) !important; }
+  .sk-nav-link { transition: color 0.15s; }
+  .sk-nav-link:hover { color: rgba(240,238,252,0.9) !important; }
+  .sk-footer-link { transition: color 0.15s; }
+  .sk-footer-link:hover { color: rgba(240,238,252,0.8) !important; }
+  .sk-social-icon { transition: all 0.18s; }
+  .sk-social-icon:hover { border-color: rgba(255,255,255,0.28) !important; background: rgba(255,255,255,0.1) !important; transform: translateY(-3px); }
+  .sk-pricing-card { transition: transform 0.2s, box-shadow 0.2s; }
+  .sk-pricing-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(155,48,255,0.15); }
+  .sk-chat-toggle { transition: transform 0.2s, box-shadow 0.2s; }
+  .sk-chat-toggle:hover { transform: scale(1.08); box-shadow: 0 4px 24px rgba(155,48,255,0.5); }
+  .sk-send-btn { transition: opacity 0.15s; }
+  .sk-send-btn:hover:not(:disabled) { opacity: 0.85; }
+  @keyframes sk-slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes sk-pop-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+  @keyframes sk-dot { 0%,80%,100% { opacity: 0.2; } 40% { opacity: 1; } }
+  .sk-chat-window { animation: sk-pop-in 0.2s ease; }
+  .sk-chat-msg { animation: sk-slide-up 0.2s ease; }
+  .sk-dot-1 { animation: sk-dot 1.4s infinite 0s; }
+  .sk-dot-2 { animation: sk-dot 1.4s infinite 0.2s; }
+  .sk-dot-3 { animation: sk-dot 1.4s infinite 0.4s; }
+`
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+type ChatMsg = { role: 'user' | 'assistant'; content: string }
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function Home() {
   const [page, setPage] = useState('landing')
   const [loading, setLoading] = useState('')
   const [waitlistEmail, setWaitlistEmail] = useState('')
   const [waitlistDone, setWaitlistDone] = useState(false)
+
+  // Chat state
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([
+    { role: 'assistant', content: 'Olá! Sou o assistente do Sheikstream. Pode me perguntar qualquer coisa sobre a plataforma!' },
+  ])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMessages, chatLoading])
 
   function handleOAuth(platform: string) {
     setLoading(platform)
@@ -41,10 +80,121 @@ export default function Home() {
     if (waitlistEmail.trim()) setWaitlistDone(true)
   }
 
-  // ── WAITLIST PAGE ────────────────────────────────────────────────────────────
+  function scrollToSection(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  async function sendChat() {
+    if (!chatInput.trim() || chatLoading) return
+    const userMsg: ChatMsg = { role: 'user', content: chatInput.trim() }
+    const updated = [...chatMessages, userMsg]
+    setChatMessages(updated)
+    setChatInput('')
+    setChatLoading(true)
+
+    try {
+      // Slice(1) removes the initial assistant greeting so API starts with user role
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: updated.slice(1) }),
+      })
+      const data = await res.json()
+      setChatMessages(prev => [...prev, { role: 'assistant', content: data.content }])
+    } catch {
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Ops, tive um problema. Tente novamente.' }])
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
+  // ── Chat Widget (fixed, persists across all pages) ───────────────────────
+  const chatWidget = (
+    <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem' }}>
+      {chatOpen && (
+        <div className="sk-chat-window" style={{ width: '340px', height: '480px', background: '#0e0f17', border: '1px solid rgba(155,48,255,0.35)', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}>
+          {/* Chat header */}
+          <div style={{ padding: '0.9rem 1rem', background: 'rgba(155,48,255,0.12)', borderBottom: '1px solid rgba(155,48,255,0.2)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>S</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f0eefc' }}>Assistente Sheikstream</div>
+              <div style={{ fontSize: '0.7rem', color: '#39ff14', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#39ff14', display: 'inline-block' }} />
+                Online
+              </div>
+            </div>
+            <button onClick={() => setChatOpen(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(240,238,252,0.4)', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, padding: '0.2rem' }}>✕</button>
+          </div>
+
+          {/* Messages */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {chatMessages.map((m, i) => (
+              <div key={i} className="sk-chat-msg" style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div style={{
+                  maxWidth: '82%', padding: '0.6rem 0.85rem', borderRadius: m.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                  background: m.role === 'user' ? '#9b30ff' : 'rgba(255,255,255,0.07)',
+                  border: m.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                  color: '#f0eefc', fontSize: '0.82rem', lineHeight: 1.6,
+                }}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div className="sk-chat-msg" style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{ padding: '0.6rem 1rem', borderRadius: '12px 12px 12px 4px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  {[1, 2, 3].map(n => (
+                    <span key={n} className={`sk-dot-${n}`} style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'rgba(240,238,252,0.5)', display: 'inline-block' }} />
+                  ))}
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input */}
+          <div style={{ padding: '0.75rem', borderTop: '1px solid rgba(155,48,255,0.18)', display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="text"
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }}
+              placeholder="Pergunte qualquer coisa..."
+              disabled={chatLoading}
+              style={{ flex: 1, padding: '0.55rem 0.8rem', background: '#08090d', border: '1px solid rgba(155,48,255,0.3)', borderRadius: '8px', color: '#f0eefc', fontSize: '0.82rem', outline: 'none', opacity: chatLoading ? 0.6 : 1 }}
+            />
+            <button
+              onClick={sendChat}
+              disabled={chatLoading || !chatInput.trim()}
+              className="sk-send-btn"
+              style={{ padding: '0.55rem 0.9rem', background: '#9b30ff', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.88rem', cursor: chatLoading ? 'not-allowed' : 'pointer', opacity: !chatInput.trim() ? 0.5 : 1 }}
+            >
+              →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle button */}
+      <button
+        onClick={() => setChatOpen(v => !v)}
+        className="sk-chat-toggle"
+        style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', border: '2px solid rgba(155,48,255,0.4)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(155,48,255,0.4)', fontSize: chatOpen ? '1.1rem' : '1.3rem' }}
+      >
+        {chatOpen ? '✕' : (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+          </svg>
+        )}
+      </button>
+    </div>
+  )
+
+  // ── WAITLIST PAGE ──────────────────────────────────────────────────────────
   if (page === 'waitlist') {
     return (
       <div style={{ fontFamily: 'sans-serif', background: '#08090d', minHeight: '100vh', color: '#f0eefc' }}>
+        <style>{HOVER_CSS}</style>
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', borderBottom: '1px solid rgba(155,48,255,0.18)', background: 'rgba(8,9,13,0.97)' }}>
           <div onClick={() => { setPage('landing'); setWaitlistDone(false); setWaitlistEmail('') }} style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '1px', cursor: 'pointer' }}>
             Sheik<span style={{ color: '#39ff14' }}>stream</span>
@@ -66,11 +216,8 @@ export default function Home() {
               </p>
               <form onSubmit={handleWaitlistSubmit}>
                 <input
-                  type="email"
-                  required
-                  placeholder="seu@email.com"
-                  value={waitlistEmail}
-                  onChange={e => setWaitlistEmail(e.target.value)}
+                  type="email" required placeholder="seu@email.com"
+                  value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)}
                   style={{ width: '100%', padding: '0.75rem 1rem', background: '#08090d', border: '1px solid rgba(155,48,255,0.35)', borderRadius: '8px', color: '#f0eefc', fontSize: '0.9rem', outline: 'none', marginBottom: '0.75rem', boxSizing: 'border-box' }}
                 />
                 <button type="submit" style={{ width: '100%', padding: '0.8rem', background: '#9b30ff', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer' }}>
@@ -116,11 +263,12 @@ export default function Home() {
             </div>
           )}
         </div>
+        {chatWidget}
       </div>
     )
   }
 
-  // ── LOGIN PAGE ───────────────────────────────────────────────────────────────
+  // ── LOGIN PAGE ─────────────────────────────────────────────────────────────
   if (page === 'login') {
     const oauthPlatforms = [
       { id: 'Twitch',  color: '#9147ff', bg: 'rgba(145,71,255,0.1)',  label: 'Entrar com Twitch' },
@@ -132,6 +280,7 @@ export default function Home() {
 
     return (
       <div style={{ fontFamily: 'sans-serif', background: '#08090d', minHeight: '100vh', color: '#f0eefc' }}>
+        <style>{HOVER_CSS}</style>
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', borderBottom: '1px solid rgba(155,48,255,0.18)', background: 'rgba(8,9,13,0.97)' }}>
           <div onClick={() => setPage('landing')} style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '1px', cursor: 'pointer' }}>
             Sheik<span style={{ color: '#39ff14' }}>stream</span>
@@ -180,8 +329,7 @@ export default function Home() {
             </div>
 
             <input
-              type="email"
-              placeholder="seu@email.com"
+              type="email" placeholder="seu@email.com"
               style={{ width: '100%', padding: '0.7rem 1rem', background: '#08090d', border: '1px solid rgba(155,48,255,0.3)', borderRadius: '8px', color: '#f0eefc', fontSize: '0.9rem', outline: 'none', marginBottom: '0.6rem', boxSizing: 'border-box' }}
             />
             <button style={{ width: '100%', padding: '0.72rem', background: '#9b30ff', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>
@@ -194,11 +342,12 @@ export default function Home() {
             </div>
           </div>
         </div>
+        {chatWidget}
       </div>
     )
   }
 
-  // ── LANDING PAGE ─────────────────────────────────────────────────────────────
+  // ── LANDING PAGE ────────────────────────────────────────────────────────────
   const heroPlatforms = [
     { id: 'Twitch',   color: '#9147ff' },
     { id: 'YouTube',  color: '#ff0000' },
@@ -218,14 +367,16 @@ export default function Home() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', background: '#08090d', minHeight: '100vh', color: '#f0eefc', display: 'flex', flexDirection: 'column' }}>
+      <style>{HOVER_CSS}</style>
+
       {/* Nav */}
-      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', borderBottom: '1px solid rgba(155,48,255,0.18)', background: 'rgba(8,9,13,0.97)' }}>
-        <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '1px' }}>
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', borderBottom: '1px solid rgba(155,48,255,0.18)', background: 'rgba(8,9,13,0.97)', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '1px', cursor: 'default' }}>
           Sheik<span style={{ color: '#39ff14' }}>stream</span>
         </div>
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-          <span style={{ color: 'rgba(240,238,252,0.45)', fontSize: '0.9rem', cursor: 'pointer' }}>Produto</span>
-          <span style={{ color: 'rgba(240,238,252,0.45)', fontSize: '0.9rem', cursor: 'pointer' }}>Preços</span>
+          <span className="sk-nav-link" onClick={() => scrollToSection('produto')} style={{ color: 'rgba(240,238,252,0.45)', fontSize: '0.9rem', cursor: 'pointer' }}>Produto</span>
+          <span className="sk-nav-link" onClick={() => scrollToSection('precos')} style={{ color: 'rgba(240,238,252,0.45)', fontSize: '0.9rem', cursor: 'pointer' }}>Preços</span>
           <button onClick={() => setPage('login')} style={{ background: '#9b30ff', color: '#fff', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600 }}>
             Entrar
           </button>
@@ -236,9 +387,9 @@ export default function Home() {
       </nav>
 
       {/* Hero */}
-      <div style={{ textAlign: 'center', padding: '5rem 2rem 3rem', borderTop: '3px solid', borderImage: 'linear-gradient(90deg,#9b30ff,#39ff14,#9b30ff) 1' }}>
+      <div style={{ textAlign: 'center', padding: '5rem 2rem 2.5rem', borderTop: '3px solid', borderImage: 'linear-gradient(90deg,#9b30ff,#39ff14,#9b30ff) 1' }}>
         <div style={{ display: 'inline-block', background: 'rgba(46,13,92,0.6)', border: '1px solid #6b1fc2', color: '#c98fff', fontSize: '0.75rem', padding: '0.28rem 0.9rem', borderRadius: '999px', marginBottom: '1.4rem', letterSpacing: '0.5px' }}>
-          ● Hub para streamers brasileiros
+          ● Hub para streamers brasileiros — BETA
         </div>
         <h1 style={{ fontSize: '3.5rem', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-1px', marginBottom: '1rem' }}>
           Gerencie <span style={{ color: '#39ff14' }}>Twitch</span>,{' '}
@@ -251,16 +402,30 @@ export default function Home() {
           <button onClick={() => setPage('waitlist')} style={{ background: '#39ff14', color: '#000', border: 'none', padding: '0.75rem 2rem', borderRadius: '6px', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer' }}>
             Criar conta grátis
           </button>
-          <button style={{ background: 'transparent', color: 'rgba(240,238,252,0.7)', border: '1px solid rgba(255,255,255,0.18)', padding: '0.75rem 1.6rem', borderRadius: '6px', fontSize: '0.88rem', cursor: 'pointer' }}>
-            Ver demo
+          <button onClick={() => scrollToSection('produto')} style={{ background: 'transparent', color: 'rgba(240,238,252,0.7)', border: '1px solid rgba(255,255,255,0.18)', padding: '0.75rem 1.6rem', borderRadius: '6px', fontSize: '0.88rem', cursor: 'pointer' }}>
+            Ver recursos
           </button>
         </div>
+      </div>
+
+      {/* Stats bar */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', padding: '1.5rem 2rem 2.5rem', flexWrap: 'wrap' }}>
+        {[
+          { value: '5', label: 'plataformas integradas' },
+          { value: 'R$0', label: 'para sempre no beta' },
+          { value: '100%', label: 'focado em streamers BR' },
+        ].map(s => (
+          <div key={s.label} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.9rem', fontWeight: 900, color: '#39ff14', lineHeight: 1 }}>{s.value}</div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(240,238,252,0.35)', marginTop: '0.2rem' }}>{s.label}</div>
+          </div>
+        ))}
       </div>
 
       {/* Platform badges */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '0.7rem', flexWrap: 'wrap', padding: '0 2rem 3rem' }}>
         {heroPlatforms.map((p) => (
-          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0f1018', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.82rem', color: 'rgba(240,238,252,0.55)' }}>
+          <div key={p.id} className="sk-platform" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0f1018', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.82rem', color: 'rgba(240,238,252,0.55)' }}>
             <PIcon id={p.id} color={p.color} size={14} />
             {p.id}
           </div>
@@ -270,9 +435,10 @@ export default function Home() {
       <div style={{ height: '1px', background: 'rgba(155,48,255,0.18)', margin: '0 2rem' }} />
 
       {/* Features */}
-      <section style={{ padding: '3rem 2rem', maxWidth: '860px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-        <div style={{ fontSize: '0.72rem', letterSpacing: '2px', color: '#39ff14', textTransform: 'uppercase', marginBottom: '0.5rem', fontWeight: 600 }}>Recursos</div>
-        <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#f0eefc', marginBottom: '2rem', letterSpacing: '-0.5px' }}>Feito pra quem vive de stream</h2>
+      <section id="produto" style={{ padding: '3.5rem 2rem', maxWidth: '860px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ fontSize: '0.72rem', letterSpacing: '2px', color: '#39ff14', textTransform: 'uppercase', marginBottom: '0.5rem', fontWeight: 600 }}>Produto</div>
+        <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#f0eefc', marginBottom: '0.5rem', letterSpacing: '-0.5px' }}>Feito pra quem vive de stream</h2>
+        <p style={{ fontSize: '0.88rem', color: 'rgba(240,238,252,0.4)', marginBottom: '2rem' }}>Tudo que você precisa para crescer nas plataformas, num só painel.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', border: '1px solid rgba(155,48,255,0.18)', borderRadius: '12px', overflow: 'hidden' }}>
           {[
             { icon: '◈', title: 'Painel Unificado', desc: 'Todas as métricas das suas plataformas em tempo real numa só tela.', green: true },
@@ -282,7 +448,7 @@ export default function Home() {
             { icon: '▲', title: 'Analytics Avançados', desc: 'Descubra o que retém seu público — e o que faz ele sair.', green: true },
             { icon: '⬡', title: 'Bot de Automação', desc: 'Automatize moderação, comandos e respostas do chat sem esforço.', green: false },
           ].map((f) => (
-            <div key={f.title} style={{ background: '#0f1018', padding: '1.4rem', borderRight: '1px solid rgba(155,48,255,0.15)', borderBottom: '1px solid rgba(155,48,255,0.15)' }}>
+            <div key={f.title} className="sk-feature-card" style={{ background: '#0f1018', padding: '1.4rem', borderRight: '1px solid rgba(155,48,255,0.15)', borderBottom: '1px solid rgba(155,48,255,0.15)' }}>
               <div style={{ width: '34px', height: '34px', background: f.green ? 'rgba(57,255,20,0.1)' : 'rgba(155,48,255,0.15)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.9rem', fontSize: '16px', color: f.green ? '#39ff14' : '#c98fff' }}>
                 {f.icon}
               </div>
@@ -294,14 +460,15 @@ export default function Home() {
       </section>
 
       {/* Pricing */}
-      <section style={{ padding: '1rem 2rem 4rem', maxWidth: '860px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      <section id="precos" style={{ padding: '1rem 2rem 4rem', maxWidth: '860px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ height: '1px', background: 'rgba(155,48,255,0.18)', marginBottom: '3.5rem' }} />
         <div style={{ fontSize: '0.72rem', letterSpacing: '2px', color: '#39ff14', textTransform: 'uppercase', marginBottom: '0.5rem', fontWeight: 600 }}>Preços</div>
         <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#f0eefc', marginBottom: '0.4rem', letterSpacing: '-0.5px' }}>Comece de graça, sempre</h2>
         <p style={{ fontSize: '0.88rem', color: 'rgba(240,238,252,0.4)', marginBottom: '2.5rem' }}>Sem cartão de crédito. Sem surpresas.</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
           {/* Free plan */}
-          <div style={{ background: '#0f1018', border: '1px solid rgba(57,255,20,0.35)', borderRadius: '14px', padding: '2rem' }}>
+          <div className="sk-pricing-card" style={{ background: '#0f1018', border: '1px solid rgba(57,255,20,0.35)', borderRadius: '14px', padding: '2rem' }}>
             <div style={{ display: 'inline-block', background: 'rgba(57,255,20,0.1)', border: '1px solid rgba(57,255,20,0.3)', color: '#39ff14', fontSize: '0.67rem', padding: '0.2rem 0.75rem', borderRadius: '999px', fontWeight: 700, marginBottom: '1.2rem', letterSpacing: '0.5px' }}>
               DISPONÍVEL AGORA
             </div>
@@ -327,7 +494,7 @@ export default function Home() {
           </div>
 
           {/* Pro plan – coming soon */}
-          <div style={{ background: '#0f1018', border: '1px solid rgba(155,48,255,0.2)', borderRadius: '14px', padding: '2rem', opacity: 0.65 }}>
+          <div className="sk-pricing-card" style={{ background: '#0f1018', border: '1px solid rgba(155,48,255,0.2)', borderRadius: '14px', padding: '2rem', opacity: 0.65 }}>
             <div style={{ display: 'inline-block', background: 'rgba(155,48,255,0.1)', border: '1px solid rgba(155,48,255,0.22)', color: '#c98fff', fontSize: '0.67rem', padding: '0.2rem 0.75rem', borderRadius: '999px', fontWeight: 700, marginBottom: '1.2rem', letterSpacing: '0.5px' }}>
               EM BREVE
             </div>
@@ -372,7 +539,6 @@ export default function Home() {
       <footer style={{ borderTop: '1px solid rgba(155,48,255,0.15)', marginTop: 'auto', padding: '3rem 2rem 2rem', background: 'rgba(6,7,11,0.98)' }}>
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2.5rem', marginBottom: '2.5rem' }}>
-            {/* Brand */}
             <div style={{ maxWidth: '220px' }}>
               <div style={{ fontSize: '1.45rem', fontWeight: 900, letterSpacing: '1px', marginBottom: '0.6rem' }}>
                 Sheik<span style={{ color: '#39ff14' }}>stream</span>
@@ -382,18 +548,22 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Links */}
             <div style={{ display: 'flex', gap: '3rem', flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '1.5px', color: 'rgba(240,238,252,0.28)', textTransform: 'uppercase', marginBottom: '0.85rem' }}>Produto</div>
-                {['Recursos', 'Preços', 'Roadmap', 'Changelog'].map(l => (
-                  <div key={l} style={{ fontSize: '0.82rem', color: 'rgba(240,238,252,0.45)', marginBottom: '0.5rem', cursor: 'pointer' }}>{l}</div>
+                {[
+                  { label: 'Recursos', action: () => scrollToSection('produto') },
+                  { label: 'Preços', action: () => scrollToSection('precos') },
+                  { label: 'Roadmap', action: () => {} },
+                  { label: 'Changelog', action: () => {} },
+                ].map(l => (
+                  <div key={l.label} className="sk-footer-link" onClick={l.action} style={{ fontSize: '0.82rem', color: 'rgba(240,238,252,0.45)', marginBottom: '0.5rem', cursor: 'pointer' }}>{l.label}</div>
                 ))}
               </div>
               <div>
                 <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '1.5px', color: 'rgba(240,238,252,0.28)', textTransform: 'uppercase', marginBottom: '0.85rem' }}>Empresa</div>
                 {['Sobre', 'Blog', 'Contato', 'Termos'].map(l => (
-                  <div key={l} style={{ fontSize: '0.82rem', color: 'rgba(240,238,252,0.45)', marginBottom: '0.5rem', cursor: 'pointer' }}>{l}</div>
+                  <div key={l} className="sk-footer-link" style={{ fontSize: '0.82rem', color: 'rgba(240,238,252,0.45)', marginBottom: '0.5rem', cursor: 'pointer' }}>{l}</div>
                 ))}
               </div>
             </div>
@@ -405,15 +575,9 @@ export default function Home() {
             <div style={{ fontSize: '0.75rem', color: 'rgba(240,238,252,0.22)' }}>
               © 2025 Sheikstream. Feito com carinho para streamers brasileiros.
             </div>
-            {/* Social icons */}
             <div style={{ display: 'flex', gap: '0.6rem' }}>
               {socialLinks.map(s => (
-                <a
-                  key={s.id}
-                  href="#"
-                  title={s.name}
-                  style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none' }}
-                >
+                <a key={s.id} href="#" title={s.name} className="sk-social-icon" style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none' }}>
                   <PIcon id={s.id} color={s.color} size={16} />
                 </a>
               ))}
@@ -421,6 +585,8 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {chatWidget}
     </div>
   )
 }
