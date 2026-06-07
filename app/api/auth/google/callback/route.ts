@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
 
-const BASE = process.env.NODE_ENV === 'production'
-  ? 'https://sheikstream.com.br'
-  : 'http://localhost:3000'
-const REDIRECT_URI = process.env.NODE_ENV === 'production'
-  ? 'https://sheikstream.com.br/api/auth/google/callback'
-  : 'http://localhost:3000/api/auth/google/callback'
+const BASE = 'https://sheikstream.vercel.app'
+const REDIRECT_URI = 'https://sheikstream.vercel.app/api/auth/google/callback'
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams
