@@ -58,15 +58,38 @@ function makeCSS(C: typeof DARK) {
   .sk-tab.active { background: ${C.primaryBg}; color: ${C.primary}; }
   .sk-tab:not(.active) { color: ${C.muted}; }
   .sk-tab:not(.active):hover { color: ${C.text}; background: ${C.vvdim}; }
+  .sk-pw-toggle { background: transparent; border: none; cursor: pointer; padding: 0.2rem; display: flex; align-items: center; color: ${C.dim}; transition: color 0.15s; position: absolute; right: 0.7rem; top: 50%; transform: translateY(-50%); }
+  .sk-pw-toggle:hover { color: ${C.primary}; }
   @keyframes sk-pop-in { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
   .sk-card { animation: sk-pop-in 0.35s ease both; }
+  @keyframes sk-spin { to { transform: rotate(360deg); } }
+  .sk-spin { animation: sk-spin 0.8s linear infinite; }
   `
+}
+
+function EyeIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  )
+}
+function EyeOffIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>
+  )
 }
 
 export default function AdminPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [authed, setAuthed] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false) // true once we know if session is valid
   const [authError, setAuthError] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
   const [users, setUsers] = useState<User[]>([])
@@ -78,20 +101,16 @@ export default function AdminPage() {
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
 
-  useEffect(() => {
-    const saved = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
-    if (saved) setTheme(saved)
-    const pw = sessionStorage.getItem('sk-admin-pw')
-    if (pw) { setStoredPw(pw); setAuthed(true) }
-  }, [])
-
   const fetchUsers = useCallback(async (pw: string) => {
     setUsersLoading(true)
     try {
-      const res = await fetch('/api/admin/users', {
-        headers: { 'x-admin-password': pw },
-      })
-      if (!res.ok) { setAuthed(false); return }
+      const res = await fetch('/api/admin/users', { headers: { 'x-admin-password': pw } })
+      if (!res.ok) {
+        setAuthed(false)
+        setStoredPw('')
+        sessionStorage.removeItem('sk-admin-pw')
+        return
+      }
       const data = await res.json()
       setUsers(data)
     } catch {
@@ -101,9 +120,34 @@ export default function AdminPage() {
     }
   }, [])
 
+  // On mount: verify any stored session BEFORE showing anything
   useEffect(() => {
-    if (authed && storedPw) fetchUsers(storedPw)
-  }, [authed, storedPw, fetchUsers])
+    const saved = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
+    if (saved) setTheme(saved)
+
+    const pw = sessionStorage.getItem('sk-admin-pw')
+    if (!pw) {
+      setAuthChecked(true) // no session → show login immediately
+      return
+    }
+
+    // Verify the stored password against the API
+    fetch('/api/admin/users', { headers: { 'x-admin-password': pw } })
+      .then(async res => {
+        if (res.ok) {
+          const data = await res.json()
+          setUsers(data)
+          setStoredPw(pw)
+          setAuthed(true)
+        } else {
+          sessionStorage.removeItem('sk-admin-pw')
+        }
+      })
+      .catch(() => {
+        sessionStorage.removeItem('sk-admin-pw')
+      })
+      .finally(() => setAuthChecked(true))
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -120,6 +164,7 @@ export default function AdminPage() {
         sessionStorage.setItem('sk-admin-pw', password)
         setStoredPw(password)
         setAuthed(true)
+        fetchUsers(password)
       } else {
         setAuthError(data.error || 'Acesso negado')
       }
@@ -177,6 +222,19 @@ export default function AdminPage() {
     )
   }
 
+  // Show spinner while verifying stored session
+  if (!authChecked) {
+    return (
+      <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: DARK.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}>
+        <svg className="sk-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={DARK.primary} strokeWidth="2.5" strokeLinecap="round">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+        <style>{`.sk-spin { animation: sk-spin 0.8s linear infinite; } @keyframes sk-spin { to { transform: rotate(360deg); } }`}</style>
+        <span style={{ color: DARK.muted, fontSize: '0.85rem' }}>Verificando acesso...</span>
+      </div>
+    )
+  }
+
   return (
     <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text }}>
       <style>{makeCSS(C)}</style>
@@ -192,7 +250,7 @@ export default function AdminPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {authed && (
-            <button onClick={() => { setAuthed(false); sessionStorage.removeItem('sk-admin-pw'); setStoredPw('') }}
+            <button onClick={() => { setAuthed(false); setUsers([]); sessionStorage.removeItem('sk-admin-pw'); setStoredPw('') }}
               style={{ background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.35rem 0.9rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
               Sair
             </button>
@@ -218,15 +276,29 @@ export default function AdminPage() {
               <p style={{ fontSize: '0.83rem', color: C.muted, marginTop: '0.4rem', margin: '0.4rem 0 0' }}>Acesso restrito ao administrador</p>
             </div>
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <input
-                type="password"
-                placeholder="Senha de administrador"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                autoFocus
-                style={{ width: '100%', padding: '0.75rem 1rem', background: C.inputBg, border: `1px solid ${authError ? C.dangerBorder : C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-              {authError && <p style={{ color: C.danger, fontSize: '0.8rem', margin: 0 }}>{authError}</p>}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Senha de administrador"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  autoFocus
+                  style={{ width: '100%', padding: '0.75rem 2.8rem 0.75rem 1rem', background: C.inputBg, border: `1px solid ${authError ? C.dangerBorder : C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="sk-pw-toggle"
+                  title={showPassword ? 'Esconder senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
+              {authError && (
+                <p style={{ color: C.danger, fontSize: '0.8rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span>⚠</span> {authError}
+                </p>
+              )}
               <button type="submit" disabled={authLoading || !password}
                 style={{ padding: '0.82rem', background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.92rem', fontWeight: 700, cursor: authLoading || !password ? 'not-allowed' : 'pointer', opacity: !password ? 0.6 : 1, transition: 'opacity 0.15s' }}>
                 {authLoading ? 'Verificando...' : 'Entrar'}

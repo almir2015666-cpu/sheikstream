@@ -981,7 +981,7 @@ export default function Home() {
             <div style={{ fontSize: '0.73rem', color: C.vdim }}>
               © 2025 Sheikstream. Feito com carinho para streamers brasileiros.
             </div>
-            <div style={{ display: 'flex', gap: '1.4rem' }}>
+            <div style={{ display: 'flex', gap: '1.4rem', alignItems: 'center' }}>
               {[
                 { label: 'Termos', href: '/termos-e-condicoes' },
                 { label: 'Privacidade', href: '/privacidade' },
@@ -989,6 +989,12 @@ export default function Home() {
               ].map(l => (
                 <a key={l.label} href={l.href} className="sk-legal-link" style={{ fontSize: '0.73rem', color: C.vdim, textDecoration: 'none' }}>{l.label}</a>
               ))}
+              <a href="/admin" style={{ fontSize: '0.68rem', color: '#ff4444', textDecoration: 'none', background: 'rgba(255,68,68,0.1)', border: '1px solid rgba(255,68,68,0.3)', padding: '0.18rem 0.65rem', borderRadius: '999px', fontWeight: 700, letterSpacing: '0.5px', opacity: 0.7, transition: 'opacity 0.15s' }}
+                onMouseOver={e => (e.currentTarget.style.opacity = '1')}
+                onMouseOut={e => (e.currentTarget.style.opacity = '0.7')}
+              >
+                ADMIN
+              </a>
             </div>
           </div>
         </div>
