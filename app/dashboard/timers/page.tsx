@@ -126,24 +126,28 @@ function TimerModal({
   const isConnected = (key: string) => {
     if (key === 'twitch') return !!connections.twitch
     if (key === 'youtube') return !!connections.youtube
-    return false // kick/tiktok shown as "Conectar"
+    return false
+  }
+
+  const oauthUrl: Record<string, string | null> = {
+    twitch: '/api/auth/twitch',
+    youtube: '/api/auth/google',
+    kick: null,
+    tiktok: null,
   }
 
   const togglePlat = (key: string) => {
-    if (!isConnected(key) && key !== 'kick' && key !== 'tiktok') return
+    if (!isConnected(key) && key !== 'kick' && key !== 'tiktok') {
+      const url = oauthUrl[key]
+      if (url) window.location.href = url
+      return
+    }
     setForm(f => ({
       ...f,
       plataformas: f.plataformas.includes(key)
         ? f.plataformas.filter(p => p !== key)
         : [...f.plataformas, key],
     }))
-  }
-
-  const label: Record<string, string> = {
-    twitch: connections.twitch ? '' : 'Conectar',
-    youtube: connections.youtube ? '' : 'Conectar',
-    kick: 'Conectar',
-    tiktok: 'Conectar',
   }
 
   return (
@@ -270,15 +274,12 @@ function TimerModal({
             {PLATS.map(p => {
               const connected = isConnected(p.key)
               const selected = form.plataformas.includes(p.key)
-              const canSelect = connected || p.key === 'kick' || p.key === 'tiktok'
-              const sublabel = label[p.key]
 
               return (
                 <button
                   key={p.key}
                   type="button"
                   onClick={() => togglePlat(p.key)}
-                  disabled={!canSelect}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -287,23 +288,25 @@ function TimerModal({
                     background: selected ? `${p.color}15` : '#1f2937',
                     border: `1px solid ${selected ? p.color : '#374151'}`,
                     borderRadius: 8,
-                    cursor: canSelect ? 'pointer' : 'default',
+                    cursor: 'pointer',
                     transition: 'all 0.15s',
-                    opacity: !canSelect ? 0.5 : 1,
                   }}
                 >
                   <span style={{ fontSize: 14, fontWeight: 600, color: selected ? p.color : '#94a3b8' }}>
                     {p.label}
                   </span>
                   {connected && !selected && (
-                    <span style={{ fontSize: 11, color: '#64748b' }}>○ Conectando...</span>
+                    <span style={{ fontSize: 11, color: '#64748b' }}>○ Conectado</span>
                   )}
                   {connected && selected && (
                     <span style={{ fontSize: 11, color: p.color }}>● Ativo</span>
                   )}
-                  {!connected && (
+                  {!connected && (p.key === 'kick' || p.key === 'tiktok') && (
+                    <span style={{ fontSize: 11, color: '#64748b' }}>○ Overlay</span>
+                  )}
+                  {!connected && oauthUrl[p.key] && (
                     <span style={{ fontSize: 11, color: '#6366f1', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      ⇄ {sublabel}
+                      ⇄ Conectar
                     </span>
                   )}
                 </button>
