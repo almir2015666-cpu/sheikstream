@@ -8,18 +8,25 @@ export async function GET(req: NextRequest) {
   const user = decodeSession(token)
   if (!user) return NextResponse.json(null, { status: 401 })
 
-  try {
-    const db = getSupabaseAdmin()
-    const { data: entry } = await db
-      .from('waitlist')
-      .select('status')
-      .eq('platform_id', user.id)
-      .maybeSingle()
-    if (entry?.status === 'banned') {
-      return NextResponse.json({ banned: true }, { status: 403 })
+  if (user.platform === 'Twitch') {
+    try {
+      const db = getSupabaseAdmin()
+      const { data: entry } = await db
+        .from('waitlist')
+        .select('status')
+        .eq('platform', 'Twitch')
+        .eq('platform_username', user.name)
+        .maybeSingle()
+
+      if (entry?.status === 'banned') {
+        return NextResponse.json({ error: 'banned' }, { status: 403 })
+      }
+      if (entry?.status === 'pending' || entry?.status === 'rejected') {
+        return NextResponse.json({ error: 'pending' }, { status: 403 })
+      }
+    } catch {
+      // DB unavailable — allow through
     }
-  } catch {
-    // Ban check unavailable
   }
 
   return NextResponse.json(user)

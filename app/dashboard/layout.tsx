@@ -114,7 +114,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     fetch('/api/me')
       .then(async r => {
-        if (r.status === 403) { router.replace('/login?error=banned'); return undefined }
+        if (r.status === 403) {
+          const body = await r.json().catch(() => ({}))
+          if (body?.error === 'banned') router.replace('/login?error=banned')
+          else router.replace('/pending')
+          return undefined
+        }
         return r.ok ? r.json() : null
       })
       .then(data => { if (data !== undefined) { setUser(data); setStatus('done') } })

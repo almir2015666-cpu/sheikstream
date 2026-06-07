@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
       name: gu.name ?? gu.email ?? '',
       email: gu.email ?? '',
       image: gu.picture ?? '',
+      platform: 'YouTube',
     }
 
     const token = encodeSession(user)

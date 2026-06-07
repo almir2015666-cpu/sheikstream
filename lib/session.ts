@@ -1,13 +1,14 @@
 import crypto from 'crypto'
 
 const SECRET = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? 'sk-local-secret'
-export const COOKIE_NAME = 'sk-session'
+export const COOKIE_NAME = 'sk-s2'
 
 export type SessionUser = {
   id: string
   name: string
   email: string
   image: string
+  platform?: string
 }
 
 export function encodeSession(user: SessionUser): string {

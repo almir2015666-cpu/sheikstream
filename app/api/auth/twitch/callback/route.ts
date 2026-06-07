@@ -48,44 +48,39 @@ export async function GET(req: NextRequest) {
     const tw = data[0]
     if (!tw) return NextResponse.redirect(`${BASE}/login?error=no_user`)
 
-    try {
-      const db = getSupabaseAdmin()
-      const { data: existing } = await db
-        .from('waitlist')
-        .select('id, status')
-        .eq('platform_id', tw.id)
-        .maybeSingle()
+    const db = getSupabaseAdmin()
+    const { data: existing } = await db
+      .from('waitlist')
+      .select('id, status')
+      .eq('platform', 'Twitch')
+      .eq('platform_username', tw.display_name)
+      .maybeSingle()
 
-      if (existing?.status === 'banned') {
-        return NextResponse.redirect(`${BASE}/login?error=banned`)
-      }
+    if (existing?.status === 'banned') {
+      return NextResponse.redirect(`${BASE}/login?error=banned`)
+    }
 
-      if (existing?.status === 'pending') {
-        return NextResponse.redirect(`${BASE}/pending`)
-      }
-
-      if (!existing) {
-        await db.from('waitlist').insert({
-          platform: 'Twitch',
-          platform_id: tw.id,
-          platform_username: tw.display_name,
-          email: tw.email ?? '',
-          status: 'pending',
-        })
-        return NextResponse.redirect(`${BASE}/pending`)
-      }
-
-      // status === 'approved' — allow in
-    } catch {
-      // DB unavailable — block access to be safe
+    if (existing?.status === 'pending' || existing?.status === 'rejected') {
       return NextResponse.redirect(`${BASE}/pending`)
     }
 
+    if (!existing) {
+      await db.from('waitlist').insert({
+        platform: 'Twitch',
+        platform_username: tw.display_name,
+        email: tw.email ?? '',
+        status: 'pending',
+      })
+      return NextResponse.redirect(`${BASE}/pending`)
+    }
+
+    // status === 'approved' — set session and allow in
     const user: SessionUser = {
       id: tw.id,
       name: tw.display_name,
       email: tw.email ?? '',
       image: tw.profile_image_url ?? '',
+      platform: 'Twitch',
     }
 
     const token = encodeSession(user)

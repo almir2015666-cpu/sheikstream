@@ -101,6 +101,7 @@ export default function AdminPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [storedPw, setStoredPw] = useState('')
   const [isMobile, setIsMobile] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -206,6 +207,20 @@ export default function AdminPage() {
       }
     } finally {
       setActionLoading(null)
+    }
+  }
+
+  async function handleResetSessions() {
+    if (!confirm('Isso irá remover todos os usuários Twitch da lista, forçando re-aprovação. Confirmar?')) return
+    setResetLoading(true)
+    try {
+      await fetch('/api/admin/reset-sessions', {
+        method: 'POST',
+        headers: { 'x-admin-password': storedPw },
+      })
+      fetchUsers(storedPw)
+    } finally {
+      setResetLoading(false)
     }
   }
 
@@ -359,6 +374,10 @@ export default function AdminPage() {
                   </button>
                 ))}
               </div>
+              <button onClick={handleResetSessions} disabled={resetLoading}
+                style={{ background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>
+                {resetLoading ? 'Resetando...' : '⊘ Resetar sessões Twitch'}
+              </button>
               <button onClick={() => fetchUsers(storedPw)} disabled={usersLoading}
                 style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
