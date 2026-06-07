@@ -111,6 +111,7 @@ function TimerModal({
   form,
   setForm,
   connections,
+  setConnections,
   saving,
   onSave,
   onClose,
@@ -119,6 +120,7 @@ function TimerModal({
   form: FormState
   setForm: React.Dispatch<React.SetStateAction<FormState>>
   connections: UserConnections
+  setConnections: React.Dispatch<React.SetStateAction<UserConnections>>
   saving: boolean
   onSave: () => void
   onClose: () => void
@@ -702,6 +704,7 @@ export default function TimersPage() {
           form={form}
           setForm={setForm}
           connections={connections}
+          setConnections={setConnections}
           saving={saving}
           onSave={handleSave}
           onClose={() => setShowModal(false)}
