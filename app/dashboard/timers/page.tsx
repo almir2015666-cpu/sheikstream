@@ -30,75 +30,36 @@ type FormState = {
   nome: string
   mensagem: string
   intervalo_minutos: number
-  min_mensagens: number
   plataformas: string[]
-  tipo_saida: 'chat' | 'overlay' | 'both'
   ativo: boolean
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+type UserConnections = {
+  twitch?: boolean
+  youtube?: boolean
+}
 
 const EMPTY_FORM: FormState = {
   nome: '',
   mensagem: '',
-  intervalo_minutos: 30,
-  min_mensagens: 0,
+  intervalo_minutos: 60,
   plataformas: [],
-  tipo_saida: 'chat',
   ativo: true,
 }
 
-const PLAT_OPTIONS = [
-  {
-    key: 'twitch',
-    label: 'Twitch',
-    color: '#9146FF',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" width={16} height={16}>
-        <path d="M2.149 0L.537 4.119v16.836h5.731V24h3.224l3.045-3.045h4.657l6.269-6.269V0H2.149zm19.164 13.612l-3.582 3.582H12.87l-3.045 3.045v-3.045H5.094V2.149h16.22v11.463zm-3.582-7.343v6.27h-2.149V6.269h2.149zm-5.731 0v6.27h-2.149V6.269h2.149z" />
-      </svg>
-    ),
-  },
-  {
-    key: 'youtube',
-    label: 'YouTube',
-    color: '#FF0000',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" width={16} height={16}>
-        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-      </svg>
-    ),
-  },
-  {
-    key: 'kick',
-    label: 'Kick',
-    color: '#53FC18',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" width={16} height={16}>
-        <path d="M2 2h4v8l6-8h5l-7 9 7 11h-5L6 14v8H2V2z" />
-      </svg>
-    ),
-  },
-  {
-    key: 'tiktok',
-    label: 'TikTok',
-    color: '#fe2c55',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" width={16} height={16}>
-        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V9.15a8.16 8.16 0 0 0 4.77 1.52V7.23a4.85 4.85 0 0 1-1-.54z" />
-      </svg>
-    ),
-  },
+const PLATS = [
+  { key: 'twitch', label: 'Twitch', color: '#9146FF' },
+  { key: 'youtube', label: 'YouTube', color: '#FF0000' },
+  { key: 'kick', label: 'Kick', color: '#53FC18' },
+  { key: 'tiktok', label: 'TikTok', color: '#fe2c55' },
 ]
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function platStatus(timer: Timer, platKey: string): 'success' | 'error' | 'none' {
-  const recentLogs = [...timer.timer_logs]
+  const logs = [...timer.timer_logs]
     .filter(l => l.plataforma === platKey)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  if (recentLogs.length === 0) return 'none'
-  return recentLogs[0].status === 'success' ? 'success' : 'error'
+  if (!logs.length) return 'none'
+  return logs[0].status === 'success' ? 'success' : 'error'
 }
 
 function formatInterval(mins: number) {
@@ -108,28 +69,20 @@ function formatInterval(mins: number) {
   return m === 0 ? `${h}h` : `${h}h ${m}min`
 }
 
-function overlayUrl(userId: string) {
-  const base =
-    typeof window !== 'undefined' ? window.location.origin : 'https://sheikstream.com.br'
-  return `${base}/overlay/timer/${userId}`
-}
-
 // ─── Toggle ──────────────────────────────────────────────────────────────────
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       type="button"
-      role="switch"
-      aria-checked={checked}
       onClick={() => onChange(!checked)}
       style={{
-        width: 40,
-        height: 22,
-        borderRadius: 11,
+        width: 44,
+        height: 24,
+        borderRadius: 12,
         border: 'none',
         cursor: 'pointer',
-        background: checked ? '#4ade80' : '#374151',
+        background: checked ? '#3b82f6' : '#374151',
         position: 'relative',
         transition: 'background 0.2s',
         flexShrink: 0,
@@ -139,9 +92,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
         style={{
           position: 'absolute',
           top: 3,
-          left: checked ? 21 : 3,
-          width: 16,
-          height: 16,
+          left: checked ? 23 : 3,
+          width: 18,
+          height: 18,
           borderRadius: '50%',
           background: '#fff',
           transition: 'left 0.2s',
@@ -151,28 +104,272 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
-// ─── Slider ──────────────────────────────────────────────────────────────────
+// ─── Modal ───────────────────────────────────────────────────────────────────
 
-function Slider({
-  value,
-  min,
-  max,
-  onChange,
+function TimerModal({
+  editingId,
+  form,
+  setForm,
+  connections,
+  saving,
+  onSave,
+  onClose,
 }: {
-  value: number
-  min: number
-  max: number
-  onChange: (v: number) => void
+  editingId: string | null
+  form: FormState
+  setForm: React.Dispatch<React.SetStateAction<FormState>>
+  connections: UserConnections
+  saving: boolean
+  onSave: () => void
+  onClose: () => void
 }) {
+  const isConnected = (key: string) => {
+    if (key === 'twitch') return !!connections.twitch
+    if (key === 'youtube') return !!connections.youtube
+    return false // kick/tiktok shown as "Conectar"
+  }
+
+  const togglePlat = (key: string) => {
+    if (!isConnected(key) && key !== 'kick' && key !== 'tiktok') return
+    setForm(f => ({
+      ...f,
+      plataformas: f.plataformas.includes(key)
+        ? f.plataformas.filter(p => p !== key)
+        : [...f.plataformas, key],
+    }))
+  }
+
+  const label: Record<string, string> = {
+    twitch: connections.twitch ? '' : 'Conectar',
+    youtube: connections.youtube ? '' : 'Conectar',
+    kick: 'Conectar',
+    tiktok: 'Conectar',
+  }
+
   return (
-    <input
-      type="range"
-      min={min}
-      max={max}
-      value={value}
-      onChange={e => onChange(Number(e.target.value))}
-      style={{ width: '100%', accentColor: '#6366f1' }}
-    />
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.7)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#111827',
+          border: '1px solid #1f2937',
+          borderRadius: 16,
+          width: '100%',
+          maxWidth: 520,
+          padding: 28,
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>
+            {editingId ? 'Editar Timer' : 'Novo Timer'}
+          </h2>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 20, padding: 4 }}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Nome */}
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 8 }}>
+            NOME
+          </label>
+          <input
+            value={form.nome}
+            onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
+            placeholder="Ex: Lembrete de doação"
+            style={{
+              width: '100%',
+              background: '#1f2937',
+              border: '1px solid #374151',
+              borderRadius: 8,
+              padding: '11px 14px',
+              color: '#f1f5f9',
+              fontSize: 14,
+              boxSizing: 'border-box',
+              outline: 'none',
+            }}
+          />
+        </div>
+
+        {/* Mensagem */}
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 8 }}>
+            MENSAGEM
+          </label>
+          <textarea
+            value={form.mensagem}
+            onChange={e => setForm(f => ({ ...f, mensagem: e.target.value }))}
+            placeholder="Mensagem enviada pelo bot..."
+            rows={3}
+            style={{
+              width: '100%',
+              background: '#1f2937',
+              border: '1px solid #374151',
+              borderRadius: 8,
+              padding: '11px 14px',
+              color: '#f1f5f9',
+              fontSize: 14,
+              resize: 'vertical',
+              fontFamily: 'inherit',
+              boxSizing: 'border-box',
+              outline: 'none',
+            }}
+          />
+        </div>
+
+        {/* Intervalo */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 8 }}>
+            INTERVALO (MINUTOS)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={1440}
+            value={form.intervalo_minutos}
+            onChange={e => setForm(f => ({ ...f, intervalo_minutos: Math.max(1, Number(e.target.value)) }))}
+            style={{
+              width: '100%',
+              background: '#1f2937',
+              border: '1px solid #374151',
+              borderRadius: 8,
+              padding: '11px 14px',
+              color: '#f1f5f9',
+              fontSize: 14,
+              boxSizing: 'border-box',
+              outline: 'none',
+            }}
+          />
+        </div>
+
+        {/* Plataformas */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 6 }}>
+            ENVIAR NO CHAT QUANDO AO VIVO
+          </label>
+          <p style={{ margin: '0 0 12px', fontSize: 12, color: '#475569', lineHeight: 1.5 }}>
+            Escolha em quais plataformas conectadas o timer deve aparecer. Fora da live, o envio fica pausado automaticamente.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {PLATS.map(p => {
+              const connected = isConnected(p.key)
+              const selected = form.plataformas.includes(p.key)
+              const canSelect = connected || p.key === 'kick' || p.key === 'tiktok'
+              const sublabel = label[p.key]
+
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => togglePlat(p.key)}
+                  disabled={!canSelect}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    background: selected ? `${p.color}15` : '#1f2937',
+                    border: `1px solid ${selected ? p.color : '#374151'}`,
+                    borderRadius: 8,
+                    cursor: canSelect ? 'pointer' : 'default',
+                    transition: 'all 0.15s',
+                    opacity: !canSelect ? 0.5 : 1,
+                  }}
+                >
+                  <span style={{ fontSize: 14, fontWeight: 600, color: selected ? p.color : '#94a3b8' }}>
+                    {p.label}
+                  </span>
+                  {connected && !selected && (
+                    <span style={{ fontSize: 11, color: '#64748b' }}>○ Conectando...</span>
+                  )}
+                  {connected && selected && (
+                    <span style={{ fontSize: 11, color: p.color }}>● Ativo</span>
+                  )}
+                  {!connected && (
+                    <span style={{ fontSize: 11, color: '#6366f1', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      ⇄ {sublabel}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Timer ativo */}
+        <div
+          style={{
+            background: '#1f2937',
+            borderRadius: 10,
+            padding: '14px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 24,
+          }}
+        >
+          <div>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>Timer ativo</p>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Enviar mensagens automaticamente</p>
+          </div>
+          <Toggle checked={form.ativo} onChange={v => setForm(f => ({ ...f, ativo: v }))} />
+        </div>
+
+        {/* Buttons */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: 'none',
+              border: '1px solid #374151',
+              borderRadius: 8,
+              color: '#94a3b8',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onSave}
+            disabled={saving || !form.nome.trim() || !form.mensagem.trim()}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: '#3b82f6',
+              border: 'none',
+              borderRadius: 8,
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: saving || !form.nome.trim() || !form.mensagem.trim() ? 'not-allowed' : 'pointer',
+              opacity: !form.nome.trim() || !form.mensagem.trim() ? 0.5 : 1,
+            }}
+          >
+            {saving ? 'Salvando...' : editingId ? 'Salvar' : 'Criar'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -181,12 +378,13 @@ function Slider({
 export default function TimersPage() {
   const [timers, setTimers] = useState<Timer[]>([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<'list' | 'form'>('list')
+  const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
-  const [userId, setUserId] = useState<string>('')
+  const [connections, setConnections] = useState<UserConnections>({})
+  const [userId, setUserId] = useState('')
   const [copied, setCopied] = useState(false)
 
   const fetchTimers = useCallback(async () => {
@@ -202,14 +400,18 @@ export default function TimersPage() {
     fetchTimers()
     fetch('/api/me')
       .then(r => r.json())
-      .then((u: { id?: string }) => { if (u?.id) setUserId(u.id) })
+      .then((u: { id?: string; platform?: string }) => {
+        if (u?.id) setUserId(u.id)
+        if (u?.platform === 'Twitch') setConnections(c => ({ ...c, twitch: true }))
+        if (u?.platform === 'Google') setConnections(c => ({ ...c, youtube: true }))
+      })
       .catch(() => {})
   }, [fetchTimers])
 
   function openCreate() {
     setEditingId(null)
     setForm(EMPTY_FORM)
-    setView('form')
+    setShowModal(true)
   }
 
   function openEdit(t: Timer) {
@@ -218,12 +420,10 @@ export default function TimersPage() {
       nome: t.nome,
       mensagem: t.mensagem,
       intervalo_minutos: t.intervalo_minutos,
-      min_mensagens: t.min_mensagens,
       plataformas: t.plataformas,
-      tipo_saida: t.tipo_saida,
       ativo: t.ativo,
     })
-    setView('form')
+    setShowModal(true)
   }
 
   async function handleSave() {
@@ -235,11 +435,11 @@ export default function TimersPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, min_mensagens: 0, tipo_saida: 'chat' }),
       })
       if (res.ok) {
         await fetchTimers()
-        setView('list')
+        setShowModal(false)
       }
     } finally {
       setSaving(false)
@@ -265,510 +465,230 @@ export default function TimersPage() {
     })
   }
 
-  function togglePlat(key: string) {
-    setForm(f => ({
-      ...f,
-      plataformas: f.plataformas.includes(key)
-        ? f.plataformas.filter(p => p !== key)
-        : [...f.plataformas, key],
-    }))
-  }
+  const overlayUrl = userId
+    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://www.sheikstream.com.br'}/overlay/timer/${userId}`
+    : ''
 
-  async function copyOverlayUrl() {
-    if (!userId) return
-    await navigator.clipboard.writeText(overlayUrl(userId))
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  // ── LIST VIEW ──────────────────────────────────────────────────────────────
-
-  if (view === 'list') {
-    return (
-      <div style={{ padding: '32px 24px', maxWidth: 920, margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>
-              ⏱ Timers
-            </h1>
-            <p style={{ margin: '4px 0 0', fontSize: 14, color: '#94a3b8' }}>
-              Mensagens automáticas no chat durante a live
-            </p>
-          </div>
-          <button
-            onClick={openCreate}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              background: '#6366f1',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 18px',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            + Novo timer
-          </button>
+  return (
+    <div style={{ padding: '32px 24px', maxWidth: 860, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>⏱ Timers</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#64748b' }}>
+            Mensagens automáticas no chat durante a live
+          </p>
         </div>
+        <button
+          onClick={openCreate}
+          style={{
+            background: '#3b82f6',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            padding: '10px 20px',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          + Novo timer
+        </button>
+      </div>
 
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-          {[
-            { label: 'Total', value: timers.length, color: '#94a3b8' },
-            { label: 'Ativos', value: timers.filter(t => t.ativo).length, color: '#4ade80' },
-            { label: 'Inativos', value: timers.filter(t => !t.ativo).length, color: '#f87171' },
-          ].map(s => (
-            <div
-              key={s.label}
-              style={{
-                background: '#1e293b',
-                border: '1px solid #334155',
-                borderRadius: 10,
-                padding: '14px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-              }}
-            >
-              <span style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.value}</span>
-              <span style={{ fontSize: 13, color: '#94a3b8' }}>{s.label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Overlay URL card */}
-        {userId && (
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 24 }}>
+        {[
+          { label: 'Total', value: timers.length, color: '#94a3b8' },
+          { label: 'Ativos', value: timers.filter(t => t.ativo).length, color: '#4ade80' },
+          { label: 'Inativos', value: timers.filter(t => !t.ativo).length, color: '#f87171' },
+        ].map(s => (
           <div
+            key={s.label}
             style={{
-              background: '#1e293b',
-              border: '1px solid #334155',
+              background: '#111827',
+              border: '1px solid #1f2937',
               borderRadius: 10,
-              padding: '16px 20px',
-              marginBottom: 24,
+              padding: '14px 20px',
               display: 'flex',
               alignItems: 'center',
               gap: 12,
-              flexWrap: 'wrap',
             }}
           >
-            <span style={{ fontSize: 13, color: '#94a3b8', flexShrink: 0 }}>URL do Overlay OBS:</span>
-            <code
-              style={{
-                flex: 1,
-                background: '#0f172a',
-                color: '#818cf8',
-                padding: '6px 10px',
-                borderRadius: 6,
-                fontSize: 12,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {overlayUrl(userId)}
-            </code>
-            <button
-              onClick={copyOverlayUrl}
-              style={{
-                background: copied ? '#22c55e' : '#334155',
-                color: '#f1f5f9',
-                border: 'none',
-                borderRadius: 6,
-                padding: '6px 14px',
-                fontSize: 12,
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-              }}
-            >
-              {copied ? 'Copiado!' : 'Copiar'}
-            </button>
+            <span style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 13, color: '#64748b' }}>{s.label}</span>
           </div>
-        )}
-
-        {/* Timer list */}
-        {loading ? (
-          <div style={{ color: '#94a3b8', textAlign: 'center', padding: 40 }}>Carregando...</div>
-        ) : timers.length === 0 ? (
-          <div
-            style={{
-              background: '#1e293b',
-              border: '1px dashed #334155',
-              borderRadius: 12,
-              padding: 48,
-              textAlign: 'center',
-              color: '#64748b',
-            }}
-          >
-            <div style={{ fontSize: 40, marginBottom: 12 }}>⏱</div>
-            <p style={{ margin: 0, fontSize: 15 }}>Nenhum timer criado ainda.</p>
-            <p style={{ margin: '6px 0 0', fontSize: 13 }}>Crie seu primeiro timer para enviar mensagens automáticas durante a live.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {timers.map(t => (
-              <div
-                key={t.id}
-                style={{
-                  background: '#1e293b',
-                  border: `1px solid ${t.ativo ? '#334155' : '#1e293b'}`,
-                  borderRadius: 12,
-                  padding: '16px 20px',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto',
-                  gap: 16,
-                  alignItems: 'center',
-                  opacity: t.ativo ? 1 : 0.6,
-                }}
-              >
-                {/* Left */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <span style={{ fontWeight: 600, fontSize: 15, color: '#f1f5f9' }}>{t.nome}</span>
-                    <span
-                      style={{
-                        background: t.ativo ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
-                        color: t.ativo ? '#4ade80' : '#f87171',
-                        border: `1px solid ${t.ativo ? '#4ade80' : '#f87171'}`,
-                        borderRadius: 20,
-                        padding: '1px 8px',
-                        fontSize: 11,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {t.ativo ? 'ativo' : 'inativo'}
-                    </span>
-                  </div>
-
-                  <p
-                    style={{
-                      margin: '0 0 10px',
-                      fontSize: 13,
-                      color: '#94a3b8',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      maxWidth: 500,
-                    }}
-                  >
-                    {t.mensagem}
-                  </p>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, color: '#64748b' }}>
-                      🕐 a cada {formatInterval(t.intervalo_minutos)}
-                    </span>
-                    {t.min_mensagens > 0 && (
-                      <span style={{ fontSize: 12, color: '#64748b' }}>
-                        💬 mín {t.min_mensagens} msgs
-                      </span>
-                    )}
-                    <span style={{ fontSize: 12, color: '#64748b' }}>
-                      📤 {t.tipo_saida === 'chat' ? 'Chat' : t.tipo_saida === 'overlay' ? 'Overlay' : 'Chat + Overlay'}
-                    </span>
-
-                    {/* Platform status dots */}
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      {PLAT_OPTIONS.filter(p => t.plataformas.includes(p.key)).map(p => {
-                        const st = platStatus(t, p.key)
-                        const dotColor = st === 'success' ? '#4ade80' : st === 'error' ? '#f87171' : '#64748b'
-                        return (
-                          <div
-                            key={p.key}
-                            title={`${p.label}: ${st === 'none' ? 'sem disparo' : st}`}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              background: '#0f172a',
-                              borderRadius: 6,
-                              padding: '2px 8px',
-                              fontSize: 11,
-                              color: p.color,
-                            }}
-                          >
-                            {p.icon}
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, display: 'inline-block' }} />
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {t.ultimo_disparo && (
-                      <span style={{ fontSize: 11, color: '#475569' }}>
-                        último: {new Date(t.ultimo_disparo).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right actions */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Toggle checked={t.ativo} onChange={v => handleToggle(t.id, v)} />
-                  <button
-                    onClick={() => openEdit(t)}
-                    title="Editar"
-                    style={{
-                      background: 'none',
-                      border: '1px solid #334155',
-                      borderRadius: 6,
-                      color: '#94a3b8',
-                      cursor: 'pointer',
-                      padding: '6px 10px',
-                      fontSize: 14,
-                    }}
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    onClick={() => handleDelete(t.id)}
-                    disabled={deleting === t.id}
-                    title="Excluir"
-                    style={{
-                      background: 'none',
-                      border: '1px solid #334155',
-                      borderRadius: 6,
-                      color: '#f87171',
-                      cursor: 'pointer',
-                      padding: '6px 10px',
-                      fontSize: 14,
-                    }}
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // ── FORM VIEW ──────────────────────────────────────────────────────────────
-
-  return (
-    <div style={{ padding: '32px 24px', maxWidth: 680, margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-        <button
-          onClick={() => setView('list')}
-          style={{
-            background: 'none',
-            border: '1px solid #334155',
-            borderRadius: 8,
-            color: '#94a3b8',
-            cursor: 'pointer',
-            padding: '6px 12px',
-            fontSize: 13,
-          }}
-        >
-          ← Voltar
-        </button>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>
-          {editingId ? 'Editar timer' : 'Novo timer'}
-        </h1>
+        ))}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Nome */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: 20 }}>
-          <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 8 }}>Nome do timer</label>
-          <input
-            value={form.nome}
-            onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
-            placeholder="Ex: Redes sociais, Discord, Sorteio..."
-            style={{
-              width: '100%',
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: 8,
-              padding: '10px 12px',
-              color: '#f1f5f9',
-              fontSize: 14,
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-
-        {/* Mensagem */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: 20 }}>
-          <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 8 }}>Mensagem</label>
-          <textarea
-            value={form.mensagem}
-            onChange={e => setForm(f => ({ ...f, mensagem: e.target.value }))}
-            placeholder="Mensagem que será enviada no chat..."
-            rows={3}
-            style={{
-              width: '100%',
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: 8,
-              padding: '10px 12px',
-              color: '#f1f5f9',
-              fontSize: 14,
-              resize: 'vertical',
-              fontFamily: 'inherit',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-
-        {/* Interval */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <label style={{ fontSize: 13, color: '#94a3b8' }}>Intervalo</label>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#6366f1' }}>
-              {formatInterval(form.intervalo_minutos)}
-            </span>
-          </div>
-          <Slider
-            value={form.intervalo_minutos}
-            min={1}
-            max={120}
-            onChange={v => setForm(f => ({ ...f, intervalo_minutos: v }))}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569', marginTop: 4 }}>
-            <span>1 min</span>
-            <span>2 horas</span>
-          </div>
-        </div>
-
-        {/* Min messages */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <label style={{ fontSize: 13, color: '#94a3b8' }}>Mínimo de mensagens no chat</label>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#6366f1' }}>{form.min_mensagens}</span>
-          </div>
-          <Slider
-            value={form.min_mensagens}
-            min={0}
-            max={100}
-            onChange={v => setForm(f => ({ ...f, min_mensagens: v }))}
-          />
-          <p style={{ margin: '8px 0 0', fontSize: 12, color: '#475569' }}>
-            O timer só dispara se houver pelo menos este número de mensagens desde o último disparo.
-          </p>
-        </div>
-
-        {/* Platforms */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: 20 }}>
-          <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>Plataformas</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-            {PLAT_OPTIONS.map(p => {
-              const active = form.plataformas.includes(p.key)
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => togglePlat(p.key)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '12px 8px',
-                    background: active ? `${p.color}18` : '#0f172a',
-                    border: `1.5px solid ${active ? p.color : '#334155'}`,
-                    borderRadius: 10,
-                    cursor: 'pointer',
-                    color: active ? p.color : '#64748b',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {p.icon}
-                  <span style={{ fontSize: 11, fontWeight: 600 }}>{p.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Tipo de saída */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: 20 }}>
-          <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>Enviar como</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[
-              { value: 'chat', label: 'Chat' },
-              { value: 'overlay', label: 'Overlay OBS' },
-              { value: 'both', label: 'Chat + Overlay' },
-            ].map(opt => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setForm(f => ({ ...f, tipo_saida: opt.value as FormState['tipo_saida'] }))}
-                style={{
-                  flex: 1,
-                  padding: '10px 4px',
-                  background: form.tipo_saida === opt.value ? '#6366f1' : '#0f172a',
-                  border: `1px solid ${form.tipo_saida === opt.value ? '#6366f1' : '#334155'}`,
-                  borderRadius: 8,
-                  color: form.tipo_saida === opt.value ? '#fff' : '#94a3b8',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: form.tipo_saida === opt.value ? 600 : 400,
-                  transition: 'all 0.15s',
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          {(form.tipo_saida === 'overlay' || form.tipo_saida === 'both') && userId && (
-            <div style={{ marginTop: 12, background: '#0f172a', borderRadius: 8, padding: 10 }}>
-              <p style={{ margin: '0 0 6px', fontSize: 12, color: '#94a3b8' }}>Adicione esta URL como Browser Source no OBS:</p>
-              <code style={{ fontSize: 11, color: '#818cf8', wordBreak: 'break-all' }}>
-                {overlayUrl(userId)}
-              </code>
-            </div>
-          )}
-        </div>
-
-        {/* Ativo */}
+      {/* Overlay URL */}
+      {overlayUrl && (
         <div
           style={{
-            background: '#1e293b',
-            border: '1px solid #334155',
-            borderRadius: 12,
-            padding: '16px 20px',
+            background: '#111827',
+            border: '1px solid #1f2937',
+            borderRadius: 10,
+            padding: '14px 18px',
+            marginBottom: 24,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            gap: 12,
+            flexWrap: 'wrap',
           }}
         >
-          <div>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>Timer ativo</p>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>
-              Desative para pausar sem excluir
-            </p>
-          </div>
-          <Toggle checked={form.ativo} onChange={v => setForm(f => ({ ...f, ativo: v }))} />
+          <span style={{ fontSize: 12, color: '#64748b', flexShrink: 0 }}>Overlay OBS:</span>
+          <code style={{ flex: 1, fontSize: 11, color: '#818cf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {overlayUrl}
+          </code>
+          <button
+            onClick={async () => {
+              await navigator.clipboard.writeText(overlayUrl)
+              setCopied(true)
+              setTimeout(() => setCopied(false), 2000)
+            }}
+            style={{
+              background: copied ? '#22c55e' : '#1f2937',
+              color: '#f1f5f9',
+              border: 'none',
+              borderRadius: 6,
+              padding: '5px 12px',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            {copied ? 'Copiado!' : 'Copiar'}
+          </button>
         </div>
+      )}
 
-        {/* Save button */}
-        <button
-          onClick={handleSave}
-          disabled={saving || !form.nome.trim() || !form.mensagem.trim()}
+      {/* List */}
+      {loading ? (
+        <p style={{ color: '#64748b', textAlign: 'center', padding: 40 }}>Carregando...</p>
+      ) : timers.length === 0 ? (
+        <div
           style={{
-            background: saving ? '#4338ca' : '#6366f1',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 10,
-            padding: '14px',
-            fontSize: 15,
-            fontWeight: 700,
-            cursor: saving ? 'not-allowed' : 'pointer',
-            opacity: !form.nome.trim() || !form.mensagem.trim() ? 0.5 : 1,
-            transition: 'all 0.15s',
+            background: '#111827',
+            border: '1px dashed #1f2937',
+            borderRadius: 12,
+            padding: 48,
+            textAlign: 'center',
+            color: '#475569',
           }}
         >
-          {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Criar timer'}
-        </button>
-      </div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>⏱</div>
+          <p style={{ margin: 0, fontSize: 15 }}>Nenhum timer criado ainda.</p>
+          <p style={{ margin: '6px 0 0', fontSize: 13 }}>Crie seu primeiro timer para enviar mensagens automáticas durante a live.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {timers.map(t => (
+            <div
+              key={t.id}
+              style={{
+                background: '#111827',
+                border: '1px solid #1f2937',
+                borderRadius: 12,
+                padding: '16px 20px',
+                display: 'grid',
+                gridTemplateColumns: '1fr auto',
+                gap: 16,
+                alignItems: 'center',
+                opacity: t.ativo ? 1 : 0.55,
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+                  <span style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9' }}>{t.nome}</span>
+                  <span
+                    style={{
+                      background: t.ativo ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                      color: t.ativo ? '#4ade80' : '#f87171',
+                      border: `1px solid ${t.ativo ? '#4ade80' : '#f87171'}`,
+                      borderRadius: 20,
+                      padding: '1px 8px',
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {t.ativo ? 'ativo' : 'inativo'}
+                  </span>
+                </div>
+
+                <p style={{ margin: '0 0 10px', fontSize: 13, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 480 }}>
+                  {t.mensagem}
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 12, color: '#475569' }}>🕐 a cada {formatInterval(t.intervalo_minutos)}</span>
+
+                  {/* Platform status */}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {PLATS.filter(p => t.plataformas.includes(p.key)).map(p => {
+                      const st = platStatus(t, p.key)
+                      const dot = st === 'success' ? '#4ade80' : st === 'error' ? '#f87171' : '#64748b'
+                      return (
+                        <span
+                          key={p.key}
+                          title={`${p.label}: ${st === 'none' ? 'sem disparo' : st}`}
+                          style={{
+                            background: '#1f2937',
+                            borderRadius: 6,
+                            padding: '2px 8px',
+                            fontSize: 11,
+                            color: p.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          {p.label}
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: dot, display: 'inline-block' }} />
+                        </span>
+                      )
+                    })}
+                  </div>
+
+                  {t.ultimo_disparo && (
+                    <span style={{ fontSize: 11, color: '#374151' }}>
+                      último: {new Date(t.ultimo_disparo).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Toggle checked={t.ativo} onChange={v => handleToggle(t.id, v)} />
+                <button
+                  onClick={() => openEdit(t)}
+                  style={{ background: 'none', border: '1px solid #1f2937', borderRadius: 6, color: '#64748b', cursor: 'pointer', padding: '6px 10px', fontSize: 13 }}
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={() => handleDelete(t.id)}
+                  disabled={deleting === t.id}
+                  style={{ background: 'none', border: '1px solid #1f2937', borderRadius: 6, color: '#f87171', cursor: 'pointer', padding: '6px 10px', fontSize: 13 }}
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal */}
+      {showModal && (
+        <TimerModal
+          editingId={editingId}
+          form={form}
+          setForm={setForm}
+          connections={connections}
+          saving={saving}
+          onSave={handleSave}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </div>
   )
 }
