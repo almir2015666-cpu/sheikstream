@@ -171,8 +171,17 @@ export default function LoginPage() {
         </p>
       </div>
 
+      {/* Back */}
+      <a href="/" style={{ marginTop: '1.5rem', fontSize: '0.85rem', color: C.muted, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem', opacity: 0.75, transition: 'opacity 0.15s' }}
+        onMouseOver={e => (e.currentTarget.style.opacity = '1')}
+        onMouseOut={e => (e.currentTarget.style.opacity = '0.75')}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Voltar ao início
+      </a>
+
       {/* Footer */}
-      <div style={{ marginTop: '2.5rem', fontSize: '0.75rem', color: C.footer }}>
+      <div style={{ marginTop: '1.5rem', fontSize: '0.75rem', color: C.footer }}>
         <a href="/" style={{ color: 'inherit', textDecoration: 'none' }}>SheikSTREAM</a>
         {' '}© 2025
         <span style={{ margin: '0 0.6rem', opacity: 0.4 }}>·</span>
