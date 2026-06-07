@@ -13,6 +13,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${BASE}/login?error=oauth_failed`)
   }
 
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return NextResponse.redirect(`${BASE}/login?error=google_not_configured`)
+  }
+
   try {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
