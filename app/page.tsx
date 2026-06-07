@@ -181,6 +181,10 @@ export default function Home() {
   }, [chatMessages, chatLoading])
 
   function handleOAuth(platform: string) {
+    if (platform === 'YouTube') {
+      window.location.href = '/api/auth/google'
+      return
+    }
     setLoading(platform)
     setTimeout(() => {
       setLoading('')
