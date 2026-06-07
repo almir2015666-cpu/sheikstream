@@ -72,34 +72,34 @@ const LIGHT = {
 function makeCSS(C: typeof DARK) {
   return `
   * { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-  .sk-feature-card { transition: background 0.2s, transform 0.2s, border-color 0.2s; cursor: default; }
+  .sk-feature-card { transition: background 0.14s, transform 0.14s, border-color 0.14s; cursor: default; }
   .sk-feature-card:hover { background: ${C.primaryBgLight} !important; transform: translateY(-4px); border-color: ${C.borderGlow} !important; }
-  .sk-platform { transition: all 0.15s; cursor: pointer; }
+  .sk-platform { transition: all 0.1s; cursor: pointer; }
   .sk-platform:hover { border-color: ${C.borderStrong} !important; background: ${C.primaryBg} !important; transform: translateY(-2px); }
-  .sk-nav-link { transition: color 0.15s; }
+  .sk-nav-link { transition: color 0.1s; }
   .sk-nav-link:hover { color: ${C.text} !important; }
-  .sk-legal-link { transition: color 0.15s; cursor: pointer; }
+  .sk-legal-link { transition: color 0.1s; cursor: pointer; }
   .sk-legal-link:hover { color: ${C.primary} !important; }
-  .sk-social-icon { transition: all 0.18s; }
+  .sk-social-icon { transition: all 0.12s; }
   .sk-social-icon:hover { border-color: ${C.borderStrong} !important; background: ${C.primaryBg} !important; transform: translateY(-3px); }
-  .sk-pricing-card { transition: transform 0.22s, box-shadow 0.22s; }
+  .sk-pricing-card { transition: transform 0.15s, box-shadow 0.15s; }
   .sk-pricing-card:hover { transform: translateY(-6px); box-shadow: 0 16px 48px ${C.shadowPricing}; }
-  .sk-chat-toggle { transition: transform 0.2s, box-shadow 0.2s; }
+  .sk-chat-toggle { transition: transform 0.14s, box-shadow 0.14s; }
   .sk-chat-toggle:hover { transform: scale(1.08); box-shadow: 0 4px 24px ${C.primaryBgMed}; }
-  .sk-send-btn { transition: opacity 0.15s; }
+  .sk-send-btn { transition: opacity 0.1s; }
   .sk-send-btn:hover:not(:disabled) { opacity: 0.82; }
-  .sk-theme-btn { transition: transform 0.25s, opacity 0.15s; }
+  .sk-theme-btn { transition: transform 0.17s, opacity 0.1s; }
   .sk-theme-btn:hover { transform: rotate(18deg) scale(1.15); }
   .sk-nav { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-  .sk-btn-cta { transition: all 0.2s; }
+  .sk-btn-cta { transition: all 0.14s; }
   .sk-btn-cta:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 32px ${C.primaryBg3} !important; }
-  .sk-btn-ghost { transition: all 0.18s; }
+  .sk-btn-ghost { transition: all 0.12s; }
   .sk-btn-ghost:hover { background: ${C.primaryBgLight} !important; border-color: ${C.borderStrong} !important; color: ${C.text} !important; }
-  .sk-app-btn { transition: all 0.18s; }
+  .sk-app-btn { transition: all 0.12s; }
   .sk-app-btn:hover { background: ${C.appBtn} !important; border-color: ${C.primary} !important; color: ${C.primary} !important; }
-  .sk-oauth-btn { transition: all 0.18s; }
+  .sk-oauth-btn { transition: all 0.12s; }
   .sk-oauth-btn:hover { border-color: rgba(155,48,255,0.3) !important; background: ${C.primaryBgLight} !important; }
-  .sk-checkbox { width:18px; height:18px; border:2px solid ${C.border}; border-radius:4px; background:${C.inputBg}; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:border-color 0.15s, background 0.15s; }
+  .sk-checkbox { width:18px; height:18px; border:2px solid ${C.border}; border-radius:4px; background:${C.inputBg}; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:border-color 0.1s, background 0.1s; }
   .sk-checkbox.checked { border-color:${C.primary}; background:${C.primary}; }
   @keyframes sk-slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes sk-pop-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
@@ -110,12 +110,12 @@ function makeCSS(C: typeof DARK) {
   @keyframes sk-pending-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.6; transform:scale(0.96); } }
   .sk-mock-glow { animation: sk-glow-pulse 3.5s ease-in-out infinite; }
   .sk-mock-float { animation: sk-float 5s ease-in-out infinite; }
-  .sk-chat-window { animation: sk-pop-in 0.22s ease; }
-  .sk-chat-msg { animation: sk-slide-up 0.18s ease; }
+  .sk-chat-window { animation: sk-pop-in 0.15s ease; }
+  .sk-chat-msg { animation: sk-slide-up 0.12s ease; }
   .sk-dot-1 { animation: sk-dot 1.4s infinite 0s; }
   .sk-dot-2 { animation: sk-dot 1.4s infinite 0.2s; }
   .sk-dot-3 { animation: sk-dot 1.4s infinite 0.4s; }
-  .sk-theme-overlay { animation: sk-circle-collapse 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+  .sk-theme-overlay { animation: sk-circle-collapse 0.73s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
   .sk-gradient-text { display: inline-block; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; }
   .sk-pending-pulse { animation: sk-pending-pulse 2s ease-in-out infinite; }
   `
@@ -680,7 +680,7 @@ export default function Home() {
           <span className="sk-nav-link" onClick={() => scrollToSection('precos')} style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500 }}>Preços</span>
           <a className="sk-nav-link" href="/roadmap" style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500, textDecoration: 'none' }}>Roadmap</a>
           {themeBtn}
-          {/* App button — replaces "Entrar" */}
+          {/* App button */}
           <button onClick={() => window.location.href = '/login'} className="sk-app-btn" style={{
             background: C.appBtn, color: C.primary,
             border: `1px solid ${C.appBtnBorder}`,
@@ -693,19 +693,16 @@ export default function Home() {
             </svg>
             App
           </button>
-          <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.52rem 1.25rem', borderRadius: '7px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700, boxShadow: `0 2px 16px ${C.primaryBgMed}` }}>
-            Começar agora
-          </button>
         </div>
       </nav>
 
       {/* ── Hero ── */}
       <div style={{ textAlign: 'center', padding: '5.5rem 2rem 3rem', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg,transparent 5%,${C.primary},${C.accent},${C.primary},transparent 95%)` }} />
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(${C.primary}18 1px, transparent 1px)`, backgroundSize: '28px 28px', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)', width: '800px', height: '500px', background: `radial-gradient(ellipse at center, ${C.primary}18 0%, transparent 65%)`, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg,transparent 5%,${C.primary},${C.accent},${C.primary},transparent 95%)`, zIndex: 0 }} />
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(${C.primary}18 1px, transparent 1px)`, backgroundSize: '28px 28px', pointerEvents: 'none', zIndex: 0 }} />
+        <div style={{ position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)', width: '800px', height: '500px', background: `radial-gradient(ellipse at center, ${C.primary}18 0%, transparent 65%)`, pointerEvents: 'none', zIndex: 0 }} />
 
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: C.heroBadgeBg, border: `1px solid ${C.heroBadgeBorder}`, color: C.heroBadgeText, fontSize: '0.73rem', padding: '0.3rem 1rem', borderRadius: '999px', marginBottom: '1.6rem', letterSpacing: '0.5px', fontWeight: 600 }}>
             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />
             Hub para streamers brasileiros — BETA fechado

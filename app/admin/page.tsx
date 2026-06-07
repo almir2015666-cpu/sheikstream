@@ -61,7 +61,7 @@ function makeCSS(C: typeof DARK) {
   .sk-pw-toggle { background: transparent; border: none; cursor: pointer; padding: 0.2rem; display: flex; align-items: center; color: ${C.dim}; transition: color 0.15s; position: absolute; right: 0.7rem; top: 50%; transform: translateY(-50%); }
   .sk-pw-toggle:hover { color: ${C.primary}; }
   @keyframes sk-pop-in { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
-  .sk-card { animation: sk-pop-in 0.35s ease both; }
+  .sk-card { animation: sk-pop-in 0.24s ease both; }
   @keyframes sk-spin { to { transform: rotate(360deg); } }
   .sk-spin { animation: sk-spin 0.8s linear infinite; }
   `
@@ -105,10 +105,16 @@ export default function AdminPage() {
     setUsersLoading(true)
     try {
       const res = await fetch('/api/admin/users', { headers: { 'x-admin-password': pw } })
-      if (!res.ok) {
+      if (res.status === 401) {
+        // Auth failure — invalidate session
         setAuthed(false)
         setStoredPw('')
         sessionStorage.removeItem('sk-admin-pw')
+        return
+      }
+      if (!res.ok) {
+        // Server/data error — keep session, show empty list
+        setUsers([])
         return
       }
       const data = await res.json()

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import { SiTwitch, SiYoutube, SiKick } from 'react-icons/si'
 
 const DARK = {
@@ -33,15 +34,15 @@ const LIGHT = {
 function makeCSS() {
   return `
   * { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-  .sk-oauth-btn { transition: opacity 0.15s, transform 0.15s, filter 0.15s; border: none; border-radius: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 0.95rem 1.2rem; font-size: 1rem; font-weight: 700; cursor: pointer; color: #fff; }
+  .sk-oauth-btn { transition: opacity 0.1s, transform 0.1s, filter 0.1s; border: none; border-radius: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 0.95rem 1.2rem; font-size: 1rem; font-weight: 700; cursor: pointer; color: #fff; }
   .sk-oauth-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-2px); filter: brightness(1.08); }
   .sk-oauth-btn:disabled { cursor: not-allowed; opacity: 0.5; }
-  .sk-theme-btn { transition: transform 0.22s; background: transparent; border: none; cursor: pointer; opacity: 0.5; position: fixed; top: 1.1rem; right: 1.5rem; z-index: 200; padding: 0.4rem; }
+  .sk-theme-btn { transition: transform 0.15s; background: transparent; border: none; cursor: pointer; opacity: 0.5; position: fixed; top: 1.1rem; right: 1.5rem; z-index: 200; padding: 0.4rem; }
   .sk-theme-btn:hover { transform: rotate(18deg) scale(1.15); opacity: 0.85; }
   @keyframes sk-pop-in { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-  .sk-card { animation: sk-pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+  .sk-card { animation: sk-pop-in 0.28s cubic-bezier(0.34,1.56,0.64,1) both; }
   @keyframes sk-logo-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-  .sk-logo { animation: sk-logo-in 0.35s ease both; }
+  .sk-logo { animation: sk-logo-in 0.24s ease both; }
   `
 }
 
@@ -68,6 +69,11 @@ export default function LoginPage() {
   function handleOAuth(platform: string) {
     if (loading) return
     setLoading(platform)
+    if (platform === 'Twitch') {
+      signIn('twitch', { callbackUrl: '/pending?platform=Twitch' })
+      return
+    }
+    // YouTube and Kick — simulated until OAuth is configured
     setTimeout(() => {
       router.push(`/pending?platform=${encodeURIComponent(platform)}`)
     }, 1100)
