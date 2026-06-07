@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
             </div>
             <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 900, color: S.text, letterSpacing: '0.2px', lineHeight: 1.15 }}>Sheik<span style={{ color: S.accent }}>STREAM</span></div>
+              <Link href="/" style={{ fontSize: '0.88rem', fontWeight: 900, color: S.text, letterSpacing: '0.2px', lineHeight: 1.15, textDecoration: 'none' }}>Sheik<span style={{ color: S.accent }}>STREAM</span></Link>
               <div style={{ fontSize: '0.58rem', color: S.dim }}>Painel Admin</div>
             </div>
           </div>

@@ -44,24 +44,24 @@ function makeCSS(C: typeof DARK) {
   return `
   * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
   .sk-nav { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-  .sk-theme-btn { transition: transform 0.22s; background: transparent; border: none; cursor: pointer; padding: 0.4rem; }
+  .sk-theme-btn { transition: transform 0.11s; background: transparent; border: none; cursor: pointer; padding: 0.4rem; }
   .sk-theme-btn:hover { transform: rotate(18deg) scale(1.15); }
-  .sk-user-row { transition: background 0.15s; }
+  .sk-user-row { transition: background 0.07s; }
   .sk-user-row:hover { background: ${C.primaryBg} !important; }
-  .sk-btn-approve { transition: all 0.15s; border: 1px solid ${C.accentBorder}; background: ${C.accentBg}; color: ${C.accent}; border-radius: 6px; padding: 0.32rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+  .sk-btn-approve { transition: all 0.07s; border: 1px solid ${C.accentBorder}; background: ${C.accentBg}; color: ${C.accent}; border-radius: 6px; padding: 0.32rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
   .sk-btn-approve:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .sk-btn-approve:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .sk-btn-reject { transition: all 0.15s; border: 1px solid ${C.dangerBorder}; background: ${C.dangerBg}; color: ${C.danger}; border-radius: 6px; padding: 0.32rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+  .sk-btn-reject { transition: all 0.07s; border: 1px solid ${C.dangerBorder}; background: ${C.dangerBg}; color: ${C.danger}; border-radius: 6px; padding: 0.32rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
   .sk-btn-reject:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .sk-btn-reject:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .sk-tab { transition: all 0.15s; cursor: pointer; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; border: none; background: transparent; }
+  .sk-tab { transition: all 0.07s; cursor: pointer; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; border: none; background: transparent; }
   .sk-tab.active { background: ${C.primaryBg}; color: ${C.primary}; }
   .sk-tab:not(.active) { color: ${C.muted}; }
   .sk-tab:not(.active):hover { color: ${C.text}; background: ${C.vvdim}; }
-  .sk-pw-toggle { background: transparent; border: none; cursor: pointer; padding: 0.2rem; display: flex; align-items: center; color: ${C.dim}; transition: color 0.15s; position: absolute; right: 0.7rem; top: 50%; transform: translateY(-50%); }
+  .sk-pw-toggle { background: transparent; border: none; cursor: pointer; padding: 0.2rem; display: flex; align-items: center; color: ${C.dim}; transition: color 0.07s; position: absolute; right: 0.7rem; top: 50%; transform: translateY(-50%); }
   .sk-pw-toggle:hover { color: ${C.primary}; }
   @keyframes sk-pop-in { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
-  .sk-card { animation: sk-pop-in 0.24s ease both; }
+  .sk-card { animation: sk-pop-in 0.12s ease both; }
   @keyframes sk-spin { to { transform: rotate(360deg); } }
   .sk-spin { animation: sk-spin 0.8s linear infinite; }
   `
@@ -128,6 +128,7 @@ export default function AdminPage() {
 
   // On mount: verify any stored session BEFORE showing anything
   useEffect(() => {
+    setPassword('') // clear any browser-autofilled value
     const saved = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
     if (saved) setTheme(saved)
 
@@ -288,6 +289,8 @@ export default function AdminPage() {
                   placeholder="Senha de administrador"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  name="sk_admin_secret_field"
                   autoFocus
                   style={{ width: '100%', padding: '0.75rem 2.8rem 0.75rem 1rem', background: C.inputBg, border: `1px solid ${authError ? C.dangerBorder : C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
                 />

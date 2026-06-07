@@ -2,6 +2,8 @@ import NextAuth from "next-auth"
 import Twitch from "next-auth/providers/twitch"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  trustHost: true,
   providers: [
     Twitch({
       clientId: process.env.TWITCH_CLIENT_ID!,
