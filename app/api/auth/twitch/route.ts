@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const REDIRECT_URI = 'https://sheikstream.vercel.app/api/auth/twitch/callback'
+const REDIRECT_URI = 'https://sheikstream.com.br/api/auth/twitch/callback'
 
 export async function GET() {
   const params = new URLSearchParams({

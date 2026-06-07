@@ -4,7 +4,7 @@
 export const SITE = {
   name: 'SheikSTREAM',
   url: 'sheikstream.com.br',
-  urlAlt: 'sheikstream.vercel.app',
+  urlAlt: 'sheikstream.vercel.app (legado)',
   description: 'Hub gratuito para streamers brasileiros gerenciarem todas as plataformas de streaming num só lugar.',
   status: 'BETA fechado — acesso mediante aprovação manual do administrador',
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
 import { logActivity } from '@/app/lib/log-activity'
 
-const BASE = 'https://sheikstream.vercel.app'
+const BASE = 'https://sheikstream.com.br'
 const REDIRECT_URI = `${BASE}/api/auth/youtube/callback`
 
 export async function GET(req: NextRequest) {

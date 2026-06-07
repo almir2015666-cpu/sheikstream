@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const BASE = 'https://sheikstream.vercel.app'
+const BASE = 'https://sheikstream.com.br'
 const REDIRECT_URI = `${BASE}/api/auth/youtube/callback`
 
 export async function GET() {

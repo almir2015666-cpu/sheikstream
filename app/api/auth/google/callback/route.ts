@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
 import { logActivity } from '@/app/lib/log-activity'
 
-const BASE = 'https://sheikstream.vercel.app'
-const REDIRECT_URI = 'https://sheikstream.vercel.app/api/auth/google/callback'
+const BASE = 'https://sheikstream.com.br'
+const REDIRECT_URI = 'https://sheikstream.com.br/api/auth/google/callback'
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams

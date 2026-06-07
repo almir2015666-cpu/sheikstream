@@ -47,7 +47,7 @@ async function sendApprovalEmail(email: string, username: string) {
             <p style="margin:0 0 28px;font-size:15px;color:rgba(240,238,252,0.6);line-height:1.6;">
               Seu acesso ao SheikSTREAM foi aprovado. Agora você pode entrar na plataforma usando sua conta da Twitch.
             </p>
-            <a href="https://sheikstream.vercel.app/login"
+            <a href="https://sheikstream.com.br/login"
                style="display:inline-block;background:linear-gradient(135deg,#9b30ff,#7b1fff);color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px;">
               Entrar agora →
             </a>
@@ -57,7 +57,7 @@ async function sendApprovalEmail(email: string, username: string) {
         <tr>
           <td style="padding:20px 32px;text-align:center;border-top:1px solid rgba(155,48,255,0.1);">
             <p style="margin:0;font-size:12px;color:rgba(240,238,252,0.25);">
-              SheikSTREAM · sheikstream.vercel.app
+              SheikSTREAM · sheikstream.com.br
             </p>
           </td>
         </tr>

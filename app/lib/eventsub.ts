@@ -29,7 +29,7 @@ async function getAppToken(): Promise<string> {
 
 export async function registerEventSubSubscriptions(broadcasterId: string): Promise<void> {
   const token = await getAppToken()
-  const appUrl = process.env.APP_URL ?? 'https://sheikstream.vercel.app'
+  const appUrl = process.env.APP_URL ?? 'https://sheikstream.com.br'
   const secret = process.env.TWITCH_WEBHOOK_SECRET ?? ''
 
   for (const sub of EVENT_TYPES) {

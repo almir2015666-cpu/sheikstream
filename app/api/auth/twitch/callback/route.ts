@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { logActivity } from '@/app/lib/log-activity'
 import { registerEventSubSubscriptions } from '@/app/lib/eventsub'
 
-const BASE = 'https://sheikstream.vercel.app'
+const BASE = 'https://sheikstream.com.br'
 const REDIRECT_URI = `${BASE}/api/auth/twitch/callback`
 
 export async function GET(req: NextRequest) {
