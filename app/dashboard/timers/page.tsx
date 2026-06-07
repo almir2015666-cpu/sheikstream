@@ -457,7 +457,7 @@ export default function TimersPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, min_mensagens: 0, tipo_saida: 'chat' }),
+        body: JSON.stringify({ ...form, min_mensagens: 0, tipo_saida: 'both' }),
       })
       if (res.ok) {
         await fetchTimers()
