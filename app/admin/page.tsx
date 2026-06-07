@@ -102,29 +102,33 @@ export default function AdminPage() {
   const [storedPw, setStoredPw] = useState('')
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
+  const [dbError, setDbError] = useState('')
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
 
   const fetchUsers = useCallback(async (pw: string) => {
     setUsersLoading(true)
+    setDbError('')
     try {
       const res = await fetch('/api/admin/users', { headers: { 'x-admin-password': pw } })
       if (res.status === 401) {
-        // Auth failure — invalidate session
         setAuthed(false)
         setStoredPw('')
         sessionStorage.removeItem('sk-admin-pw')
         return
       }
       if (!res.ok) {
-        // Server/data error — keep session, show empty list
+        const body = await res.json().catch(() => ({}))
+        setDbError(body?.error || `Erro ${res.status} ao conectar com o banco de dados`)
         setUsers([])
         return
       }
       const data = await res.json()
+      setDbError('')
       setUsers(data)
-    } catch {
+    } catch (e) {
+      setDbError('Falha de rede ao buscar usuários')
       setUsers([])
     } finally {
       setUsersLoading(false)
@@ -346,6 +350,16 @@ export default function AdminPage() {
       ) : (
         /* ── Admin dashboard ── */
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
+          {/* DB error banner */}
+          {dbError && (
+            <div style={{ background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '10px', padding: '0.9rem 1.2rem', marginBottom: '1.5rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ fontSize: '1.1rem' }}>⚠</span>
+              <div>
+                <strong>Erro no banco de dados:</strong> {dbError}
+                <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: '0.2rem' }}>Verifique se o projeto Supabase está ativo em supabase.com (projetos gratuitos pausam após inatividade)</div>
+              </div>
+            </div>
+          )}
           {/* Stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
             {([
