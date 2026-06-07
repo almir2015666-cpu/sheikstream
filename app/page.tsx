@@ -417,8 +417,11 @@ export default function Home() {
   ) : null
 
   const brandLogo = (extraStyle?: React.CSSProperties) => (
-    <a href="/" style={{ fontSize: isMobile ? '1.2rem' : '1.55rem', fontWeight: 900, letterSpacing: '0.5px', color: C.text, textDecoration: 'none', ...extraStyle }}>
-      Sheik<span style={{ color: C.accent }}>STREAM</span>
+    <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', ...extraStyle }}>
+      <div style={{ width: isMobile ? '28px' : '32px', height: isMobile ? '28px' : '32px', borderRadius: '8px', background: '#ffffff', border: '1.5px solid rgba(57,255,20,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 2px 10px rgba(57,255,20,0.18)` }}>
+        <span style={{ fontSize: isMobile ? '1.05rem' : '1.25rem', fontWeight: 900, color: '#1db300', lineHeight: 1, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", letterSpacing: '-1px' }}>S</span>
+      </div>
+      <span style={{ fontSize: isMobile ? '1.2rem' : '1.55rem', fontWeight: 900, letterSpacing: '0.5px', color: C.text }}>Sheik<span style={{ color: C.accent }}>STREAM</span></span>
     </a>
   )
 
@@ -641,7 +644,7 @@ export default function Home() {
             <a className="sk-nav-link sk-nav-desktop-links" href="/roadmap" style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500, textDecoration: 'none' }}>Roadmap</a>
             {themeBtn}
             <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: isMobile ? '0.5rem 1rem' : '0.55rem 1.3rem', borderRadius: '8px', cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.88rem', fontWeight: 700, boxShadow: `0 4px 16px ${C.primaryBgMed}`, minHeight: '44px' }}>
-              {isMobile ? 'Entrar' : 'Começar grátis'}
+              App
             </button>
           </div>
         </div>
