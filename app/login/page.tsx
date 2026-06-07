@@ -72,7 +72,10 @@ export default function LoginPage() {
       window.location.href = '/api/auth/twitch'
       return
     }
-    // YouTube and Kick — simulated until OAuth is configured
+    if (platform === 'YouTube') {
+      window.location.href = '/api/auth/youtube'
+      return
+    }
     setTimeout(() => {
       router.push(`/pending?platform=${encodeURIComponent(platform)}`)
     }, 1100)
