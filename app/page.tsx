@@ -173,12 +173,8 @@ const PLATFORM_COLORS: Record<string, string> = {
 const TW_WORDS = ['sorteios', 'comandos', 'analytics', 'metas', 'notificações', 'streams']
 
 const STREAMERS = [
-  { name: 'GabrielXD',   initials: 'GX', platform: 'Twitch',  plColor: '#9147ff' },
-  { name: 'StreamQueen', initials: 'SQ', platform: 'YouTube', plColor: '#ff0000' },
-  { name: 'NitroGamer',  initials: 'NG', platform: 'Kick',    plColor: '#53fc18' },
-  { name: 'CaioPlays',   initials: 'CP', platform: 'Twitch',  plColor: '#9147ff' },
-  { name: 'LunaStream',  initials: 'LS', platform: 'TikTok',  plColor: '#f0eefc' },
-  { name: 'FelipeAO',    initials: 'FA', platform: 'YouTube', plColor: '#ff0000' },
+  { name: 'sheikfabio',  initials: 'SF', platform: 'Twitch', plColor: '#9147ff' },
+  { name: 'thierry0800', initials: 'TH', platform: 'Twitch', plColor: '#9147ff' },
 ]
 
 const TESTIMONIALS = [
@@ -198,12 +194,6 @@ const FAQ_ITEMS = [
   { q: 'Vou perder meu acesso quando sair do beta?', a: 'Não. Usuários do beta têm acesso garantido e quem entrar agora fica no plano gratuito para sempre.' },
 ]
 
-const METRICS_CFG = [
-  { target: 5000, label: 'streamers cadastrados', suffix: '+', fmt: (v: number) => v.toLocaleString('pt-BR') },
-  { target: 12,   label: 'interações gerenciadas', suffix: 'M+', fmt: (v: number) => v.toString() },
-  { target: 5,    label: 'plataformas integradas', suffix: '', fmt: (v: number) => v.toString() },
-  { target: 99,   label: 'uptime garantido', suffix: '.9%', fmt: (v: number) => v.toString() },
-]
 
 export default function Home() {
   const [page, setPage] = useState('landing')
@@ -237,8 +227,6 @@ export default function Home() {
   const [twIdx, setTwIdx] = useState(0)
   const [twPhase, setTwPhase] = useState<'typing' | 'deleting'>('typing')
   const [userCount, setUserCount] = useState(0)
-  const [metricVals, setMetricVals] = useState([0, 0, 0, 0])
-  const metricsStarted = useRef(false)
 
   useEffect(() => {
     if (document.cookie.includes('sk-session')) {
@@ -294,7 +282,7 @@ export default function Home() {
 
   useEffect(() => {
     if (page !== 'landing') return
-    const ids = ['sk-howit','sk-features','sk-streamers','sk-testimonials','sk-metrics','sk-faq','sk-cta']
+    const ids = ['sk-howit','sk-features','sk-streamers','sk-testimonials','sk-faq','sk-cta']
     const obs = new IntersectionObserver(entries => {
       entries.forEach(e => { if (e.isIntersecting) setRevealed(prev => new Set([...prev, e.target.id])) })
     }, { threshold: 0.07 })
@@ -302,25 +290,6 @@ export default function Home() {
     return () => obs.disconnect()
   }, [page])
 
-  useEffect(() => {
-    if (page !== 'landing') return
-    metricsStarted.current = false
-    const obs = new IntersectionObserver(entries => {
-      if (entries[0]?.isIntersecting && !metricsStarted.current) {
-        metricsStarted.current = true
-        let step = 0
-        const t = setInterval(() => {
-          step++
-          const eased = 1 - Math.pow(1 - step / 55, 2.5)
-          setMetricVals(METRICS_CFG.map(m => Math.round(m.target * eased)))
-          if (step >= 55) clearInterval(t)
-        }, 28)
-      }
-    }, { threshold: 0.25 })
-    const el = document.getElementById('sk-metrics')
-    if (el) obs.observe(el)
-    return () => obs.disconnect()
-  }, [page])
 
   function handleOAuth(platform: string) {
     if (platform === 'YouTube') { window.location.href = '/api/auth/youtube'; return }
@@ -822,24 +791,6 @@ export default function Home() {
                 <div style={{ width:'40px',height:'40px',borderRadius:'50%',background:t.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.85rem',fontWeight:900,color:'#fff',flexShrink:0,boxShadow:`0 3px 12px ${t.color}44` }}>{t.initials}</div>
                 <div><div style={{ fontSize:'0.88rem',fontWeight:700,color:C.text }}>{t.name}</div><div style={{ fontSize:'0.72rem',color:C.muted }}>{t.platform}</div></div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div style={{ height:'1px',background:C.border,margin:`0 ${hp}` }} />
-
-      {/* Números */}
-      <section id="sk-metrics" style={{ padding:`5rem ${hp}`,maxWidth:'1000px',margin:'0 auto',width:'100%',boxSizing:'border-box',...revealStyle('sk-metrics') }}>
-        <div style={{ textAlign:'center',marginBottom:'3rem' }}>
-          <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',fontWeight:700,marginBottom:'0.6rem' }}>Números</div>
-          <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,letterSpacing:'-1px' }}>Números que impressionam</h2>
-        </div>
-        <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:'1.25rem' }}>
-          {METRICS_CFG.map((m,i) => (
-            <div key={m.label} className="sk-metric-card" style={{ background:C.cardBg,border:`1px solid ${C.borderStrong}`,borderRadius:'16px',padding:'2rem',textAlign:'center' }}>
-              <div style={{ fontSize:'2.8rem',fontWeight:900,color:C.primary,lineHeight:1,marginBottom:'0.5rem',letterSpacing:'-1px' }}>{m.fmt(metricVals[i])}{m.suffix}</div>
-              <div style={{ fontSize:'0.8rem',color:C.dim }}>{m.label}</div>
             </div>
           ))}
         </div>
