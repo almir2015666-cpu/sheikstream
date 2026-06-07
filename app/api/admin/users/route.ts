@@ -8,16 +8,19 @@ function checkAuth(req: NextRequest) {
 
 async function sendApprovalEmail(email: string, username: string) {
   const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey || !email) return
+  const fromAddr = process.env.EMAIL_FROM ?? 'SheikSTREAM <onboarding@resend.dev>'
+  console.log('[email] sendApprovalEmail called', { email, username, hasKey: !!apiKey, from: fromAddr })
+  if (!apiKey) { console.error('[email] RESEND_API_KEY not set'); return }
+  if (!email)  { console.error('[email] no email address'); return }
   try {
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM ?? 'SheikSTREAM <onboarding@resend.dev>',
+        from: fromAddr,
         to: [email],
         subject: 'Seu acesso ao SheikSTREAM foi aprovado!',
         html: `
@@ -68,8 +71,14 @@ async function sendApprovalEmail(email: string, username: string) {
 </html>`,
       }),
     })
-  } catch {
-    // Email failure is non-critical — approval still succeeds
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      console.error('[email] Resend error', res.status, JSON.stringify(body))
+    } else {
+      console.log('[email] sent ok', JSON.stringify(body))
+    }
+  } catch (e) {
+    console.error('[email] fetch exception', e)
   }
 }
 
