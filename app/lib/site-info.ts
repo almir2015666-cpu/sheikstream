@@ -71,14 +71,20 @@ export const SITE = {
       {
         name: 'Sorteios',
         href: '/dashboard/sorteios',
-        status: 'demo',
-        desc: 'Lista de sorteios e formulário para criar novos. Campos: nome, plataforma, tipo, duração. Dados em estado local (não persistem entre sessões ainda).',
+        status: 'funcional',
+        desc: 'Sorteios reais com integração Twitch EventSub. Tipos: Todos (subs+follows+bits), apenas Subs (2 tickets cada), apenas Seguidores, ou Palavra-chave (adição manual). Participantes adicionados automaticamente em tempo real quando alguém faz sub/follow/bits durante o sorteio ativo. Botão "Sortear vencedor" com sorteio ponderado por tickets. URL de overlay para OBS. Dados persistidos no banco.',
       },
       {
         name: 'Sorteios → Tickets',
         href: '/dashboard/sorteios/tickets',
         status: 'demo',
         desc: 'Controle de tickets de participação. Funcionalidade em desenvolvimento.',
+      },
+      {
+        name: 'Subathon',
+        href: '/dashboard/subathon',
+        status: 'funcional',
+        desc: 'Timer de subathon em tempo real. Cada novo sub adiciona X segundos (configurável), cada 100 bits adiciona Y segundos (configurável). Controles: Iniciar, Pausar, Retomar, Parar, Adicionar tempo manualmente. Overlay para OBS com countdown colorido (verde → amarelo → vermelho conforme o tempo diminui). Timer calculado no cliente com base no end_time do banco — serverless-friendly.',
       },
       {
         name: 'Banners',
@@ -89,8 +95,8 @@ export const SITE = {
       {
         name: 'Metas',
         href: '/dashboard/metas',
-        status: 'demo',
-        desc: 'Criação de metas (Valor R$, Subs Twitch, Membros YouTube, Subs Kick, Subs TikTok, Seguidores). Campos: título, valor atual, valor alvo, tipo. Disponível como overlay para OBS.',
+        status: 'funcional',
+        desc: 'Metas reais com integração Twitch EventSub. Tipos: Subs Twitch, Gift Subs, Seguidores, Bits, Valor (R$). Quando alguém faz sub/gift/bits/follow no canal, a meta é incrementada automaticamente em tempo real. Edição inline de valor atual e alvo. Botão OBS em cada meta copia a URL do overlay. Overlay mostra barra de progresso com gradiente e percentual. Dados persistidos no banco.',
       },
       {
         name: 'Comandos',
@@ -107,8 +113,8 @@ export const SITE = {
       {
         name: 'Overlays',
         href: '/dashboard/overlays',
-        status: 'disponível',
-        desc: 'URLs de overlay para usar no OBS como Browser Source (largura 1920px, altura 120–400px). Overlays disponíveis: Meta, Sorteio, Patrocinadores, Meta de Subs, Subathon, Alertas. Botão "Copiar URL" e "Preview ↗" para cada um.',
+        status: 'funcional',
+        desc: 'URLs de overlay reais para OBS Browser Source. Overlay de Meta (/overlay/meta): barra de progresso com título, valor atual/alvo e percentual — atualiza a cada 4s. Overlay de Sorteio (/overlay/sorteio): mostra sorteio ativo com contagem de participantes; quando o vencedor é sorteado, exibe uma tela de destaque por 8s. Overlay de Subathon (/overlay/subathon): countdown em tempo real com cor que muda (verde→amarelo→vermelho). Todos os overlays têm fundo transparente (ideal para OBS). URLs: /overlay/meta?uid=SEU_ID, /overlay/sorteio?uid=SEU_ID, /overlay/subathon?uid=SEU_ID.',
       },
       {
         name: 'Conexões',

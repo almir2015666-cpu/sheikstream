@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { logActivity } from '@/app/lib/log-activity'
+import { registerEventSubSubscriptions } from '@/app/lib/eventsub'
 
 const BASE = 'https://sheikstream.vercel.app'
 const REDIRECT_URI = `${BASE}/api/auth/twitch/callback`
@@ -116,5 +117,7 @@ export async function GET(req: NextRequest) {
     path: '/',
   })
   await logActivity('auth', 'login', tw.display_name, 'Twitch')
+  // Register EventSub webhooks for this broadcaster (async, doesn't block login)
+  registerEventSubSubscriptions(tw.id).catch(e => console.error('[callback] eventsub register error:', e))
   return res
 }
