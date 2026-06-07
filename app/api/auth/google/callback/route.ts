@@ -6,12 +6,16 @@ import { logActivity } from '@/app/lib/log-activity'
 const BASE = 'https://sheikstream.com.br'
 const REDIRECT_URI = 'https://sheikstream.com.br/api/auth/google/callback'
 
+const POPUP_HTML = `<!DOCTYPE html><html><body style="background:#0f172a;color:#94a3b8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><p>Conectado! Fechando...</p><script>window.close()</script></body></html>`
+
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  const isPopup = searchParams.get('state') === 'popup'
 
   if (error || !code) {
+    if (isPopup) return new NextResponse(POPUP_HTML, { headers: { 'Content-Type': 'text/html' } })
     return NextResponse.redirect(`${BASE}/login?error=oauth_failed`)
   }
 
@@ -58,7 +62,9 @@ export async function GET(req: NextRequest) {
     }
 
     const token = encodeSession(user)
-    const res = NextResponse.redirect(`${BASE}/dashboard`)
+    const res = isPopup
+      ? new NextResponse(POPUP_HTML, { headers: { 'Content-Type': 'text/html' } })
+      : NextResponse.redirect(`${BASE}/dashboard`)
     res.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: true,

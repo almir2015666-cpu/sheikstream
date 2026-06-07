@@ -132,8 +132,8 @@ function TimerModal({
   }
 
   const oauthUrl: Record<string, string | null> = {
-    twitch: '/api/auth/twitch',
-    youtube: '/api/auth/google',
+    twitch: '/api/auth/twitch?popup=1',
+    youtube: '/api/auth/google?popup=1',
     kick: null,
     tiktok: null,
   }
