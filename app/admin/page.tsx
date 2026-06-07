@@ -78,6 +78,9 @@ function makeCSS(C: typeof DARK) {
   .sk-btn-reset { transition: all 0.07s; border: 1px solid rgba(99,179,237,0.35); background: rgba(59,130,246,0.1); color: #60a5fa; border-radius: 6px; padding: 0.32rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
   .sk-btn-reset:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .sk-btn-reset:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .sk-btn-delete { transition: all 0.07s; border: 1px solid rgba(255,68,68,0.2); background: transparent; color: rgba(255,68,68,0.5); border-radius: 6px; padding: 0.32rem 0.65rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+  .sk-btn-delete:hover { border-color: rgba(255,68,68,0.45); background: rgba(255,68,68,0.08); color: #ff4444; transform: translateY(-1px); }
+  .sk-btn-delete:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
   .sk-tab { transition: all 0.07s; cursor: pointer; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; border: none; background: transparent; }
   .sk-tab.active { background: ${C.primaryBg}; color: ${C.primary}; }
   .sk-tab:not(.active) { color: ${C.muted}; }
@@ -257,6 +260,21 @@ export default function AdminPage() {
         setUsers(prev => prev.map(u => u.id === id ? { ...u, status } : u))
         fetchLogs(storedPw)
       }
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function handleDelete(id: string, username: string) {
+    if (!confirm(`Excluir permanentemente "${username}"? Esta ação não pode ser desfeita.`)) return
+    setActionLoading(id + 'delete')
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+        body: JSON.stringify({ id }),
+      })
+      if (res.ok) setUsers(prev => prev.filter(u => u.id !== id))
     } finally {
       setActionLoading(null)
     }
@@ -682,6 +700,14 @@ export default function AdminPage() {
                               {actionLoading === u.id + 'pending' ? '...' : '↺ Resetar'}
                             </button>
                           )}
+                          <button
+                            className="sk-btn-delete"
+                            onClick={() => handleDelete(u.id, u.platform_username || u.email || u.id)}
+                            disabled={actionLoading === u.id + 'delete'}
+                            title="Excluir permanentemente este usuário"
+                          >
+                            {actionLoading === u.id + 'delete' ? '...' : '🗑'}
+                          </button>
                         </div>
                       </td>
                     </tr>

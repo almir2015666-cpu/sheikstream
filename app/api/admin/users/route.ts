@@ -73,6 +73,23 @@ async function sendApprovalEmail(email: string, username: string) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const { id } = await req.json()
+    if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
+    const db = getSupabaseAdmin()
+    const { error } = await db.from('waitlist').delete().eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    try {
+      await db.from('admin_logs').insert({ action: 'deleted', target_username: null, target_platform: null })
+    } catch { /* non-critical */ }
+    return NextResponse.json({ ok: true })
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
+  }
+}
+
 export async function GET(req: NextRequest) {
   if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
