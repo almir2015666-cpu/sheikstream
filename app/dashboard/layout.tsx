@@ -94,8 +94,8 @@ const PAGE_TITLES: Record<string, string> = {
 
 function Chip({ type }: { type: Badge }) {
   return type === 'NOVO'
-    ? <span style={{ fontSize: '0.52rem', fontWeight: 700, padding: '0.08rem 0.38rem', background: 'rgba(59,130,246,0.18)', color: '#60a5fa', borderRadius: '999px', letterSpacing: '0.3px', flexShrink: 0 }}>NOVO</span>
-    : <span style={{ fontSize: '0.52rem', fontWeight: 700, padding: '0.08rem 0.38rem', background: 'rgba(57,255,20,0.12)', color: '#39ff14', borderRadius: '999px', letterSpacing: '0.3px', flexShrink: 0 }}>ATUAL.</span>
+    ? <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', borderRadius: '999px', letterSpacing: '0.4px', flexShrink: 0, border: '1px solid rgba(59,130,246,0.3)' }}>NOVO</span>
+    : <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: 'rgba(251,191,36,0.15)', color: '#fbbf24', borderRadius: '999px', letterSpacing: '0.4px', flexShrink: 0, border: '1px solid rgba(251,191,36,0.3)' }}>ATUALIZADO</span>
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -181,9 +181,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const css = `
     *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
-    .sk-nl{transition:background 0.08s,color 0.08s;}
-    .sk-nl:hover{background:rgba(155,48,255,0.08)!important;color:#e8e6f8!important;}
-    .sk-signout{transition:opacity 0.08s,color 0.08s;}
+    .sk-nl{transition:background 0.12s,color 0.12s;}
+    .sk-nl:hover{background:rgba(255,255,255,0.05)!important;color:#e8e6f8!important;}
+    .sk-nl-act{transition:background 0.12s,color 0.12s;}
+    .sk-nl-act:hover{filter:brightness(1.08);}
+    .sk-signout{transition:opacity 0.1s,color 0.1s;}
     .sk-signout:hover{opacity:1!important;color:#ff4444!important;}
     .sk-hamburger{transition:opacity 0.08s;}
     .sk-hamburger:hover{opacity:0.75!important;}
@@ -197,14 +199,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sidebarContent = (
     <>
       {/* Brand */}
-      <div style={{ padding: '1rem 1.1rem 0.85rem', borderBottom: `1px solid ${S.border}`, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <div style={{ width: '30px', height: '30px', borderRadius: '7px', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      <div style={{ padding: '1.1rem 1rem 1rem', borderBottom: `1px solid ${S.border}`, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(155,48,255,0.35)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           </div>
-          <div style={{ flex: 1 }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 900, color: S.text, letterSpacing: '0.2px', lineHeight: 1.15 }}>Sheik<span style={{ color: S.accent }}>STREAM</span></span>
-            <div style={{ fontSize: '0.58rem', color: S.vdim, marginTop: '1px' }}>Painel do Streamer</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: S.text, letterSpacing: '-0.2px', lineHeight: 1.2 }}>Sheik<span style={{ color: S.accent }}>STREAM</span></div>
+            <div style={{ fontSize: '0.65rem', color: S.dim, marginTop: '1px' }}>Painel do Streamer</div>
           </div>
           {isMobile && (
             <button onClick={() => setMobileOpen(false)} style={{ background: 'transparent', border: 'none', color: S.muted, cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem', lineHeight: 1 }}>✕</button>
@@ -213,29 +215,61 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '0.4rem 0' }}>
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '0.6rem 0.5rem' }}>
         {NAV.map(item => {
           const isAct = active(item)
           const isExp = open.has(item.id)
           const hasCh = !!item.children
           return (
             <div key={item.id}>
-              <Link href={hasCh ? '#' : item.href}
+              <Link
+                href={hasCh ? '#' : item.href}
                 onClick={hasCh ? (e) => { toggle(item.id, e); if (item.badge) dismissBadge(item.id) } : () => { setMobileOpen(false); if (item.badge) dismissBadge(item.id) }}
-                className="sk-nl"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.52rem 1.1rem', color: isAct ? S.text : S.muted, textDecoration: 'none', fontSize: '0.875rem', fontWeight: isAct ? 600 : 400, background: isAct ? S.primaryBg : 'transparent', borderLeft: `2px solid ${isAct ? S.primary : 'transparent'}`, cursor: 'pointer' }}>
-                <span style={{ color: isAct ? S.primary : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
+                className={isAct ? 'sk-nl-act' : 'sk-nl'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.7rem',
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: '9px',
+                  marginBottom: '2px',
+                  color: isAct ? '#fff' : S.muted,
+                  textDecoration: 'none',
+                  fontSize: '0.9rem',
+                  fontWeight: isAct ? 600 : 400,
+                  background: isAct ? 'linear-gradient(135deg,rgba(155,48,255,0.35),rgba(109,40,217,0.3))' : 'transparent',
+                  border: isAct ? '1px solid rgba(155,48,255,0.3)' : '1px solid transparent',
+                  cursor: 'pointer',
+                  letterSpacing: '-0.1px',
+                }}
+              >
+                <span style={{ color: isAct ? '#c084fc' : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
                 {item.badge && !seenBadges.has(item.id) && <Chip type={item.badge} />}
-                {hasCh && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'none' : 'rotate(-90deg)', transition: 'transform 0.12s' }}>{I.chev}</span>}
+                {hasCh && !isAct && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>{I.chev}</span>}
+                {isAct && <span style={{ color: '#c084fc', flexShrink: 0, display: 'flex' }}>{I.arr}</span>}
               </Link>
               {hasCh && isExp && item.children?.map(ch => {
                 const ca = pathname === ch.href
                 return (
-                  <Link key={ch.id} href={ch.href} onClick={() => { setMobileOpen(false); if (ch.badge) dismissBadge(ch.id) }} className="sk-nl" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.38rem 1.1rem 0.38rem 3rem', color: ca ? S.text : S.muted, textDecoration: 'none', fontSize: '0.825rem', fontWeight: ca ? 600 : 400, background: ca ? S.primaryBg : 'transparent', borderLeft: `2px solid ${ca ? S.primary : 'transparent'}` }}>
+                  <Link
+                    key={ch.id} href={ch.href}
+                    onClick={() => { setMobileOpen(false); if (ch.badge) dismissBadge(ch.id) }}
+                    className={ca ? 'sk-nl-act' : 'sk-nl'}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.5rem',
+                      padding: '0.48rem 0.75rem 0.48rem 2.8rem',
+                      borderRadius: '9px',
+                      marginBottom: '2px',
+                      color: ca ? '#fff' : S.muted,
+                      textDecoration: 'none',
+                      fontSize: '0.84rem',
+                      fontWeight: ca ? 600 : 400,
+                      background: ca ? 'linear-gradient(135deg,rgba(155,48,255,0.28),rgba(109,40,217,0.22))' : 'transparent',
+                      border: ca ? '1px solid rgba(155,48,255,0.25)' : '1px solid transparent',
+                    }}
+                  >
                     <span style={{ flex: 1 }}>{ch.label}</span>
                     {ch.badge && !seenBadges.has(ch.id) && <Chip type={ch.badge} />}
-                    {ca && <span style={{ color: S.primary, display: 'flex' }}>{I.arr}</span>}
+                    {ca && <span style={{ color: '#c084fc', display: 'flex' }}>{I.arr}</span>}
                   </Link>
                 )
               })}
@@ -245,27 +279,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       {/* Admin link */}
-      <div style={{ padding: '0.3rem 0.7rem', flexShrink: 0 }}>
+      <div style={{ padding: '0.3rem 0.5rem', flexShrink: 0 }}>
         <Link href="/admin" onClick={() => setMobileOpen(false)}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.38rem 0.8rem', borderRadius: '7px', background: 'rgba(255,68,68,0.07)', border: '1px solid rgba(255,68,68,0.18)', textDecoration: 'none', color: '#ff6b6b', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.3px' }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          className="sk-nl"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.45rem 0.75rem', borderRadius: '9px', background: 'rgba(255,68,68,0.07)', border: '1px solid rgba(255,68,68,0.18)', textDecoration: 'none', color: '#ff6b6b', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.1px' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Painel Admin
         </Link>
       </div>
 
       {/* User */}
-      <div style={{ padding: '0.75rem 1.1rem', borderTop: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
+      <div style={{ padding: '0.7rem 1rem', borderTop: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
         {user.image
-          ? <img src={user.image} alt="" style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-          : <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: S.primaryBg, border: `1px solid ${S.borderP}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.primary, fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>
+          ? <img src={user.image} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(155,48,255,0.3)' }} />
+          : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: S.primaryBg, border: `2px solid ${S.borderP}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.primary, fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>
               {(user.name || 'U')[0].toUpperCase()}
             </div>
         }
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '0.77rem', fontWeight: 600, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name || 'Usuário'}</div>
-          <div style={{ fontSize: '0.6rem', color: S.vdim }}>Streamer · Beta</div>
+          <div style={{ fontSize: '0.82rem', fontWeight: 600, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name || 'Usuário'}</div>
+          <div style={{ fontSize: '0.65rem', color: S.dim }}>Streamer Beta</div>
         </div>
-        <button onClick={() => { window.location.href = '/api/logout' }} title="Sair" className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.2rem', flexShrink: 0, opacity: 0.6 }}>{I.out}</button>
+        <button onClick={() => { window.location.href = '/api/logout' }} title="Sair" className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.25rem', flexShrink: 0, opacity: 0.55 }}>{I.out}</button>
       </div>
     </>
   )
