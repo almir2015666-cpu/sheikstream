@@ -8,8 +8,6 @@ export async function GET() {
     redirect_uri: REDIRECT_URI,
     response_type: 'code',
     scope: 'openid email profile https://www.googleapis.com/auth/youtube.readonly',
-    access_type: 'offline',
-    prompt: 'select_account',
   })
   return NextResponse.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
 }
