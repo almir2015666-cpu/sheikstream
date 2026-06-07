@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       is_manual: false,
       tickets: Math.max(1, Math.floor(amount)),
       date: new Date().toISOString().split('T')[0],
-    }).catch(() => {})
+    })
 
     const { data: sub } = await db.from('subathon_state').select('*').eq('broadcaster_id', channelId).single()
     if (sub?.is_active) {
