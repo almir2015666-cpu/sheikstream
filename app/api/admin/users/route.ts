@@ -1,10 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
+import { isAdminPassword } from '@/app/lib/adminAuth'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
-
-function checkAuth(req: NextRequest) {
-  const pw = req.headers.get('x-admin-password')
-  return pw === process.env.ADMIN_PASSWORD
-}
 
 async function sendApprovalEmail(email: string, username: string) {
   const apiKey = process.env.RESEND_API_KEY
@@ -83,7 +79,7 @@ async function sendApprovalEmail(email: string, username: string) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const { id } = await req.json()
     if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
@@ -100,7 +96,7 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const db = getSupabaseAdmin()
     const { data, error } = await db
@@ -116,7 +112,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const { id, status } = await req.json()
     if (!['approved', 'rejected', 'banned', 'pending'].includes(status))

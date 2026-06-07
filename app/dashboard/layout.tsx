@@ -100,6 +100,45 @@ type BannerCfg = {
   active: boolean; icon: string; text_main: string; text_sub: string; text_note: string
   action_label: string; action_url: string; color: string
   amount_current: number; amount_goal: number; supporter_count: number
+  position: 'top' | 'bottom'
+}
+
+function BannerBar({ banner, S, isDark, onDismiss }: { banner: BannerCfg; S: typeof DARK_S; isDark: boolean; onDismiss: () => void }) {
+  const isTop = banner.position === 'top' || !banner.position
+  return (
+    <div style={{ background: isDark ? `${banner.color}18` : `${banner.color}12`, [isTop ? 'borderBottom' : 'borderTop']: `2px solid ${banner.color}55`, padding: '0.65rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+      <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{banner.icon || '☕'}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: banner.color }}>{banner.text_main}</span>
+          {banner.text_sub && <span style={{ fontSize: '0.76rem', color: S.muted }}>{banner.text_sub}</span>}
+        </div>
+        {banner.text_note && <div style={{ fontSize: '0.68rem', color: S.dim, marginTop: '0.1rem' }}>{banner.text_note}</div>}
+        {banner.amount_goal > 0 && (
+          <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ flex: 1, maxWidth: 200, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius: 99, height: 4, overflow: 'hidden' }}>
+              <div style={{ background: banner.color, width: `${Math.min(100, (banner.amount_current / banner.amount_goal) * 100)}%`, height: '100%', borderRadius: 99, transition: 'width 0.5s' }} />
+            </div>
+            <span style={{ fontSize: '0.68rem', color: banner.color, fontWeight: 600, whiteSpace: 'nowrap' }}>
+              R$ {Number(banner.amount_current).toLocaleString('pt-BR', {minimumFractionDigits: 2})} de R$ {Number(banner.amount_goal).toLocaleString('pt-BR', {minimumFractionDigits: 2})} ({Math.round((banner.amount_current / banner.amount_goal) * 100)}%)
+            </span>
+            {banner.supporter_count > 0 && (
+              <span style={{ fontSize: '0.68rem', color: S.muted, whiteSpace: 'nowrap' }}>
+                👥 {banner.supporter_count} apoiador{banner.supporter_count !== 1 ? 'es' : ''}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      {banner.action_url && (
+        <a href={banner.action_url} target="_blank" rel="noopener noreferrer"
+          style={{ padding: '0.45rem 1rem', background: `${banner.color}22`, border: `1px solid ${banner.color}55`, color: banner.color, borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {banner.action_label || 'Apoiar'}
+        </a>
+      )}
+      <button onClick={onDismiss} style={{ background: 'transparent', border: 'none', color: S.dim, cursor: 'pointer', fontSize: '1rem', padding: '0.2rem', lineHeight: 1, flexShrink: 0 }}>✕</button>
+    </div>
+  )
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -392,6 +431,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div style={{ flex: 1, marginLeft: isMobile ? 0 : SW, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
+        {/* Dev banner — TOP position */}
+        {banner && banner.active && !bannerDismissed && (banner.position === 'top' || !banner.position) && (
+          <BannerBar banner={banner} S={S} isDark={isDark} onDismiss={() => setBannerDismissed(true)} />
+        )}
+
         {/* Topbar */}
         <div style={{ background: S.topbar, borderBottom: `1px solid ${S.borderP}`, padding: isMobile ? '0.7rem 1rem' : '0.7rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -415,40 +459,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <ToastProvider>{children}</ToastProvider>
         </main>
 
-        {/* Dev donation banner */}
-        {banner && banner.active && !bannerDismissed && (
-          <div style={{ background: isDark ? `${banner.color}18` : `${banner.color}12`, borderTop: `2px solid ${banner.color}55`, padding: '0.65rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{banner.icon || '☕'}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: banner.color }}>{banner.text_main}</span>
-                {banner.text_sub && <span style={{ fontSize: '0.76rem', color: S.muted }}>{banner.text_sub}</span>}
-              </div>
-              {banner.text_note && <div style={{ fontSize: '0.68rem', color: S.dim, marginTop: '0.1rem' }}>{banner.text_note}</div>}
-              {banner.amount_goal > 0 && (
-                <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ flex: 1, maxWidth: 200, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius: 99, height: 4, overflow: 'hidden' }}>
-                    <div style={{ background: banner.color, width: `${Math.min(100, (banner.amount_current / banner.amount_goal) * 100)}%`, height: '100%', borderRadius: 99, transition: 'width 0.5s' }} />
-                  </div>
-                  <span style={{ fontSize: '0.68rem', color: banner.color, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    R$ {Number(banner.amount_current).toLocaleString('pt-BR', {minimumFractionDigits: 2})} de R$ {Number(banner.amount_goal).toLocaleString('pt-BR', {minimumFractionDigits: 2})} ({Math.round((banner.amount_current / banner.amount_goal) * 100)}%)
-                  </span>
-                  {banner.supporter_count > 0 && (
-                    <span style={{ fontSize: '0.68rem', color: S.muted, whiteSpace: 'nowrap' }}>
-                      👥 {banner.supporter_count} apoiador{banner.supporter_count !== 1 ? 'es' : ''}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-            {banner.action_url && (
-              <a href={banner.action_url} target="_blank" rel="noopener noreferrer"
-                style={{ padding: '0.45rem 1rem', background: `${banner.color}22`, border: `1px solid ${banner.color}55`, color: banner.color, borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                {banner.action_label || 'Apoiar'}
-              </a>
-            )}
-            <button onClick={() => setBannerDismissed(true)} style={{ background: 'transparent', border: 'none', color: S.dim, cursor: 'pointer', fontSize: '1rem', padding: '0.2rem', lineHeight: 1, flexShrink: 0 }}>✕</button>
-          </div>
+        {/* Dev banner — BOTTOM position */}
+        {banner && banner.active && !bannerDismissed && banner.position === 'bottom' && (
+          <BannerBar banner={banner} S={S} isDark={isDark} onDismiss={() => setBannerDismissed(true)} />
         )}
       </div>
     </div>

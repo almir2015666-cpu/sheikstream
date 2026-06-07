@@ -55,8 +55,14 @@ type Stats = {
   livepix_total: number; livepix_donors: number; livepix_unique: number
   twitch_subs: number; twitch_tickets: number; tickets_total: number; participants: number
 }
+type ChannelStats = {
+  broadcaster_name: string; title: string; game_name: string
+  is_live: boolean; viewer_count: number; started_at: string | null
+  follower_count: number | null; language: string; broadcaster_login: string
+}
 
 function fmtBRL(v: number) { return `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
+function fmtNum(v: number) { return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v) }
 
 export default function DashboardPage() {
   const [period, setPeriod] = useState<Period>('30d')
@@ -65,6 +71,8 @@ export default function DashboardPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [stats, setStats] = useState<Stats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
+  const [channel, setChannel] = useState<ChannelStats | null>(null)
+  const [channelErr, setChannelErr] = useState('')
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
 
   function periodDates() {
@@ -90,6 +98,13 @@ export default function DashboardPage() {
       .finally(() => setStatsLoading(false))
   }, [period, customFrom, customTo])
 
+  useEffect(() => {
+    fetch('/api/twitch/channel-stats')
+      .then(r => r.ok ? r.json() : r.json().then((d: {error: string}) => Promise.reject(d.error)))
+      .then((d: ChannelStats) => setChannel(d))
+      .catch((e: string) => setChannelErr(e || 'Conta Twitch não conectada'))
+  }, [])
+
   return (
     <div style={{ background: '#08090d', minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
@@ -107,6 +122,57 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ padding: isMobile ? '1rem' : '1.4rem 2rem' }}>
+
+        {/* Canal Twitch — info ao vivo */}
+        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '0.9rem 1.2rem', marginBottom: '0.8rem' }}>
+          {channelErr ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem', color: C.muted }}>
+              <span style={{ fontSize: '1rem' }}>📡</span>
+              <span>{channelErr} — </span>
+              <Link href="/dashboard/conexoes" style={{ color: C.primary, textDecoration: 'none', fontWeight: 600 }}>Conectar Twitch</Link>
+            </div>
+          ) : !channel ? (
+            <div style={{ fontSize: '0.78rem', color: C.vdim }}>Carregando dados do canal...</div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {channel.is_live ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(255,68,68,0.15)', border: '1px solid rgba(255,68,68,0.3)', color: '#ff4444', fontSize: '0.68rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '999px', letterSpacing: '0.4px' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff4444', animation: 'sk-pulse 1.5s ease-in-out infinite', display: 'inline-block' }} />
+                    AO VIVO
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.68rem', color: C.vdim, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', padding: '0.2rem 0.6rem', borderRadius: '999px' }}>OFFLINE</span>
+                )}
+                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#9147ff' }}>{channel.broadcaster_name}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: C.text }}>{channel.follower_count !== null ? fmtNum(channel.follower_count) : '—'}</div>
+                  <div style={{ fontSize: '0.63rem', color: C.vdim }}>Seguidores</div>
+                </div>
+                {channel.is_live && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#ff4444' }}>{fmtNum(channel.viewer_count)}</div>
+                    <div style={{ fontSize: '0.63rem', color: C.vdim }}>Viewers</div>
+                  </div>
+                )}
+                {channel.game_name && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: C.text }}>{channel.game_name}</div>
+                    <div style={{ fontSize: '0.63rem', color: C.vdim }}>Jogo</div>
+                  </div>
+                )}
+                {channel.title && (
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.78rem', color: C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 320 }}>{channel.title}</div>
+                    <div style={{ fontSize: '0.63rem', color: C.vdim }}>Título da stream</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Cabeçalho + período */}
         <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.1rem' }}>

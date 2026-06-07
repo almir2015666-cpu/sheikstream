@@ -1,12 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
+import { isAdminPassword } from '@/app/lib/adminAuth'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 
-function checkAuth(req: NextRequest) {
-  return req.headers.get('x-admin-password') === process.env.ADMIN_PASSWORD
-}
-
 export async function GET(req: NextRequest) {
-  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const db = getSupabaseAdmin()
     const { data, error } = await db

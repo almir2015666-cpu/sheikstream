@@ -166,7 +166,7 @@ export default function AdminPage() {
   const [errorLogsLoading, setErrorLogsLoading] = useState(false)
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([])
   const [systemLogsLoading, setSystemLogsLoading] = useState(false)
-  const [bannerCfg, setBannerCfg] = useState({ active: false, icon: '☕', text_main: 'Apoie o desenvolvimento da plataforma!', text_sub: 'Sua doação vai direto para o desenvolvedor e ajuda a manter tudo gratuito.', text_note: 'Não conta em sorteios ou metas do seu canal.', action_label: 'Apoiar dev', action_url: '', color: '#f59e0b', amount_current: 10, amount_goal: 5000, supporter_count: 1 })
+  const [bannerCfg, setBannerCfg] = useState({ active: false, icon: '☕', text_main: 'Apoie o desenvolvimento da plataforma!', text_sub: 'Sua doação vai direto para o desenvolvedor e ajuda a manter tudo gratuito.', text_note: 'Não conta em sorteios ou metas do seu canal.', action_label: 'Apoiar dev', action_url: '', color: '#f59e0b', amount_current: 10, amount_goal: 5000, supporter_count: 1, position: 'bottom' as 'top' | 'bottom' })
   const [bannerSaving, setBannerSaving] = useState(false)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerSaved, setBannerSaved] = useState(false)
@@ -850,11 +850,21 @@ export default function AdminPage() {
             </div>
 
             {/* Enable toggle */}
-            <div onClick={() => setBannerCfg(p => ({ ...p, active: !p.active }))} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', background: bannerCfg.active ? C.accentBg : C.vvdim, border: `1px solid ${bannerCfg.active ? C.accentBorder : C.border}`, borderRadius: '10px', cursor: 'pointer', marginBottom: '1.5rem' }}>
+            <div onClick={() => setBannerCfg(p => ({ ...p, active: !p.active }))} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', background: bannerCfg.active ? C.accentBg : C.vvdim, border: `1px solid ${bannerCfg.active ? C.accentBorder : C.border}`, borderRadius: '10px', cursor: 'pointer', marginBottom: '0.75rem' }}>
               <span style={{ fontSize: '0.88rem', fontWeight: 600, color: bannerCfg.active ? C.accent : C.muted }}>{bannerCfg.active ? '● Banner ativo — visível para todos os usuários' : '○ Banner inativo — não é exibido'}</span>
               <div style={{ width: 40, height: 22, background: bannerCfg.active ? C.accent : C.vdim, borderRadius: 11, position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
                 <div style={{ position: 'absolute', top: 3, left: bannerCfg.active ? 19 : 3, width: 16, height: 16, background: '#fff', borderRadius: '50%', transition: 'left 0.2s' }} />
               </div>
+            </div>
+            {/* Position selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <span style={{ fontSize: '0.78rem', color: C.muted, fontWeight: 600 }}>Posição:</span>
+              {(['top', 'bottom'] as const).map(pos => (
+                <button key={pos} onClick={() => setBannerCfg(p => ({ ...p, position: pos }))}
+                  style={{ padding: '0.3rem 0.9rem', borderRadius: '7px', border: `1px solid ${bannerCfg.position === pos ? C.primaryBgMed : C.border}`, background: bannerCfg.position === pos ? C.primaryBg : 'transparent', color: bannerCfg.position === pos ? C.primary : C.muted, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+                  {pos === 'top' ? '▲ Topo' : '▼ Rodapé'}
+                </button>
+              ))}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>

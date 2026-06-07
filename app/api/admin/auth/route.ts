@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminPassword } from '@/app/lib/adminAuth'
 
 export async function POST(req: NextRequest) {
   const { password } = await req.json()
-  const correct = process.env.ADMIN_PASSWORD
-  if (!correct) return NextResponse.json({ ok: false, error: 'ADMIN_PASSWORD not set' }, { status: 500 })
-  if (password === correct) return NextResponse.json({ ok: true })
+  if (!password) return NextResponse.json({ ok: false, error: 'Senha obrigatória' }, { status: 400 })
+  const ok = await isAdminPassword(password)
+  if (ok) return NextResponse.json({ ok: true })
   return NextResponse.json({ ok: false, error: 'Senha incorreta' }, { status: 401 })
 }

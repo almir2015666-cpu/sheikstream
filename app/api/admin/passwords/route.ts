@@ -1,13 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
+import { isAdminPassword } from '@/app/lib/adminAuth'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import crypto from 'crypto'
 
-function checkAdmin(req: NextRequest) {
-  return req.headers.get('x-admin-password') === process.env.ADMIN_PASSWORD
-}
-
 export async function GET(req: NextRequest) {
-  if (!checkAdmin(req)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   const db = getSupabaseAdmin()
   const { data, error } = await db
     .from('admin_passwords')
@@ -18,7 +15,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!checkAdmin(req)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   const body = await req.json()
   const label = (body.label || '').trim()
   if (!label) return NextResponse.json({ error: 'Nome/label obrigatório' }, { status: 400 })
@@ -40,7 +37,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!checkAdmin(req)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   const url = new URL(req.url)
   const id = url.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
@@ -50,7 +47,7 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!checkAdmin(req)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   const body = await req.json()
   if (!body.id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
   const db = getSupabaseAdmin()
