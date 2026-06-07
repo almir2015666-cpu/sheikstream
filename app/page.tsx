@@ -570,11 +570,7 @@ export default function Home() {
   // ── LOGIN ────────────────────────────────────────────────────────────────
   if (page === 'login') {
     const oauthPlatforms = [
-      { id: 'Twitch',  color: '#9147ff', bg: 'rgba(145,71,255,0.1)',  label: 'Entrar com Twitch' },
-      { id: 'YouTube', color: '#ff0000', bg: 'rgba(255,0,0,0.08)',    label: 'Entrar com YouTube' },
-      { id: 'Kick',    color: '#53fc18', bg: 'rgba(83,252,24,0.08)',  label: 'Entrar com Kick' },
-      { id: 'Discord', color: '#5865f2', bg: 'rgba(88,101,242,0.1)',  label: 'Entrar com Discord' },
-      { id: 'Google',  color: '#4285f4', bg: 'rgba(66,133,244,0.08)', label: 'Entrar com Google' },
+      { id: 'Twitch', color: '#9147ff', bg: 'rgba(145,71,255,0.1)', label: 'Entrar com Twitch' },
     ]
     return (
       <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text }}>
