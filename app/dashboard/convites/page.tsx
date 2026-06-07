@@ -13,7 +13,7 @@ const C = {
 const MAX_INVITES = 10
 const inp: React.CSSProperties = { flex: 1, padding: '0.65rem 1rem', background: '#0b0d1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: C.text, fontSize: '0.88rem', outline: 'none' }
 
-type Invite = { id: string; inviter_id: string; invitee_username: string; token: string; status: string; created_at: string }
+type Invite = { id: string; inviter_id: string; invitee_email: string; token: string; status: string; created_at: string }
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -127,7 +127,7 @@ export default function ConvitesPage() {
               <div key={inv.id} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '10px', padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>@{inv.invitee_username}</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>@{inv.invitee_email}</span>
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: inv.status === 'aceito' ? C.greenBg : C.warnBg, color: inv.status === 'aceito' ? C.green : C.warn, borderRadius: 999, border: `1px solid ${inv.status === 'aceito' ? 'rgba(34,197,94,0.25)' : C.warnB}` }}>
                       {inv.status}
                     </span>

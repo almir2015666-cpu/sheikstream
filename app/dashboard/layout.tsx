@@ -249,10 +249,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     main{background:${S.bg};transition:background 0.25s ease!important;}
     ${!isDark ? `
     main>div{background:${S.bg}!important;color:${S.text}!important;}
-    main [style*="background: rgb(8, 9, 13)"],main [style*="background:#08090d"],main [style*="background: #08090d"]{background:${S.bg}!important;}
-    main [style*="background: rgb(17, 18, 25)"],main [style*="background:#111219"],main [style*="background: #111219"]{background:${S.card}!important;color:${S.text}!important;}
-    main [style*="background: rgb(11, 12, 23)"],main [style*="background:#0b0d1a"],main [style*="background: #0b0d1a"]{background:rgba(0,0,0,0.05)!important;}
-    main [style*="color: rgb(232, 230, 248)"],main [style*="color:#e8e6f8"],main [style*="color: #e8e6f8"]{color:${S.text}!important;}
+    main [style*="rgb(8, 9, 13)"]{background:${S.bg}!important;color:${S.text}!important;}
+    main [style*="rgb(17, 18, 25)"]{background:${S.card}!important;color:${S.text}!important;}
+    main [style*="rgb(11, 12, 23)"]{background:${S.bg}!important;}
+    main [style*="rgb(13, 14, 22)"]{background:rgba(0,0,0,0.04)!important;}
+    main [style*="rgb(11, 13, 26)"]{background:rgba(0,0,0,0.04)!important;}
+    main [style*="rgb(15, 16, 24)"]{background:${S.card}!important;}
+    main [style*="#08090d"]{background:${S.bg}!important;color:${S.text}!important;}
+    main [style*="#111219"]{background:${S.card}!important;color:${S.text}!important;}
+    main [style*="#0b0c17"]{background:${S.bg}!important;}
+    main [style*="#0d0e16"]{background:rgba(0,0,0,0.04)!important;}
+    main [style*="#0b0d1a"]{background:rgba(0,0,0,0.04)!important;}
+    main [style*="#0f1018"]{background:${S.card}!important;}
+    main [style*="#1a1b24"]{background:${S.card}!important;}
+    main [style*="color:#e8e6f8"],main [style*="color: #e8e6f8"]{color:${S.text}!important;}
+    main [style*="color: rgb(232, 230, 248)"]{color:${S.text}!important;}
+    main [style*="rgba(232,230,248"]{color:${S.muted}!important;}
+    main [style*="rgba(232, 230, 248"]{color:${S.muted}!important;}
+    main input,main select,main textarea{background:rgba(0,0,0,0.05)!important;color:${S.text}!important;border-color:rgba(0,0,0,0.15)!important;}
     ` : ''}
   `
 

@@ -146,7 +146,13 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords'>('users')
+  type AdminPw = { id: string; label: string; password: string; type: 'temporary' | 'permanent'; active: boolean; expires_at: string | null; created_at: string }
+  const [passwords, setPasswords] = useState<AdminPw[]>([])
+  const [pwLoading, setPwLoading] = useState(false)
+  const [showPw, setShowPw] = useState<Record<string, boolean>>({})
+  const [pwForm, setPwForm] = useState({ label: '', password: '', type: 'temporary', expires_hours: '24' })
+  const [pwSaving, setPwSaving] = useState(false)
   const [logs, setLogs] = useState<Log[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logTab, setLogTab] = useState<'admin' | 'auth' | 'dashboard' | 'feature' | 'errors' | 'system'>('admin')
@@ -231,6 +237,38 @@ export default function AdminPage() {
       setSystemLogsLoading(false)
     }
   }, [])
+
+  const fetchPasswords = useCallback(async (pw: string) => {
+    setPwLoading(true)
+    try {
+      const res = await fetch('/api/admin/passwords', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setPasswords(await res.json())
+    } catch { /* ignore */ } finally {
+      setPwLoading(false)
+    }
+  }, [])
+
+  async function createPassword() {
+    if (!pwForm.label.trim()) return
+    setPwSaving(true)
+    const res = await fetch('/api/admin/passwords', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+      body: JSON.stringify({ label: pwForm.label, password: pwForm.password || undefined, type: pwForm.type, expires_hours: pwForm.type === 'temporary' ? Number(pwForm.expires_hours) : undefined }),
+    })
+    setPwSaving(false)
+    if (res.ok) { setPwForm({ label: '', password: '', type: 'temporary', expires_hours: '24' }); fetchPasswords(storedPw) }
+  }
+
+  async function deletePassword(id: string) {
+    await fetch(`/api/admin/passwords?id=${id}`, { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
+    setPasswords(p => p.filter(x => x.id !== id))
+  }
+
+  async function togglePasswordActive(pw: AdminPw) {
+    await fetch('/api/admin/passwords', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify({ id: pw.id, active: !pw.active }) })
+    setPasswords(p => p.map(x => x.id === pw.id ? { ...x, active: !x.active } : x))
+  }
 
   async function clearErrorLogs() {
     if (!confirm('Limpar todos os logs de erro?')) return
@@ -502,11 +540,12 @@ export default function AdminPage() {
           {/* View switcher */}
           <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem' }}>
             {([
-              { v: 'users', label: '👥 Usuários' },
-              { v: 'logs',  label: '📋 Logs' },
-              { v: 'banner', label: '🎗 Banner' },
+              { v: 'users',     label: '👥 Usuários' },
+              { v: 'logs',      label: '📋 Logs' },
+              { v: 'banner',    label: '🎗 Banner' },
+              { v: 'passwords', label: '🔑 Senhas Admin' },
             ] as const).map(({ v, label }) => (
-              <button key={v} onClick={() => { setView(v); if (v === 'logs') fetchLogs(storedPw); if (v === 'banner') fetchBanner(storedPw) }}
+              <button key={v} onClick={() => { setView(v); if (v === 'logs') fetchLogs(storedPw); if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw) }}
                 className={`sk-tab${view === v ? ' active' : ''}`}
                 style={{ color: view === v ? C.primary : C.muted }}>
                 {label}
@@ -982,6 +1021,83 @@ export default function AdminPage() {
             </div>
           </div>
           </>
+          )}
+          {view === 'passwords' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Create form */}
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                <h3 style={{ margin: '0 0 1.2rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>🔑 Nova senha admin</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 600, color: C.muted, marginBottom: '0.3rem' }}>Nome / Label</div>
+                    <input value={pwForm.label} onChange={e => setPwForm(p => ({ ...p, label: e.target.value }))} placeholder="Ex: Admin temporário — João" style={{ width: '100%', padding: '0.55rem 0.85rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' as const }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 600, color: C.muted, marginBottom: '0.3rem' }}>Senha (deixe vazio para gerar)</div>
+                    <input value={pwForm.password} onChange={e => setPwForm(p => ({ ...p, password: e.target.value }))} placeholder="Gerar automaticamente" style={{ width: '100%', padding: '0.55rem 0.85rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' as const }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 600, color: C.muted, marginBottom: '0.3rem' }}>Tipo</div>
+                    <select value={pwForm.type} onChange={e => setPwForm(p => ({ ...p, type: e.target.value }))} style={{ width: '100%', padding: '0.55rem 0.85rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none' }}>
+                      <option value="temporary">Temporária</option>
+                      <option value="permanent">Permanente</option>
+                    </select>
+                  </div>
+                  {pwForm.type === 'temporary' && (
+                    <div>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: C.muted, marginBottom: '0.3rem' }}>Validade (horas)</div>
+                      <input type="number" min={1} max={720} value={pwForm.expires_hours} onChange={e => setPwForm(p => ({ ...p, expires_hours: e.target.value }))} style={{ width: '100%', padding: '0.55rem 0.85rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' as const }} />
+                    </div>
+                  )}
+                </div>
+                <button onClick={createPassword} disabled={pwSaving || !pwForm.label.trim()} className="sk-btn-approve" style={{ opacity: (!pwForm.label.trim() || pwSaving) ? 0.5 : 1 }}>
+                  {pwSaving ? 'Criando...' : '+ Criar senha'}
+                </button>
+              </div>
+
+              {/* List */}
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                <h3 style={{ margin: '0 0 1.2rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>Senhas cadastradas</h3>
+                {pwLoading ? (
+                  <div style={{ color: C.muted, fontSize: '0.85rem' }}>Carregando...</div>
+                ) : passwords.length === 0 ? (
+                  <div style={{ color: C.muted, fontSize: '0.85rem' }}>Nenhuma senha cadastrada ainda.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    {passwords.map(pw => {
+                      const expired = pw.type === 'temporary' && pw.expires_at && new Date(pw.expires_at) < new Date()
+                      return (
+                        <div key={pw.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem', background: pw.active && !expired ? C.primaryBg : C.vvdim, border: `1px solid ${pw.active && !expired ? C.border : C.border}`, borderRadius: '10px', flexWrap: 'wrap' as const }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' as const }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text }}>{pw.label}</span>
+                              <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: pw.type === 'permanent' ? C.accentBg : C.primaryBg, color: pw.type === 'permanent' ? C.accent : C.primary, borderRadius: 999 }}>{pw.type === 'permanent' ? 'PERMANENTE' : 'TEMPORÁRIA'}</span>
+                              {expired && <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: C.dangerBg, color: C.danger, borderRadius: 999 }}>EXPIRADA</span>}
+                              {!pw.active && <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: C.vvdim, color: C.muted, borderRadius: 999 }}>INATIVA</span>}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem' }}>
+                              <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: C.muted, background: C.vvdim, padding: '0.1rem 0.4rem', borderRadius: 4 }}>
+                                {showPw[pw.id] ? pw.password : '••••••••'}
+                              </code>
+                              <button onClick={() => setShowPw(p => ({ ...p, [pw.id]: !p[pw.id] }))} style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '0.75rem', padding: '0.1rem 0.3rem' }}>
+                                {showPw[pw.id] ? '🙈' : '👁'}
+                              </button>
+                              {pw.expires_at && <span style={{ fontSize: '0.72rem', color: C.dim }}>Expira: {new Date(pw.expires_at).toLocaleDateString('pt-BR')}</span>}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                            <button onClick={() => togglePasswordActive(pw)} className={pw.active ? 'sk-btn-reset' : 'sk-btn-approve'} style={{ fontSize: '0.75rem', padding: '0.28rem 0.65rem' }}>
+                              {pw.active ? 'Desativar' : 'Ativar'}
+                            </button>
+                            <button onClick={() => deletePassword(pw.id)} className="sk-btn-delete">🗑</button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
       )}

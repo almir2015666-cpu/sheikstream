@@ -59,6 +59,25 @@ export default function TwitchSubsPage() {
   const [form, setForm] = useState({ ...BLANK_FORM })
   const [saving, setSaving] = useState(false)
   const [savingTiers, setSavingTiers] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+
+  async function syncSubs() {
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/twitch/sync', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        notify(data.error || 'Erro ao sincronizar', 'error')
+      } else {
+        notify(data.message || 'Sincronizado com sucesso!', 'success')
+        loadSubs()
+      }
+    } catch {
+      notify('Falha de conexão ao sincronizar', 'error')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const loadSubs = useCallback(async () => {
     setLoading(true)
@@ -108,7 +127,9 @@ export default function TwitchSubsPage() {
   }
 
   async function submitSub() {
-    if (!form.username.trim()) return
+    if (!form.username.trim()) { notify('Nome de usuário é obrigatório', 'error'); return }
+    if (!form.date) { notify('Data é obrigatória', 'error'); return }
+    if (form.is_gift && !form.gifted_by.trim()) { notify('Informe quem enviou o gift sub', 'error'); return }
     setSaving(true)
     const body = { ...form, sorteio_id: form.sorteio_id || null, gifted_by: form.gifted_by || null }
     let res: Response
@@ -171,9 +192,9 @@ export default function TwitchSubsPage() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
           Ajustar níveis
         </button>
-        <button onClick={loadSubs} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Sync Meus Subs
+        <button onClick={syncSubs} disabled={syncing} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: syncing ? C.vdim : C.dim, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: syncing ? 'not-allowed' : 'pointer' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          {syncing ? 'Sincronizando...' : 'Sync Meus Subs'}
         </button>
         <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
           + Adicionar Sub

@@ -172,10 +172,6 @@ const PLATFORM_COLORS: Record<string, string> = {
 
 const TW_WORDS = ['sorteios', 'comandos', 'analytics', 'metas', 'notificações', 'streams']
 
-const STREAMERS = [
-  { name: 'sheikfabio',  initials: 'SF', platform: 'Twitch', plColor: '#9147ff', url: 'https://twitch.tv/sheikfabio' },
-  { name: 'thierry0800', initials: 'TH', platform: 'Twitch', plColor: '#9147ff', url: 'https://twitch.tv/thierry0800' },
-]
 
 const TESTIMONIALS = [
   { name: 'GabrielXD', platform: 'Twitch · 234K seguidores', initials: 'GX', color: '#9b30ff',
@@ -227,8 +223,7 @@ export default function Home() {
   const [twIdx, setTwIdx] = useState(0)
   const [twPhase, setTwPhase] = useState<'typing' | 'deleting'>('typing')
   const [userCount, setUserCount] = useState(0)
-  const [streamerImages, setStreamerImages] = useState<Record<string, string>>({})
-  const [approvedAvatars, setApprovedAvatars] = useState<{ username: string; image: string }[]>([])
+const [approvedAvatars, setApprovedAvatars] = useState<{ username: string; image: string }[]>([])
 
   useEffect(() => {
     if (document.cookie.includes('sk-session')) {
@@ -282,18 +277,7 @@ export default function Home() {
       .catch(() => {})
   }, [])
 
-  useEffect(() => {
-    fetch('/api/twitch/profiles')
-      .then(r => r.ok ? r.json() : [])
-      .then((profiles: { username: string; image: string }[]) => {
-        const map: Record<string, string> = {}
-        profiles.forEach(p => { map[p.username] = p.image })
-        setStreamerImages(map)
-      })
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
+useEffect(() => {
     fetch('/api/twitch/approved-avatars')
       .then(r => r.ok ? r.json() : [])
       .then(setApprovedAvatars)
@@ -625,7 +609,6 @@ export default function Home() {
           {brandLogo({ opacity: logoOpacity, transition: 'opacity 0.1s' })}
           <div style={{ display: 'flex', gap: isMobile ? '0.5rem' : '1.5rem', alignItems: 'center' }}>
             <span className="sk-nav-link sk-nav-desktop-links" onClick={() => scrollToSection('sk-features')} style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500 }}>Produto</span>
-            <a className="sk-nav-link sk-nav-desktop-links" href="/roadmap" style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500, textDecoration: 'none' }}>Roadmap</a>
             {themeBtn}
             <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: isMobile ? '0.5rem 1rem' : '0.55rem 1.3rem', borderRadius: '8px', cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.88rem', fontWeight: 700, boxShadow: `0 4px 16px ${C.primaryBgMed}`, minHeight: '44px' }}>
               App
@@ -782,30 +765,6 @@ export default function Home() {
 
       <div style={{ height:'1px',background:C.border,margin:`0 ${hp}` }} />
 
-      {/* Criadores */}
-      <section id="sk-streamers" style={{ padding:`5rem ${hp}`,maxWidth:'1000px',margin:'0 auto',width:'100%',boxSizing:'border-box',...revealStyle('sk-streamers') }}>
-        <div style={{ textAlign:'center',marginBottom:'3rem' }}>
-          <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',fontWeight:700,marginBottom:'0.6rem' }}>Comunidade</div>
-          <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,letterSpacing:'-1px',marginBottom:'0.5rem' }}>Criadores que usam</h2>
-        </div>
-        <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'1rem' }}>
-          {STREAMERS.map(s => (
-            <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" className="sk-streamer-card" style={{ background:C.cardBg,border:`1px solid ${C.border}`,borderRadius:'14px',padding:'1.5rem 1rem',textAlign:'center',textDecoration:'none',display:'block',cursor:'pointer' }}>
-              <div style={{ width:'54px',height:'54px',borderRadius:'50%',border:`2px solid ${C.borderStrong}`,margin:'0 auto 0.85rem',overflow:'hidden',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:C.primaryBg }}>
-                {streamerImages[s.name]
-                  ? <img src={streamerImages[s.name]} alt={s.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} />
-                  : <span style={{ fontSize:'1.1rem',fontWeight:900,color:C.primary }}>{s.initials}</span>
-                }
-              </div>
-              <div style={{ fontSize:'0.9rem',fontWeight:700,color:C.text,marginBottom:'0.3rem' }}>{s.name}</div>
-              <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:'0.3rem' }}><PIcon id={s.platform} color={s.plColor} size={12} /><span style={{ fontSize:'0.72rem',color:C.muted }}>{s.platform}</span></div>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      <div style={{ height:'1px',background:C.border,margin:`0 ${hp}` }} />
-
       {/* Depoimentos */}
       <section id="sk-testimonials" style={{ padding:`5rem ${hp}`,maxWidth:'1000px',margin:'0 auto',width:'100%',boxSizing:'border-box',...revealStyle('sk-testimonials') }}>
         <div style={{ textAlign:'center',marginBottom:'3rem' }}>
@@ -895,10 +854,7 @@ export default function Home() {
             </div>
             <div>
               <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Produto</div>
-              {[{ label:'Recursos',action:()=>scrollToSection('sk-features') },{ label:'Roadmap',href:'/roadmap' },{ label:'Changelog',href:'/changelog' }].map(l => l.href
-                ? <a key={l.label} href={l.href} className="sk-legal-link" style={{ display:'block',fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',textDecoration:'none' }}>{l.label}</a>
-                : <div key={l.label} className="sk-legal-link" onClick={l.action} style={{ fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem' }}>{l.label}</div>
-              )}
+              <div className="sk-legal-link" onClick={()=>scrollToSection('sk-features')} style={{ fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',cursor:'pointer' }}>Recursos</div>
             </div>
             <div>
               <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Streamers</div>
