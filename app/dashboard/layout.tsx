@@ -113,8 +113,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     fetch('/api/me')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { setUser(data); setStatus('done') })
+      .then(async r => {
+        if (r.status === 403) { router.replace('/login?error=banned'); return undefined }
+        return r.ok ? r.json() : null
+      })
+      .then(data => { if (data !== undefined) { setUser(data); setStatus('done') } })
       .catch(() => setStatus('done'))
   }, [])
 

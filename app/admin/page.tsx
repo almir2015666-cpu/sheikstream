@@ -31,7 +31,7 @@ type User = {
   platform: string
   platform_username?: string
   email?: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'rejected' | 'banned'
   created_at: string
 }
 
@@ -54,6 +54,9 @@ function makeCSS(C: typeof DARK) {
   .sk-btn-reject { transition: all 0.07s; border: 1px solid ${C.dangerBorder}; background: ${C.dangerBg}; color: ${C.danger}; border-radius: 6px; padding: 0.32rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
   .sk-btn-reject:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .sk-btn-reject:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .sk-btn-ban { transition: all 0.07s; border: 1px solid rgba(255,120,0,0.35); background: rgba(255,120,0,0.1); color: #ff7800; border-radius: 6px; padding: 0.32rem 0.8rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+  .sk-btn-ban:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .sk-btn-ban:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   .sk-tab { transition: all 0.07s; cursor: pointer; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; border: none; background: transparent; }
   .sk-tab.active { background: ${C.primaryBg}; color: ${C.primary}; }
   .sk-tab:not(.active) { color: ${C.muted}; }
@@ -94,7 +97,7 @@ export default function AdminPage() {
   const [authLoading, setAuthLoading] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'banned'>('approved')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [storedPw, setStoredPw] = useState('')
   const [isMobile, setIsMobile] = useState(false)
@@ -190,7 +193,7 @@ export default function AdminPage() {
     }
   }
 
-  async function handleAction(id: string, status: 'approved' | 'rejected') {
+  async function handleAction(id: string, status: 'approved' | 'rejected' | 'banned') {
     setActionLoading(id + status)
     try {
       const res = await fetch('/api/admin/users', {
@@ -222,13 +225,15 @@ export default function AdminPage() {
     pending: users.filter(u => u.status === 'pending').length,
     approved: users.filter(u => u.status === 'approved').length,
     rejected: users.filter(u => u.status === 'rejected').length,
+    banned: users.filter(u => u.status === 'banned').length,
   }
 
   const statusBadge = (status: User['status']) => {
     const cfg = {
-      pending: { bg: C.primaryBg, color: C.primary, border: C.border, label: 'Pendente' },
-      approved: { bg: C.accentBg, color: C.accent, border: C.accentBorder, label: 'Aprovado' },
+      pending:  { bg: C.primaryBg, color: C.primary, border: C.border, label: 'Pendente' },
+      approved: { bg: C.accentBg, color: C.accent, border: C.accentBorder, label: 'Ativo' },
       rejected: { bg: C.dangerBg, color: C.danger, border: C.dangerBorder, label: 'Rejeitado' },
+      banned:   { bg: 'rgba(255,120,0,0.1)', color: '#ff7800', border: 'rgba(255,120,0,0.3)', label: 'Banido' },
     }[status]
     return (
       <span style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: '999px', padding: '0.18rem 0.65rem', fontSize: '0.7rem', fontWeight: 700 }}>
@@ -327,12 +332,13 @@ export default function AdminPage() {
         /* ── Admin dashboard ── */
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
           {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
             {([
               { label: 'Total', key: 'all' as const, color: C.primary },
               { label: 'Pendentes', key: 'pending' as const, color: C.primary },
-              { label: 'Aprovados', key: 'approved' as const, color: C.accent },
+              { label: 'Ativos', key: 'approved' as const, color: C.accent },
               { label: 'Rejeitados', key: 'rejected' as const, color: C.danger },
+              { label: 'Banidos', key: 'banned' as const, color: '#ff7800' },
             ]).map(s => (
               <div key={s.key} style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1.2rem 1.5rem' }}>
                 <div style={{ fontSize: '0.68rem', color: C.dim, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '0.4rem' }}>{s.label}</div>
@@ -346,9 +352,9 @@ export default function AdminPage() {
             {/* Toolbar */}
             <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: '0.5rem', padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
               <div style={{ display: 'flex', gap: '0.3rem' }}>
-                {(['all', 'pending', 'approved', 'rejected'] as const).map(f => (
+                {(['all', 'approved', 'pending', 'rejected', 'banned'] as const).map(f => (
                   <button key={f} onClick={() => setFilter(f)} className={`sk-tab${filter === f ? ' active' : ''}`} style={{ color: filter === f ? C.primary : C.muted }}>
-                    {{ all: 'Todos', pending: 'Pendentes', approved: 'Aprovados', rejected: 'Rejeitados' }[f]}
+                    {{ all: 'Todos', pending: 'Pendentes', approved: 'Ativos', rejected: 'Rejeitados', banned: 'Banidos' }[f]}
                     <span style={{ marginLeft: '0.3rem', fontSize: '0.7rem', opacity: 0.7 }}>({counts[f]})</span>
                   </button>
                 ))}
@@ -395,21 +401,43 @@ export default function AdminPage() {
                       <td style={{ padding: '0.85rem 1.2rem' }}>{statusBadge(u.status)}</td>
                       <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.78rem', color: C.dim }}>{fmtDate(u.created_at)}</td>
                       <td style={{ padding: '0.85rem 1.2rem' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button
-                            className="sk-btn-approve"
-                            onClick={() => handleAction(u.id, 'approved')}
-                            disabled={u.status === 'approved' || actionLoading === u.id + 'approved'}
-                          >
-                            {actionLoading === u.id + 'approved' ? '...' : '✓ Aprovar'}
-                          </button>
-                          <button
-                            className="sk-btn-reject"
-                            onClick={() => handleAction(u.id, 'rejected')}
-                            disabled={u.status === 'rejected' || actionLoading === u.id + 'rejected'}
-                          >
-                            {actionLoading === u.id + 'rejected' ? '...' : '✕ Rejeitar'}
-                          </button>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {u.status !== 'approved' && (
+                            <button
+                              className="sk-btn-approve"
+                              onClick={() => handleAction(u.id, 'approved')}
+                              disabled={actionLoading === u.id + 'approved'}
+                            >
+                              {actionLoading === u.id + 'approved' ? '...' : '✓ Ativar'}
+                            </button>
+                          )}
+                          {u.status !== 'rejected' && u.status !== 'banned' && (
+                            <button
+                              className="sk-btn-reject"
+                              onClick={() => handleAction(u.id, 'rejected')}
+                              disabled={actionLoading === u.id + 'rejected'}
+                            >
+                              {actionLoading === u.id + 'rejected' ? '...' : '✕ Rejeitar'}
+                            </button>
+                          )}
+                          {u.status !== 'banned' && (
+                            <button
+                              className="sk-btn-ban"
+                              onClick={() => handleAction(u.id, 'banned')}
+                              disabled={actionLoading === u.id + 'banned'}
+                            >
+                              {actionLoading === u.id + 'banned' ? '...' : '⊘ Banir'}
+                            </button>
+                          )}
+                          {u.status === 'banned' && (
+                            <button
+                              className="sk-btn-approve"
+                              onClick={() => handleAction(u.id, 'approved')}
+                              disabled={actionLoading === u.id + 'approved'}
+                            >
+                              {actionLoading === u.id + 'approved' ? '...' : '↩ Reativar'}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

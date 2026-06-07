@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
+import { getSupabaseAdmin } from '@/app/lib/supabase'
 
 const BASE = 'https://sheikstream.vercel.app'
 const REDIRECT_URI = `${BASE}/api/auth/twitch/callback`
@@ -46,6 +47,32 @@ export async function GET(req: NextRequest) {
     const { data } = await userRes.json()
     const tw = data[0]
     if (!tw) return NextResponse.redirect(`${BASE}/login?error=no_user`)
+
+    // Check ban status and register user
+    try {
+      const db = getSupabaseAdmin()
+      const { data: existing } = await db
+        .from('waitlist')
+        .select('id, status')
+        .eq('platform_id', tw.id)
+        .maybeSingle()
+
+      if (existing?.status === 'banned') {
+        return NextResponse.redirect(`${BASE}/login?error=banned`)
+      }
+
+      if (!existing) {
+        await db.from('waitlist').insert({
+          platform: 'Twitch',
+          platform_id: tw.id,
+          platform_username: tw.display_name,
+          email: tw.email ?? '',
+          status: 'approved',
+        })
+      }
+    } catch {
+      // DB unavailable — allow login
+    }
 
     const user: SessionUser = {
       id: tw.id,
