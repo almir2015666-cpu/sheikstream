@@ -137,17 +137,30 @@ function TimerModal({
   }
 
   const togglePlat = (key: string) => {
-    if (!isConnected(key) && key !== 'kick' && key !== 'tiktok') {
-      const url = oauthUrl[key]
-      if (url) {
-        const w = 500
-        const h = 700
-        const left = window.screen.width - w - 20
-        const top = Math.max(0, (window.screen.height - h) / 2)
-        window.open(url, 'oauth_popup', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`)
-      }
+    const url = oauthUrl[key]
+    if (url) {
+      // Twitch e YouTube sempre abrem OAuth para renovar o token
+      const w = 500, h = 700
+      const left = window.screen.width - w - 20
+      const top = Math.max(0, (window.screen.height - h) / 2)
+      const popup = window.open(url, 'oauth_popup', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`)
+
+      // Quando o popup fechar, auto-seleciona a plataforma e atualiza conexão
+      const check = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(check)
+          const connKey = key === 'twitch' ? 'twitch' : 'youtube'
+          setConnections(c => ({ ...c, [connKey]: true }))
+          setForm(f => ({
+            ...f,
+            plataformas: f.plataformas.includes(key) ? f.plataformas : [...f.plataformas, key],
+          }))
+        }
+      }, 500)
       return
     }
+
+    // Kick e TikTok apenas alternam seleção (sem OAuth)
     setForm(f => ({
       ...f,
       plataformas: f.plataformas.includes(key)
@@ -301,18 +314,14 @@ function TimerModal({
                   <span style={{ fontSize: 14, fontWeight: 600, color: selected ? p.color : '#94a3b8' }}>
                     {p.label}
                   </span>
-                  {connected && !selected && (
-                    <span style={{ fontSize: 11, color: '#64748b' }}>○ Conectado</span>
+                  {oauthUrl[p.key] && (
+                    <span style={{ fontSize: 11, color: selected ? p.color : '#6366f1', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {selected ? '● Ativo' : '⇄ Conectar'}
+                    </span>
                   )}
-                  {connected && selected && (
-                    <span style={{ fontSize: 11, color: p.color }}>● Ativo</span>
-                  )}
-                  {!connected && (p.key === 'kick' || p.key === 'tiktok') && (
-                    <span style={{ fontSize: 11, color: '#64748b' }}>○ Overlay</span>
-                  )}
-                  {!connected && oauthUrl[p.key] && (
-                    <span style={{ fontSize: 11, color: '#6366f1', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      ⇄ Conectar
+                  {!oauthUrl[p.key] && (
+                    <span style={{ fontSize: 11, color: selected ? p.color : '#64748b' }}>
+                      {selected ? '● Ativo' : '○ Overlay'}
                     </span>
                   )}
                 </button>
