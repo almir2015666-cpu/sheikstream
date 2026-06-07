@@ -124,8 +124,8 @@ export async function GET(req: NextRequest) {
   })
   await logActivity('auth', 'login', tw.display_name, 'Twitch')
 
-  // Persist Twitch token for timer/chat integrations
-  getSupabaseAdmin()
+  // Persist Twitch token — awaited to garantir execução antes do serverless terminar
+  const { error: upsertErr } = await getSupabaseAdmin()
     .from('user_tokens')
     .upsert(
       {
@@ -136,7 +136,7 @@ export async function GET(req: NextRequest) {
       },
       { onConflict: 'user_id' }
     )
-    .then(({ error: e }) => { if (e) console.error('[twitch/callback] user_tokens upsert error:', e) })
+  if (upsertErr) console.error('[twitch/callback] user_tokens upsert error:', upsertErr)
 
   // Register EventSub webhooks for this broadcaster (async, doesn't block login)
   registerEventSubSubscriptions(tw.id).catch(e => console.error('[callback] eventsub register error:', e))

@@ -74,8 +74,8 @@ export async function GET(req: NextRequest) {
     })
     await logActivity('auth', 'login', user.name, 'Google')
 
-    // Persist YouTube token for timer/chat integrations
-    getSupabaseAdmin()
+    // Persist YouTube token — awaited para garantir execução antes do serverless terminar
+    const { error: upsertErr } = await getSupabaseAdmin()
       .from('user_tokens')
       .upsert(
         {
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
         },
         { onConflict: 'user_id' }
       )
-      .then(({ error: e }) => { if (e) console.error('[google/callback] user_tokens upsert error:', e) })
+    if (upsertErr) console.error('[google/callback] user_tokens upsert error:', upsertErr)
 
     return res
   } catch {

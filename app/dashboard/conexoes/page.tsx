@@ -104,11 +104,16 @@ export default function ConexoesPage() {
   const [livepix, setLivepix] = useState({ clientId: '', clientSecret: '', slug: '' })
   const [livepixSaving, setLivepixSaving] = useState(false)
   const [livepixSaved, setLivepixSaved] = useState(false)
+  const [tokenStatus, setTokenStatus] = useState({ twitch: false, youtube: false })
 
   useEffect(() => {
     fetch('/api/me')
       .then(r => r.ok ? r.json() : null)
       .then(u => { if (u) setConnectedUser(u.name) })
+      .catch(() => {})
+    fetch('/api/tokens/status')
+      .then(r => r.json())
+      .then(s => setTokenStatus(s))
       .catch(() => {})
   }, [])
 
@@ -146,17 +151,25 @@ export default function ConexoesPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>Bot no Chat da Twitch</span>
-              <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.45rem', background: 'rgba(251,191,36,0.12)', color: '#fbbf24', borderRadius: '999px', border: '1px solid rgba(251,191,36,0.2)' }}>pendente</span>
+              {tokenStatus.twitch
+                ? <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.45rem', background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderRadius: '999px', border: '1px solid rgba(34,197,94,0.2)' }}>conectado</span>
+                : <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.45rem', background: 'rgba(251,191,36,0.12)', color: '#fbbf24', borderRadius: '999px', border: '1px solid rgba(251,191,36,0.2)' }}>pendente</span>
+              }
             </div>
-            <div style={{ fontSize: '0.76rem', color: C.dim, marginTop: '0.15rem' }}>Conecte sua conta Twitch para que o bot opere no seu chat com comandos e sorteios.</div>
+            <div style={{ fontSize: '0.76rem', color: C.dim, marginTop: '0.15rem' }}>
+              {tokenStatus.twitch
+                ? 'Token salvo. O bot está autorizado a enviar mensagens no seu chat.'
+                : 'Conecte sua conta Twitch para que o bot opere no seu chat com comandos e sorteios.'
+              }
+            </div>
           </div>
         </div>
         <button
           onClick={() => { window.location.href = '/api/auth/twitch' }}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.1rem', background: '#9147ff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.1rem', background: tokenStatus.twitch ? '#374151' : '#9147ff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           <PlatIcon id="twitch" color="#fff" />
-          Conectar Twitch
+          {tokenStatus.twitch ? 'Reconectar Twitch' : 'Conectar Twitch'}
         </button>
       </div>
 
