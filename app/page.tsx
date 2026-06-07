@@ -711,7 +711,7 @@ export default function Home() {
           </div>
           <h1 style={{ fontSize: 'clamp(2.6rem, 6vw, 4.2rem)', fontWeight: 900, lineHeight: 1.06, letterSpacing: '-2px', marginBottom: '1.4rem', color: C.text }}>
             Gerencie tudo numa<br />
-            <span style={{ background: `linear-gradient(135deg,${C.primary} 20%,${C.accent} 80%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ display: 'inline-block', background: `linear-gradient(135deg,${C.primary} 20%,${C.accent} 80%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               só plataforma
             </span>
           </h1>
