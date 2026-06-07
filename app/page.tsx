@@ -236,7 +236,7 @@ export default function Home() {
   const [twText, setTwText] = useState('')
   const [twIdx, setTwIdx] = useState(0)
   const [twPhase, setTwPhase] = useState<'typing' | 'deleting'>('typing')
-  const [userCount, setUserCount] = useState(4863)
+  const [userCount, setUserCount] = useState(0)
   const [metricVals, setMetricVals] = useState([0, 0, 0, 0])
   const metricsStarted = useRef(false)
 
@@ -286,10 +286,11 @@ export default function Home() {
   }, [twText, twPhase, twIdx, page])
 
   useEffect(() => {
-    if (page !== 'landing') return
-    const t = setInterval(() => { if (Math.random() > 0.55) setUserCount(c => Math.min(c + 1, 5247)) }, 3500)
-    return () => clearInterval(t)
-  }, [page])
+    fetch('/api/stats')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.count != null) setUserCount(d.count) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (page !== 'landing') return
@@ -452,12 +453,9 @@ export default function Home() {
               <PIcon id={loginPlatform} color={platColor} size={18} />
               <span style={{ fontSize: '0.88rem', color: C.muted }}>Conectado via <strong style={{ color: C.text }}>{loginPlatform}</strong></span>
             </div>
-            <p style={{ fontSize: '0.87rem', color: C.muted, lineHeight: 1.75, maxWidth: '340px', margin: '0 auto 2rem' }}>Sua conta está aguardando aprovação. Você será notificado por e-mail assim que o acesso for liberado.</p>
-            <div style={{ background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1.2rem', marginBottom: '2rem' }}>
-              <div style={{ fontSize: '0.7rem', color: C.vdim, marginBottom: '0.75rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Sua posição na fila</div>
-              <div style={{ fontSize: '3rem', fontWeight: 900, color: C.primary, lineHeight: 1 }}>#247</div>
-              <div style={{ fontSize: '0.78rem', color: C.dim, marginTop: '0.3rem' }}>Tempo estimado: 24–48h</div>
-            </div>
+            <p style={{ fontSize: '0.87rem', color: C.muted, lineHeight: 1.75, maxWidth: '360px', margin: '0 auto 2rem' }}>
+              Você está na fila de espera. O administrador irá revisar seu acesso em breve e você será notificado assim que for aprovado.
+            </p>
             <div style={{ background: C.accentBg15, border: `1px dashed ${C.accentBorder}`, borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem' }}>
               <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.6rem' }}>DEMONSTRAÇÃO</div>
               <button onClick={() => setPage('terms')} style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.65rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', width: '100%', minHeight: '44px' }}>
@@ -554,8 +552,6 @@ export default function Home() {
           ) : (
             <div style={{ background: C.cardBg, border: `1px solid ${C.accentBorder}`, borderTop: `3px solid ${C.accent}`, borderRadius: '16px', padding: isMobile ? '2rem 1.5rem' : '2.5rem 2rem', width: '100%', maxWidth: '440px', textAlign: 'center' }}>
               <div style={{ width: '58px', height: '58px', borderRadius: '50%', background: C.accentBg, border: `1px solid ${C.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem', fontSize: '1.7rem', color: C.accent }}>✓</div>
-              <div style={{ fontSize: '3.2rem', fontWeight: 900, color: C.accent, lineHeight: 1, marginBottom: '0.2rem' }}>#247</div>
-              <div style={{ fontSize: '0.82rem', color: C.dim, marginBottom: '1.5rem' }}>sua posição</div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem', color: C.text }}>Cadastro confirmado!</h2>
               <p style={{ fontSize: '0.85rem', color: C.muted, lineHeight: 1.7, marginBottom: '2rem' }}>Avisamos em <strong style={{ color: C.text }}>{waitlistEmail}</strong> assim que abrir.</p>
               <button onClick={() => { setPage('landing'); setWaitlistDone(false); setWaitlistEmail('') }} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.6rem 1.5rem', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', minHeight: '44px' }}>Voltar ao início</button>
