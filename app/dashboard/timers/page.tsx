@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useToast } from '@/app/components/Toast'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -124,11 +125,12 @@ function TimerModal({
   saving: boolean
   onSave: () => void
   onClose: () => void
-}) {
+})
+ {
   const isConnected = (key: string) => {
     if (key === 'twitch') return !!connections.twitch
     if (key === 'youtube') return !!connections.youtube
-    return false
+    return true // kick/tiktok sempre disponíveis (overlay)
   }
 
   const oauthUrl: Record<string, string | null> = {
@@ -138,31 +140,34 @@ function TimerModal({
     tiktok: null,
   }
 
+  const openOAuth = (key: string, url: string) => {
+    const w = 500, h = 700
+    const left = window.screen.width - w - 20
+    const top = Math.max(0, (window.screen.height - h) / 2)
+    const popup = window.open(url, 'oauth_popup', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`)
+    const check = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(check)
+        const connKey = key === 'twitch' ? 'twitch' : 'youtube'
+        setConnections(c => ({ ...c, [connKey]: true }))
+        setForm(f => ({
+          ...f,
+          plataformas: f.plataformas.includes(key) ? f.plataformas : [...f.plataformas, key],
+        }))
+      }
+    }, 500)
+  }
+
   const togglePlat = (key: string) => {
     const url = oauthUrl[key]
-    if (url) {
-      // Twitch e YouTube sempre abrem OAuth para renovar o token
-      const w = 500, h = 700
-      const left = window.screen.width - w - 20
-      const top = Math.max(0, (window.screen.height - h) / 2)
-      const popup = window.open(url, 'oauth_popup', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`)
 
-      // Quando o popup fechar, auto-seleciona a plataforma e atualiza conexão
-      const check = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(check)
-          const connKey = key === 'twitch' ? 'twitch' : 'youtube'
-          setConnections(c => ({ ...c, [connKey]: true }))
-          setForm(f => ({
-            ...f,
-            plataformas: f.plataformas.includes(key) ? f.plataformas : [...f.plataformas, key],
-          }))
-        }
-      }, 500)
+    // Se não está conectado e tem OAuth → abre popup de conexão
+    if (!isConnected(key) && url) {
+      openOAuth(key, url)
       return
     }
 
-    // Kick e TikTok apenas alternam seleção (sem OAuth)
+    // Já conectado ou sem OAuth (kick/tiktok) → apenas alterna seleção
     setForm(f => ({
       ...f,
       plataformas: f.plataformas.includes(key)
@@ -318,9 +323,12 @@ function TimerModal({
                   <span style={{ fontSize: 14, fontWeight: 600, color: selected ? p.color : '#94a3b8' }}>
                     {p.label}
                   </span>
-                  {oauthUrl[p.key] && (
-                    <span style={{ fontSize: 11, color: selected ? p.color : '#6366f1', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {selected ? '● Ativo' : '⇄ Conectar'}
+                  {oauthUrl[p.key] && !isConnected(p.key) && (
+                    <span style={{ fontSize: 11, color: '#6366f1' }}>⇄ Conectar</span>
+                  )}
+                  {oauthUrl[p.key] && isConnected(p.key) && (
+                    <span style={{ fontSize: 11, color: selected ? p.color : '#64748b' }}>
+                      {selected ? '● Ativo' : '○ Conectado'}
                     </span>
                   )}
                   {!oauthUrl[p.key] && (
@@ -398,6 +406,7 @@ function TimerModal({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function TimersPage() {
+  const toast = useToast()
   const [timers, setTimers] = useState<Timer[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -422,10 +431,12 @@ export default function TimersPage() {
     fetchTimers()
     fetch('/api/me')
       .then(r => r.json())
-      .then((u: { id?: string; platform?: string }) => {
-        if (u?.id) setUserId(u.id)
-        if (u?.platform === 'Twitch') setConnections(c => ({ ...c, twitch: true }))
-        if (u?.platform === 'Google') setConnections(c => ({ ...c, youtube: true }))
+      .then((u: { id?: string }) => { if (u?.id) setUserId(u.id) })
+      .catch(() => {})
+    fetch('/api/tokens/status')
+      .then(r => r.json())
+      .then((s: { twitch?: boolean; youtube?: boolean }) => {
+        setConnections({ twitch: !!s.twitch, youtube: !!s.youtube })
       })
       .catch(() => {})
   }, [fetchTimers])
@@ -449,7 +460,10 @@ export default function TimersPage() {
   }
 
   async function handleSave() {
-    if (!form.nome.trim() || !form.mensagem.trim()) return
+    if (!form.nome.trim() || !form.mensagem.trim()) {
+      toast.show('Nome e mensagem são obrigatórios', 'error')
+      return
+    }
     setSaving(true)
     try {
       const method = editingId ? 'PUT' : 'POST'
@@ -462,6 +476,9 @@ export default function TimersPage() {
       if (res.ok) {
         await fetchTimers()
         setShowModal(false)
+        toast.show(editingId ? 'Timer atualizado!' : 'Timer criado com sucesso!', 'success')
+      } else {
+        toast.show('Erro ao salvar timer', 'error')
       }
     } finally {
       setSaving(false)
