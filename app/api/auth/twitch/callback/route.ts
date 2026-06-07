@@ -48,7 +48,6 @@ export async function GET(req: NextRequest) {
     const tw = data[0]
     if (!tw) return NextResponse.redirect(`${BASE}/login?error=no_user`)
 
-    // Check ban status and register user
     try {
       const db = getSupabaseAdmin()
       const { data: existing } = await db
@@ -61,17 +60,25 @@ export async function GET(req: NextRequest) {
         return NextResponse.redirect(`${BASE}/login?error=banned`)
       }
 
+      if (existing?.status === 'pending') {
+        return NextResponse.redirect(`${BASE}/pending`)
+      }
+
       if (!existing) {
         await db.from('waitlist').insert({
           platform: 'Twitch',
           platform_id: tw.id,
           platform_username: tw.display_name,
           email: tw.email ?? '',
-          status: 'approved',
+          status: 'pending',
         })
+        return NextResponse.redirect(`${BASE}/pending`)
       }
+
+      // status === 'approved' — allow in
     } catch {
-      // DB unavailable — allow login
+      // DB unavailable — block access to be safe
+      return NextResponse.redirect(`${BASE}/pending`)
     }
 
     const user: SessionUser = {
