@@ -139,7 +139,13 @@ function TimerModal({
   const togglePlat = (key: string) => {
     if (!isConnected(key) && key !== 'kick' && key !== 'tiktok') {
       const url = oauthUrl[key]
-      if (url) window.location.href = url
+      if (url) {
+        const w = 500
+        const h = 700
+        const left = window.screen.width - w - 20
+        const top = Math.max(0, (window.screen.height - h) / 2)
+        window.open(url, 'oauth_popup', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`)
+      }
       return
     }
     setForm(f => ({
