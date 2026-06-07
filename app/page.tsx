@@ -116,8 +116,7 @@ function makeCSS(C: typeof DARK) {
   .sk-dot-2 { animation: sk-dot 1.4s infinite 0.2s; }
   .sk-dot-3 { animation: sk-dot 1.4s infinite 0.4s; }
   .sk-theme-overlay { animation: sk-circle-collapse 0.37s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
-  .sk-gradient-text { display: inline-block; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; }
-  .sk-pending-pulse { animation: sk-pending-pulse 2s ease-in-out infinite; }
+.sk-pending-pulse { animation: sk-pending-pulse 2s ease-in-out infinite; }
   `
 }
 
@@ -702,7 +701,7 @@ export default function Home() {
           </div>
           <h1 style={{ fontSize: 'clamp(2.6rem, 6vw, 4.2rem)', fontWeight: 900, lineHeight: 1.06, letterSpacing: '-2px', marginBottom: '1.4rem', color: C.text }}>
             Gerencie tudo numa<br />
-            <span className="sk-gradient-text" style={{ background: `linear-gradient(135deg,${C.primary} 20%,${C.accent} 80%)` }}>
+            <span style={{ color: C.primary }}>
               só plataforma
             </span>
           </h1>
