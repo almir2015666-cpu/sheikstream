@@ -70,7 +70,7 @@ export default function LoginPage() {
     if (loading) return
     setLoading(platform)
     if (platform === 'Twitch') {
-      signIn('twitch', { callbackUrl: '/pending?platform=Twitch' })
+      signIn('twitch', { callbackUrl: '/dashboard' })
       return
     }
     // YouTube and Kick — simulated until OAuth is configured
