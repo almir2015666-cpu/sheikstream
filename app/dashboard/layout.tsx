@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -103,6 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [open, setOpen] = useState<Set<string>>(new Set(['sorteios', 'plataformas']))
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const lastTrackedPath = useRef<string | null>(null)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -129,6 +130,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (status === 'done' && !user) router.replace('/login')
   }, [status, user, router])
+
+  useEffect(() => {
+    if (!user) return
+    if (lastTrackedPath.current === pathname) return
+    lastTrackedPath.current = pathname
+    const label = PAGE_TITLES[pathname] ?? pathname
+    fetch('/api/activity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: 'dashboard', event: 'page_view', details: label }),
+    }).catch(() => {})
+  }, [pathname, user])
 
   if (status === 'loading') return <div style={{ background: S.bg, minHeight: '100vh' }} />
   if (!user) return null

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
+import { logActivity } from '@/app/lib/log-activity'
 
 const BASE = 'https://sheikstream.vercel.app'
 const REDIRECT_URI = 'https://sheikstream.vercel.app/api/auth/google/callback'
@@ -64,6 +65,7 @@ export async function GET(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
+    await logActivity('auth', 'login', user.name, 'Google')
     return res
   } catch {
     return NextResponse.redirect(`${BASE}/login?error=server_error`)
