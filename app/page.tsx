@@ -693,8 +693,8 @@ export default function Home() {
             </svg>
             App
           </button>
-          <button onClick={() => setPage('waitlist')} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.52rem 1.25rem', borderRadius: '7px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700, boxShadow: `0 2px 16px ${C.primaryBgMed}` }}>
-            Começar grátis
+          <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.52rem 1.25rem', borderRadius: '7px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700, boxShadow: `0 2px 16px ${C.primaryBgMed}` }}>
+            Começar agora
           </button>
         </div>
       </nav>
@@ -720,8 +720,8 @@ export default function Home() {
             Conecte Twitch, YouTube, Kick, TikTok e Facebook. Automatize sorteios, acompanhe metas e engaje sua comunidade — de graça.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '4rem' }}>
-            <button onClick={() => setPage('waitlist')} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.9rem 2.3rem', borderRadius: '8px', fontSize: '0.98rem', fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 24px ${C.primaryBgMed}` }}>
-              Criar conta grátis →
+            <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.9rem 2.3rem', borderRadius: '8px', fontSize: '0.98rem', fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 24px ${C.primaryBgMed}` }}>
+              Começar agora →
             </button>
             <button onClick={() => scrollToSection('produto')} className="sk-btn-ghost" style={{ background: 'transparent', color: C.muted, border: `1px solid ${C.border}`, padding: '0.9rem 1.9rem', borderRadius: '8px', fontSize: '0.92rem', cursor: 'pointer', fontWeight: 500 }}>
               Ver recursos
@@ -861,8 +861,8 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-            <button onClick={() => setPage('waitlist')} className="sk-btn-cta" style={{ width: '100%', padding: '0.85rem', background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', borderRadius: '9px', fontSize: '0.93rem', fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 20px ${C.primaryBgMed}` }}>
-              Garantir acesso grátis →
+            <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ width: '100%', padding: '0.85rem', background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', borderRadius: '9px', fontSize: '0.93rem', fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 20px ${C.primaryBgMed}` }}>
+              Começar agora →
             </button>
           </div>
           <div className="sk-pricing-card" style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderRadius: '16px', padding: '2.2rem', opacity: 0.6 }}>
@@ -896,8 +896,8 @@ export default function Home() {
           <p style={{ fontSize: '1rem', color: C.muted, marginBottom: '2.2rem', position: 'relative', maxWidth: '420px', margin: '0 auto 2.2rem', lineHeight: 1.7 }}>
             Conecte suas plataformas em menos de 2 minutos e comece a crescer de verdade.
           </p>
-          <button onClick={() => setPage('waitlist')} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '1rem 2.8rem', borderRadius: '9px', fontSize: '1rem', fontWeight: 700, cursor: 'pointer', boxShadow: `0 6px 28px ${C.primaryBgMed}`, position: 'relative' }}>
-            Criar conta grátis →
+          <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '1rem 2.8rem', borderRadius: '9px', fontSize: '1rem', fontWeight: 700, cursor: 'pointer', boxShadow: `0 6px 28px ${C.primaryBgMed}`, position: 'relative' }}>
+            Começar agora →
           </button>
           <div style={{ fontSize: '0.78rem', color: C.dim, marginTop: '1.1rem', position: 'relative' }}>Sem cartão de crédito. Acesso imediato ao beta.</div>
         </div>
