@@ -173,8 +173,8 @@ const PLATFORM_COLORS: Record<string, string> = {
 const TW_WORDS = ['sorteios', 'comandos', 'analytics', 'metas', 'notificações', 'streams']
 
 const STREAMERS = [
-  { name: 'sheikfabio',  initials: 'SF', platform: 'Twitch', plColor: '#9147ff' },
-  { name: 'thierry0800', initials: 'TH', platform: 'Twitch', plColor: '#9147ff' },
+  { name: 'sheikfabio',  initials: 'SF', platform: 'Twitch', plColor: '#9147ff', url: 'https://twitch.tv/sheikfabio' },
+  { name: 'thierry0800', initials: 'TH', platform: 'Twitch', plColor: '#9147ff', url: 'https://twitch.tv/thierry0800' },
 ]
 
 const TESTIMONIALS = [
@@ -765,11 +765,11 @@ export default function Home() {
         </div>
         <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'1rem' }}>
           {STREAMERS.map(s => (
-            <div key={s.name} className="sk-streamer-card" style={{ background:C.cardBg,border:`1px solid ${C.border}`,borderRadius:'14px',padding:'1.5rem 1rem',textAlign:'center' }}>
+            <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" className="sk-streamer-card" style={{ background:C.cardBg,border:`1px solid ${C.border}`,borderRadius:'14px',padding:'1.5rem 1rem',textAlign:'center',textDecoration:'none',display:'block',cursor:'pointer' }}>
               <div style={{ width:'54px',height:'54px',borderRadius:'50%',background:C.primaryBg,border:`1px solid ${C.borderStrong}`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 0.85rem',fontSize:'1.1rem',fontWeight:900,color:C.primary }}>{s.initials}</div>
               <div style={{ fontSize:'0.9rem',fontWeight:700,color:C.text,marginBottom:'0.3rem' }}>{s.name}</div>
               <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:'0.3rem' }}><PIcon id={s.platform} color={s.plColor} size={12} /><span style={{ fontSize:'0.72rem',color:C.muted }}>{s.platform}</span></div>
-            </div>
+            </a>
           ))}
         </div>
       </section>
