@@ -68,14 +68,26 @@ function SubathonOverlayContent() {
   const uid = sp.get('uid') ?? ''
   const cfgRaw = sp.get('cfg') ?? ''
 
-  let cfg: Cfg = DEF
-  if (cfgRaw) {
-    try { cfg = { ...DEF, ...JSON.parse(atob(cfgRaw)) } } catch {}
-  }
-
+  const [cfg, setCfg] = useState<Cfg>(() => {
+    if (cfgRaw) { try { return { ...DEF, ...JSON.parse(atob(cfgRaw)) } } catch {} }
+    return DEF
+  })
   const [state, setState] = useState<SubathonState | null>(null)
   const [remaining, setRemaining] = useState(0)
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Fetch config from DB (auto-updates when editor saves)
+  useEffect(() => {
+    if (!uid) return
+    const loadCfg = () =>
+      fetch(`/api/overlay-config/subathon?uid=${uid}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d && Object.keys(d).length) setCfg(prev => ({ ...prev, ...d.style, ...d })) })
+        .catch(() => {})
+    loadCfg()
+    const iv = setInterval(loadCfg, 10000)
+    return () => clearInterval(iv)
+  }, [uid])
 
   useEffect(() => {
     if (!uid) return

@@ -146,7 +146,11 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles'>('users')
+  type UserRole = { id: string; user_id: string; role: string; created_at: string }
+  const [roles, setRoles] = useState<UserRole[]>([])
+  const [rolesLoading, setRolesLoading] = useState(false)
+  const [rolesSaving, setRolesSaving] = useState<string | null>(null)
   type AdminPw = { id: string; label: string; password: string; type: 'temporary' | 'permanent'; active: boolean; expires_at: string | null; created_at: string }
   const [passwords, setPasswords] = useState<AdminPw[]>([])
   const [pwLoading, setPwLoading] = useState(false)
@@ -247,6 +251,40 @@ export default function AdminPage() {
       setPwLoading(false)
     }
   }, [])
+
+  const fetchRoles = useCallback(async (pw: string) => {
+    setRolesLoading(true)
+    try {
+      const res = await fetch('/api/admin/roles', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setRoles(await res.json())
+    } catch { /* ignore */ } finally {
+      setRolesLoading(false)
+    }
+  }, [])
+
+  async function assignRole(userId: string, role: string) {
+    setRolesSaving(userId)
+    try {
+      const res = await fetch('/api/admin/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+        body: JSON.stringify({ user_id: userId, role }),
+      })
+      if (res.ok) await fetchRoles(storedPw)
+    } finally {
+      setRolesSaving(null)
+    }
+  }
+
+  async function removeRole(userId: string) {
+    setRolesSaving(userId)
+    try {
+      await fetch(`/api/admin/roles?user_id=${userId}`, { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
+      setRoles(r => r.filter(x => x.user_id !== userId))
+    } finally {
+      setRolesSaving(null)
+    }
+  }
 
   async function createPassword() {
     if (!pwForm.label.trim()) return
@@ -544,8 +582,9 @@ export default function AdminPage() {
               { v: 'logs',      label: '📋 Logs' },
               { v: 'banner',    label: '🎗 Banner' },
               { v: 'passwords', label: '🔑 Senhas Admin' },
+              { v: 'roles',     label: '🏷 Funções' },
             ] as const).map(({ v, label }) => (
-              <button key={v} onClick={() => { setView(v); if (v === 'logs') fetchLogs(storedPw); if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw) }}
+              <button key={v} onClick={() => { setView(v); if (v === 'logs') fetchLogs(storedPw); if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } }}
                 className={`sk-tab${view === v ? ' active' : ''}`}
                 style={{ color: view === v ? C.primary : C.muted }}>
                 {label}
@@ -1099,6 +1138,61 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+          {view === 'roles' && (() => {
+            const ROLES = ['admin', 'moderador', 'vip', 'streamer', 'parceiro', 'editor']
+            const ROLE_COLORS: Record<string, string> = { admin: '#ff4444', moderador: '#9147ff', vip: '#fbbf24', streamer: '#39ff14', parceiro: '#3b82f6', editor: '#f97316' }
+            const roleMap = Object.fromEntries(roles.map(r => [r.user_id, r]))
+            const allUsers = users.filter(u => u.status === 'approved')
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                  <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>Funções dos usuários</h3>
+                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.8rem', color: C.muted }}>Selecione um usuário aprovado e atribua uma função. A função aparece no perfil do usuário.</p>
+                  {rolesLoading ? (
+                    <div style={{ color: C.muted, fontSize: '0.85rem' }}>Carregando...</div>
+                  ) : allUsers.length === 0 ? (
+                    <div style={{ color: C.muted, fontSize: '0.85rem' }}>Nenhum usuário aprovado encontrado.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {allUsers.map(u => {
+                        const uname = u.platform_username || u.email || u.id.slice(0, 8)
+                        const currentRole = roleMap[u.id]?.role
+                        const isSaving = rolesSaving === u.id
+                        return (
+                          <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 1rem', background: C.cardBgAlt, borderRadius: '10px', border: `1px solid ${C.border}`, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 140 }}>
+                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: PLATFORM_COLORS[u.platform] || C.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                                {uname.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text }}>{uname}</div>
+                                <div style={{ fontSize: '0.68rem', color: C.muted }}>{u.platform}</div>
+                              </div>
+                            </div>
+                            {currentRole && (
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.7rem', borderRadius: '999px', background: `${ROLE_COLORS[currentRole] ?? C.primaryBg}22`, color: ROLE_COLORS[currentRole] ?? C.primary, border: `1px solid ${ROLE_COLORS[currentRole] ?? C.primary}44` }}>
+                                {currentRole}
+                              </span>
+                            )}
+                            <select
+                              value={currentRole ?? ''}
+                              disabled={isSaving}
+                              onChange={e => { if (e.target.value) assignRole(u.id, e.target.value); else removeRole(u.id) }}
+                              style={{ background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: '7px', padding: '0.3rem 0.6rem', fontSize: '0.8rem', cursor: 'pointer', outline: 'none' }}
+                            >
+                              <option value="">— sem função —</option>
+                              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                            {isSaving && <span style={{ fontSize: '0.75rem', color: C.muted }}>Salvando...</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
     </div>

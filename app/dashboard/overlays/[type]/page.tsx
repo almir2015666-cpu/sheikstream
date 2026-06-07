@@ -294,11 +294,23 @@ export default function OverlayEditorPage({ params }: Ctx) {
     return `${base}${meta.overlayPath}?uid=${id}${cfg ? `&cfg=${cfg}` : ''}`
   }
 
-  function save() {
-    try { localStorage.setItem(`overlay-cfg-${type}`, JSON.stringify({ style, vis, fontes, bannerUrls, activePreset })) } catch {}
+  async function save() {
+    const localPayload = { style, vis, fontes, bannerUrls, activePreset }
+    try { localStorage.setItem(`overlay-cfg-${type}`, JSON.stringify(localPayload)) } catch {}
     setSavedOk(true)
     setTimeout(() => setSavedOk(false), 2500)
-    notify('Configurações salvas!', 'success')
+    // Save to DB so overlay auto-updates in OBS without changing URL
+    fetch(`/api/overlay-config/${type}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(localPayload),
+    }).then(r => {
+      if (r.ok) {
+        notify('Overlay salvo! As mudanças aparecem automaticamente no OBS.', 'success')
+      } else {
+        notify('Configuração salva localmente.', 'info')
+      }
+    }).catch(() => notify('Configuração salva localmente.', 'info'))
   }
 
   function copyUrl() {

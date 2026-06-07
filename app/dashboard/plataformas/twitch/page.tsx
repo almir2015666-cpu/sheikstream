@@ -21,6 +21,12 @@ type Sorteio = { id: string; title: string; type: string; status: string }
 const TIER_LABELS: Record<string, string> = { tier1: 'Tier 1', tier2: 'Tier 2', tier3: 'Tier 3', prime: 'Prime' }
 const PERIOD_OPTIONS = [7, 30, 90]
 
+function daysAgoStr(n: number) {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+
 function tierValue(tier: string, cfg: TierConfig): number {
   if (tier === 'tier1') return cfg.tier1_value
   if (tier === 'tier2') return cfg.tier2_value
@@ -44,6 +50,9 @@ const BLANK_FORM = { username: '', tier: 'tier1', is_gift: false, gifted_by: '',
 
 export default function TwitchSubsPage() {
   const [days, setDays] = useState(30)
+  const [useCustom, setUseCustom] = useState(false)
+  const [customFrom, setCustomFrom] = useState(daysAgoStr(30))
+  const [customTo, setCustomTo] = useState(today())
   const [subs, setSubs] = useState<Sub[]>([])
   const [tiers, setTiers] = useState<TierConfig>({ tier1_name: 'Tier 1', tier1_value: 9.9, tier2_name: 'Tier 2', tier2_value: 25.9, tier3_name: 'Tier 3', tier3_value: 49.9 })
   const [tiersEdit, setTiersEdit] = useState<TierConfig>(tiers)
@@ -81,8 +90,11 @@ export default function TwitchSubsPage() {
 
   const loadSubs = useCallback(async () => {
     setLoading(true)
+    const subsUrl = useCustom
+      ? `/api/twitch/subs?from=${customFrom}&to=${customTo}`
+      : `/api/twitch/subs?days=${days}`
     const [subsRes, tiersRes, sorteiosRes, meRes] = await Promise.all([
-      fetch(`/api/twitch/subs?days=${days}`).then(r => r.json()).catch(() => []),
+      fetch(subsUrl).then(r => r.json()).catch(() => []),
       fetch('/api/twitch/tier-config').then(r => r.json()).catch(() => ({})),
       fetch('/api/sorteios').then(r => r.json()).catch(() => []),
       fetch('/api/me').then(r => r.ok ? r.json() : null).catch(() => null),
@@ -92,7 +104,7 @@ export default function TwitchSubsPage() {
     setSorteios(Array.isArray(sorteiosRes) ? sorteiosRes.filter((s: Sorteio) => s.status === 'active') : [])
     setUser(meRes)
     setLoading(false)
-  }, [days])
+  }, [days, useCustom, customFrom, customTo])
 
   useEffect(() => { loadSubs() }, [loadSubs])
 
@@ -180,13 +192,22 @@ export default function TwitchSubsPage() {
           <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Subs da Twitch</h2>
         </div>
         {/* Period tabs */}
-        <div style={{ display: 'flex', gap: '0.35rem', background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '8px', padding: '3px' }}>
-          {PERIOD_OPTIONS.map(d => (
-            <button key={d} onClick={() => setDays(d)} style={{ padding: '0.28rem 0.7rem', background: days === d ? C.primary : 'transparent', color: days === d ? '#fff' : C.dim, border: 'none', borderRadius: '6px', fontSize: '0.78rem', fontWeight: days === d ? 700 : 400, cursor: 'pointer' }}>
-              {d} dias
-            </button>
-          ))}
-          <button style={{ padding: '0.28rem 0.7rem', background: 'transparent', color: C.dim, border: 'none', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer' }}>Personalizado</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.35rem', background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '8px', padding: '3px' }}>
+            {PERIOD_OPTIONS.map(d => (
+              <button key={d} onClick={() => { setDays(d); setUseCustom(false) }} style={{ padding: '0.28rem 0.7rem', background: !useCustom && days === d ? C.primary : 'transparent', color: !useCustom && days === d ? '#fff' : C.dim, border: 'none', borderRadius: '6px', fontSize: '0.78rem', fontWeight: !useCustom && days === d ? 700 : 400, cursor: 'pointer' }}>
+                {d} dias
+              </button>
+            ))}
+            <button onClick={() => setUseCustom(true)} style={{ padding: '0.28rem 0.7rem', background: useCustom ? C.primary : 'transparent', color: useCustom ? '#fff' : C.dim, border: 'none', borderRadius: '6px', fontSize: '0.78rem', fontWeight: useCustom ? 700 : 400, cursor: 'pointer' }}>Personalizado</button>
+          </div>
+          {useCustom && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.primaryB}`, borderRadius: '6px', color: C.text, fontSize: '0.77rem', padding: '0.28rem 0.6rem', outline: 'none', colorScheme: 'dark' }} />
+              <span style={{ fontSize: '0.72rem', color: C.dim }}>até</span>
+              <input type="date" value={customTo} min={customFrom} onChange={e => setCustomTo(e.target.value)} style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.primaryB}`, borderRadius: '6px', color: C.text, fontSize: '0.77rem', padding: '0.28rem 0.6rem', outline: 'none', colorScheme: 'dark' }} />
+            </div>
+          )}
         </div>
         <button onClick={() => { setShowNiveis(v => !v); setTiersEdit(tiers) }} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>

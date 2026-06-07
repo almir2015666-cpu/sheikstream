@@ -51,12 +51,27 @@ function daysAgoStr(n: number) {
   return d.toISOString().slice(0, 10)
 }
 
+type Stats = {
+  livepix_total: number; livepix_donors: number; livepix_unique: number
+  twitch_subs: number; twitch_tickets: number; tickets_total: number; participants: number
+}
+
+function fmtBRL(v: number) { return `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
+
 export default function DashboardPage() {
   const [period, setPeriod] = useState<Period>('30d')
   const [customFrom, setCustomFrom] = useState(daysAgoStr(30))
   const [customTo, setCustomTo] = useState(todayStr())
   const [isMobile, setIsMobile] = useState(false)
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
+
+  function periodDates() {
+    if (period === 'custom') return { from: customFrom, to: customTo }
+    const days = period === '7d' ? 7 : period === '90d' ? 90 : 30
+    return { from: daysAgoStr(days), to: todayStr() }
+  }
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -64,6 +79,16 @@ export default function DashboardPage() {
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  useEffect(() => {
+    const { from, to } = periodDates()
+    setStatsLoading(true)
+    fetch(`/api/dashboard/stats?from=${from}&to=${to}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setStats(d) })
+      .catch(() => {})
+      .finally(() => setStatsLoading(false))
+  }, [period, customFrom, customTo])
 
   return (
     <div style={{ background: '#08090d', minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
@@ -117,7 +142,7 @@ export default function DashboardPage() {
               <span style={{ color: C.primary, fontSize: '0.8rem' }}>↗</span>
               Total arrecadado — todas as plataformas
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px' }}>R$ 0,00</div>
+            <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px' }}>{statsLoading ? '...' : fmtBRL(stats?.livepix_total ?? 0)}</div>
           </div>
           <div style={{ display: 'flex', gap: '1.2rem', flexWrap: 'wrap', alignItems: 'center' }}>
             {PLAT_TOTALS.map(p => (
@@ -125,7 +150,9 @@ export default function DashboardPage() {
                 <span style={{ color: p.color, fontSize: '0.95rem' }}>{p.sym}</span>
                 <div>
                   <div style={{ fontSize: '0.65rem', color: C.vdim }}>{p.name}</div>
-                  <div style={{ fontSize: '0.78rem', color: C.muted, fontWeight: 600 }}>R$ 0,00</div>
+                  <div style={{ fontSize: '0.78rem', color: C.muted, fontWeight: 600 }}>
+                    {p.name === 'Livepix' ? fmtBRL(stats?.livepix_total ?? 0) : 'R$ 0,00'}
+                  </div>
                 </div>
               </div>
             ))}
@@ -133,18 +160,33 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats grid 4×2 */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.65rem', marginBottom: '0.65rem' }}>
-          {STATS.map(s => (
-            <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '10px', padding: '0.9rem 1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                <div style={{ fontSize: '0.7rem', color: C.muted, lineHeight: 1.3 }}>{s.label}</div>
-                {s.badge && <span style={{ fontSize: '0.5rem', fontWeight: 700, padding: '0.08rem 0.38rem', background: 'rgba(59,130,246,0.16)', color: '#60a5fa', borderRadius: '999px', flexShrink: 0 }}>NOVO</span>}
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.5px' }}>{s.value}</div>
-              <div style={{ fontSize: '0.67rem', color: C.vdim, marginTop: '0.18rem' }}>{s.sub}</div>
+        {(() => {
+          const live = stats
+          const statCards = [
+            { label: 'Tickets ativos',  value: live ? String(live.tickets_total)     : '0',   sub: 'em circulação',  badge: false },
+            { label: 'Participantes',   value: live ? String(live.participants)       : '0',   sub: 'únicos',         badge: false },
+            { label: 'Total Livepix',   value: live ? fmtBRL(live.livepix_total)     : 'R$ 0,00', sub: 'no período', badge: true  },
+            { label: 'Doadores',        value: live ? String(live.livepix_donors)    : '0',   sub: 'no período',     badge: true  },
+            { label: 'Subs Twitch',     value: live ? String(live.twitch_subs)       : '0',   sub: 'no período',     badge: false },
+            { label: 'Tickets Twitch',  value: live ? String(live.twitch_tickets)    : '0',   sub: 'gerados',        badge: false },
+            { label: 'Únicos Livepix',  value: live ? String(live.livepix_unique)    : '0',   sub: 'doadores',       badge: false },
+            { label: 'Total geral',     value: live ? fmtBRL(live.livepix_total)     : 'R$ 0,00', sub: 'arrecadado', badge: false },
+          ]
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.65rem', marginBottom: '0.65rem' }}>
+              {statCards.map(s => (
+                <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '10px', padding: '0.9rem 1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: C.muted, lineHeight: 1.3 }}>{s.label}</div>
+                    {s.badge && <span style={{ fontSize: '0.5rem', fontWeight: 700, padding: '0.08rem 0.38rem', background: 'rgba(59,130,246,0.16)', color: '#60a5fa', borderRadius: '999px', flexShrink: 0 }}>NOVO</span>}
+                  </div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.5px' }}>{statsLoading ? '...' : s.value}</div>
+                  <div style={{ fontSize: '0.67rem', color: C.vdim, marginTop: '0.18rem' }}>{s.sub}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )
+        })()}
 
         {/* Nota rodapé */}
         <div style={{ fontSize: '0.69rem', color: C.vdim, marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

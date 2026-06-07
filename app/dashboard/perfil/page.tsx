@@ -95,11 +95,14 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+const ROLE_COLORS: Record<string, string> = { admin: '#ff4444', moderador: '#9147ff', vip: '#fbbf24', streamer: '#39ff14', parceiro: '#3b82f6', editor: '#f97316' }
+
 export default function PerfilPage() {
   const [user, setUser] = useState<UserData | null>(null)
   const [form, setForm] = useState({ nome: '', nick: '', email: '', twitchUser: '', youtube: '' })
   const [platforms, setPlatforms] = useState({ twitch: false, youtube: false, discord: false })
   const [saved, setSaved] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/me')
@@ -116,6 +119,10 @@ export default function PerfilPage() {
           youtube: '',
         })
         setPlatforms(p => ({ ...p, twitch: isTwitch }))
+        fetch('/api/me/role')
+          .then(r => r.ok ? r.json() : null)
+          .then(d => { if (d?.role) setUserRole(d.role) })
+          .catch(() => {})
       })
       .catch(() => {})
   }, [])
@@ -259,7 +266,14 @@ export default function PerfilPage() {
                   </span>
                 }
               />
-              <SummaryRow label="Perfil" value="Streamer Beta" />
+              <SummaryRow
+                label="Função"
+                value={userRole ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: `${ROLE_COLORS[userRole] ?? C.primaryBg}22`, border: `1px solid ${ROLE_COLORS[userRole] ?? C.primaryBg}44`, color: ROLE_COLORS[userRole] ?? C.primary, fontSize: '0.74rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '999px', textTransform: 'capitalize' }}>
+                    {userRole}
+                  </span>
+                ) : <span style={{ color: C.dim }}>Usuário</span>}
+              />
               <SummaryRow
                 label="Discord"
                 value={<span style={{ color: C.dim }}>Não vinculado</span>}
