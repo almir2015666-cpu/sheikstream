@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
+import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { logActivity } from '@/app/lib/log-activity'
 
 const BASE = 'https://sheikstream.com.br'
@@ -66,6 +67,20 @@ export async function GET(req: NextRequest) {
       path: '/',
     })
     await logActivity('auth', 'login', user.name, 'Google')
+
+    // Persist YouTube token for timer/chat integrations
+    getSupabaseAdmin()
+      .from('user_tokens')
+      .upsert(
+        {
+          user_id: gu.sub,
+          youtube_token: access_token,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      )
+      .then(({ error: e }) => { if (e) console.error('[google/callback] user_tokens upsert error:', e) })
+
     return res
   } catch {
     return NextResponse.redirect(`${BASE}/login?error=server_error`)
