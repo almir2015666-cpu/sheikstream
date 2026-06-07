@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     }
 
     const token = encodeSession(user)
-    const res = NextResponse.redirect(`${BASE}/pending`)
+    const res = NextResponse.redirect(`${BASE}/dashboard`)
     res.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: true,
