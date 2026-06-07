@@ -106,7 +106,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router   = useRouter()
   const [user, setUser] = useState<{ id: string; name: string; email: string; image: string } | null>(null)
   const [status, setStatus] = useState<'loading' | 'done'>('loading')
-  const [open, setOpen] = useState<Set<string>>(new Set(['sorteios', 'plataformas']))
+  const [open, setOpen] = useState<Set<string>>(new Set())
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
@@ -127,7 +127,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const t = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
       if (t) setTheme(t)
     } catch { /* ignore */ }
-    fetch('/api/dev-banner').then(r => r.json()).then(d => { if (d?.active) setBanner(d) }).catch(() => {})
+    const fetchBanner = () => fetch('/api/dev-banner').then(r => r.json()).then(d => setBanner(d?.active ? d : null)).catch(() => {})
+    fetchBanner()
+    const iv = setInterval(fetchBanner, 30000)
+    return () => clearInterval(iv)
   }, [])
 
   // Auto-dismiss badge when navigating to that page
@@ -224,16 +227,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pageTitle = PAGE_TITLES[pathname] ?? 'Dashboard'
 
   const css = `
-    *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
-    .sk-nl{transition:background 0.12s,color 0.12s;}
+    *{box-sizing:border-box;-webkit-font-smoothing:antialiased;transition:background-color 0.25s ease,color 0.22s ease,border-color 0.22s ease,box-shadow 0.22s ease;}
+    a,button,svg,img,input,select,textarea,span[style*="border-radius"],div[style*="animation"]{transition:none!important;}
+    .sk-nl{transition:background 0.12s,color 0.12s!important;}
     .sk-nl:hover{background:${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}!important;color:${S.text}!important;}
-    .sk-nl-act{transition:background 0.12s,color 0.12s;}
+    .sk-nl-act{transition:background 0.12s,color 0.12s!important;}
     .sk-nl-act:hover{filter:brightness(${isDark ? '1.08' : '0.95'});}
-    .sk-signout{transition:opacity 0.1s,color 0.1s;}
+    .sk-signout{transition:opacity 0.1s,color 0.1s!important;}
     .sk-signout:hover{opacity:1!important;color:#ff4444!important;}
-    .sk-theme-btn{transition:transform 0.12s;background:transparent;border:none;cursor:pointer;padding:0.3rem;display:flex;align-items:center;color:${S.dim};}
+    .sk-theme-btn{background:transparent;border:none;cursor:pointer;padding:0.3rem;display:flex;align-items:center;color:${S.dim};transition:transform 0.2s ease!important;}
     .sk-theme-btn:hover{transform:rotate(15deg) scale(1.15);color:${S.primary};}
-    .sk-hamburger{transition:opacity 0.08s;}
+    .sk-hamburger{transition:opacity 0.08s!important;}
     .sk-hamburger:hover{opacity:0.75!important;}
     .sk-mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:199;backdrop-filter:blur(2px);}
     ::-webkit-scrollbar{width:3px;}
@@ -241,6 +245,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     @keyframes sk-slide-in{from{transform:translateX(-100%);}to{transform:translateX(0);}}
     .sk-sidebar-mobile{animation:sk-slide-in 0.22s cubic-bezier(0.4,0,0.2,1) forwards;}
     @keyframes sk-pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+    main{background:${S.bg};transition:background 0.25s ease!important;}
+    ${!isDark ? `
+    main>div{background:${S.bg}!important;color:${S.text}!important;}
+    main [style*="background: rgb(8, 9, 13)"],main [style*="background:#08090d"],main [style*="background: #08090d"]{background:${S.bg}!important;}
+    main [style*="background: rgb(17, 18, 25)"],main [style*="background:#111219"],main [style*="background: #111219"]{background:${S.card}!important;color:${S.text}!important;}
+    main [style*="background: rgb(11, 12, 23)"],main [style*="background:#0b0d1a"],main [style*="background: #0b0d1a"]{background:rgba(0,0,0,0.05)!important;}
+    main [style*="color: rgb(232, 230, 248)"],main [style*="color:#e8e6f8"],main [style*="color: #e8e6f8"]{color:${S.text}!important;}
+    ` : ''}
   `
 
   const sidebarContent = (
@@ -344,7 +356,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: S.bg, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: S.text }}>
+    <div data-theme={theme} style={{ display: 'flex', minHeight: '100vh', background: S.bg, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: S.text }}>
       <style>{css}</style>
 
       {isMobile && mobileOpen && (

@@ -13,6 +13,17 @@ export async function POST(req: NextRequest) {
   const db = getSupabaseAdmin()
 
   if (channelId && amount > 0) {
+    // Record in donors table
+    await db.from('livepix_donors').insert({
+      broadcaster_id: channelId,
+      username: donorName,
+      amount,
+      message: message || null,
+      is_manual: false,
+      tickets: Math.max(1, Math.floor(amount)),
+      date: new Date().toISOString().split('T')[0],
+    }).catch(() => {})
+
     const { data: sub } = await db.from('subathon_state').select('*').eq('broadcaster_id', channelId).single()
     if (sub?.is_active) {
       const secsPerUnit = Number(sub.seconds_per_livepix ?? 120)
