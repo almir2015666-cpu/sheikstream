@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { SiTwitch, SiYoutube, SiKick } from 'react-icons/si'
+import { SiTwitch } from 'react-icons/si'
 
 const DARK = {
   bg: '#0d0e16',
@@ -89,20 +89,6 @@ export default function LoginPage() {
       hover: '#7c52c8',
       icon: <SiTwitch size={22} color="#fff" />,
     },
-    {
-      id: 'YouTube',
-      label: 'Entrar com YouTube',
-      bg: '#cc0000',
-      hover: '#e60000',
-      icon: <SiYoutube size={24} color="#fff" />,
-    },
-    {
-      id: 'Kick',
-      label: 'Entrar com Kick',
-      bg: '#1a1a1a',
-      hover: '#2a2a2a',
-      icon: <SiKick size={20} color="#53fc18" />,
-    },
   ]
 
   return (
@@ -177,7 +163,7 @@ export default function LoginPage() {
         ))}
 
         <p style={{ fontSize: '0.78rem', color: C.muted, textAlign: 'center', margin: '0.5rem 0 0', lineHeight: 1.6 }}>
-          Sem convite? Ao entrar com Twitch, YouTube ou Kick<br />você entra automaticamente na fila de espera.
+          Ao entrar com Twitch você acessa o painel direto.
         </p>
       </div>
 
