@@ -106,6 +106,13 @@ export async function PATCH(req: NextRequest) {
     if (status === 'approved' && data?.email) {
       await sendApprovalEmail(data.email, data.platform_username ?? 'streamer')
     }
+    try {
+      await db.from('admin_logs').insert({
+        action: status,
+        target_username: data?.platform_username ?? null,
+        target_platform: data?.platform ?? null,
+      })
+    } catch { /* log failure is non-critical */ }
     return NextResponse.json(data)
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)

@@ -35,6 +35,14 @@ type User = {
   created_at: string
 }
 
+type Log = {
+  id: string
+  action: string
+  target_username: string | null
+  target_platform: string | null
+  performed_at: string
+}
+
 const PLATFORM_COLORS: Record<string, string> = {
   Twitch: '#9147ff', YouTube: '#ff0000', Kick: '#53fc18',
   Discord: '#5865f2', Google: '#4285f4',
@@ -103,6 +111,9 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
+  const [view, setView] = useState<'users' | 'logs'>('users')
+  const [logs, setLogs] = useState<Log[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -132,6 +143,16 @@ export default function AdminPage() {
       setUsers([])
     } finally {
       setUsersLoading(false)
+    }
+  }, [])
+
+  const fetchLogs = useCallback(async (pw: string) => {
+    setLogsLoading(true)
+    try {
+      const res = await fetch('/api/admin/logs', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setLogs(await res.json())
+    } catch { /* ignore */ } finally {
+      setLogsLoading(false)
     }
   }, [])
 
@@ -208,6 +229,7 @@ export default function AdminPage() {
       })
       if (res.ok) {
         setUsers(prev => prev.map(u => u.id === id ? { ...u, status } : u))
+        fetchLogs(storedPw)
       }
     } finally {
       setActionLoading(null)
@@ -350,6 +372,17 @@ export default function AdminPage() {
       ) : (
         /* ── Admin dashboard ── */
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
+          {/* View switcher */}
+          <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem' }}>
+            {(['users', 'logs'] as const).map(v => (
+              <button key={v} onClick={() => { setView(v); if (v === 'logs') fetchLogs(storedPw) }}
+                className={`sk-tab${view === v ? ' active' : ''}`}
+                style={{ color: view === v ? C.primary : C.muted }}>
+                {{ users: '👥 Usuários', logs: '📋 Logs' }[v]}
+              </button>
+            ))}
+          </div>
+
           {/* DB error banner */}
           {dbError && (
             <div style={{ background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '10px', padding: '0.9rem 1.2rem', marginBottom: '1.5rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -360,6 +393,67 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+          {view === 'logs' ? (
+            /* ── Logs view ── */
+            <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: C.text }}>Histórico de ações</span>
+                <button onClick={() => fetchLogs(storedPw)} disabled={logsLoading}
+                  style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                  {logsLoading ? 'Carregando...' : 'Atualizar'}
+                </button>
+              </div>
+              {logsLoading ? (
+                <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando logs...</div>
+              ) : logs.length === 0 ? (
+                <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum log registrado ainda.</div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                        {['Data / Hora', 'Ação', 'Plataforma', 'Usuário'].map(h => (
+                          <th key={h} style={{ padding: '0.75rem 1.2rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, color: C.dim, letterSpacing: '1px', textTransform: 'uppercase' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {logs.map(log => {
+                        const actionCfg: Record<string, { label: string; bg: string; color: string; border: string }> = {
+                          approved: { label: '✓ Aprovado',  bg: C.accentBg,              color: C.accent,   border: C.accentBorder },
+                          rejected: { label: '✕ Rejeitado', bg: C.dangerBg,              color: C.danger,   border: C.dangerBorder },
+                          banned:   { label: '⊘ Banido',   bg: 'rgba(255,120,0,0.1)',   color: '#ff7800',  border: 'rgba(255,120,0,0.3)' },
+                        }
+                        const cfg = actionCfg[log.action] ?? { label: log.action, bg: C.primaryBg, color: C.primary, border: C.border }
+                        return (
+                          <tr key={log.id} className="sk-user-row" style={{ borderBottom: `1px solid ${C.vdim}`, background: 'transparent' }}>
+                            <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.78rem', color: C.dim, whiteSpace: 'nowrap' }}>{fmtDate(log.performed_at)}</td>
+                            <td style={{ padding: '0.85rem 1.2rem' }}>
+                              <span style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: '999px', padding: '0.18rem 0.65rem', fontSize: '0.72rem', fontWeight: 700 }}>{cfg.label}</span>
+                            </td>
+                            <td style={{ padding: '0.85rem 1.2rem' }}>
+                              {log.target_platform ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.85rem', color: PLATFORM_COLORS[log.target_platform] || C.primary }}>
+                                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: PLATFORM_COLORS[log.target_platform] || C.primary, display: 'inline-block' }} />
+                                  {log.target_platform}
+                                </span>
+                              ) : <span style={{ color: C.dim }}>—</span>}
+                            </td>
+                            <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.85rem', color: C.text, fontWeight: 500 }}>{log.target_username ?? '—'}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : (
+          /* ── Users view ── */
+          <>
           {/* Stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
             {([
@@ -480,6 +574,8 @@ export default function AdminPage() {
             )}
             </div>
           </div>
+          </>
+          )}
         </div>
       )}
     </div>
