@@ -64,10 +64,10 @@ function makeCSS(C: typeof DARK) {
   .sk-social-icon:hover { border-color: ${C.borderStrong} !important; background: ${C.primaryBg} !important; transform: translateY(-3px); }
   .sk-content-link { transition: color 0.15s; }
   .sk-content-link:hover { color: ${C.primary} !important; }
-  @keyframes sk-circle-expand { from { clip-path: circle(0px at var(--tx) var(--ty)); } to { clip-path: circle(200vmax at var(--tx) var(--ty)); } }
+  @keyframes sk-circle-collapse { from { clip-path: circle(200vmax at var(--tx) var(--ty)); } to { clip-path: circle(0px at var(--tx) var(--ty)); } }
   @keyframes sk-glow-pulse { 0%,100% { opacity: 0.28; } 50% { opacity: 0.52; } }
   @keyframes sk-fade-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-  .sk-theme-overlay { animation: sk-circle-expand 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+  .sk-theme-overlay { animation: sk-circle-collapse 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
   .sk-fade-up { animation: sk-fade-up 0.5s ease both; }
   .sk-fade-up-2 { animation: sk-fade-up 0.5s 0.12s ease both; }
   .sk-glow { animation: sk-glow-pulse 3.5s ease-in-out infinite; }
@@ -191,7 +191,7 @@ export default function LegalPage({ params }: { params: Promise<{ slug: string }
   const themeOverlay = overlay.active ? (
     <div className="sk-theme-overlay" style={{
       position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none',
-      background: overlay.newTheme === 'dark' ? DARK.bg : LIGHT.bg,
+      background: overlay.newTheme === 'dark' ? LIGHT.bg : DARK.bg,
       '--tx': overlay.x, '--ty': overlay.y,
     } as React.CSSProperties} />
   ) : null

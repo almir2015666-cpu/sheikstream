@@ -104,7 +104,7 @@ function makeCSS(C: typeof DARK) {
   @keyframes sk-slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes sk-pop-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
   @keyframes sk-dot { 0%,80%,100% { opacity: 0.2; } 40% { opacity: 1; } }
-  @keyframes sk-circle-expand { from { clip-path: circle(0px at var(--tx) var(--ty)); } to { clip-path: circle(200vmax at var(--tx) var(--ty)); } }
+  @keyframes sk-circle-collapse { from { clip-path: circle(200vmax at var(--tx) var(--ty)); } to { clip-path: circle(0px at var(--tx) var(--ty)); } }
   @keyframes sk-glow-pulse { 0%,100% { opacity: 0.28; } 50% { opacity: 0.52; } }
   @keyframes sk-float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
   @keyframes sk-pending-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.6; transform:scale(0.96); } }
@@ -115,7 +115,7 @@ function makeCSS(C: typeof DARK) {
   .sk-dot-1 { animation: sk-dot 1.4s infinite 0s; }
   .sk-dot-2 { animation: sk-dot 1.4s infinite 0.2s; }
   .sk-dot-3 { animation: sk-dot 1.4s infinite 0.4s; }
-  .sk-theme-overlay { animation: sk-circle-expand 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+  .sk-theme-overlay { animation: sk-circle-collapse 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
   .sk-gradient-text { display: inline-block; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; }
   .sk-pending-pulse { animation: sk-pending-pulse 2s ease-in-out infinite; }
   `
@@ -320,7 +320,7 @@ export default function Home() {
   const themeOverlay = overlay.active ? (
     <div className="sk-theme-overlay" style={{
       position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none',
-      background: overlay.newTheme === 'dark' ? DARK.bg : LIGHT.bg,
+      background: overlay.newTheme === 'dark' ? LIGHT.bg : DARK.bg,
       '--tx': overlay.x, '--ty': overlay.y,
     } as React.CSSProperties} />
   ) : null

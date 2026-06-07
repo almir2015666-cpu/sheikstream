@@ -30,8 +30,8 @@ function makeCSS(C: typeof DARK) {
   .sk-theme-btn:hover { transform: rotate(18deg) scale(1.15); }
   .sk-checkbox { width:18px; height:18px; border:2px solid ${C.border}; border-radius:4px; background:${C.bg}; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:border-color 0.15s, background 0.15s; }
   .sk-checkbox.checked { border-color:${C.primary}; background:${C.primary}; }
-  @keyframes sk-circle-expand { from { clip-path: circle(0px at var(--tx) var(--ty)); } to { clip-path: circle(200vmax at var(--tx) var(--ty)); } }
-  .sk-theme-overlay { animation: sk-circle-expand 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+  @keyframes sk-circle-collapse { from { clip-path: circle(200vmax at var(--tx) var(--ty)); } to { clip-path: circle(0px at var(--tx) var(--ty)); } }
+  .sk-theme-overlay { animation: sk-circle-collapse 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
   @keyframes sk-pop-in { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
   .sk-card { animation: sk-pop-in 0.35s ease both; }
   `
@@ -69,7 +69,7 @@ export default function TermsPage() {
   const themeOverlay = overlay.active ? (
     <div className="sk-theme-overlay" style={{
       position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none',
-      background: overlay.newTheme === 'dark' ? DARK.bg : LIGHT.bg,
+      background: overlay.newTheme === 'dark' ? LIGHT.bg : DARK.bg,
       '--tx': overlay.x, '--ty': overlay.y,
     } as React.CSSProperties} />
   ) : null
