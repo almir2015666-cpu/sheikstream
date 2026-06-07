@@ -228,6 +228,7 @@ export default function Home() {
   const [twPhase, setTwPhase] = useState<'typing' | 'deleting'>('typing')
   const [userCount, setUserCount] = useState(0)
   const [streamerImages, setStreamerImages] = useState<Record<string, string>>({})
+  const [approvedAvatars, setApprovedAvatars] = useState<{ username: string; image: string }[]>([])
 
   useEffect(() => {
     if (document.cookie.includes('sk-session')) {
@@ -289,6 +290,13 @@ export default function Home() {
         profiles.forEach(p => { map[p.username] = p.image })
         setStreamerImages(map)
       })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/twitch/approved-avatars')
+      .then(r => r.ok ? r.json() : [])
+      .then(setApprovedAvatars)
       .catch(() => {})
   }, [])
 
@@ -647,7 +655,12 @@ export default function Home() {
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', marginBottom: '2rem' }}>
             <div style={{ display: 'flex' }}>
-              {['#9b30ff','#ff6bbd','#39ff14','#00d4ff'].map((c, i) => (
+              {approvedAvatars.slice(0, 5).map((a, i) => (
+                <div key={a.username} style={{ width: '26px', height: '26px', borderRadius: '50%', border: `2px solid ${C.bg}`, marginLeft: i > 0 ? '-9px' : '0', overflow: 'hidden', flexShrink: 0, background: C.primaryBg }}>
+                  <img src={a.image} alt={a.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ))}
+              {approvedAvatars.length === 0 && ['#9b30ff','#ff6bbd','#39ff14','#00d4ff'].map((c, i) => (
                 <div key={i} style={{ width: '26px', height: '26px', borderRadius: '50%', background: c, border: `2px solid ${C.bg}`, marginLeft: i > 0 ? '-9px' : '0' }} />
               ))}
             </div>
