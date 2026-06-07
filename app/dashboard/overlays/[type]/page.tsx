@@ -24,10 +24,10 @@ type FontesCfg = Record<string, boolean>
 const FONTS = ['Inter', 'Open Sans', 'Roboto', 'Montserrat', 'Poppins', 'Rajdhani', 'Exo 2', 'Nunito']
 
 const DEF: StyleCfg = {
-  font: 'Inter', timerSize: 56, titleSize: 14, supportSize: 11, width: 360,
-  bgColor: '#000000', bgOpacity: 0, textColor: '#ffffff', timerColor: '#9146FF',
+  font: 'Inter', timerSize: 120, titleSize: 14, supportSize: 11, width: 560,
+  bgColor: '#0b0c17', bgOpacity: 0.92, textColor: '#ffffff', timerColor: '#9146FF',
   barColor: '#9146FF', barBg: '#222222', barThickness: 8,
-  border: false, borderColor: '#9146FF', borderThick: 1, borderRadius: 14,
+  border: false, borderColor: '#9146FF', borderThick: 1, borderRadius: 16,
 }
 
 const PRESETS = [
@@ -145,17 +145,24 @@ function MetaPreview({ s, vis }: { s: StyleCfg; vis: VisCfg }) {
 
 function SubathonPreview({ s, vis }: { s: StyleCfg; vis: VisCfg }) {
   const bg = s.bgOpacity === 0 ? 'transparent' : s.bgColor
+  const scale = Math.min(1, 480 / Math.max(s.width, 200))
   return (
-    <div style={{ background: bg, padding: '18px 20px', borderRadius: s.borderRadius, maxWidth: s.width, margin: '0 auto', textAlign: 'center', border: s.border ? `${s.borderThick}px solid ${s.borderColor}` : 'none', fontFamily: s.font }}>
-      {vis.title && <div style={{ color: s.textColor, fontSize: s.titleSize, marginBottom: 8, opacity: 0.8 }}>nome do subathon</div>}
-      <div style={{ color: s.timerColor, fontSize: s.timerSize, fontWeight: 900, lineHeight: 1.1, marginBottom: 10, textShadow: `0 0 20px ${s.timerColor}44` }}>01:23:45</div>
-      {vis.tags && (
-        <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-          <span style={{ padding: '2px 8px', background: `${s.timerColor}22`, color: s.timerColor, borderRadius: 99, fontSize: 9 }}>+2m TWITCH SUB</span>
-          <span style={{ padding: '2px 8px', background: 'rgba(57,255,20,0.15)', color: '#39ff14', borderRadius: 99, fontSize: 9 }}>+2m LIVEPIX</span>
-        </div>
-      )}
-      {vis.lastContrib && <div style={{ color: s.textColor, opacity: 0.4, fontSize: s.supportSize }}>● viewer123 +2m</div>}
+    <div style={{ transform: `scale(${scale})`, transformOrigin: 'top center', width: s.width, margin: '0 auto' }}>
+      <div style={{ background: bg, padding: '20px 28px 16px', borderRadius: s.borderRadius, textAlign: 'center', border: s.border ? `${s.borderThick}px solid ${s.borderColor}` : 'none', fontFamily: s.font, boxShadow: `0 0 30px ${s.timerColor}22` }}>
+        {vis.title && <div style={{ color: s.textColor, fontSize: s.titleSize, marginBottom: 6, opacity: 0.7, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>nome do subathon</div>}
+        <div style={{ color: s.timerColor, fontSize: s.timerSize, fontWeight: 900, lineHeight: 1, marginBottom: 12, letterSpacing: '-2px', textShadow: `0 0 30px ${s.timerColor}66` }}>01:23:45</div>
+        {vis.tags && (
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+            <span style={{ padding: '3px 10px', background: `${s.timerColor}22`, color: s.timerColor, border: `1px solid ${s.timerColor}55`, borderRadius: 99, fontSize: s.supportSize + 1, fontWeight: 700 }}>+2m TWITCH SUB</span>
+            <span style={{ padding: '3px 10px', background: 'rgba(57,255,20,0.15)', color: '#39ff14', border: '1px solid rgba(57,255,20,0.4)', borderRadius: 99, fontSize: s.supportSize + 1, fontWeight: 700 }}>+1m LIVEPIX</span>
+            <span style={{ padding: '3px 10px', background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', borderRadius: 99, fontSize: s.supportSize + 1, fontWeight: 700 }}>+30s BITS</span>
+          </div>
+        )}
+        {vis.lastContrib && <div style={{ color: s.textColor, opacity: 0.4, fontSize: s.supportSize, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.timerColor, display: 'inline-block' }} />
+          viewer123 +2m
+        </div>}
+      </div>
     </div>
   )
 }
@@ -268,6 +275,20 @@ export default function OverlayEditorPage({ params }: Ctx) {
     setActivePreset(p.id)
   }
 
+  function buildCfgParam() {
+    const visCfg = type === 'subathon'
+      ? { showTitle: vis.title ?? true, showTags: vis.tags ?? true, showLastContrib: vis.lastContrib ?? true }
+      : {}
+    try { return btoa(JSON.stringify({ ...style, ...visCfg })) } catch { return '' }
+  }
+
+  function buildUrl() {
+    const base = typeof window !== 'undefined' ? window.location.origin : 'https://sheikstream.com.br'
+    const id = uid || 'SEU_ID'
+    const cfg = buildCfgParam()
+    return `${base}${meta.overlayPath}?uid=${id}${cfg ? `&cfg=${cfg}` : ''}`
+  }
+
   function save() {
     try { localStorage.setItem(`overlay-cfg-${type}`, JSON.stringify({ style, vis, fontes, bannerUrls, activePreset })) } catch {}
     setSavedOk(true)
@@ -275,15 +296,12 @@ export default function OverlayEditorPage({ params }: Ctx) {
   }
 
   function copyUrl() {
-    const base = typeof window !== 'undefined' ? window.location.origin : 'https://sheikstream.com.br'
-    navigator.clipboard.writeText(uid ? `${base}${meta.overlayPath}?uid=${uid}` : `${base}${meta.overlayPath}?uid=SEU_ID`).catch(() => {})
+    navigator.clipboard.writeText(buildUrl()).catch(() => {})
     setCopiedOk(true)
     setTimeout(() => setCopiedOk(false), 2000)
   }
 
-  const overlayUrl = uid
-    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://sheikstream.com.br'}${meta.overlayPath}?uid=${uid}`
-    : `https://sheikstream.com.br${meta.overlayPath}?uid=SEU_ID`
+  const overlayUrl = buildUrl()
 
   // ─── Left panel per type ───────────────────────────────────────────────────
   function renderLeft() {

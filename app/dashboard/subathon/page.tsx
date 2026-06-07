@@ -197,7 +197,7 @@ export default function SubathonPage() {
 
       {/* OBS URL hint */}
       <div style={{ background: 'rgba(155,48,255,0.06)', border: '1px solid rgba(155,48,255,0.15)', borderRadius: '10px', padding: '0.9rem 1.2rem', fontSize: '0.8rem', color: C.dim }}>
-        <strong style={{ color: C.text }}>OBS Browser Source:</strong> Clique em &quot;URL OBS&quot; acima para copiar o link. No OBS: Adicionar Fonte → Browser → colar a URL. Tamanho recomendado: 400×100px.
+        <strong style={{ color: C.text }}>OBS Browser Source:</strong> Clique em &quot;URL OBS&quot; acima para copiar o link. No OBS: Adicionar Fonte → Browser → colar a URL. Tamanho recomendado: <strong style={{ color: C.text }}>600×220px</strong>. Para personalizar cores e tamanho, acesse <a href="/dashboard/overlays/subathon" style={{ color: C.primary }}>Overlays → Subathon</a>.
       </div>
     </div>
   )

@@ -10,6 +10,44 @@ type SubathonState = {
   is_paused: boolean
 }
 
+type Cfg = {
+  font: string
+  timerSize: number
+  titleSize: number
+  supportSize: number
+  width: number
+  bgColor: string
+  bgOpacity: number
+  textColor: string
+  timerColor: string
+  border: boolean
+  borderColor: string
+  borderThick: number
+  borderRadius: number
+  showTitle: boolean
+  showTags: boolean
+  showLastContrib: boolean
+}
+
+const DEF: Cfg = {
+  font: 'Inter',
+  timerSize: 120,
+  titleSize: 14,
+  supportSize: 11,
+  width: 560,
+  bgColor: '#0b0c17',
+  bgOpacity: 0.92,
+  textColor: '#ffffff',
+  timerColor: '#9146FF',
+  border: false,
+  borderColor: '#9146FF',
+  borderThick: 1,
+  borderRadius: 16,
+  showTitle: true,
+  showTags: true,
+  showLastContrib: true,
+}
+
 function fmt(secs: number): string {
   const h = Math.floor(secs / 3600)
   const m = Math.floor((secs % 3600) / 60)
@@ -18,9 +56,23 @@ function fmt(secs: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+function hexToRgb(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `${r},${g},${b}`
+}
+
 function SubathonOverlayContent() {
   const sp = useSearchParams()
   const uid = sp.get('uid') ?? ''
+  const cfgRaw = sp.get('cfg') ?? ''
+
+  let cfg: Cfg = DEF
+  if (cfgRaw) {
+    try { cfg = { ...DEF, ...JSON.parse(atob(cfgRaw)) } } catch {}
+  }
+
   const [state, setState] = useState<SubathonState | null>(null)
   const [remaining, setRemaining] = useState(0)
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -37,7 +89,6 @@ function SubathonOverlayContent() {
     return () => clearInterval(iv)
   }, [uid])
 
-  // Client-side countdown
   useEffect(() => {
     if (tickRef.current) clearInterval(tickRef.current)
     if (!state?.is_active) { setRemaining(state?.paused_remaining ?? 0); return }
@@ -45,8 +96,7 @@ function SubathonOverlayContent() {
     if (!state.end_time) { setRemaining(0); return }
 
     const calc = () => {
-      const secs = Math.max(0, Math.floor((new Date(state.end_time!).getTime() - Date.now()) / 1000))
-      setRemaining(secs)
+      setRemaining(Math.max(0, Math.floor((new Date(state.end_time!).getTime() - Date.now()) / 1000)))
     }
     calc()
     tickRef.current = setInterval(calc, 1000)
@@ -55,35 +105,90 @@ function SubathonOverlayContent() {
 
   if (!state?.is_active) return null
 
-  const totalSecs = state.end_time
-    ? Math.floor((new Date(state.end_time).getTime() - Date.now()) / 1000) + remaining
-    : (state.paused_remaining ?? 0)
+  const warningColor = remaining < 300 ? '#ff4444' : remaining < 1800 ? '#ffaa00' : cfg.timerColor
+  const bg = cfg.bgOpacity === 0
+    ? 'transparent'
+    : `rgba(${hexToRgb(cfg.bgColor)},${cfg.bgOpacity})`
 
-  const warningColor = remaining < 300 ? '#ff4444' : remaining < 1800 ? '#ffaa00' : '#39ff14'
+  const RULE_TAGS = [
+    { label: '+2m TWITCH SUB', color: cfg.timerColor },
+    { label: '+1m LIVEPIX',    color: '#39ff14' },
+    { label: '+30s BITS',      color: '#fbbf24' },
+  ]
 
   return (
     <div style={{
-      fontFamily: "-apple-system,'Inter',system-ui,sans-serif",
-      padding: '16px 28px',
-      background: 'rgba(11,12,23,0.93)',
-      borderRadius: '14px',
-      border: `1px solid ${warningColor}44`,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '18px',
-      boxShadow: `0 0 20px ${warningColor}22`,
-      minWidth: '280px',
+      fontFamily: `'${cfg.font}', -apple-system, system-ui, sans-serif`,
+      width: cfg.width,
+      background: bg,
+      borderRadius: cfg.borderRadius,
+      border: cfg.border ? `${cfg.borderThick}px solid ${cfg.borderColor}` : 'none',
+      padding: '24px 32px 20px',
+      textAlign: 'center',
+      boxShadow: `0 0 40px ${warningColor}22`,
     }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={warningColor} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        {state.is_paused && <span style={{ fontSize: '0.5rem', color: '#ffaa00', fontWeight: 700, marginTop: '3px' }}>PAUSE</span>}
-      </div>
-      <div>
-        <div style={{ fontSize: '0.62rem', color: 'rgba(232,230,248,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>{state.title}</div>
-        <div style={{ fontSize: '2.2rem', fontWeight: 900, color: warningColor, letterSpacing: '-1px', lineHeight: 1, textShadow: `0 0 15px ${warningColor}66` }}>
-          {fmt(remaining)}
+      {cfg.showTitle && (
+        <div style={{
+          fontSize: cfg.titleSize,
+          color: cfg.textColor,
+          opacity: 0.7,
+          fontWeight: 600,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          marginBottom: 8,
+        }}>
+          {state.title || 'SUBATHON'}
         </div>
+      )}
+
+      <div style={{
+        fontSize: cfg.timerSize,
+        fontWeight: 900,
+        color: warningColor,
+        lineHeight: 1,
+        letterSpacing: '-2px',
+        textShadow: `0 0 30px ${warningColor}66, 0 0 60px ${warningColor}33`,
+        marginBottom: cfg.showTags || cfg.showLastContrib ? 14 : 0,
+      }}>
+        {state.is_paused && (
+          <div style={{ fontSize: cfg.titleSize, color: '#ffaa00', fontWeight: 700, marginBottom: 4 }}>⏸ PAUSADO</div>
+        )}
+        {fmt(remaining)}
       </div>
+
+      {cfg.showTags && (
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+          {RULE_TAGS.map(t => (
+            <span key={t.label} style={{
+              padding: '3px 10px',
+              background: `${t.color}22`,
+              color: t.color,
+              border: `1px solid ${t.color}55`,
+              borderRadius: 999,
+              fontSize: cfg.supportSize + 1,
+              fontWeight: 700,
+              letterSpacing: '0.03em',
+            }}>
+              {t.label}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {cfg.showLastContrib && (
+        <div style={{
+          color: cfg.textColor,
+          opacity: 0.45,
+          fontSize: cfg.supportSize,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 5,
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: warningColor, display: 'inline-block' }} />
+          última contribuição aparecerá aqui
+        </div>
+      )}
     </div>
   )
 }
@@ -91,8 +196,16 @@ function SubathonOverlayContent() {
 export default function SubathonOverlayPage() {
   return (
     <>
-      <style>{`html,body{margin:0;padding:0;background:transparent!important;}`}</style>
-      <div style={{ padding: '12px' }}>
+      <style>{`
+        html, body, #__next, [data-nextjs-scroll-focus-boundary] {
+          background: transparent !important;
+          background-color: transparent !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+        }
+      `}</style>
+      <div style={{ padding: '12px', display: 'inline-block' }}>
         <Suspense fallback={null}>
           <SubathonOverlayContent />
         </Suspense>
