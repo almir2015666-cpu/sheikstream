@@ -17,7 +17,7 @@ function PIcon({ id, color, size = 18 }: { id: string; color: string; size?: num
 }
 
 const DARK = {
-  bg: '#08090d', navBg: 'rgba(8,9,13,0.82)', footerBg: 'rgba(6,7,11,0.99)',
+  bg: '#08090d', navBg: 'rgba(8,9,13,0.92)', footerBg: 'rgba(6,7,11,0.99)',
   cardBg: '#0f1018', cardBgAlt: '#0e0f17',
   text: '#f0eefc', muted: 'rgba(240,238,252,0.5)', dim: 'rgba(240,238,252,0.28)',
   vdim: 'rgba(240,238,252,0.22)', vvdim: 'rgba(240,238,252,0.08)',
@@ -40,10 +40,10 @@ const DARK = {
   featureSep: 'rgba(155,48,255,0.15)', statColor: '#39ff14',
   pricingFreeBorder: 'rgba(57,255,20,0.4)',
   shadowPricing: 'rgba(155,48,255,0.2)',
-  overlayBg: '#f6f5ff',
+  appBtn: 'rgba(155,48,255,0.15)', appBtnBorder: 'rgba(155,48,255,0.4)',
 }
 const LIGHT = {
-  bg: '#f6f5ff', navBg: 'rgba(246,245,255,0.85)', footerBg: 'rgba(236,234,255,0.99)',
+  bg: '#f6f5ff', navBg: 'rgba(246,245,255,0.92)', footerBg: 'rgba(236,234,255,0.99)',
   cardBg: '#ffffff', cardBgAlt: '#faf9ff',
   text: '#0d0c1e', muted: 'rgba(13,12,30,0.55)', dim: 'rgba(13,12,30,0.32)',
   vdim: 'rgba(13,12,30,0.22)', vvdim: 'rgba(13,12,30,0.07)',
@@ -66,7 +66,7 @@ const LIGHT = {
   featureSep: 'rgba(124,42,245,0.1)', statColor: '#0a8c00',
   pricingFreeBorder: 'rgba(10,140,0,0.4)',
   shadowPricing: 'rgba(124,42,245,0.15)',
-  overlayBg: '#08090d',
+  appBtn: 'rgba(124,42,245,0.1)', appBtnBorder: 'rgba(124,42,245,0.35)',
 }
 
 function makeCSS(C: typeof DARK) {
@@ -95,14 +95,19 @@ function makeCSS(C: typeof DARK) {
   .sk-btn-cta:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 32px ${C.primaryBg3} !important; }
   .sk-btn-ghost { transition: all 0.18s; }
   .sk-btn-ghost:hover { background: ${C.primaryBgLight} !important; border-color: ${C.borderStrong} !important; color: ${C.text} !important; }
+  .sk-app-btn { transition: all 0.18s; }
+  .sk-app-btn:hover { background: ${C.appBtn} !important; border-color: ${C.primary} !important; color: ${C.primary} !important; }
   .sk-oauth-btn { transition: all 0.18s; }
   .sk-oauth-btn:hover { border-color: rgba(155,48,255,0.3) !important; background: ${C.primaryBgLight} !important; }
+  .sk-checkbox { width:18px; height:18px; border:2px solid ${C.border}; border-radius:4px; background:${C.inputBg}; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:border-color 0.15s, background 0.15s; }
+  .sk-checkbox.checked { border-color:${C.primary}; background:${C.primary}; }
   @keyframes sk-slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes sk-pop-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
   @keyframes sk-dot { 0%,80%,100% { opacity: 0.2; } 40% { opacity: 1; } }
   @keyframes sk-circle-expand { from { clip-path: circle(0px at var(--tx) var(--ty)); } to { clip-path: circle(200vmax at var(--tx) var(--ty)); } }
   @keyframes sk-glow-pulse { 0%,100% { opacity: 0.28; } 50% { opacity: 0.52; } }
   @keyframes sk-float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+  @keyframes sk-pending-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.6; transform:scale(0.96); } }
   .sk-mock-glow { animation: sk-glow-pulse 3.5s ease-in-out infinite; }
   .sk-mock-float { animation: sk-float 5s ease-in-out infinite; }
   .sk-chat-window { animation: sk-pop-in 0.22s ease; }
@@ -111,6 +116,7 @@ function makeCSS(C: typeof DARK) {
   .sk-dot-2 { animation: sk-dot 1.4s infinite 0.2s; }
   .sk-dot-3 { animation: sk-dot 1.4s infinite 0.4s; }
   .sk-theme-overlay { animation: sk-circle-expand 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+  .sk-pending-pulse { animation: sk-pending-pulse 2s ease-in-out infinite; }
   `
 }
 
@@ -133,257 +139,24 @@ function MoonIcon() {
   )
 }
 
-const LEGAL = {
-  termos: {
-    title: 'Termos e Condições',
-    content: `Última atualização: junho de 2025
-
-Ao acessar e usar o Sheikstream, você concorda com estes Termos e Condições. Leia com atenção antes de continuar.
-
-1. ACEITAÇÃO
-Ao criar uma conta ou utilizar a plataforma, você aceita integralmente estes termos. Se não concordar com algum ponto, não utilize o serviço.
-
-2. DESCRIÇÃO DO SERVIÇO
-O Sheikstream é um hub de gerenciamento para streamers brasileiros, permitindo conectar e gerenciar múltiplas plataformas de streaming em um só lugar. A plataforma está atualmente em fase beta fechado.
-
-3. CONTA E SEGURANÇA
-Você é responsável por manter a confidencialidade das suas credenciais de acesso. Notifique-nos imediatamente caso identifique qualquer uso não autorizado da sua conta.
-
-4. USO ACEITÁVEL
-É estritamente proibido usar o Sheikstream para atividades ilegais, envio de spam, violação de direitos autorais ou qualquer forma de abuso que prejudique outros usuários ou a plataforma.
-
-5. PROPRIEDADE INTELECTUAL
-Todo o conteúdo da plataforma — incluindo código-fonte, design, logotipo e marca — é propriedade exclusiva do Sheikstream e protegido pelas leis de propriedade intelectual vigentes no Brasil.
-
-6. LIMITAÇÃO DE RESPONSABILIDADE
-O Sheikstream não se responsabiliza por perdas ou danos indiretos resultantes do uso ou da impossibilidade de uso da plataforma.
-
-7. ALTERAÇÕES
-Podemos atualizar estes termos a qualquer momento. Usuários serão notificados por e-mail sobre mudanças significativas.
-
-8. CONTATO
-Dúvidas sobre estes termos? Entre em contato: contato@sheikstream.com.br`,
-  },
-  privacidade: {
-    title: 'Política de Privacidade',
-    content: `Última atualização: junho de 2025
-
-O Sheikstream valoriza sua privacidade. Esta política explica como coletamos, usamos e protegemos suas informações pessoais.
-
-1. DADOS COLETADOS
-• Informações de conta: e-mail, nome de usuário
-• Dados de plataformas conectadas: métricas públicas de streaming
-• Dados de uso: como você interage com a plataforma
-• Dados técnicos: endereço IP, tipo de navegador, sistema operacional
-
-2. COMO USAMOS OS DADOS
-• Para fornecer e melhorar continuamente os serviços
-• Para enviar notificações relevantes sobre sua conta
-• Para análises internas de produto (sempre anonimizadas)
-• Para cumprir obrigações legais aplicáveis
-
-3. COMPARTILHAMENTO DE DADOS
-Não vendemos seus dados a terceiros. Compartilhamos informações apenas com:
-• Provedores de serviço essenciais (hospedagem, e-mail transacional)
-• Autoridades competentes, quando exigido por lei
-
-4. SEUS DIREITOS (LGPD)
-Nos termos da Lei Geral de Proteção de Dados (Lei nº 13.709/2018), você tem direito de acessar, corrigir, excluir ou exportar seus dados pessoais. Para exercer esses direitos, entre em contato conosco.
-
-5. COOKIES
-Utilizamos cookies essenciais para o funcionamento da plataforma e cookies analíticos para melhorar a experiência do usuário. Consulte nossa Política de Cookies para mais detalhes.
-
-6. RETENÇÃO DE DADOS
-Mantemos seus dados enquanto sua conta estiver ativa. Após a exclusão da conta, os dados são removidos em até 30 dias úteis.
-
-7. CONTATO
-privacidade@sheikstream.com.br`,
-  },
-  cookies: {
-    title: 'Política de Cookies',
-    content: `Última atualização: junho de 2025
-
-Esta política explica como o Sheikstream utiliza cookies e tecnologias similares de rastreamento.
-
-O QUE SÃO COOKIES?
-Cookies são pequenos arquivos de texto armazenados no seu dispositivo pelo navegador. Eles nos ajudam a oferecer uma experiência personalizada e a entender como a plataforma é utilizada.
-
-TIPOS DE COOKIES QUE USAMOS
-
-Cookies Essenciais (sempre ativos)
-• Sessão de autenticação — mantém você logado entre visitas
-• Preferências de tema — salva sua escolha entre modo claro e escuro
-• Proteção CSRF — segurança contra ataques entre sites
-
-Cookies Analíticos (requerem consentimento)
-• Contagem de visitantes únicos (dados anonimizados)
-• Páginas e recursos mais acessados
-• Origem do tráfego e comportamento de navegação
-
-Não utilizamos cookies de publicidade, rastreamento de terceiros ou qualquer tecnologia que compartilhe dados com redes de anúncios.
-
-COMO GERENCIAR COOKIES
-Você pode bloquear ou excluir cookies nas configurações do seu navegador. Atenção: desativar cookies essenciais pode impedir o funcionamento correto de partes da plataforma.
-
-ATUALIZAÇÕES
-Esta política pode ser atualizada periodicamente. A data de "última atualização" no topo indica a versão vigente.
-
-CONTATO
-cookies@sheikstream.com.br`,
-  },
-  sobre: {
-    title: 'Sobre o Sheikstream',
-    content: `O Sheikstream nasceu de uma necessidade real: streamers brasileiros precisavam alternar entre dezenas de abas, aplicativos e ferramentas para gerenciar suas lives em múltiplas plataformas simultaneamente.
-
-Nossa missão é simples — dar ao streamer brasileiro uma ferramenta poderosa, gratuita e feita para a nossa realidade.
-
-POR QUE CRIAMOS O SHEIKSTREAM?
-O mercado de streaming cresceu exponencialmente no Brasil nos últimos anos. Streamers sérios transmitem simultaneamente no Twitch, YouTube, Kick, TikTok e Facebook — mas as ferramentas existentes são caras, em inglês ou simplesmente não atendem ao ecossistema e à cultura do criador de conteúdo brasileiro.
-
-O QUE NOS DIFERENCIA
-• 100% focado no streamer brasileiro e na comunidade BR
-• Gratuito por padrão — monetizamos apenas com features pro avançadas
-• Construído com feedback direto da comunidade desde o primeiro dia
-• Sem dados vendidos para anunciantes, sem rastreamento invasivo
-
-FASE ATUAL
-Estamos em beta fechado, trabalhando lado a lado com streamers selecionados para refinar cada detalhe da experiência antes do lançamento público.
-
-NOSSA EQUIPE
-Somos um time apaixonado por streaming e pela comunidade brasileira de criadores. Muitos de nós somos streamers também — então sabemos exatamente qual é a dor.
-
-ENTRE EM CONTATO
-Tem sugestões, quer fazer parte do beta ou simplesmente quer bater um papo?
-contato@sheikstream.com.br`,
-  },
-  roadmap: {
-    title: 'Roadmap',
-    content: `Aqui está o que estamos construindo para você. Atualizado mensalmente com base no feedback da comunidade.
-
-✅ CONCLUÍDO
-• Painel unificado de métricas em tempo real
-• Conexão com Twitch, YouTube, Kick, TikTok e Facebook
-• Sistema de sorteios automáticos
-• Metas de seguidores, subs e doações
-• Notificações ao vivo para a comunidade
-• Lista de espera com posição numerada e sistema de indicações
-• Assistente IA integrado ao site
-• Modo escuro e claro com transição animada
-
-🔨 EM DESENVOLVIMENTO — Q3 2025
-• Dashboard ao vivo com widgets customizáveis por plataforma
-• Bot de moderação básico com comandos personalizados
-• Integração nativa com OBS Studio
-• Analytics de retenção de audiência com gráficos detalhados
-• Alertas sonoros e visuais personalizáveis
-
-📋 PLANEJADO — Q4 2025
-• Plano Pro com recursos avançados (R$19/mês)
-• Histórico completo de analytics (90 dias)
-• Bot de automação avançado
-• Integração com StreamElements e Streamlabs
-• API pública para desenvolvedores
-• App mobile para iOS e Android
-
-💡 IDEIAS FUTURAS (votadas pela comunidade)
-• Clipagem automática dos melhores momentos da live
-• IA para sugestão dos melhores horários para fazer live
-• Marketplace de overlays, alertas e comandos
-
-Tem uma sugestão? Manda pra: contato@sheikstream.com.br`,
-  },
-  changelog: {
-    title: 'Changelog',
-    content: `Registro completo de mudanças, melhorias e correções da plataforma.
-
-v0.3.0 — junho 2025
-• Layout profissional completo com mockup do dashboard
-• Modo escuro e claro com transição circular animada
-• Chat com assistente IA integrado (powered by Claude)
-• Links do rodapé funcionais com conteúdo real
-• Newsletter no rodapé
-• Rodapé com 4 colunas e seção de Links Rápidos
-• Melhorias gerais de performance e acessibilidade
-
-v0.2.0 — maio 2025
-• Ícones SVG oficiais de todas as plataformas
-• Lista de espera com posição numerada (#247)
-• Sistema de indicações para avançar na fila
-• Login com OAuth (Twitch, YouTube, Kick, Discord, Google)
-• Rodapé com links de redes sociais
-• Seção de preços com plano grátis e pro
-
-v0.1.0 — abril 2025
-• Lançamento inicial da landing page
-• Sistema de lista de espera
-• Página de login
-• Deploy no Vercel com domínio sheikstream.vercel.app
-
----
-Acompanhe todas as novidades: @sheikstream no X/Twitter`,
-  },
-  contato: {
-    title: 'Contato',
-    content: `Estamos sempre disponíveis para ouvir você. Escolha o canal que preferir:
-
-📧 E-MAIL GERAL
-contato@sheikstream.com.br
-Respondemos em até 48 horas úteis.
-
-🐛 REPORTAR BUGS
-bugs@sheikstream.com.br
-Inclua: descrição do problema, navegador e sistema operacional.
-
-💼 PARCERIAS E IMPRENSA
-parceria@sheikstream.com.br
-
-🔒 PRIVACIDADE E DADOS (LGPD)
-privacidade@sheikstream.com.br
-
-💬 COMUNIDADE
-Nossa comunidade no Discord está chegando em breve! Enquanto isso, nos siga nas redes sociais:
-• Twitter / X: @sheikstream
-• Instagram: @sheikstream
-• TikTok: @sheikstream
-
-⚡ SUPORTE RÁPIDO
-Para dúvidas rápidas, use o chat com nosso assistente IA direto no site — disponível 24/7 no canto inferior direito da tela.`,
-  },
-  blog: {
-    title: 'Blog',
-    content: `Nosso blog está chegando! 🚀
-
-Em breve você vai encontrar aqui conteúdo de qualidade para streamers brasileiros:
-
-📚 CONTEÚDO PLANEJADO
-• Guias completos para crescer no Twitch, YouTube e Kick em 2025
-• Como configurar transmissões simultâneas em múltiplas plataformas
-• Melhores horários para fazer live em cada plataforma (dados reais)
-• Comparativo aprofundado: Twitch vs Kick vs YouTube em 2025
-• Como usar bots para automatizar sua live sem perder autenticidade
-• Histórias de streamers brasileiros que escalaram com o hub
-• Novidades e atualizações do Sheikstream explicadas em detalhes
-
-📬 SEJA O PRIMEIRO A SABER
-Assine nossa newsletter no rodapé do site e você será notificado assim que publicarmos o primeiro artigo.
-
-✍️ QUER ESCREVER PARA NÓS?
-Somos um produto da comunidade. Se você é streamer e quer compartilhar sua experiência, manda uma mensagem:
-blog@sheikstream.com.br`,
-  },
-}
-
 type ChatMsg = { role: 'user' | 'assistant'; content: string }
 type Overlay = { active: boolean; x: string; y: string; newTheme: 'dark' | 'light' }
+type TermsState = { termos: boolean; privacidade: boolean; news: boolean }
+
+const PLATFORM_COLORS: Record<string, string> = {
+  Twitch: '#9147ff', YouTube: '#ff0000', Kick: '#53fc18',
+  Discord: '#5865f2', Google: '#4285f4',
+}
 
 export default function Home() {
   const [page, setPage] = useState('landing')
   const [loading, setLoading] = useState('')
+  const [loginPlatform, setLoginPlatform] = useState('')
   const [waitlistEmail, setWaitlistEmail] = useState('')
   const [waitlistDone, setWaitlistDone] = useState(false)
-  const [legalPage, setLegalPage] = useState<string | null>(null)
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [newsletterDone, setNewsletterDone] = useState(false)
+  const [termsState, setTermsState] = useState<TermsState>({ termos: false, privacidade: false, news: false })
 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [overlay, setOverlay] = useState<Overlay>({ active: false, x: '0px', y: '0px', newTheme: 'light' })
@@ -399,15 +172,24 @@ export default function Home() {
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const saved = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
+    if (saved) setTheme(saved)
+  }, [])
+
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages, chatLoading])
 
   function handleOAuth(platform: string) {
     setLoading(platform)
-    setTimeout(() => setLoading(''), 2000)
+    setTimeout(() => {
+      setLoading('')
+      setLoginPlatform(platform)
+      setPage('pending')
+    }, 1500)
   }
 
-  function handleWaitlistSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+  function handleWaitlistSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (waitlistEmail.trim()) setWaitlistDone(true)
   }
@@ -422,11 +204,13 @@ export default function Home() {
     const x = `${Math.round(rect.left + rect.width / 2)}px`
     const y = `${Math.round(rect.top + rect.height / 2)}px`
     const newTheme = isDark ? 'light' : 'dark'
+    // Batch both in same render: theme changes under the overlay, no flash
+    setTheme(newTheme)
     setOverlay({ active: true, x, y, newTheme })
+    localStorage.setItem('sk-theme', newTheme)
     setTimeout(() => {
-      setTheme(newTheme)
       setOverlay(o => ({ ...o, active: false }))
-    }, 1020)
+    }, 1100)
   }
 
   async function sendChat() {
@@ -540,25 +324,189 @@ export default function Home() {
     } as React.CSSProperties} />
   ) : null
 
-  const legalModal = legalPage && LEGAL[legalPage as keyof typeof LEGAL] ? (
+  const brandLogo = (onClick?: () => void) => (
     <div
-      onClick={() => setLegalPage(null)}
-      style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}
+      onClick={onClick}
+      style={{ fontSize: '1.55rem', fontWeight: 900, letterSpacing: '0.5px', color: C.text, cursor: onClick ? 'pointer' : 'default' }}
     >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderRadius: '18px', width: '100%', maxWidth: '580px', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.5)' }}
-      >
-        <div style={{ padding: '1.3rem 1.6rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: C.text, margin: 0 }}>{LEGAL[legalPage as keyof typeof LEGAL].title}</h2>
-          <button onClick={() => setLegalPage(null)} style={{ background: C.vvdim, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: '0.3rem 0.55rem', borderRadius: '6px' }}>✕</button>
+      Sheik<span style={{ color: C.accent }}>STREAM</span>
+    </div>
+  )
+
+  // ── PENDING PAGE ────────────────────────────────────────────────────────────
+  if (page === 'pending') {
+    const platColor = PLATFORM_COLORS[loginPlatform] || C.primary
+    return (
+      <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text }}>
+        <style>{makeCSS(C)}</style>
+        {themeOverlay}
+        <nav className="sk-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', borderBottom: `1px solid ${C.border}`, background: C.navBg, position: 'sticky', top: 0, zIndex: 100 }}>
+          {brandLogo(() => setPage('landing'))}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            {themeBtn}
+            <button onClick={() => setPage('landing')} style={{ background: 'transparent', border: `1px solid ${C.vvdim}`, color: C.muted, padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+              Voltar
+            </button>
+          </div>
+        </nav>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 65px)', padding: '2rem' }}>
+          <div style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderTop: `3px solid ${C.primary}`, borderRadius: '18px', padding: '3rem 2.5rem', width: '100%', maxWidth: '460px', textAlign: 'center', boxShadow: `0 12px 50px ${C.primaryBgLight}` }}>
+            {/* Pulsing icon */}
+            <div className="sk-pending-pulse" style={{ width: '72px', height: '72px', borderRadius: '50%', background: C.primaryBg, border: `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '2rem' }}>
+              ⏳
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: C.accentBg, border: `1px solid ${C.accentBorder}`, color: C.accent, fontSize: '0.68rem', padding: '0.22rem 0.85rem', borderRadius: '999px', marginBottom: '1.4rem', fontWeight: 700, letterSpacing: '1px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />
+              AGUARDANDO APROVAÇÃO
+            </div>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '0.6rem', color: C.text }}>Quase lá!</h1>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <PIcon id={loginPlatform} color={platColor} size={18} />
+              <span style={{ fontSize: '0.88rem', color: C.muted }}>Conectado via <strong style={{ color: C.text }}>{loginPlatform}</strong></span>
+            </div>
+            <p style={{ fontSize: '0.87rem', color: C.muted, lineHeight: 1.75, maxWidth: '340px', margin: '0 auto 2rem' }}>
+              Sua conta está aguardando aprovação manual. Você será notificado por e-mail assim que o acesso for liberado.
+            </p>
+
+            <div style={{ background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1.2rem', marginBottom: '2rem' }}>
+              <div style={{ fontSize: '0.7rem', color: C.vdim, marginBottom: '0.75rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Sua posição na fila</div>
+              <div style={{ fontSize: '3rem', fontWeight: 900, color: C.primary, lineHeight: 1 }}>#247</div>
+              <div style={{ fontSize: '0.78rem', color: C.dim, marginTop: '0.3rem' }}>Tempo estimado: 24–48h</div>
+            </div>
+
+            {/* Demo button - simulates admin approval */}
+            <div style={{ background: C.accentBg15, border: `1px dashed ${C.accentBorder}`, borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.6rem', letterSpacing: '0.5px' }}>DEMONSTRAÇÃO</div>
+              <button
+                onClick={() => setPage('terms')}
+                style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.65rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', width: '100%' }}
+              >
+                Simular aprovação do admin →
+              </button>
+            </div>
+
+            <button onClick={() => setPage('landing')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+              Voltar ao início
+            </button>
+          </div>
         </div>
-        <div style={{ padding: '1.5rem 1.6rem', overflowY: 'auto', flex: 1, fontSize: '0.84rem', color: C.muted, lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>
-          {LEGAL[legalPage as keyof typeof LEGAL].content}
+        {chatWidget}
+      </div>
+    )
+  }
+
+  // ── TERMS PAGE ────────────────────────────────────────────────────────────
+  if (page === 'terms') {
+    const canContinue = termsState.termos && termsState.privacidade
+    function toggleTerm(key: keyof TermsState) {
+      setTermsState(prev => ({ ...prev, [key]: !prev[key] }))
+    }
+    const checkboxItems = [
+      { key: 'termos' as const, label: 'Li e concordo com os', link: 'Termos de Uso', required: true, slug: '/termos-e-condicoes' },
+      { key: 'privacidade' as const, label: 'Li e concordo com a', link: 'Política de Privacidade', required: true, slug: '/privacidade' },
+      { key: 'news' as const, label: 'Aceito receber novidades, dicas e promoções da Sheikstream', link: '', required: false, slug: '' },
+    ]
+    return (
+      <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <style>{makeCSS(C)}</style>
+        {themeOverlay}
+        <div style={{ width: '100%', maxWidth: '480px' }}>
+          {/* Top brand */}
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: C.text }}>
+              Sheik<span style={{ color: C.accent }}>STREAM</span>
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.6rem', background: C.accentBg, border: `1px solid ${C.accentBorder}`, color: C.accent, fontSize: '0.72rem', padding: '0.22rem 0.85rem', borderRadius: '999px', fontWeight: 700 }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />
+              Acesso aprovado!
+            </div>
+          </div>
+
+          {/* Terms card */}
+          <div style={{ background: isDark ? '#1a1b2e' : '#ffffff', border: `1px solid ${C.borderStrong}`, borderRadius: '16px', overflow: 'hidden', boxShadow: `0 8px 40px ${C.primaryBgLight}` }}>
+            {/* Header */}
+            <div style={{ padding: '1.5rem 1.75rem', borderBottom: `1px solid ${C.border}` }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: C.text, margin: 0, marginBottom: '0.4rem' }}>Antes de continuar</h2>
+              <p style={{ fontSize: '0.85rem', color: C.muted, margin: 0, lineHeight: 1.6 }}>
+                Para usar a plataforma, você precisa aceitar os termos abaixo.
+              </p>
+            </div>
+
+            {/* Checkboxes */}
+            <div style={{ padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {checkboxItems.map(item => (
+                <div key={item.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }} onClick={() => toggleTerm(item.key)}>
+                  <div className={`sk-checkbox${termsState[item.key] ? ' checked' : ''}`}>
+                    {termsState[item.key] && (
+                      <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                        <path d="M1 4.5L4 7.5L10 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.88rem', color: C.text, lineHeight: 1.55, userSelect: 'none' }}>
+                    {item.link ? (
+                      <>
+                        {item.label}{' '}
+                        <a
+                          href={item.slug}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          style={{ color: C.primary, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: '2px' }}
+                        >
+                          {item.link}
+                        </a>
+                        {' '}da Sheikstream{item.required ? <span style={{ color: '#e55', marginLeft: '2px' }}> *</span> : ''}
+                      </>
+                    ) : (
+                      <>{item.label}</>
+                    )}
+                  </span>
+                </div>
+              ))}
+
+              <p style={{ fontSize: '0.75rem', color: C.vdim, margin: '0.25rem 0 0' }}>* campos obrigatórios</p>
+            </div>
+
+            {/* Action */}
+            <div style={{ padding: '0 1.75rem 1.75rem' }}>
+              <button
+                disabled={!canContinue}
+                onClick={() => {
+                  if (canContinue) {
+                    // In production: save terms acceptance, redirect to app
+                    alert('Bem-vindo ao SheikSTREAM! (Em produção você seria redirecionado ao dashboard.)')
+                    setPage('landing')
+                    setTermsState({ termos: false, privacidade: false, news: false })
+                  }
+                }}
+                className="sk-btn-cta"
+                style={{
+                  width: '100%', padding: '0.85rem',
+                  background: canContinue
+                    ? `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`
+                    : C.vvdim,
+                  color: canContinue ? '#fff' : C.vdim,
+                  border: 'none', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 700,
+                  cursor: canContinue ? 'pointer' : 'not-allowed',
+                  boxShadow: canContinue ? `0 4px 20px ${C.primaryBgMed}` : 'none',
+                  transition: 'all 0.2s',
+                }}
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '1.2rem' }}>
+            <button onClick={() => setPage('pending')} style={{ background: 'transparent', border: 'none', color: C.vdim, fontSize: '0.8rem', cursor: 'pointer' }}>
+              ← Voltar
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  ) : null
+    )
+  }
 
   // ── WAITLIST PAGE ──────────────────────────────────────────────────────────
   if (page === 'waitlist') {
@@ -566,11 +514,8 @@ export default function Home() {
       <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text }}>
         <style>{makeCSS(C)}</style>
         {themeOverlay}
-        {legalModal}
         <nav className="sk-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', borderBottom: `1px solid ${C.border}`, background: C.navBg, position: 'sticky', top: 0, zIndex: 100 }}>
-          <div onClick={() => { setPage('landing'); setWaitlistDone(false); setWaitlistEmail('') }} style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '1px', cursor: 'pointer', color: C.text }}>
-            Sheik<span style={{ color: C.accent }}>stream</span>
-          </div>
+          {brandLogo(() => { setPage('landing'); setWaitlistDone(false); setWaitlistEmail('') })}
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             {themeBtn}
             <button onClick={() => { setPage('landing'); setWaitlistDone(false); setWaitlistEmail('') }} style={{ background: 'transparent', border: `1px solid ${C.vvdim}`, color: C.muted, padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
@@ -584,7 +529,7 @@ export default function Home() {
               <div style={{ width: '58px', height: '58px', borderRadius: '14px', background: C.primaryBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '1.7rem' }}>⏳</div>
               <h1 style={{ fontSize: '1.65rem', fontWeight: 900, marginBottom: '0.5rem', color: C.text }}>Lista de espera</h1>
               <p style={{ fontSize: '0.88rem', color: C.muted, lineHeight: 1.7, maxWidth: '320px', margin: '0 auto 2rem' }}>
-                O Sheikstream está em beta fechado. Cadastre seu e-mail e avisamos quando sua vaga abrir.
+                O SheikSTREAM está em beta fechado. Cadastre seu e-mail e avisamos quando sua vaga abrir.
               </p>
               <form onSubmit={handleWaitlistSubmit}>
                 <input type="email" required placeholder="seu@email.com" value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)}
@@ -642,11 +587,8 @@ export default function Home() {
       <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text }}>
         <style>{makeCSS(C)}</style>
         {themeOverlay}
-        {legalModal}
         <nav className="sk-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', borderBottom: `1px solid ${C.border}`, background: C.navBg, position: 'sticky', top: 0, zIndex: 100 }}>
-          <div onClick={() => setPage('landing')} style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '1px', cursor: 'pointer', color: C.text }}>
-            Sheik<span style={{ color: C.accent }}>stream</span>
-          </div>
+          {brandLogo(() => setPage('landing'))}
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             {themeBtn}
             <button onClick={() => setPage('landing')} style={{ background: 'transparent', border: `1px solid ${C.vvdim}`, color: C.muted, padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
@@ -658,7 +600,7 @@ export default function Home() {
           <div style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderTop: `3px solid ${C.primary}`, borderRadius: '16px', padding: '2.2rem', width: '100%', maxWidth: '410px', boxShadow: `0 8px 40px ${C.primaryBgLight}` }}>
             <div style={{ textAlign: 'center', marginBottom: '1.8rem' }}>
               <div style={{ fontSize: '1.9rem', fontWeight: 900, letterSpacing: '1px', color: C.text }}>
-                Sheik<span style={{ color: C.accent }}>stream</span>
+                Sheik<span style={{ color: C.accent }}>STREAM</span>
               </div>
               <div style={{ fontSize: '0.85rem', color: C.muted, marginTop: '0.3rem' }}>Conecte sua plataforma e entre no hub</div>
             </div>
@@ -669,7 +611,7 @@ export default function Home() {
                 border: `1px solid ${loading === p.id ? p.color : C.oauthBtnBorder}`,
                 background: loading === p.id ? p.bg : C.oauthBtnBg,
                 color: C.text, fontSize: '0.9rem', fontWeight: 500,
-                cursor: 'pointer', textAlign: 'left',
+                cursor: loading ? 'not-allowed' : 'pointer', textAlign: 'left',
               }}>
                 <span style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <PIcon id={p.id} color={p.color} size={20} />
@@ -686,7 +628,7 @@ export default function Home() {
             <input type="email" placeholder="seu@email.com"
               style={{ width: '100%', padding: '0.7rem 1rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.9rem', outline: 'none', marginBottom: '0.6rem', boxSizing: 'border-box' }}
             />
-            <button className="sk-btn-cta" style={{ width: '100%', padding: '0.72rem', background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', boxShadow: `0 4px 20px ${C.primaryBgMed}` }}>
+            <button onClick={() => setPage('pending')} className="sk-btn-cta" style={{ width: '100%', padding: '0.72rem', background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', boxShadow: `0 4px 20px ${C.primaryBgMed}` }}>
               Entrar com e-mail
             </button>
             <div style={{ textAlign: 'center', marginTop: '1.2rem', fontSize: '0.78rem', color: C.vdim }}>
@@ -716,7 +658,6 @@ export default function Home() {
     { id: 'YouTube',   name: 'YouTube',     color: '#ff0000' },
     { id: 'TikTok',    name: 'TikTok',      color: isDark ? '#f0eefc' : '#0d0c1e' },
   ]
-
   const mockPlatforms = [
     { id: 'Twitch',   color: '#9147ff' },
     { id: 'YouTube',  color: '#ff0000' },
@@ -729,20 +670,27 @@ export default function Home() {
     <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text, display: 'flex', flexDirection: 'column' }}>
       <style>{makeCSS(C)}</style>
       {themeOverlay}
-      {legalModal}
 
       {/* ── Nav ── */}
       <nav className="sk-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.9rem 2.5rem', borderBottom: `1px solid ${C.border}`, background: C.navBg, position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ fontSize: '1.55rem', fontWeight: 900, letterSpacing: '0.5px', color: C.text }}>
-          Sheik<span style={{ color: C.accent }}>stream</span>
-        </div>
+        {brandLogo()}
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
           <span className="sk-nav-link" onClick={() => scrollToSection('produto')} style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500 }}>Produto</span>
           <span className="sk-nav-link" onClick={() => scrollToSection('precos')} style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500 }}>Preços</span>
-          <span className="sk-nav-link" onClick={() => setLegalPage('roadmap')} style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500 }}>Roadmap</span>
+          <a className="sk-nav-link" href="/roadmap" style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500, textDecoration: 'none' }}>Roadmap</a>
           {themeBtn}
-          <button onClick={() => setPage('login')} style={{ background: 'transparent', color: C.muted, border: `1px solid ${C.border}`, padding: '0.48rem 1.1rem', borderRadius: '7px', cursor: 'pointer', fontSize: '0.87rem', fontWeight: 500 }}>
-            Entrar
+          {/* App button — replaces "Entrar" */}
+          <button onClick={() => setPage('login')} className="sk-app-btn" style={{
+            background: C.appBtn, color: C.primary,
+            border: `1px solid ${C.appBtnBorder}`,
+            padding: '0.48rem 1.2rem', borderRadius: '7px', cursor: 'pointer',
+            fontSize: '0.87rem', fontWeight: 700,
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.85 }}>
+              <path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z" />
+            </svg>
+            App
           </button>
           <button onClick={() => setPage('waitlist')} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.52rem 1.25rem', borderRadius: '7px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700, boxShadow: `0 2px 16px ${C.primaryBgMed}` }}>
             Começar grátis
@@ -752,11 +700,8 @@ export default function Home() {
 
       {/* ── Hero ── */}
       <div style={{ textAlign: 'center', padding: '5.5rem 2rem 3rem', position: 'relative', overflow: 'hidden' }}>
-        {/* Gradient top line */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg,transparent 5%,${C.primary},${C.accent},${C.primary},transparent 95%)` }} />
-        {/* Dot grid bg */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(${C.primary}18 1px, transparent 1px)`, backgroundSize: '28px 28px', pointerEvents: 'none' }} />
-        {/* Radial glow */}
         <div style={{ position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)', width: '800px', height: '500px', background: `radial-gradient(ellipse at center, ${C.primary}18 0%, transparent 65%)`, pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative' }}>
@@ -786,7 +731,6 @@ export default function Home() {
           <div className="sk-mock-float" style={{ maxWidth: '820px', margin: '0 auto', position: 'relative' }}>
             <div className="sk-mock-glow" style={{ position: 'absolute', inset: '-40px', background: `radial-gradient(ellipse at 50% 30%, ${C.primary}22, transparent 65%)`, borderRadius: '40px', pointerEvents: 'none' }} />
             <div style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderRadius: '16px', overflow: 'hidden', boxShadow: `0 28px 90px rgba(0,0,0,0.45), 0 0 0 1px ${C.borderFaint}`, position: 'relative' }}>
-              {/* Browser bar */}
               <div style={{ background: C.cardBgAlt, padding: '0.65rem 1rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', gap: '5px' }}>
                   <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ff5f56' }} />
@@ -797,9 +741,7 @@ export default function Home() {
                   🔒 sheikstream.vercel.app/dashboard
                 </div>
               </div>
-              {/* Dashboard content */}
               <div style={{ display: 'flex' }}>
-                {/* Sidebar */}
                 <div style={{ width: '52px', background: C.cardBgAlt, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '14px 0' }}>
                   {mockPlatforms.map(p => (
                     <div key={p.id} style={{ width: '32px', height: '32px', borderRadius: '8px', background: C.vvdim, border: `1px solid ${C.borderFaint}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -807,9 +749,7 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                {/* Main */}
                 <div style={{ flex: 1, padding: '1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                  {/* Stat cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.6rem' }}>
                     {[
                       { label: 'Viewers ao vivo', value: '3.2K', platform: 'Twitch', color: '#9147ff', delta: '+12%' },
@@ -826,7 +766,6 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
-                  {/* Chart */}
                   <div style={{ background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '9px', padding: '0.8rem' }}>
                     <div style={{ fontSize: '0.62rem', color: C.dim, marginBottom: '0.65rem', fontWeight: 600 }}>Audiência total — últimos 7 dias</div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '5px', height: '52px' }}>
@@ -904,9 +843,7 @@ export default function Home() {
         <div style={{ fontSize: '0.7rem', letterSpacing: '2.5px', color: C.accent, textTransform: 'uppercase', marginBottom: '0.6rem', fontWeight: 700 }}>Preços</div>
         <h2 style={{ fontSize: '2.2rem', fontWeight: 900, color: C.text, marginBottom: '0.5rem', letterSpacing: '-1px' }}>Comece de graça, sempre</h2>
         <p style={{ fontSize: '0.9rem', color: C.dim, marginBottom: '3rem' }}>Sem cartão de crédito. Sem surpresas. Sem pegadinha.</p>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-          {/* Free plan */}
           <div className="sk-pricing-card" style={{ background: C.cardBg, border: `1px solid ${C.pricingFreeBorder}`, borderRadius: '16px', padding: '2.2rem', position: 'relative', boxShadow: `0 0 0 1px ${C.accentBorder}, 0 6px 32px ${C.accentBg}` }}>
             <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)', background: C.accent, color: isDark ? '#000' : '#fff', fontSize: '0.62rem', fontWeight: 800, padding: '0.2rem 0.9rem', borderRadius: '999px', whiteSpace: 'nowrap', letterSpacing: '0.8px' }}>
               MELHOR ESCOLHA
@@ -927,8 +864,6 @@ export default function Home() {
               Garantir acesso grátis →
             </button>
           </div>
-
-          {/* Pro plan */}
           <div className="sk-pricing-card" style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderRadius: '16px', padding: '2.2rem', opacity: 0.6 }}>
             <div style={{ display: 'inline-block', background: C.primaryBg, border: `1px solid ${C.border}`, color: C.primary, fontSize: '0.65rem', padding: '0.2rem 0.75rem', borderRadius: '999px', fontWeight: 700, marginBottom: '1.4rem', letterSpacing: '0.5px' }}>
               EM BREVE
@@ -969,7 +904,6 @@ export default function Home() {
 
       {/* ── Footer ── */}
       <footer style={{ borderTop: `1px solid ${C.border}`, marginTop: 'auto', background: C.footerBg }}>
-        {/* Newsletter bar */}
         <div style={{ borderBottom: `1px solid ${C.border}` }}>
           <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '1.8rem 2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
             <div>
@@ -978,11 +912,7 @@ export default function Home() {
             </div>
             {!newsletterDone ? (
               <form onSubmit={e => { e.preventDefault(); if (newsletterEmail.trim()) setNewsletterDone(true) }} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <input
-                  type="email" required
-                  placeholder="seu@email.com"
-                  value={newsletterEmail}
-                  onChange={e => setNewsletterEmail(e.target.value)}
+                <input type="email" required placeholder="seu@email.com" value={newsletterEmail} onChange={e => setNewsletterEmail(e.target.value)}
                   style={{ padding: '0.6rem 1rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none', width: '220px', boxSizing: 'border-box' }}
                 />
                 <button type="submit" style={{ padding: '0.6rem 1.3rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
@@ -994,14 +924,11 @@ export default function Home() {
             )}
           </div>
         </div>
-
-        {/* Footer columns */}
         <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '3rem 2.5rem 2rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1.1fr', gap: '2.5rem', marginBottom: '3rem' }}>
-            {/* Brand */}
             <div>
               <div style={{ fontSize: '1.4rem', fontWeight: 900, letterSpacing: '0.5px', marginBottom: '0.7rem', color: C.text }}>
-                Sheik<span style={{ color: C.accent }}>stream</span>
+                Sheik<span style={{ color: C.accent }}>STREAM</span>
               </div>
               <p style={{ fontSize: '0.81rem', color: C.dim, lineHeight: 1.75, margin: '0 0 1.3rem', maxWidth: '220px' }}>
                 O hub definitivo para streamers brasileiros gerenciarem todas as suas plataformas.
@@ -1014,45 +941,40 @@ export default function Home() {
                 ))}
               </div>
             </div>
-
-            {/* Produto */}
             <div>
               <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.8px', color: C.vdim, textTransform: 'uppercase', marginBottom: '1.1rem' }}>Produto</div>
               {[
                 { label: 'Recursos', action: () => scrollToSection('produto') },
                 { label: 'Preços', action: () => scrollToSection('precos') },
-                { label: 'Roadmap', action: () => setLegalPage('roadmap') },
-                { label: 'Changelog', action: () => setLegalPage('changelog') },
+                { label: 'Roadmap', href: '/roadmap' },
+                { label: 'Changelog', href: '/changelog' },
               ].map(l => (
-                <div key={l.label} className="sk-legal-link" onClick={l.action} style={{ fontSize: '0.83rem', color: C.dim, marginBottom: '0.6rem' }}>{l.label}</div>
+                l.href
+                  ? <a key={l.label} href={l.href} className="sk-legal-link" style={{ display: 'block', fontSize: '0.83rem', color: C.dim, marginBottom: '0.6rem', textDecoration: 'none' }}>{l.label}</a>
+                  : <div key={l.label} className="sk-legal-link" onClick={l.action} style={{ fontSize: '0.83rem', color: C.dim, marginBottom: '0.6rem' }}>{l.label}</div>
               ))}
             </div>
-
-            {/* Empresa */}
             <div>
               <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.8px', color: C.vdim, textTransform: 'uppercase', marginBottom: '1.1rem' }}>Empresa</div>
               {[
-                { label: 'Sobre', key: 'sobre' },
-                { label: 'Blog', key: 'blog' },
-                { label: 'Contato', key: 'contato' },
+                { label: 'Sobre', href: '/sobre' },
+                { label: 'Blog', href: '/blog' },
+                { label: 'Contato', href: '/contato' },
               ].map(l => (
-                <div key={l.label} className="sk-legal-link" onClick={() => setLegalPage(l.key)} style={{ fontSize: '0.83rem', color: C.dim, marginBottom: '0.6rem' }}>{l.label}</div>
+                <a key={l.label} href={l.href} className="sk-legal-link" style={{ display: 'block', fontSize: '0.83rem', color: C.dim, marginBottom: '0.6rem', textDecoration: 'none' }}>{l.label}</a>
               ))}
             </div>
-
-            {/* Links Rápidos */}
             <div>
               <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.8px', color: C.vdim, textTransform: 'uppercase', marginBottom: '1.1rem' }}>Links Rápidos</div>
               {[
-                { label: 'Termos e Condições', key: 'termos' },
-                { label: 'Política de Privacidade', key: 'privacidade' },
-                { label: 'Política de Cookies', key: 'cookies' },
+                { label: 'Termos e Condições', href: '/termos-e-condicoes' },
+                { label: 'Política de Privacidade', href: '/privacidade' },
+                { label: 'Política de Cookies', href: '/cookies' },
               ].map(l => (
-                <div key={l.label} className="sk-legal-link" onClick={() => setLegalPage(l.key)} style={{ fontSize: '0.83rem', color: C.dim, marginBottom: '0.6rem' }}>{l.label}</div>
+                <a key={l.label} href={l.href} className="sk-legal-link" style={{ display: 'block', fontSize: '0.83rem', color: C.dim, marginBottom: '0.6rem', textDecoration: 'none' }}>{l.label}</a>
               ))}
             </div>
           </div>
-
           <div style={{ height: '1px', background: C.border, marginBottom: '1.4rem' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div style={{ fontSize: '0.73rem', color: C.vdim }}>
@@ -1060,11 +982,11 @@ export default function Home() {
             </div>
             <div style={{ display: 'flex', gap: '1.4rem' }}>
               {[
-                { label: 'Termos', key: 'termos' },
-                { label: 'Privacidade', key: 'privacidade' },
-                { label: 'Cookies', key: 'cookies' },
+                { label: 'Termos', href: '/termos-e-condicoes' },
+                { label: 'Privacidade', href: '/privacidade' },
+                { label: 'Cookies', href: '/cookies' },
               ].map(l => (
-                <span key={l.label} className="sk-legal-link" onClick={() => setLegalPage(l.key)} style={{ fontSize: '0.73rem', color: C.vdim }}>{l.label}</span>
+                <a key={l.label} href={l.href} className="sk-legal-link" style={{ fontSize: '0.73rem', color: C.vdim, textDecoration: 'none' }}>{l.label}</a>
               ))}
             </div>
           </div>
