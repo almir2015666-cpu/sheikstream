@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { logActivity } from '@/app/lib/log-activity'
+import { logSystem } from '@/app/lib/logger'
 
 const BASE = 'https://sheikstream.com.br'
 const REDIRECT_URI = 'https://sheikstream.com.br/api/auth/google/callback'
@@ -73,6 +74,7 @@ export async function GET(req: NextRequest) {
       path: '/',
     })
     await logActivity('auth', 'login', user.name, 'Google')
+    await logSystem('auth.login', `Login Google: ${user.name}`, user.id, { platform: 'Google', username: user.name, email: user.email, is_popup: isPopup })
 
     // Persist YouTube token — awaited para garantir execução antes do serverless terminar
     const { error: upsertErr } = await getSupabaseAdmin()

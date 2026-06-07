@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { logActivity } from '@/app/lib/log-activity'
+import { logSystem } from '@/app/lib/logger'
 import { registerEventSubSubscriptions } from '@/app/lib/eventsub'
 
 const BASE = 'https://sheikstream.com.br'
@@ -91,6 +92,7 @@ export async function GET(req: NextRequest) {
         status: 'pending',
       })
       if (insertErr) console.error('[twitch/callback] waitlist insert error:', insertErr)
+      await logSystem('auth.new_user', `Novo usuário Twitch na waitlist: ${tw.display_name}`, tw.id, { platform: 'Twitch', username: tw.display_name })
       return NextResponse.redirect(`${BASE}/pending`)
     }
 
@@ -123,6 +125,7 @@ export async function GET(req: NextRequest) {
     path: '/',
   })
   await logActivity('auth', 'login', tw.display_name, 'Twitch')
+  await logSystem('auth.login', `Login Twitch: ${tw.display_name}`, tw.id, { platform: 'Twitch', username: tw.display_name, is_popup: isPopup })
 
   // Persist Twitch token — awaited to garantir execução antes do serverless terminar
   const { error: upsertErr } = await getSupabaseAdmin()

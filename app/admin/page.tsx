@@ -53,6 +53,25 @@ type ActivityLog = {
   performed_at: string
 }
 
+type ErrorLog = {
+  id: string
+  endpoint: string
+  error_message: string
+  error_stack: string | null
+  user_id: string | null
+  context: Record<string, unknown> | null
+  created_at: string
+}
+
+type SystemLog = {
+  id: string
+  type: string
+  message: string
+  user_id: string | null
+  data: Record<string, unknown> | null
+  created_at: string
+}
+
 const PLATFORM_COLORS: Record<string, string> = {
   Twitch: '#9147ff', YouTube: '#ff0000', Kick: '#53fc18',
   Discord: '#5865f2', Google: '#4285f4',
@@ -130,9 +149,13 @@ export default function AdminPage() {
   const [view, setView] = useState<'users' | 'logs'>('users')
   const [logs, setLogs] = useState<Log[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
-  const [logTab, setLogTab] = useState<'admin' | 'auth' | 'dashboard' | 'feature'>('admin')
+  const [logTab, setLogTab] = useState<'admin' | 'auth' | 'dashboard' | 'feature' | 'errors' | 'system'>('admin')
   const [activity, setActivity] = useState<ActivityLog[]>([])
   const [activityLoading, setActivityLoading] = useState(false)
+  const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([])
+  const [errorLogsLoading, setErrorLogsLoading] = useState(false)
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([])
+  const [systemLogsLoading, setSystemLogsLoading] = useState(false)
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -184,6 +207,38 @@ export default function AdminPage() {
       setActivityLoading(false)
     }
   }, [])
+
+  const fetchErrorLogs = useCallback(async (pw: string) => {
+    setErrorLogsLoading(true)
+    try {
+      const res = await fetch('/api/admin/error-logs', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setErrorLogs(await res.json())
+    } catch { /* ignore */ } finally {
+      setErrorLogsLoading(false)
+    }
+  }, [])
+
+  const fetchSystemLogs = useCallback(async (pw: string) => {
+    setSystemLogsLoading(true)
+    try {
+      const res = await fetch('/api/admin/system-logs', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setSystemLogs(await res.json())
+    } catch { /* ignore */ } finally {
+      setSystemLogsLoading(false)
+    }
+  }, [])
+
+  async function clearErrorLogs() {
+    if (!confirm('Limpar todos os logs de erro?')) return
+    await fetch('/api/admin/error-logs', { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
+    setErrorLogs([])
+  }
+
+  async function clearSystemLogs() {
+    if (!confirm('Limpar todos os logs do sistema?')) return
+    await fetch('/api/admin/system-logs', { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
+    setSystemLogs([])
+  }
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -443,19 +498,23 @@ export default function AdminPage() {
               {/* Log sub-tabs */}
               <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 {([
-                  { key: 'admin',     label: '🛡 Admin',          desc: 'Aprovar / Rejeitar / Banir' },
-                  { key: 'auth',      label: '🔑 Autenticação',   desc: 'Login e Logout' },
-                  { key: 'dashboard', label: '📊 Navegação',      desc: 'Páginas visitadas' },
-                  { key: 'feature',   label: '⚡ Funcionalidades', desc: 'Recursos usados' },
+                  { key: 'admin',     label: '🛡 Admin' },
+                  { key: 'auth',      label: '🔑 Autenticação' },
+                  { key: 'dashboard', label: '📊 Navegação' },
+                  { key: 'feature',   label: '⚡ Funcionalidades' },
+                  { key: 'errors',    label: '⚠ Erros' },
+                  { key: 'system',    label: '⚙ Sistema' },
                 ] as const).map(t => (
                   <button key={t.key}
                     onClick={() => {
                       setLogTab(t.key)
                       if (t.key === 'admin') fetchLogs(storedPw)
+                      else if (t.key === 'errors') fetchErrorLogs(storedPw)
+                      else if (t.key === 'system') fetchSystemLogs(storedPw)
                       else fetchActivity(storedPw, t.key)
                     }}
                     className={`sk-tab${logTab === t.key ? ' active' : ''}`}
-                    style={{ color: logTab === t.key ? C.primary : C.muted }}>
+                    style={{ color: logTab === t.key ? (t.key === 'errors' ? C.danger : C.primary) : C.muted }}>
                     {t.label}
                   </button>
                 ))}
@@ -465,17 +524,29 @@ export default function AdminPage() {
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
                   <span style={{ fontWeight: 700, fontSize: '0.9rem', color: C.text }}>
-                    {{ admin: '🛡 Ações do admin', auth: '🔑 Autenticação', dashboard: '📊 Navegação no dashboard', feature: '⚡ Uso de funcionalidades' }[logTab]}
+                    {{ admin: '🛡 Ações do admin', auth: '🔑 Autenticação', dashboard: '📊 Navegação no dashboard', feature: '⚡ Uso de funcionalidades', errors: '⚠ Logs de erro', system: '⚙ Logs do sistema' }[logTab]}
                   </span>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  {logTab === 'errors' && (
+                    <button onClick={clearErrorLogs} style={{ background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>
+                      Limpar
+                    </button>
+                  )}
+                  {logTab === 'system' && (
+                    <button onClick={clearSystemLogs} style={{ background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>
+                      Limpar
+                    </button>
+                  )}
                   <button
-                    onClick={() => logTab === 'admin' ? fetchLogs(storedPw) : fetchActivity(storedPw, logTab)}
-                    disabled={logTab === 'admin' ? logsLoading : activityLoading}
+                    onClick={() => { if (logTab === 'admin') fetchLogs(storedPw); else if (logTab === 'errors') fetchErrorLogs(storedPw); else if (logTab === 'system') fetchSystemLogs(storedPw); else fetchActivity(storedPw, logTab) }}
+                    disabled={logTab === 'admin' ? logsLoading : logTab === 'errors' ? errorLogsLoading : logTab === 'system' ? systemLogsLoading : activityLoading}
                     style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
                     </svg>
-                    {(logTab === 'admin' ? logsLoading : activityLoading) ? 'Carregando...' : 'Atualizar'}
+                    {(logTab === 'admin' ? logsLoading : logTab === 'errors' ? errorLogsLoading : logTab === 'system' ? systemLogsLoading : activityLoading) ? 'Carregando...' : 'Atualizar'}
                   </button>
+                  </div>
                 </div>
 
                 {/* Admin tab — approve/reject/ban */}
@@ -526,8 +597,84 @@ export default function AdminPage() {
                   )
                 )}
 
+                {/* Error logs tab */}
+                {logTab === 'errors' && (
+                  errorLogsLoading ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
+                  ) : errorLogs.length === 0 ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum erro registrado.</div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                            {['Data / Hora', 'Endpoint', 'Erro', 'Contexto'].map(h => (
+                              <th key={h} style={{ padding: '0.75rem 1.2rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, color: C.dim, letterSpacing: '1px', textTransform: 'uppercase' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {errorLogs.map(e => (
+                            <tr key={e.id} className="sk-user-row" style={{ borderBottom: `1px solid ${C.vdim}`, background: 'transparent' }}>
+                              <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.78rem', color: C.dim, whiteSpace: 'nowrap' }}>{fmtDate(e.created_at)}</td>
+                              <td style={{ padding: '0.85rem 1.2rem' }}>
+                                <span style={{ background: C.dangerBg, color: C.danger, border: `1px solid ${C.dangerBorder}`, borderRadius: '6px', padding: '0.15rem 0.55rem', fontSize: '0.72rem', fontWeight: 700, fontFamily: 'monospace' }}>{e.endpoint}</span>
+                              </td>
+                              <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.8rem', color: C.text, maxWidth: '320px' }}>
+                                <div style={{ color: C.danger, fontWeight: 600, marginBottom: '0.2rem' }}>{e.error_message}</div>
+                                {e.error_stack && <details style={{ fontSize: '0.7rem', color: C.dim }}><summary style={{ cursor: 'pointer', color: C.muted }}>Stack trace</summary><pre style={{ margin: '0.4rem 0 0', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.68rem' }}>{e.error_stack}</pre></details>}
+                              </td>
+                              <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.72rem', color: C.muted, maxWidth: '200px' }}>
+                                {e.context ? <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.68rem' }}>{JSON.stringify(e.context, null, 2)}</pre> : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                )}
+
+                {/* System logs tab */}
+                {logTab === 'system' && (
+                  systemLogsLoading ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
+                  ) : systemLogs.length === 0 ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum evento do sistema registrado.</div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                            {['Data / Hora', 'Tipo', 'Mensagem', 'Dados'].map(h => (
+                              <th key={h} style={{ padding: '0.75rem 1.2rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, color: C.dim, letterSpacing: '1px', textTransform: 'uppercase' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {systemLogs.map(s => {
+                            const typeColor = s.type.startsWith('auth') ? '#60a5fa' : s.type.startsWith('cron') ? '#a78bfa' : s.type.startsWith('token') ? '#fb923c' : C.muted
+                            return (
+                              <tr key={s.id} className="sk-user-row" style={{ borderBottom: `1px solid ${C.vdim}`, background: 'transparent' }}>
+                                <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.78rem', color: C.dim, whiteSpace: 'nowrap' }}>{fmtDate(s.created_at)}</td>
+                                <td style={{ padding: '0.85rem 1.2rem' }}>
+                                  <span style={{ background: `${typeColor}18`, color: typeColor, border: `1px solid ${typeColor}44`, borderRadius: '6px', padding: '0.15rem 0.55rem', fontSize: '0.72rem', fontWeight: 700, fontFamily: 'monospace' }}>{s.type}</span>
+                                </td>
+                                <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.82rem', color: C.text }}>{s.message}</td>
+                                <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.72rem', color: C.muted, maxWidth: '200px' }}>
+                                  {s.data ? <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.68rem' }}>{JSON.stringify(s.data, null, 2)}</pre> : '—'}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                )}
+
                 {/* Auth / Dashboard / Feature tabs */}
-                {logTab !== 'admin' && (
+                {logTab !== 'admin' && logTab !== 'errors' && logTab !== 'system' && (
                   activityLoading ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
                   ) : activity.length === 0 ? (

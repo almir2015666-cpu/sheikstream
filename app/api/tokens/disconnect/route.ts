@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { decodeSession, COOKIE_NAME } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
+import { logSystem } from '@/app/lib/logger'
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get(COOKIE_NAME)?.value
@@ -27,5 +28,6 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  await logSystem('token.disconnect', `${user.name} desconectou ${platform}`, user.id, { platform, username: user.name })
   return NextResponse.json({ ok: true })
 }

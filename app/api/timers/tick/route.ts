@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
+import { logSystem, logError } from '@/app/lib/logger'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.sheikstream.com.br'
 
@@ -30,6 +31,7 @@ async function sendYouTube(access_token: string, live_chat_id: string, message: 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    await logSystem('cron.unauthorized', 'Cron tick called with invalid auth header')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -41,8 +43,12 @@ export async function GET(req: NextRequest) {
     .select('*')
     .eq('ativo', true)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    await logError('/api/timers/tick', new Error(error.message), { phase: 'fetch_timers' })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   if (!timers || timers.length === 0) return NextResponse.json({ fired: 0 })
+  await logSystem('cron.tick', `Cron tick: verificando ${timers.length} timer(s)`, null, { timer_count: timers.length })
 
   let fired = 0
   const results: Record<string, unknown>[] = []
@@ -113,6 +119,7 @@ export async function GET(req: NextRequest) {
       } catch (e: unknown) {
         status = 'error'
         erro = String(e)
+        await logError('/api/timers/tick', e, { user_id: timer.user_id, timer_id: timer.id, timer_name: timer.nome, platform: plat })
       }
 
       logs.push({ timer_id: timer.id, plataforma: plat, status, erro })
@@ -125,5 +132,8 @@ export async function GET(req: NextRequest) {
     results.push(timerResult)
   }
 
+  if (fired > 0) {
+    await logSystem('cron.tick.fired', `Cron tick disparou ${fired} timer(s)`, null, { fired, total: timers.length })
+  }
   return NextResponse.json({ fired, checkedAt: now.toISOString(), results })
 }
