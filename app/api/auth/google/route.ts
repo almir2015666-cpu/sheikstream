@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 const BASE = 'https://sheikstream.vercel.app'
-const REDIRECT_URI = `${BASE}/api/auth/google/callback`
+const REDIRECT_URI = 'https://sheikstream.vercel.app/api/auth/google/callback'
 
 export async function GET() {
   if (!process.env.GOOGLE_CLIENT_ID) {
