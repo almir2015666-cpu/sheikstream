@@ -11,12 +11,13 @@ export async function GET(req: NextRequest) {
   if (user.platform === 'Twitch') {
     try {
       const db = getSupabaseAdmin()
-      const { data: entry } = await db
+      const { data: rows } = await db
         .from('waitlist')
         .select('status')
         .eq('platform', 'Twitch')
-        .eq('platform_username', user.name)
-        .maybeSingle()
+        .ilike('platform_username', user.name)
+        .limit(1)
+      const entry = rows?.[0] ?? null
 
       if (entry?.status === 'banned') {
         return NextResponse.json({ error: 'banned' }, { status: 403 })

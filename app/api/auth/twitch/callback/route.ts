@@ -56,12 +56,13 @@ export async function GET(req: NextRequest) {
   let approved = false
   try {
     const db = getSupabaseAdmin()
-    const { data: existing, error: fetchErr } = await db
+    const { data: rows, error: fetchErr } = await db
       .from('waitlist')
       .select('id, status')
       .eq('platform', 'Twitch')
-      .eq('platform_username', tw.display_name)
-      .maybeSingle()
+      .ilike('platform_username', tw.display_name)
+      .limit(1)
+    const existing = rows?.[0] ?? null
 
     if (fetchErr) {
       console.error('[twitch/callback] waitlist select error:', fetchErr)

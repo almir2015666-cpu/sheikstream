@@ -97,7 +97,7 @@ export default function AdminPage() {
   const [authLoading, setAuthLoading] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'banned'>('approved')
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'banned'>('pending')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [storedPw, setStoredPw] = useState('')
   const [isMobile, setIsMobile] = useState(false)
