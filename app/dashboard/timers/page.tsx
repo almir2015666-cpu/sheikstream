@@ -116,6 +116,7 @@ function TimerModal({
   saving,
   onSave,
   onClose,
+  overlayUrl,
 }: {
   editingId: string | null
   form: FormState
@@ -125,8 +126,11 @@ function TimerModal({
   saving: boolean
   onSave: () => void
   onClose: () => void
+  overlayUrl: string
 })
  {
+  const [copiedOverlay, setCopiedOverlay] = useState(false)
+
   const isConnected = (key: string) => {
     if (key === 'twitch') return !!connections.twitch
     if (key === 'youtube') return !!connections.youtube
@@ -341,6 +345,32 @@ function TimerModal({
             })}
           </div>
         </div>
+
+        {/* Overlay OBS */}
+        {overlayUrl && (
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 8 }}>
+              URL DO OVERLAY (OBS)
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#1f2937', border: '1px solid #374151', borderRadius: 8, padding: '8px 12px' }}>
+              <code style={{ flex: 1, fontSize: 11, color: '#818cf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {overlayUrl}
+              </code>
+              <button
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(overlayUrl)
+                  setCopiedOverlay(true)
+                  setTimeout(() => setCopiedOverlay(false), 2000)
+                }}
+                style={{ background: copiedOverlay ? '#22c55e22' : '#374151', color: copiedOverlay ? '#22c55e' : '#94a3b8', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}
+              >
+                {copiedOverlay ? '✓ Copiado' : 'Copiar'}
+              </button>
+            </div>
+            <p style={{ margin: '5px 0 0', fontSize: 11, color: '#475569' }}>Cole esta URL em uma Browser Source no OBS.</p>
+          </div>
+        )}
 
         {/* Timer ativo */}
         <div
@@ -727,6 +757,7 @@ export default function TimersPage() {
           saving={saving}
           onSave={handleSave}
           onClose={() => setShowModal(false)}
+          overlayUrl={overlayUrl}
         />
       )}
     </div>
