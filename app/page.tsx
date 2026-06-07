@@ -681,7 +681,7 @@ export default function Home() {
           <a className="sk-nav-link" href="/roadmap" style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500, textDecoration: 'none' }}>Roadmap</a>
           {themeBtn}
           {/* App button — replaces "Entrar" */}
-          <button onClick={() => setPage('login')} className="sk-app-btn" style={{
+          <button onClick={() => window.location.href = '/login'} className="sk-app-btn" style={{
             background: C.appBtn, color: C.primary,
             border: `1px solid ${C.appBtnBorder}`,
             padding: '0.48rem 1.2rem', borderRadius: '7px', cursor: 'pointer',

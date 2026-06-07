@@ -228,7 +228,7 @@ export default function LegalPage({ params }: { params: Promise<{ slug: string }
           <a href="/roadmap" className="sk-nav-link" style={{ color: C.muted, fontSize: '0.88rem', fontWeight: 500, textDecoration: 'none' }}>Roadmap</a>
           <a href="/contato" className="sk-nav-link" style={{ color: C.muted, fontSize: '0.88rem', fontWeight: 500, textDecoration: 'none' }}>Contato</a>
           {themeBtn(C, isDark, handleThemeToggle)}
-          <a href="/" className="sk-app-btn" style={{
+          <a href="/login" className="sk-app-btn" style={{
             background: C.appBtn, color: C.primary,
             border: `1px solid ${C.appBtnBorder}`,
             padding: '0.48rem 1.2rem', borderRadius: '7px',
