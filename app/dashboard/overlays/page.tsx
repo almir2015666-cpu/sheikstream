@@ -1,87 +1,81 @@
 'use client'
-import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 const C = {
-  card: '#111219', cardB: 'rgba(255,255,255,0.05)',
-  text: '#e8e6f8', muted: 'rgba(232,230,248,0.48)', dim: 'rgba(232,230,248,0.28)',
-  vdim: 'rgba(232,230,248,0.12)', primary: '#9b30ff', primaryBg: 'rgba(155,48,255,0.1)',
-  accent: '#39ff14',
+  page: '#08090d', card: '#111219', cardB: 'rgba(255,255,255,0.06)',
+  text: '#e8e6f8', dim: 'rgba(232,230,248,0.28)', vdim: 'rgba(232,230,248,0.12)',
+  primary: '#9b30ff', primaryB: 'rgba(155,48,255,0.2)',
 }
 
-const OVERLAYS = [
-  { id: 'meta',           label: 'Overlay Meta',           desc: 'Barra de progresso da meta ativa — atualiza automaticamente via Twitch', path: '/overlay/meta',     live: true  },
-  { id: 'sorteio',        label: 'Overlay Sorteio',        desc: 'Sorteio ativo com contagem de participantes e animação de vencedor',     path: '/overlay/sorteio',  live: true  },
-  { id: 'subathon',       label: 'Overlay Subathon',       desc: 'Countdown do subathon — aumenta com subs e bits em tempo real',          path: '/overlay/subathon', live: true  },
-  { id: 'patrocinadores', label: 'Overlay Patrocinadores', desc: 'Banner rotativo de patrocinadores',                                       path: '/overlay/banners',  live: false },
-  { id: 'alertas',        label: 'Overlay Alertas',        desc: 'Notificações de subs, doações e follows',                                path: '/overlay/alertas',  live: false },
+function Icon({ type, color }: { type: string; color: string }) {
+  const s = { stroke: color, fill: 'none', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  if (type === 'patrocinadores') return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M22 8.01c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8.01z"/><line x1="7" y1="12" x2="7" y2="16"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="17" y1="12" x2="17" y2="16"/></svg>
+  if (type === 'subathon')       return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  if (type === 'meta-subs')      return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill={color}/></svg>
+  if (type === 'sorteio')        return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M8 21h8M12 17v4M17 3H7l-2 6h14L17 3z"/><path d="M5 9c0 3.5 2 6 7 6s7-2.5 7-6"/></svg>
+  return                                <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+}
+
+const CATALOG = [
+  { type: 'patrocinadores', label: 'Patrocinadores', badge: 'NOVO', color: '#a78bfa', live: false,
+    desc: 'Carrossel de banners de patrocinadores com timing, dimensões e layout configurável.' },
+  { type: 'subathon',       label: 'Subathon',       badge: 'NOVO', color: '#60a5fa', live: true,
+    desc: 'Cronômetro de live progressivo — cada contribuição adiciona tempo ao relógio.' },
+  { type: 'meta-subs',      label: 'Meta de Subs',   badge: null,   color: '#34d399', live: true,
+    desc: 'Barra de progresso da meta de inscrições da Twitch em tempo real.' },
+  { type: 'sorteio',        label: 'Meta de Sorteio', badge: null,  color: '#fbbf24', live: true,
+    desc: 'Progresso do sorteio unificado com contadores por fonte (Livepix, Twitch, YouTube).' },
+  { type: 'meta',           label: 'Meta',            badge: 'NOVO', color: '#f87171', live: true,
+    desc: 'Overlay dedicado ao progresso de uma meta ativa criada pelo streamer.' },
 ]
 
 export default function OverlaysPage() {
-  const [uid, setUid] = useState('')
-  const [copied, setCopied] = useState('')
-
-  useEffect(() => {
-    fetch('/api/me').then(r => r.json()).then(d => { if (d?.id) setUid(d.id) }).catch(() => {})
-  }, [])
-
-  function getUrl(path: string, withUid = true) {
-    const base = typeof window !== 'undefined' ? window.location.origin : 'https://sheikstream.vercel.app'
-    return withUid && uid ? `${base}${path}?uid=${uid}` : `${base}${path}?uid=SEU_ID`
-  }
-
-  function copy(path: string) {
-    navigator.clipboard.writeText(getUrl(path)).catch(() => {})
-    setCopied(path)
-    setTimeout(() => setCopied(''), 2000)
-  }
-
   return (
-    <div style={{ background: '#08090d', minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
-
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ margin: '0 0 0.4rem', fontSize: '1.1rem', fontWeight: 800 }}>Overlays</h2>
-        <p style={{ margin: 0, fontSize: '0.84rem', color: C.dim }}>
-          Copie a URL e adicione como Browser Source no OBS Studio. Largura recomendada: 1920px · Altura: 100–200px
+    <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+      <div style={{ marginBottom: '1.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Overlays</h2>
+        </div>
+        <p style={{ margin: 0, fontSize: '0.82rem', color: C.dim }}>
+          Configure e copie as URLs para usar no OBS Studio — cada overlay tem editor visual com prévia ao vivo.
         </p>
       </div>
 
-      <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', padding: '0.85rem 1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span style={{ fontSize: '0.82rem', color: '#93c5fd' }}>
-          No OBS: Adicione Fonte → Browser → cole a URL → desmarque "Controlar áudio via OBS". Fundo transparente — use Filtro de Chroma Key se necessário.
-        </span>
-      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.9rem' }}>
+        {CATALOG.map(item => (
+          <div key={item.type} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.2rem', position: 'relative', opacity: item.live ? 1 : 0.6 }}>
+            <Link
+              href={`/dashboard/overlays/${item.type}`}
+              style={{ position: 'absolute', top: '0.8rem', right: '0.8rem', padding: '0.3rem 0.35rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '6px', display: 'flex', alignItems: 'center', color: C.dim, textDecoration: 'none' }}
+              title="Editar overlay"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </Link>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '0.8rem' }}>
-        {OVERLAYS.map(ov => (
-          <div key={ov.id} style={{ background: C.card, border: `1px solid ${ov.live ? 'rgba(155,48,255,0.15)' : C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem', opacity: ov.live ? 1 : 0.6 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: C.text }}>{ov.label}</div>
-                  {ov.live
-                    ? <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '0.08rem 0.38rem', background: 'rgba(57,255,20,0.12)', color: C.accent, borderRadius: '999px' }}>AO VIVO</span>
-                    : <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '0.08rem 0.38rem', background: 'rgba(255,255,255,0.06)', color: C.dim, borderRadius: '999px' }}>EM BREVE</span>
-                  }
-                </div>
-                <div style={{ fontSize: '0.75rem', color: C.dim }}>{ov.desc}</div>
-              </div>
-              {ov.live && (
-                <a href={getUrl(ov.path)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', color: C.primary, textDecoration: 'none', flexShrink: 0, marginLeft: '0.75rem' }}>
-                  Preview ↗
-                </a>
+            <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.8rem' }}>
+              <Icon type={item.type} color={item.color} />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{item.label}</span>
+              {item.badge && (
+                <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: 'rgba(155,48,255,0.12)', color: C.primary, borderRadius: '999px', border: `1px solid ${C.primaryB}` }}>
+                  {item.badge}
+                </span>
               )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ flex: 1, background: '#08090d', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '0.45rem 0.75rem', fontSize: '0.68rem', color: C.vdim, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {getUrl(ov.path, !!uid)}
-              </div>
-              {ov.live && (
-                <button onClick={() => copy(ov.path)} disabled={!uid} style={{ padding: '0.45rem 0.85rem', background: copied === ov.path ? 'rgba(57,255,20,0.1)' : C.primaryBg, border: `1px solid ${copied === ov.path ? 'rgba(57,255,20,0.3)' : 'rgba(155,48,255,0.25)'}`, color: copied === ov.path ? C.accent : C.primary, borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: uid ? 'pointer' : 'not-allowed', flexShrink: 0, whiteSpace: 'nowrap', opacity: uid ? 1 : 0.5 }}>
-                  {copied === ov.path ? '✓ Copiado' : 'Copiar URL'}
-                </button>
-              )}
-            </div>
+            <p style={{ margin: '0 0 0.7rem', fontSize: '0.76rem', color: C.dim, lineHeight: 1.5 }}>{item.desc}</p>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: C.vdim }}>
+              {item.live
+                ? 'Abra o editor (ícone de lápis), configure e clique em Salvar para gerar a URL do OBS.'
+                : 'Em breve — integração em desenvolvimento.'}
+            </p>
           </div>
         ))}
       </div>
