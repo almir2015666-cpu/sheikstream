@@ -105,6 +105,22 @@ export default function ConexoesPage() {
   const [livepixSaving, setLivepixSaving] = useState(false)
   const [livepixSaved, setLivepixSaved] = useState(false)
   const [tokenStatus, setTokenStatus] = useState({ twitch: false, youtube: false })
+  const [disconnecting, setDisconnecting] = useState(false)
+
+  async function handleDisconnect(platform: string) {
+    setDisconnecting(true)
+    try {
+      await fetch('/api/tokens/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform }),
+      })
+      setTokenStatus(s => ({ ...s, [platform]: false }))
+      if (platform === 'twitch') setConnectedUser(null)
+    } finally {
+      setDisconnecting(false)
+    }
+  }
 
   useEffect(() => {
     fetch('/api/me')
@@ -164,13 +180,26 @@ export default function ConexoesPage() {
             </div>
           </div>
         </div>
-        <button
-          onClick={() => { window.location.href = '/api/auth/twitch' }}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.1rem', background: tokenStatus.twitch ? '#374151' : '#9147ff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-        >
-          <PlatIcon id="twitch" color="#fff" />
-          {tokenStatus.twitch ? 'Reconectar Twitch' : 'Conectar Twitch'}
-        </button>
+        {tokenStatus.twitch ? (
+          <button
+            onClick={() => handleDisconnect('twitch')}
+            disabled={disconnecting}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.1rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: disconnecting ? 'default' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0, opacity: disconnecting ? 0.6 : 1 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
+            </svg>
+            {disconnecting ? 'Desconectando...' : 'Desconectar'}
+          </button>
+        ) : (
+          <button
+            onClick={() => { window.location.href = '/api/auth/twitch' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.1rem', background: '#9147ff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            <PlatIcon id="twitch" color="#fff" />
+            Conectar Twitch
+          </button>
+        )}
       </div>
 
       {/* Platform grid 3 columns */}
