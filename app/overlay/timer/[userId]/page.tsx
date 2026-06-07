@@ -9,7 +9,14 @@ export default function TimerOverlay() {
 
   const [message, setMessage] = useState<string | null>(null)
   const [visible, setVisible] = useState(false)
+  const lastMessage = useRef<string | null>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Force transparent background — works in OBS Browser Source without any extra config
+  useEffect(() => {
+    document.documentElement.style.cssText = 'background: transparent !important;'
+    document.body.style.cssText = 'background: transparent !important; margin: 0; overflow: hidden;'
+  }, [])
 
   useEffect(() => {
     if (!userId) return
@@ -17,16 +24,20 @@ export default function TimerOverlay() {
     const poll = async () => {
       try {
         const res = await fetch(`/api/timers/overlay-state/${userId}`)
-        const data = (await res.json()) as { message: string | null; expires_at?: string }
-        if (data.message && data.message !== message) {
+        const data = (await res.json()) as { message: string | null }
+        if (data.message && data.message !== lastMessage.current) {
+          lastMessage.current = data.message
           setMessage(data.message)
           setVisible(true)
 
           if (hideTimer.current) clearTimeout(hideTimer.current)
-          hideTimer.current = setTimeout(() => setVisible(false), 10_000)
+          hideTimer.current = setTimeout(() => {
+            setVisible(false)
+            lastMessage.current = null
+          }, 10_000)
         }
       } catch {
-        // silent — OBS overlay should never show errors
+        // silent — overlay never shows errors
       }
     }
 
@@ -36,7 +47,6 @@ export default function TimerOverlay() {
       clearInterval(interval)
       if (hideTimer.current) clearTimeout(hideTimer.current)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
   return (
