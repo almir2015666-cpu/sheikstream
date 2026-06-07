@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { SiTwitch, SiYoutube, SiKick } from 'react-icons/si'
 
 const DARK = {
@@ -47,6 +48,7 @@ function makeCSS() {
 type Overlay = { active: boolean; x: string; y: string; newTheme: 'dark' | 'light' }
 
 export default function LoginPage() {
+  const router = useRouter()
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [loading, setLoading] = useState('')
   const isDark = theme === 'dark'
@@ -67,7 +69,7 @@ export default function LoginPage() {
     if (loading) return
     setLoading(platform)
     setTimeout(() => {
-      window.location.href = `/pending?platform=${encodeURIComponent(platform)}`
+      router.push(`/pending?platform=${encodeURIComponent(platform)}`)
     }, 1100)
   }
 
