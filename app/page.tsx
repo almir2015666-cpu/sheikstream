@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import {
   SiTwitch, SiYoutube, SiKick, SiTiktok, SiFacebook,
   SiDiscord, SiInstagram, SiGoogle, SiX, SiWhatsapp,
@@ -115,16 +115,18 @@ function makeCSS(C: typeof DARK) {
   @keyframes sk-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
   @keyframes sk-badge-pulse { 0%,100% { box-shadow: 0 0 0 0 ${C.primary}55; } 70% { box-shadow: 0 0 0 7px ${C.primary}00; } }
   @keyframes sk-bar { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
-  @keyframes sk-intro-bg { 0% { opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
-  @keyframes sk-intro-logo { 0% { opacity: 0; transform: scale(0.88) translateY(10px); } 30% { opacity: 1; transform: scale(1.04) translateY(0); } 70% { opacity: 1; transform: scale(1) translateY(0); } 100% { opacity: 0; transform: scale(1.08) translateY(-8px); } }
-  @keyframes sk-intro-scan { 0% { top: -4px; } 100% { top: 100%; } }
-  @keyframes sk-intro-glitch { 0%,90%,100% { clip-path: none; transform: none; } 91% { clip-path: inset(40% 0 50% 0); transform: translateX(-4px); } 94% { clip-path: inset(10% 0 80% 0); transform: translateX(3px); } 97% { clip-path: inset(70% 0 5% 0); transform: translateX(-2px); } }
-  @keyframes sk-intro-out { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100vh); opacity: 0; } }
-  .sk-intro-overlay { animation: sk-intro-bg 2.7s ease forwards; position: fixed; inset: 0; z-index: 9999; background: #000; pointer-events: all; }
-  .sk-intro-overlay.out { animation: sk-intro-out 0.8s cubic-bezier(0.55, 0, 0.45, 1) forwards; }
-  .sk-intro-logo { animation: sk-intro-logo 2.3s ease forwards; opacity: 0; }
-  .sk-intro-glitch { animation: sk-intro-glitch 2.3s ease forwards; }
-  .sk-intro-scanline { position: absolute; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, transparent, #39ff14aa, transparent); animation: sk-intro-scan 1.1s linear infinite; pointer-events: none; }
+  @keyframes sk-intro-logo-rise { 0% { opacity: 0; transform: scale(0.9) translateY(18px); } 15% { opacity: 1; transform: scale(1.02) translateY(0); } 55% { opacity: 1; transform: scale(1) translateY(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: scale(0.97) translateY(-8px); } }
+  @keyframes sk-glow-brand { 0%,100% { text-shadow: 0 0 20px #9b30ff77, 0 0 60px #9b30ff22; } 50% { text-shadow: 0 0 55px #9b30ffcc, 0 0 110px #9b30ff55, 0 0 180px #9b30ff11; } }
+  @keyframes sk-panel-top-split { 0%,65% { transform: translateY(0); } 100% { transform: translateY(-100%); } }
+  @keyframes sk-panel-bot-split { 0%,65% { transform: translateY(0); } 100% { transform: translateY(100%); } }
+  @keyframes sk-intro-accent { 0% { opacity:0; width:0; } 20% { opacity:1; width:64px; } 78% { opacity:1; width:64px; } 100% { opacity:0; width:0; } }
+  .sk-intro-panel-top { position:absolute; top:0; left:0; right:0; height:50.5%; background:#040408; border-bottom:1px solid rgba(155,48,255,0.18); }
+  .sk-intro-panel-bot { position:absolute; bottom:0; left:0; right:0; height:50.5%; background:#040408; border-top:1px solid rgba(155,48,255,0.18); }
+  .sk-intro-panel-top.out { animation:sk-panel-top-split 1.3s cubic-bezier(0.7,0,0.3,1) forwards; }
+  .sk-intro-panel-bot.out { animation:sk-panel-bot-split 1.3s cubic-bezier(0.7,0,0.3,1) forwards; }
+  .sk-intro-logo-new { animation:sk-intro-logo-rise 4.2s ease forwards; opacity:0; position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.6rem; pointer-events:none; z-index:1; }
+  .sk-glow-brand-text { animation:sk-glow-brand 2s ease-in-out 0.6s infinite; }
+  .sk-intro-accent-line { animation:sk-intro-accent 4.2s ease forwards; height:1px; background:linear-gradient(90deg,transparent,#9b30ff,transparent); }
   .sk-mock-float { animation: sk-float 5s ease-in-out infinite; }
   .sk-chat-window { animation: sk-pop-in 0.07s ease; }
   .sk-chat-msg { animation: sk-slide-up 0.06s ease; }
@@ -231,7 +233,7 @@ export default function Home() {
   const [ticketError, setTicketError] = useState('')
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  const [showIntro, setShowIntro] = useState(false)
+  const [showIntro, setShowIntro] = useState(true)
   const [introOut, setIntroOut] = useState(false)
 
   const [logoOpacity, setLogoOpacity] = useState(1)
@@ -369,12 +371,12 @@ useEffect(() => {
     }
   }
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try { if (sessionStorage.getItem('sk-intro')) return } catch { return }
-    setShowIntro(true)
-    const t1 = setTimeout(() => setIntroOut(true), 1900)
-    const t2 = setTimeout(() => { setShowIntro(false); try { sessionStorage.setItem('sk-intro', '1') } catch {} }, 2700)
+  useLayoutEffect(() => {
+    try {
+      if (sessionStorage.getItem('sk-intro')) { setShowIntro(false); return }
+    } catch { setShowIntro(false); return }
+    const t1 = setTimeout(() => setIntroOut(true), 3000)
+    const t2 = setTimeout(() => { setShowIntro(false); try { sessionStorage.setItem('sk-intro', '1') } catch {} }, 4300)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [])
 
@@ -700,23 +702,20 @@ useEffect(() => {
       <style>{makeCSS(C)}</style>
       {themeOverlay}
 
-      {/* Intro animation */}
+      {/* Intro animation — split curtain */}
       {showIntro && (
-        <div className={`sk-intro-overlay${introOut ? ' out' : ''}`}>
-          <div className="sk-intro-scanline" />
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(57,255,20,0.03) 2px, rgba(57,255,20,0.03) 4px)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-            <div className="sk-intro-logo sk-intro-glitch" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 'clamp(2rem, 8vw, 4.5rem)', fontWeight: 900, letterSpacing: '-2px', color: '#fff', textShadow: '0 0 30px #39ff14, 0 0 60px #39ff1466', lineHeight: 1 }}>
-                Sheik<span style={{ color: '#39ff14' }}>STREAM</span>
-              </div>
-              <div style={{ marginTop: '0.8rem', fontSize: 'clamp(0.75rem, 2vw, 0.92rem)', color: 'rgba(57,255,20,0.6)', letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 600 }}>
-                Hub para streamers brasileiros
-              </div>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'all', overflow: 'hidden' }}>
+          <div className={`sk-intro-panel-top${introOut ? ' out' : ''}`} />
+          <div className={`sk-intro-panel-bot${introOut ? ' out' : ''}`} />
+          <div className="sk-intro-logo-new">
+            <div className="sk-intro-accent-line" style={{ width: 0 }} />
+            <div className="sk-glow-brand-text" style={{ fontSize: 'clamp(2.2rem, 9vw, 5rem)', fontWeight: 900, letterSpacing: '-2px', color: '#fff', lineHeight: 1, textAlign: 'center' }}>
+              Sheik<span style={{ color: '#9b30ff' }}>STREAM</span>
             </div>
-          </div>
-          <div style={{ position: 'absolute', bottom: '2rem', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '6px' }}>
-            {[0,1,2].map(i => <div key={i} className={`sk-dot-${i+1}`} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#39ff14' }} />)}
+            <div style={{ fontSize: 'clamp(0.68rem, 1.8vw, 0.82rem)', color: 'rgba(155,48,255,0.5)', letterSpacing: '0.32em', textTransform: 'uppercase', fontWeight: 600 }}>
+              Hub para streamers brasileiros
+            </div>
+            <div className="sk-intro-accent-line" style={{ width: 0 }} />
           </div>
         </div>
       )}

@@ -166,6 +166,7 @@ export default function AdminPage() {
   const [logs, setLogs] = useState<Log[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logTab, setLogTab] = useState<'admin' | 'auth' | 'dashboard' | 'feature' | 'errors' | 'system' | 'logins' | 'changelog'>('admin')
+  const [logSearch, setLogSearch] = useState('')
   type SupportTicket = { id: string; subject: string; message: string; reply_email: string | null; username: string | null; status: string; created_at: string; updated_at: string; admin_reply: string | null }
   const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [ticketsLoading, setTicketsLoading] = useState(false)
@@ -693,6 +694,7 @@ export default function AdminPage() {
                   <button key={t.key}
                     onClick={() => {
                       setLogTab(t.key)
+                      setLogSearch('')
                       if (t.key === 'logins') fetchLoginLogs(storedPw)
                       else if (t.key === 'admin') fetchLogs(storedPw)
                       else if (t.key === 'errors') fetchErrorLogs(storedPw)
@@ -713,6 +715,13 @@ export default function AdminPage() {
                     {({ logins: '🔐 Logins no painel admin', admin: '🛡 Ações do admin', auth: '🔑 Autenticação', dashboard: '📊 Navegação no dashboard', feature: '⚡ Uso de funcionalidades', errors: '⚠ Logs de erro', system: '⚙ Logs do sistema', changelog: '📝 Changelog do sistema' } as Record<string, string>)[logTab]}
                   </span>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  {logTab !== 'changelog' && (
+                    <div style={{ position: 'relative' }}>
+                      <svg style={{ position: 'absolute', left: '0.55rem', top: '50%', transform: 'translateY(-50%)', color: C.dim, pointerEvents: 'none' }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <input value={logSearch} onChange={e => setLogSearch(e.target.value)} placeholder="Buscar..." style={{ padding: '0.35rem 1.8rem 0.35rem 1.8rem', background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '0.78rem', outline: 'none', width: '160px' }} />
+                      {logSearch && <button onClick={() => setLogSearch('')} style={{ position: 'absolute', right: '0.4rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: C.dim, fontSize: '0.8rem', lineHeight: 1, padding: 0 }}>✕</button>}
+                    </div>
+                  )}
                   {logTab === 'errors' && (
                     <button onClick={clearErrorLogs} style={{ background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>
                       Limpar
@@ -736,11 +745,13 @@ export default function AdminPage() {
                 </div>
 
                 {/* Login logs tab */}
-                {logTab === 'logins' && (
-                  loginLogsLoading ? (
+                {logTab === 'logins' && (() => {
+                  const lq = logSearch.toLowerCase()
+                  const rows = lq ? loginLogs.filter(l => l.ip?.toLowerCase().includes(lq) || l.user_agent?.toLowerCase().includes(lq) || (l.success ? 'sucesso' : 'falhou').includes(lq)) : loginLogs
+                  return loginLogsLoading ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
-                  ) : loginLogs.length === 0 ? (
-                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum login registrado ainda.</div>
+                  ) : rows.length === 0 ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>{logSearch ? 'Nenhum resultado.' : 'Nenhum login registrado ainda.'}</div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -752,7 +763,7 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {loginLogs.map(l => (
+                          {rows.map(l => (
                             <tr key={l.id} className="sk-user-row" style={{ borderBottom: `1px solid ${C.vdim}`, background: 'transparent' }}>
                               <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.78rem', color: C.dim, whiteSpace: 'nowrap' }}>{fmtDate(l.created_at)}</td>
                               <td style={{ padding: '0.85rem 1.2rem' }}>
@@ -769,14 +780,16 @@ export default function AdminPage() {
                       </table>
                     </div>
                   )
-                )}
+                })()}
 
                 {/* Admin tab — approve/reject/ban */}
-                {logTab === 'admin' && (
-                  logsLoading ? (
+                {logTab === 'admin' && (() => {
+                  const lq = logSearch.toLowerCase()
+                  const rows = lq ? logs.filter(l => l.action?.toLowerCase().includes(lq) || l.target_username?.toLowerCase().includes(lq) || l.target_platform?.toLowerCase().includes(lq)) : logs
+                  return logsLoading ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
-                  ) : logs.length === 0 ? (
-                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhuma ação registrada ainda.</div>
+                  ) : rows.length === 0 ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>{logSearch ? 'Nenhum resultado.' : 'Nenhuma ação registrada ainda.'}</div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -788,7 +801,7 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {logs.map(log => {
+                          {rows.map(log => {
                             const actionCfg: Record<string, { label: string; bg: string; color: string; border: string }> = {
                               approved: { label: '✓ Aprovado',  bg: C.accentBg,            color: C.accent,  border: C.accentBorder },
                               rejected: { label: '✕ Rejeitado', bg: C.dangerBg,            color: C.danger,  border: C.dangerBorder },
@@ -817,14 +830,16 @@ export default function AdminPage() {
                       </table>
                     </div>
                   )
-                )}
+                })()}
 
                 {/* Error logs tab */}
-                {logTab === 'errors' && (
-                  errorLogsLoading ? (
+                {logTab === 'errors' && (() => {
+                  const lq = logSearch.toLowerCase()
+                  const rows = lq ? errorLogs.filter(e => e.endpoint?.toLowerCase().includes(lq) || e.error_message?.toLowerCase().includes(lq) || e.user_id?.toLowerCase().includes(lq)) : errorLogs
+                  return errorLogsLoading ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
-                  ) : errorLogs.length === 0 ? (
-                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum erro registrado.</div>
+                  ) : rows.length === 0 ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>{logSearch ? 'Nenhum resultado.' : 'Nenhum erro registrado.'}</div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -836,7 +851,7 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {errorLogs.map(e => (
+                          {rows.map(e => (
                             <tr key={e.id} className="sk-user-row" style={{ borderBottom: `1px solid ${C.vdim}`, background: 'transparent' }}>
                               <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.78rem', color: C.dim, whiteSpace: 'nowrap' }}>{fmtDate(e.created_at)}</td>
                               <td style={{ padding: '0.85rem 1.2rem' }}>
@@ -855,14 +870,16 @@ export default function AdminPage() {
                       </table>
                     </div>
                   )
-                )}
+                })()}
 
                 {/* System logs tab */}
-                {logTab === 'system' && (
-                  systemLogsLoading ? (
+                {logTab === 'system' && (() => {
+                  const lq = logSearch.toLowerCase()
+                  const rows = lq ? systemLogs.filter(s => s.type?.toLowerCase().includes(lq) || s.message?.toLowerCase().includes(lq) || s.user_id?.toLowerCase().includes(lq)) : systemLogs
+                  return systemLogsLoading ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
-                  ) : systemLogs.length === 0 ? (
-                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum evento do sistema registrado.</div>
+                  ) : rows.length === 0 ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>{logSearch ? 'Nenhum resultado.' : 'Nenhum evento do sistema registrado.'}</div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -874,7 +891,7 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {systemLogs.map(s => {
+                          {rows.map(s => {
                             const typeColor = s.type.startsWith('auth') ? '#60a5fa' : s.type.startsWith('cron') ? '#a78bfa' : s.type.startsWith('token') ? '#fb923c' : C.muted
                             return (
                               <tr key={s.id} className="sk-user-row" style={{ borderBottom: `1px solid ${C.vdim}`, background: 'transparent' }}>
@@ -893,10 +910,11 @@ export default function AdminPage() {
                       </table>
                     </div>
                   )
-                )}
+                })()}
 
                 {/* Auth / Dashboard / Feature tabs */}
                 {logTab === 'changelog' && (() => {
+                  const lq = logSearch.toLowerCase()
                   const CHANGELOG = [
                     { date: '2026-06-07', title: 'Sistema de Tickets', desc: 'Formulário de ticket no chat da landing page, API pública POST /api/tickets, API admin GET/PATCH /api/admin/tickets, view completa de tickets no painel admin com status e resposta.' },
                     { date: '2026-06-07', title: 'Animação de entrada na landing page', desc: 'Overlay verde com logo SheikSTREAM e efeito de scanline ao abrir o site pela primeira vez. Executado uma vez por sessão via sessionStorage.' },
@@ -920,9 +938,11 @@ export default function AdminPage() {
                     { date: '2026-06-03', title: 'Posição do banner (topo/rodapé)', desc: 'Campo position no banner config. Banner pode ser fixado no topo ou no rodapé do dashboard.' },
                     { date: '2026-06-03', title: 'CSS white mode improvements', desc: 'Melhorias de contraste no modo claro com !important overrides para textos e backgrounds.' },
                   ]
+                  const filtered = lq ? CHANGELOG.filter(e => e.title.toLowerCase().includes(lq) || e.desc.toLowerCase().includes(lq) || e.date.includes(lq)) : CHANGELOG
                   return (
                     <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {CHANGELOG.map((entry, i) => (
+                      {!filtered.length && <div style={{ textAlign: 'center', color: C.dim, fontSize: '0.9rem', padding: '2rem' }}>Nenhum resultado.</div>}
+                      {filtered.map((entry, i) => (
                         <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', padding: '0.9rem 1rem', background: C.cardBgAlt, borderRadius: '10px', border: `1px solid ${C.border}` }}>
                           <div style={{ flexShrink: 0, minWidth: '86px' }}>
                             <div style={{ fontSize: '0.68rem', color: C.dim, fontWeight: 600 }}>{entry.date}</div>
@@ -936,11 +956,13 @@ export default function AdminPage() {
                     </div>
                   )
                 })()}
-                {logTab !== 'logins' && logTab !== 'admin' && logTab !== 'errors' && logTab !== 'system' && logTab !== 'changelog' && (
-                  activityLoading ? (
+                {logTab !== 'logins' && logTab !== 'admin' && logTab !== 'errors' && logTab !== 'system' && logTab !== 'changelog' && (() => {
+                  const lq = logSearch.toLowerCase()
+                  const rows = lq ? activity.filter(a => a.event?.toLowerCase().includes(lq) || a.username?.toLowerCase().includes(lq) || a.details?.toLowerCase().includes(lq) || a.platform?.toLowerCase().includes(lq)) : activity
+                  return activityLoading ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
-                  ) : activity.length === 0 ? (
-                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum registro ainda.</div>
+                  ) : rows.length === 0 ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>{logSearch ? 'Nenhum resultado.' : 'Nenhum registro ainda.'}</div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -952,7 +974,7 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {activity.map(a => {
+                          {rows.map(a => {
                             const evtCfg: Record<string, { label: string; bg: string; color: string; border: string }> = {
                               login:     { label: '→ Login',      bg: C.accentBg,            color: C.accent,   border: C.accentBorder },
                               logout:    { label: '← Logout',     bg: 'rgba(255,120,0,0.1)', color: '#ff7800',  border: 'rgba(255,120,0,0.3)' },
@@ -982,7 +1004,7 @@ export default function AdminPage() {
                       </table>
                     </div>
                   )
-                )}
+                })()}
               </div>
             </>
           ) : view === 'banner' ? (
