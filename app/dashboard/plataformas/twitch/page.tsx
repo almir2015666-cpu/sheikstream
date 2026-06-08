@@ -76,6 +76,31 @@ export default function TwitchSubsPage() {
   const [videos, setVideos] = useState<TwitchVideo[]>([])
   const [videosLoading, setVideosLoading] = useState(false)
   const [videosError, setVideosError] = useState('')
+  const [showDiag, setShowDiag] = useState(false)
+  const [diagData, setDiagData] = useState<Record<string, unknown> | null>(null)
+  const [diagLoading, setDiagLoading] = useState(false)
+  const [resyncing, setResyncing] = useState(false)
+
+  async function runDiag() {
+    setDiagLoading(true)
+    try {
+      const res = await fetch('/api/twitch/debug')
+      const data = await res.json()
+      setDiagData(data)
+    } catch { setDiagData({ error: 'Falha de conexão' }) }
+    finally { setDiagLoading(false) }
+  }
+
+  async function runResync() {
+    setResyncing(true)
+    try {
+      const res = await fetch('/api/twitch/resync', { method: 'POST' })
+      const data = await res.json()
+      notify(data.ok ? 'Resync concluído! EventSub re-registrado e comandos verificados.' : (data.error || 'Erro no resync'), data.ok ? 'success' : 'error')
+      runDiag()
+    } catch { notify('Falha de conexão no resync', 'error') }
+    finally { setResyncing(false) }
+  }
 
   async function syncSubs() {
     setSyncing(true)
@@ -269,6 +294,10 @@ export default function TwitchSubsPage() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           {syncing ? 'Sincronizando...' : 'Sync Meus Subs'}
         </button>
+        <button onClick={() => { setShowDiag(v => !v); if (!diagData) runDiag() }} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: showDiag ? 'rgba(239,68,68,0.12)' : 'transparent', border: `1px solid ${showDiag ? 'rgba(239,68,68,0.3)' : C.cardB}`, color: showDiag ? '#ef4444' : C.dim, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Diagnóstico
+        </button>
         <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
           + Adicionar Sub
         </button>
@@ -309,6 +338,128 @@ export default function TwitchSubsPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Diagnóstico EventSub */}
+      {showDiag && (
+        <div style={{ background: C.card, border: '1px solid rgba(239,68,68,0.25)', borderRadius: '12px', padding: '1.3rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.9rem' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Diagnóstico de Integração
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button onClick={runDiag} disabled={diagLoading} style={{ padding: '0.3rem 0.75rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: '7px', fontSize: '0.75rem', cursor: 'pointer' }}>
+                {diagLoading ? '...' : '↻ Atualizar'}
+              </button>
+              <button onClick={runResync} disabled={resyncing} style={{ padding: '0.3rem 0.9rem', background: resyncing ? 'rgba(145,71,255,0.2)' : C.primary, color: '#fff', border: 'none', borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: resyncing ? 'not-allowed' : 'pointer' }}>
+                {resyncing ? '⏳ Ativando...' : '⚡ Forçar Resync'}
+              </button>
+            </div>
+          </div>
+          {diagLoading && <div style={{ color: C.dim, fontSize: '0.82rem' }}>Verificando...</div>}
+          {!diagLoading && diagData && (() => {
+            const d = diagData as Record<string, unknown>
+            const tv = d.tokenValidation as Record<string, unknown> | undefined
+            const tok = d.token as Record<string, unknown> | undefined
+            const subs = (d.eventsubSubscriptions as Array<Record<string, string>> | undefined) ?? []
+            const cmds = (d.eventCommands as Array<{ trigger: string; habilitado: boolean }> | undefined) ?? []
+            const EXPECTED = ['channel.follow', 'channel.subscribe', 'channel.subscription.gift', 'channel.subscription.message', 'channel.cheer', 'channel.chat.message']
+            const activeTypes = subs.filter(s => s.status === 'enabled').map(s => s.type)
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                {/* Token status */}
+                <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                  <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Token Twitch</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.78rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ color: tok?.hasToken ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{tok?.hasToken ? '✓' : '✗'}</span>
+                      <span style={{ color: C.text }}>Token armazenado</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ color: tok?.hasRefreshToken ? '#22c55e' : '#f59e0b', fontWeight: 700 }}>{tok?.hasRefreshToken ? '✓' : '!'}</span>
+                      <span style={{ color: C.text }}>Refresh token {tok?.hasRefreshToken ? 'presente' : 'ausente — reconecte a Twitch'}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ color: tv?.valid ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{tv?.valid ? '✓' : '✗'}</span>
+                      <span style={{ color: C.text }}>Token válido {tv?.valid ? `(${String(tv.login)})` : `— ${String(tv?.error ?? 'expirado')}`}</span>
+                    </div>
+                    {tv?.valid && (
+                      <div style={{ fontSize: '0.7rem', color: C.dim, marginTop: '0.2rem' }}>
+                        Escopos: {(tv.scopes as string[] | undefined)?.join(', ') ?? '?'}
+                      </div>
+                    )}
+                    {!tv?.valid && (
+                      <div style={{ marginTop: '0.4rem', padding: '0.4rem 0.6rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', fontSize: '0.71rem', color: '#ef4444' }}>
+                        Reconecte a Twitch em Conexões para renovar o token.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* EventSub subscriptions */}
+                <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                  <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                    EventSub ({subs.length} inscrições)
+                  </div>
+                  {d.eventsubError && <div style={{ fontSize: '0.72rem', color: '#ef4444' }}>Erro: {String(d.eventsubError)}</div>}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    {EXPECTED.map(type => {
+                      const found = subs.find(s => s.type === type)
+                      const active = activeTypes.includes(type)
+                      return (
+                        <div key={type} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.75rem' }}>
+                          <span style={{ color: active ? '#22c55e' : found ? '#f59e0b' : '#ef4444', fontWeight: 700, flexShrink: 0 }}>
+                            {active ? '✓' : found ? '!' : '✗'}
+                          </span>
+                          <span style={{ color: active ? C.text : C.dim }}>{type}</span>
+                          {found && !active && <span style={{ fontSize: '0.65rem', color: '#f59e0b' }}>({found.status})</span>}
+                        </div>
+                      )
+                    })}
+                    {subs.length === 0 && !d.eventsubError && (
+                      <div style={{ fontSize: '0.75rem', color: '#ef4444' }}>Nenhuma inscrição ativa — clique em "Forçar Resync"</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Event commands */}
+                <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                  <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Comandos de evento no banco</div>
+                  {cmds.length === 0
+                    ? <div style={{ fontSize: '0.75rem', color: '#ef4444' }}>Nenhum comando encontrado — clique em "Forçar Resync"</div>
+                    : cmds.map(c => (
+                      <div key={c.trigger} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+                        <span style={{ color: c.habilitado ? '#22c55e' : '#f59e0b', fontWeight: 700 }}>{c.habilitado ? '✓' : '!'}</span>
+                        <span style={{ color: c.habilitado ? C.text : C.dim }}>{c.trigger} {!c.habilitado && '(desativado)'}</span>
+                      </div>
+                    ))
+                  }
+                </div>
+
+                {/* DB tables */}
+                <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                  <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Tabelas do banco</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.76rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ color: d.cheersTableExists ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{d.cheersTableExists ? '✓' : '✗'}</span>
+                      <span style={{ color: C.text }}>twitch_cheers {!d.cheersTableExists && `— ${String(d.cheersTableError)}`}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ color: !d.eventsTableError ? '#22c55e' : '#f59e0b', fontWeight: 700 }}>{!d.eventsTableError ? '✓' : '!'}</span>
+                      <span style={{ color: C.text }}>twitch_events {d.eventsTableError ? `— ${String(d.eventsTableError)}` : `(${((d.recentEvents as unknown[]) ?? []).length} recentes)`}</span>
+                    </div>
+                    {!d.cheersTableExists && (
+                      <div style={{ marginTop: '0.4rem', padding: '0.4rem 0.6rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', fontSize: '0.71rem', color: '#ef4444' }}>
+                        Execute o SQL do supabase-schema.sql no Supabase SQL Editor para criar a tabela twitch_cheers.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 
