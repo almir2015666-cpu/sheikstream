@@ -325,13 +325,35 @@ create table if not exists public.livepix_donors (
   broadcaster_id text not null,
   username       text not null,
   amount         numeric not null default 0,
+  message        text,
+  is_manual      boolean default false,
+  tickets        integer default 1,
   date           date not null default current_date,
   external_id    text,
   created_at     timestamptz default now()
 );
+-- Run these if the table already exists without the new columns:
+-- alter table public.livepix_donors add column if not exists message text;
+-- alter table public.livepix_donors add column if not exists is_manual boolean default false;
+-- alter table public.livepix_donors add column if not exists tickets integer default 1;
+-- notify pgrst, 'reload schema';
 alter table public.livepix_donors enable row level security;
 create index if not exists livepix_donors_broadcaster_idx on public.livepix_donors(broadcaster_id);
 create index if not exists livepix_donors_date_idx on public.livepix_donors(date);
+
+-- ==========================================
+-- TWITCH_EVENTS  (log de eventos EventSub)
+-- ==========================================
+create table if not exists public.twitch_events (
+  id             uuid primary key default gen_random_uuid(),
+  broadcaster_id text not null,
+  event_type     text not null,
+  event_data     jsonb,
+  created_at     timestamptz default now()
+);
+alter table public.twitch_events enable row level security;
+create index if not exists twitch_events_broadcaster_idx on public.twitch_events(broadcaster_id);
+create index if not exists twitch_events_type_idx on public.twitch_events(event_type);
 
 -- ==========================================
 -- SORTEIO_TICKETS  (tickets de participantes em sorteios)

@@ -125,32 +125,43 @@ export default function ComandosPage() {
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    fetch('/api/comandos')
-      .then(r => r.ok ? r.json() : [])
-      .then((rows: Array<{ id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string }>) => {
-        // Split into event and regular commands
-        const dbEvents   = rows.filter(r => isEventTrigger(r.trigger))
-        const dbRegular  = rows.filter(r => !isEventTrigger(r.trigger))
+    type DbRow = { id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string }
 
-        // Merge: DB event overrides defaults with same trigger
-        const mergedDefaults = DEFAULTS.map(def => {
-          const override = dbEvents.find(r => r.trigger === def.trigger)
-          if (override) {
-            return { ...def, id: override.id, resposta: override.resposta, cooldown: override.cooldown_s, habilitado: override.habilitado, db: true }
-          }
-          return def
-        })
+    async function loadAndSeed() {
+      const rows: DbRow[] = await fetch('/api/comandos').then(r => r.ok ? r.json() : []).catch(() => [])
 
-        // Regular DB commands (not event triggers)
-        const regularCmds: Cmd[] = dbRegular.map(r => ({
-          id: r.id, label: '!' + r.trigger, trigger: '!' + r.trigger, resposta: r.resposta,
-          cooldown: r.cooldown_s, habilitado: r.habilitado,
-          isEvento: false, origem: r.permissao ?? 'todos', platform: r.platform ?? 'Twitch', db: true,
-        }))
+      const dbEvents  = rows.filter(r => isEventTrigger(r.trigger))
+      const dbRegular = rows.filter(r => !isEventTrigger(r.trigger))
+      const dbByTrigger = new Map<string, DbRow>(dbEvents.map(r => [r.trigger, r]))
 
-        setCmds([...mergedDefaults, ...regularCmds])
+      // Seed any default events not yet in DB so fireEventCommand can find them
+      const missing = DEFAULTS.filter(d => !dbByTrigger.has(d.trigger))
+      const seeded = await Promise.all(missing.map(def =>
+        fetch('/api/comandos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trigger: def.trigger, resposta: def.resposta, cooldown_s: def.cooldown, habilitado: def.habilitado, permissao: 'todos', platform: def.platform }),
+        }).then(r => r.ok ? r.json() as Promise<DbRow> : null).catch(() => null)
+      ))
+      for (const s of seeded) { if (s) dbByTrigger.set(s.trigger, s) }
+
+      // Merge: DB record (real UUID) overrides local default
+      const mergedDefaults = DEFAULTS.map(def => {
+        const db = dbByTrigger.get(def.trigger)
+        if (db) return { ...def, id: db.id, resposta: db.resposta, cooldown: db.cooldown_s, habilitado: db.habilitado, db: true }
+        return def
       })
-      .catch(() => {})
+
+      const regularCmds: Cmd[] = dbRegular.map(r => ({
+        id: r.id, label: '!' + r.trigger, trigger: '!' + r.trigger, resposta: r.resposta,
+        cooldown: r.cooldown_s, habilitado: r.habilitado,
+        isEvento: false, origem: r.permissao ?? 'todos', platform: r.platform ?? 'Twitch', db: true,
+      }))
+
+      setCmds([...mergedDefaults, ...regularCmds])
+    }
+
+    loadAndSeed()
   }, [])
 
   function insertVar(v: string) {
