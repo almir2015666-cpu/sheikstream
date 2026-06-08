@@ -756,7 +756,7 @@ export default function ConexoesPage() {
 
             <div style={{ display: 'flex', gap: '0.65rem' }}>
               <button
-                onClick={() => { setSpotifySuccess(false); router.push('/dashboard') }}
+                onClick={() => { setSpotifySuccess(false); router.push('/dashboard/comandos') }}
                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.65rem', background: 'transparent', border: '1px solid rgba(30,215,96,0.4)', color: '#1ed760', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
