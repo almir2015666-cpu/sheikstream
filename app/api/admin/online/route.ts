@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     db.from('activity_logs').select('username,performed_at').gte('performed_at', fifteenMinAgo).not('username', 'is', null),
     db.from('activity_logs').select('username,performed_at').gte('performed_at', sevenDaysAgo).not('username', 'is', null).order('performed_at', { ascending: false }).limit(5000),
     db.from('user_tokens').select('user_id,twitch_token,twitch_username').limit(1000),
-    db.from('livepix_config').select('user_id').not('channel_id', 'is', null).limit(1000),
+    db.from('livepix_config').select('user_id').not('client_id', 'is', null).limit(1000),
     // system_logs.data.username is saved on every Twitch login — fallback for rows
     // where user_tokens.twitch_username was NULL (pre-fix sessions)
     db.from('system_logs').select('user_id,data').eq('type', 'auth.login').not('user_id', 'is', null).order('created_at', { ascending: false }).limit(2000),
