@@ -107,7 +107,7 @@ export default function ComandosPage() {
 
   function selectTemplate(tpl: Tpl) {
     setAdvOpen(false)
-    setForm({ trigger: tpl.trigger, resposta: tpl.resposta, cooldown: tpl.cooldown, ativo: true, permissao: tpl.permissao, responderComo: 'canal', notifOverlay: false, template: tpl.id, extraVars: tpl.extraVars ?? [] })
+    setForm({ trigger: tpl.trigger, resposta: tpl.resposta, cooldown: tpl.cooldown, cooldownUser: 0, custoBase: 0, custoInscritos: 0, ativo: true, permissao: tpl.permissao, responderComo: 'canal', notifOverlay: false, template: tpl.id, extraVars: tpl.extraVars ?? [], platforms: ['Twitch'] })
   }
 
   function startEdit(cmd: Cmd) {
