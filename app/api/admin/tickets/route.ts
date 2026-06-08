@@ -25,16 +25,23 @@ export async function PATCH(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
     const db = getSupabaseAdmin()
 
-    // Fetch ticket for email info before updating
+    // Fetch ticket for email info and existing reply before updating
     const { data: ticket } = await db
       .from('support_tickets')
-      .select('reply_email, subject, username')
+      .select('reply_email, subject, username, admin_reply')
       .eq('id', id)
       .maybeSingle()
 
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (status) update.status = status
-    if (admin_reply !== undefined) update.admin_reply = admin_reply
+    if (admin_reply !== undefined) {
+      const now = new Date().toISOString()
+      const prev = (ticket?.admin_reply ?? '').trim()
+      // Append new reply instead of replacing — separator with ISO timestamp
+      update.admin_reply = prev
+        ? `${prev}\n\n---[${now}]---\n${admin_reply.trim()}`
+        : admin_reply.trim()
+    }
     const { error } = await db.from('support_tickets').update(update).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

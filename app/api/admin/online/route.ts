@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
       last_seen_at:     lastSeenMap.get(key) ?? null,
       is_online:        onlineSet.has(key),
       access_count:     accessCount.get(key) ?? 0,
-      twitch_connected: true,
+      twitch_connected: !!tokenByName.get(key),
       livepix_connected: livepix,
     }
   })

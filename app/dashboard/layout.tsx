@@ -523,12 +523,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Admin link */}
       <div style={{ padding: '0.3rem 0.5rem', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-        {isAdmin && (
-          <button onClick={() => setReorderMode(r => !r)} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.4rem 0.75rem', borderRadius: '8px', background: reorderMode ? 'rgba(155,48,255,0.12)' : 'transparent', border: `1px solid ${reorderMode ? 'rgba(155,48,255,0.28)' : 'rgba(255,255,255,0.06)'}`, color: reorderMode ? S.primary : S.dim, cursor: 'pointer', fontSize: '0.75rem', fontWeight: reorderMode ? 700 : 500, width: '100%', textAlign: 'left' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-            {reorderMode ? 'Salvar ordem ✓' : 'Reordenar menu'}
-          </button>
-        )}
         <Link href="/admin" onClick={() => setMobileOpen(false)}
           className="sk-nl"
           style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.45rem 0.75rem', borderRadius: '9px', background: 'rgba(255,68,68,0.07)', border: '1px solid rgba(255,68,68,0.18)', textDecoration: 'none', color: '#ff6b6b', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.1px' }}>

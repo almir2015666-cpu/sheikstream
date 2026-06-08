@@ -391,7 +391,18 @@ export default function AdminPage() {
     setTicketUpdating(id)
     try {
       await fetch('/api/admin/tickets', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify({ id, ...updates }) })
-      setTickets(prev => prev.map(t => t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t))
+      const now = new Date().toISOString()
+      setTickets(prev => prev.map(t => {
+        if (t.id !== id) return t
+        let newReply = t.admin_reply
+        if (updates.admin_reply !== undefined) {
+          const prev2 = (t.admin_reply ?? '').trim()
+          newReply = prev2
+            ? `${prev2}\n\n---[${now}]---\n${updates.admin_reply.trim()}`
+            : updates.admin_reply.trim()
+        }
+        return { ...t, ...(updates.status ? { status: updates.status } : {}), admin_reply: newReply, updated_at: now }
+      }))
       if (updates.admin_reply !== undefined) {
         setAdminReply(prev => { const next = { ...prev }; delete next[id]; return next })
       }
@@ -1607,22 +1618,35 @@ export default function AdminPage() {
                                   </div>
                                 </div>
 
-                                {/* Admin reply — right bubble */}
-                                {t.admin_reply && (
-                                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
-                                    <div style={{ maxWidth: '78%' }}>
-                                      <div style={{ fontSize: '0.62rem', color: C.dim, marginBottom: '0.25rem', textAlign: 'right' }}>
-                                        Admin · {t.updated_at ? new Date(t.updated_at).toLocaleString('pt-BR') : ''}
+                                {/* Admin replies — multiple bubbles parsed from history */}
+                                {t.admin_reply && (() => {
+                                  // Parse history: entries split by \n\n---[ISO]---\n
+                                  const raw = t.admin_reply
+                                  const parts: { text: string; ts?: string }[] = []
+                                  const segments = raw.split(/\n\n---\[([^\]]+)\]---\n/)
+                                  // segments: [text0, ts1, text1, ts2, text2, ...]
+                                  parts.push({ text: segments[0].trim() })
+                                  for (let i = 1; i < segments.length; i += 2) {
+                                    const ts = segments[i]
+                                    const txt = (segments[i + 1] ?? '').trim()
+                                    if (txt) parts.push({ text: txt, ts })
+                                  }
+                                  return parts.filter(p => p.text).map((p, pi) => (
+                                    <div key={pi} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+                                      <div style={{ maxWidth: '78%' }}>
+                                        <div style={{ fontSize: '0.62rem', color: C.dim, marginBottom: '0.25rem', textAlign: 'right' }}>
+                                          Admin {p.ts ? '· ' + new Date(p.ts).toLocaleString('pt-BR') : pi === parts.length - 1 && t.updated_at ? '· ' + new Date(t.updated_at).toLocaleString('pt-BR') : ''}
+                                        </div>
+                                        <div style={{ background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: '10px 0 10px 10px', padding: '0.65rem 0.9rem', fontSize: '0.82rem', color: C.primary, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
+                                          {p.text}
+                                        </div>
                                       </div>
-                                      <div style={{ background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: '10px 0 10px 10px', padding: '0.65rem 0.9rem', fontSize: '0.82rem', color: C.primary, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
-                                        {t.admin_reply}
+                                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
+                                        A
                                       </div>
                                     </div>
-                                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
-                                      A
-                                    </div>
-                                  </div>
-                                )}
+                                  ))
+                                })()}
                               </div>
 
                               {/* Reply input */}
@@ -1631,7 +1655,7 @@ export default function AdminPage() {
                                   value={adminReply[t.id] ?? ''}
                                   onChange={e => setAdminReply(p => ({ ...p, [t.id]: e.target.value }))}
                                   onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && adminReply[t.id]?.trim()) { e.preventDefault(); updateTicket(t.id, { admin_reply: adminReply[t.id].trim() }) } }}
-                                  placeholder={t.admin_reply ? 'Editar resposta... (Ctrl+Enter para enviar)' : 'Escreva uma resposta... (Ctrl+Enter para enviar)'}
+                                  placeholder={t.admin_reply ? 'Adicionar nova resposta... (Ctrl+Enter para enviar)' : 'Escreva uma resposta... (Ctrl+Enter para enviar)'}
                                   rows={2}
                                   style={{ flex: 1, marginTop: '0.65rem', padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
                                 />
@@ -1639,7 +1663,7 @@ export default function AdminPage() {
                                   disabled={ticketUpdating === t.id || !adminReply[t.id]?.trim()}
                                   onClick={() => updateTicket(t.id, { admin_reply: adminReply[t.id]!.trim() })}
                                   style={{ marginTop: '0.65rem', padding: '0.5rem 1rem', background: adminReply[t.id]?.trim() ? C.primaryBg : C.vvdim, border: `1px solid ${adminReply[t.id]?.trim() ? C.borderStrong : C.border}`, color: adminReply[t.id]?.trim() ? C.primary : C.dim, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: adminReply[t.id]?.trim() ? 'pointer' : 'not-allowed', alignSelf: 'flex-end', whiteSpace: 'nowrap' as const }}>
-                                  {ticketUpdating === t.id ? '...' : adminReply[t.id]?.trim() ? '➤ Enviar' : t.admin_reply ? '✏ Editar' : '➤ Enviar'}
+                                  {ticketUpdating === t.id ? '...' : '➤ Responder'}
                                 </button>
                               </div>
                             </div>

@@ -82,6 +82,13 @@ export default function DashboardPage() {
   const [activeNotif, setActiveNotif] = useState<AdminNotif | null>(null)
   const [notifCountdown, setNotifCountdown] = useState(0)
   const notifTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const notifLoadedRef = useRef(false)
+  // Suggestion form
+  const [showSugg, setShowSugg] = useState(false)
+  const [suggType, setSuggType] = useState<'suggestion' | 'bug'>('suggestion')
+  const [suggMsg, setSuggMsg] = useState('')
+  const [suggSending, setSuggSending] = useState(false)
+  const [suggSent, setSuggSent] = useState(false)
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
 
   function periodDates() {
@@ -103,20 +110,20 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
+    // Use sessionStorage so notifications re-appear on every new dashboard session/entry
     try {
-      const seen = JSON.parse(localStorage.getItem('sk-dismissed-notifs') || '[]')
+      const seen = JSON.parse(sessionStorage.getItem('sk-dismissed-notifs') || '[]')
       setDismissedNotifs(new Set(seen))
     } catch {}
 
-    const fetchNotifs = () => {
+    // Load notifications once on entry
+    if (!notifLoadedRef.current) {
+      notifLoadedRef.current = true
       fetch('/api/me/notifications')
         .then(r => r.ok ? r.json() : [])
         .then((d: AdminNotif[]) => { if (Array.isArray(d)) setNotifications(d) })
         .catch(() => {})
     }
-    fetchNotifs()
-    const iv = setInterval(fetchNotifs, 15000) // poll every 15s
-    return () => clearInterval(iv)
   }, [])
 
   // Show notifications one at a time as a modal
@@ -146,9 +153,24 @@ export default function DashboardPage() {
     setActiveNotif(null)
     setDismissedNotifs(prev => {
       const next = new Set(prev); next.add(id)
-      try { localStorage.setItem('sk-dismissed-notifs', JSON.stringify([...next])) } catch {}
+      try { sessionStorage.setItem('sk-dismissed-notifs', JSON.stringify([...next])) } catch {}
       return next
     })
+  }
+
+  async function submitSuggestion() {
+    if (!suggMsg.trim()) return
+    setSuggSending(true)
+    try {
+      const res = await fetch('/api/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: suggType, message: suggMsg.trim() }),
+      })
+      if (res.ok) { setSuggSent(true); setSuggMsg('') }
+    } catch { /* ignore */ } finally {
+      setSuggSending(false)
+    }
   }
 
   useEffect(() => {
@@ -555,6 +577,68 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      {/* Suggestion / bug report floating button */}
+      <button
+        onClick={() => { setShowSugg(true); setSuggSent(false) }}
+        title="Enviar sugestão ou reportar bug"
+        style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(155,48,255,0.45)', zIndex: 200, fontSize: '1.4rem' }}>
+        💬
+      </button>
+
+      {/* Suggestion modal */}
+      {showSugg && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowSugg(false) }}>
+          <div style={{ background: '#111219', border: '1px solid rgba(155,48,255,0.25)', borderRadius: '20px', padding: '2rem', maxWidth: '460px', width: '100%', boxShadow: '0 0 60px rgba(155,48,255,0.15), 0 20px 40px rgba(0,0,0,0.7)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: C.text }}>Enviar feedback</div>
+                <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: '0.15rem' }}>Sugestões e bugs vão direto para o admin</div>
+              </div>
+              <button onClick={() => setShowSugg(false)} style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem', lineHeight: 1 }}>✕</button>
+            </div>
+
+            {suggSent ? (
+              <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✅</div>
+                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: C.text, marginBottom: '0.4rem' }}>Obrigado pelo feedback!</div>
+                <div style={{ fontSize: '0.78rem', color: C.muted, marginBottom: '1.5rem' }}>Sua mensagem foi enviada ao admin.</div>
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                  <button onClick={() => setSuggSent(false)} style={{ padding: '0.6rem 1.2rem', background: 'rgba(155,48,255,0.1)', border: '1px solid rgba(155,48,255,0.3)', borderRadius: '10px', color: C.primary, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>Enviar outro</button>
+                  <button onClick={() => setShowSugg(false)} style={{ padding: '0.6rem 1.2rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: C.muted, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Fechar</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Type selector */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                  {(['suggestion', 'bug'] as const).map(t => (
+                    <button key={t} onClick={() => setSuggType(t)}
+                      style={{ flex: 1, padding: '0.55rem', borderRadius: '10px', border: `1px solid ${suggType === t ? 'rgba(155,48,255,0.45)' : 'rgba(255,255,255,0.07)'}`, background: suggType === t ? 'rgba(155,48,255,0.12)' : 'transparent', color: suggType === t ? C.primary : C.muted, fontWeight: suggType === t ? 700 : 500, fontSize: '0.85rem', cursor: 'pointer' }}>
+                      {t === 'suggestion' ? '💡 Sugestão' : '🐛 Bug'}
+                    </button>
+                  ))}
+                </div>
+                {/* Message */}
+                <textarea
+                  value={suggMsg}
+                  onChange={e => setSuggMsg(e.target.value)}
+                  placeholder={suggType === 'suggestion' ? 'Descreva sua sugestão de melhoria...' : 'Descreva o bug encontrado (como reproduzir, o que era esperado)...'}
+                  rows={5}
+                  style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(155,48,255,0.2)', borderRadius: '10px', color: C.text, fontSize: '0.85rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', lineHeight: 1.6 }}
+                />
+                <button
+                  disabled={suggSending || !suggMsg.trim()}
+                  onClick={submitSuggestion}
+                  style={{ marginTop: '0.75rem', width: '100%', padding: '0.75rem', background: suggMsg.trim() ? 'linear-gradient(135deg,#9b30ff,#6b1fc2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${suggMsg.trim() ? 'rgba(155,48,255,0.5)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '10px', color: suggMsg.trim() ? '#fff' : C.vdim, fontWeight: 700, fontSize: '0.9rem', cursor: suggMsg.trim() ? 'pointer' : 'not-allowed' }}>
+                  {suggSending ? 'Enviando...' : '➤ Enviar'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

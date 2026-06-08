@@ -8,13 +8,22 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  // Fetch all invites and approved waitlist users in parallel
-  const [{ data: invites, error: invErr }, { data: waitlist }] = await Promise.all([
-    db.from('invites').select('*').order('created_at', { ascending: false }),
-    db.from('waitlist').select('id,platform_username,invite_quota').eq('status', 'approved').eq('platform', 'Twitch'),
-  ])
-
+  // Fetch all invites
+  const { data: invites, error: invErr } = await db.from('invites').select('*').order('created_at', { ascending: false })
   if (invErr) return NextResponse.json({ error: invErr.message }, { status: 500 })
+
+  // Fetch approved waitlist users — try with invite_quota first, fall back without
+  let waitlist: { id: string; platform_username: string; invite_quota?: number }[] = []
+  try {
+    const { data, error } = await db.from('waitlist').select('id,platform_username,invite_quota').eq('status', 'approved').order('platform_username', { ascending: true })
+    if (!error) {
+      waitlist = data ?? []
+    } else if (error.code === '42703') {
+      // invite_quota column doesn't exist yet — fetch without it
+      const { data: d2 } = await db.from('waitlist').select('id,platform_username').eq('status', 'approved').order('platform_username', { ascending: true })
+      waitlist = (d2 ?? []).map(u => ({ ...u, invite_quota: 0 }))
+    }
+  } catch { /* ignore */ }
 
   // Try to look up Twitch IDs (inviter_id) for each invite via user_tokens
   let tokenMap: Record<string, string> = {} // user_id → twitch_username
@@ -27,7 +36,7 @@ export async function GET(req: NextRequest) {
     }
   } catch { /* user_tokens may not exist */ }
 
-  const quotas = (waitlist ?? []).map(u => ({
+  const quotas = waitlist.map(u => ({
     platform_username: u.platform_username,
     quota: (u as Record<string, unknown>).invite_quota as number ?? 0,
   }))
