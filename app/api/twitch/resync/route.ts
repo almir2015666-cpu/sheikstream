@@ -15,15 +15,19 @@ const DEFAULT_EVENT_COMMANDS = [
   { trigger: 'event:twitch:bits',    resposta: 'Valeu pelos $valor bits, $user! $msg' },
 ]
 
-// All webhook subscriptions use app access token (Twitch requirement for webhook transport)
+// Most webhook subscriptions use app access token
 const APP_TOKEN_SUBS = [
   { type: 'channel.subscribe',            version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.subscription.gift',    version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.subscription.message', version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.cheer',               version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.raid',                version: '1', cond: (id: string) => ({ to_broadcaster_user_id: id }) },
-  { type: 'channel.chat.message',        version: '1', cond: (id: string) => ({ broadcaster_user_id: id, user_id: id }) },
   { type: 'channel.follow',             version: '2', cond: (id: string) => ({ broadcaster_user_id: id, moderator_user_id: id }) },
+]
+
+// channel.chat.message requires the broadcaster's user access token
+const USER_TOKEN_SUBS = [
+  { type: 'channel.chat.message', version: '1', cond: (id: string) => ({ broadcaster_user_id: id, user_id: id }) },
 ]
 
 async function getAppToken(): Promise<string> {
@@ -111,7 +115,22 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 4. Register user-token subscriptions
+  // 4. Register user-token subscriptions (channel.chat.message needs broadcaster's user token)
+  const { data: tokRow } = await db.from('user_tokens').select('twitch_token').eq('user_id', user.id).single()
+  const userToken = tokRow?.twitch_token
+  if (userToken) {
+    for (const sub of USER_TOKEN_SUBS) {
+      try {
+        const r = await registerSub(sub.type, sub.version, sub.cond(user.id), userToken, appUrl, secret)
+        subResults[sub.type] = r.ok ? (r.status === 409 ? 'already_exists' : 'registered') : `error_${r.status}: ${r.body ?? ''}`
+      } catch (e) {
+        subResults[sub.type] = `exception: ${e}`
+      }
+    }
+  } else {
+    subResults['channel.chat.message'] = 'skipped: no user token stored'
+  }
+
   // 5. Seed missing event commands
   const seeded: string[] = []
   for (const cmd of DEFAULT_EVENT_COMMANDS) {
