@@ -17,19 +17,13 @@ export async function POST(req: NextRequest) {
   const ts       = req.headers.get('Twitch-Eventsub-Message-Timestamp') ?? ''
   const sig      = req.headers.get('Twitch-Eventsub-Message-Signature') ?? ''
 
-  // Log incoming request so we can confirm Twitch reaches this endpoint
-  console.log('[eventsub] POST received:', msgType || 'unknown', 'bodyLen:', body.length)
-  const { error: diagErr } = await getSupabaseAdmin().from('twitch_events').insert({
-    broadcaster_id: '_webhook',
-    event_type: `incoming:${msgType || 'unknown'}`,
-    event_data: { msgId: msgId.slice(0, 16), sig: sig.slice(0, 20), bodyLen: body.length },
-  })
-  if (diagErr) console.error('[eventsub] diagnostic insert failed:', diagErr.message, diagErr.code)
+  console.log('[eventsub] incoming:', msgType || 'unknown', 'bodyLen:', body.length, 'msgId:', msgId.slice(0, 8))
 
-  // Respond to verification challenge immediately — HMAC check applies to notifications only
+  // Respond to verification challenge immediately (before any async work)
   if (msgType === 'webhook_callback_verification') {
     try {
       const payload = JSON.parse(body)
+      console.log('[eventsub] challenge received — responding')
       return new NextResponse(payload.challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } })
     } catch {
       return new NextResponse('', { status: 200 })
