@@ -397,10 +397,63 @@ export default function DashboardPage() {
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <span style={{ color: C.primary }}>↗</span> Receita líquida por plataforma
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '130px', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ fontSize: '2.5rem', opacity: 0.1 }}>↗</div>
-              <div style={{ fontSize: '0.8rem', color: C.vdim }}>Sem receita registrada ainda</div>
-            </div>
+            {(() => {
+              const livepixNet = (stats?.livepix_total ?? 0) * 0.95
+              const allPlats = [
+                { label: 'Livepix', color: '#ff69b4', value: livepixNet },
+                { label: 'Twitch',  color: '#9147ff', value: 0 },
+                { label: 'YouTube', color: '#ff4444', value: 0 },
+              ]
+              const total = allPlats.reduce((s, p) => s + p.value, 0)
+              const r = 46, cx = 58, cy = 58
+              const circ = 2 * Math.PI * r
+              let acc = 0
+              const segs = allPlats.map(p => {
+                const arc = total > 0 ? (p.value / total) * circ : 0
+                const s = { ...p, arc, off: acc }
+                acc += arc
+                return s
+              })
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                  <svg width={116} height={116} style={{ flexShrink: 0 }}>
+                    <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={15} />
+                    <g transform={`rotate(-90 ${cx} ${cy})`}>
+                      {total > 0 && segs.filter(s => s.value > 0).map(s => (
+                        <circle key={s.label} cx={cx} cy={cy} r={r}
+                          fill="none" stroke={s.color} strokeWidth={15}
+                          strokeDasharray={`${s.arc} ${circ}`}
+                          strokeDashoffset={-s.off}
+                        />
+                      ))}
+                    </g>
+                    {total > 0 ? (
+                      <>
+                        <text x={cx} y={cx - 5} textAnchor="middle" fill="#e8e6f8" fontSize="10" fontWeight="800" fontFamily="inherit">{fmtBRL(total)}</text>
+                        <text x={cx} y={cx + 9} textAnchor="middle" fill="rgba(232,230,248,0.3)" fontSize="8.5" fontFamily="inherit">líquido</text>
+                      </>
+                    ) : (
+                      <text x={cx} y={cx + 4} textAnchor="middle" fill="rgba(232,230,248,0.15)" fontSize="9" fontFamily="inherit">R$ 0,00</text>
+                    )}
+                  </svg>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1 }}>
+                    {allPlats.map(p => (
+                      <div key={p.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0, opacity: p.value > 0 ? 1 : 0.2 }} />
+                        <span style={{ fontSize: '0.75rem', color: p.value > 0 ? C.muted : C.vdim, flex: 1 }}>{p.label}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: p.value > 0 ? C.text : C.vdim }}>{fmtBRL(p.value)}</span>
+                        <span style={{ fontSize: '0.68rem', color: C.vdim, minWidth: 30, textAlign: 'right' }}>
+                          {total > 0 ? `${Math.round(p.value / total * 100)}%` : '—'}
+                        </span>
+                      </div>
+                    ))}
+                    {total === 0 && (
+                      <div style={{ fontSize: '0.72rem', color: C.vdim, marginTop: '0.2rem' }}>Sincronize o Livepix para ver dados</div>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
 
