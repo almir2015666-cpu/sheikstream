@@ -356,6 +356,23 @@ create index if not exists twitch_events_broadcaster_idx on public.twitch_events
 create index if not exists twitch_events_type_idx on public.twitch_events(event_type);
 
 -- ==========================================
+-- TWITCH_CHEERS  (histórico de bits/cheers por streamer)
+-- ==========================================
+create table if not exists public.twitch_cheers (
+  id             uuid primary key default gen_random_uuid(),
+  broadcaster_id text not null,
+  username       text,
+  bits           integer not null default 0,
+  message        text,
+  is_anonymous   boolean default false,
+  date           date not null default current_date,
+  created_at     timestamptz default now()
+);
+alter table public.twitch_cheers enable row level security;
+create index if not exists twitch_cheers_broadcaster_idx on public.twitch_cheers(broadcaster_id);
+create index if not exists twitch_cheers_date_idx on public.twitch_cheers(date);
+
+-- ==========================================
 -- SORTEIO_TICKETS  (tickets de participantes em sorteios)
 -- ==========================================
 create table if not exists public.sorteio_tickets (

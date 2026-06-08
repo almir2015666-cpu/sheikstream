@@ -32,7 +32,7 @@ function Toggle({ on, onChange, size = 'md' }: { on: boolean; onChange: (v: bool
 // All known automatic event triggers (NOT user-typed commands)
 const KNOWN_EVENT_TRIGGERS = new Set([
   'event:twitch:sub', 'event:twitch:giftsub', 'event:twitch:resub', 'event:twitch:prime',
-  'event:twitch:follow', 'donation:livepix', 'donation:paypal',
+  'event:twitch:follow', 'event:twitch:bits', 'donation:livepix', 'donation:paypal',
   'event:kick:follow', 'event:kick:giftsub', 'event:kick:sub',
   'event:youtube:member', 'event:youtube:giftmember',
 ])
@@ -110,6 +110,7 @@ const DEFAULTS: Cmd[] = [
   { id: 'evt-kick-sub',           label: 'Sub Kick',            trigger: 'event:kick:sub',            resposta: 'Obrigado pelo sub na Kick, $user! Voce ganhou $tickets ticket(s).',             cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Kick' },
   { id: 'evt-youtube-member',     label: 'Membro YouTube',      trigger: 'event:youtube:member',      resposta: 'Obrigado por virar membro, $user! Voce ganhou $tickets ticket(s).',             cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Youtube' },
   { id: 'evt-youtube-giftmember', label: 'Gift member YouTube', trigger: 'event:youtube:giftmember',  resposta: 'Obrigado $user por presentear $count membro(s) no YouTube!',                   cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Youtube' },
+  { id: 'evt-twitch-bits',       label: 'Bits Twitch',         trigger: 'event:twitch:bits',         resposta: 'Valeu pelos $valor bits, $user! $msg',                                          cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
 ]
 
 export default function ComandosPage() {
@@ -245,9 +246,9 @@ export default function ComandosPage() {
       })
       setSaveOk(true)
       setSaving(false)
-      // Reload from server to guarantee list shows persisted data
-      reloadFromDB().catch(() => {})
-      setTimeout(() => { setForm(emptyForm); setCreating(false); setEditingId(null); setSaveOk(false) }, 1200)
+      // Wait for reload before closing so the list reflects the actual DB state
+      await reloadFromDB().catch(() => {})
+      setTimeout(() => { setForm(emptyForm); setCreating(false); setEditingId(null); setSaveOk(false) }, 900)
     } catch (err) {
       setSaveErr('Erro de conexão: ' + String(err))
       setSaving(false)

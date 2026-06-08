@@ -16,6 +16,7 @@ const lbl: React.CSSProperties = { fontSize: '0.65rem', fontWeight: 700, color: 
 
 type TierConfig = { tier1_name: string; tier1_value: number; tier2_name: string; tier2_value: number; tier3_name: string; tier3_value: number }
 type Sub = { id: string; broadcaster_id: string; username: string; tier: string; is_gift: boolean; gifted_by: string | null; sorteio_id: string | null; tickets: number; date: string; created_at: string }
+type Cheer = { id: string; broadcaster_id: string; username: string | null; bits: number; message: string | null; is_anonymous: boolean; date: string; created_at: string }
 type Sorteio = { id: string; title: string; type: string; status: string }
 type TwitchVideo = { id: string; title: string; url: string; created_at: string; duration: string; view_count: number; thumbnail_url: string }
 
@@ -55,6 +56,7 @@ export default function TwitchSubsPage() {
   const [customFrom, setCustomFrom] = useState(daysAgoStr(30))
   const [customTo, setCustomTo] = useState(today())
   const [subs, setSubs] = useState<Sub[]>([])
+  const [cheers, setCheers] = useState<Cheer[]>([])
   const [tiers, setTiers] = useState<TierConfig>({ tier1_name: 'Tier 1', tier1_value: 9.9, tier2_name: 'Tier 2', tier2_value: 25.9, tier3_name: 'Tier 3', tier3_value: 49.9 })
   const [tiersEdit, setTiersEdit] = useState<TierConfig>(tiers)
   const [sorteios, setSorteios] = useState<Sorteio[]>([])
@@ -102,14 +104,19 @@ export default function TwitchSubsPage() {
     const subsUrl = useCustom
       ? `/api/twitch/subs?from=${customFrom}&to=${customTo}`
       : `/api/twitch/subs?days=${days}`
-    const [subsRes, tiersRes, sorteiosRes, meRes, statsRes] = await Promise.all([
+    const cheersUrl = useCustom
+      ? `/api/twitch/cheers?from=${customFrom}&to=${customTo}`
+      : `/api/twitch/cheers?days=${days}`
+    const [subsRes, cheersRes, tiersRes, sorteiosRes, meRes, statsRes] = await Promise.all([
       fetch(subsUrl).then(r => r.json()).catch(() => []),
+      fetch(cheersUrl).then(r => r.json()).catch(() => []),
       fetch('/api/twitch/tier-config').then(r => r.json()).catch(() => ({})),
       fetch('/api/sorteios').then(r => r.json()).catch(() => []),
       fetch('/api/me').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/twitch/channel-stats').then(r => r.ok ? r.json() : null).catch(() => null),
     ])
     setSubs(Array.isArray(subsRes) ? subsRes : [])
+    setCheers(Array.isArray(cheersRes) ? cheersRes : [])
     if (tiersRes && !tiersRes.error) { setTiers(tiersRes); setTiersEdit(tiersRes) }
     setSorteios(Array.isArray(sorteiosRes) ? sorteiosRes.filter((s: Sorteio) => s.status === 'active') : [])
     setUser(meRes)
@@ -157,6 +164,16 @@ export default function TwitchSubsPage() {
   const totalLiquid = totalBruto * 0.5
   const totalUSD = totalLiquid / EXCHANGE
   const pctPayout = Math.min(100, (totalUSD / PAYOUT_THRESHOLD) * 100)
+
+  const totalBits = cheers.reduce((acc, c) => acc + c.bits, 0)
+  const bitsUSD = totalBits * 0.01
+  const bitsBRL = bitsUSD * EXCHANGE
+  const uniqueCheerers = new Set(cheers.filter(c => !c.is_anonymous && c.username).map(c => c.username)).size
+  const cheersByUser = cheers.filter(c => c.username).reduce<Record<string, number>>((acc, c) => {
+    acc[c.username!] = (acc[c.username!] ?? 0) + c.bits
+    return acc
+  }, {})
+  const topCheerers = Object.entries(cheersByUser).sort((a, b) => b[1] - a[1]).slice(0, 3)
 
   async function saveTiers() {
     setSavingTiers(true)
@@ -296,7 +313,7 @@ export default function TwitchSubsPage() {
       )}
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
         {[
           { label: 'Total subs', value: String(totalSubs), sub: null },
           { label: 'Gift subs', value: String(giftSubs), sub: 'total geral' },
@@ -318,6 +335,45 @@ export default function TwitchSubsPage() {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Bits */}
+      <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 700, fontSize: '0.9rem' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Bits recebidos
+          </div>
+          <span style={{ fontSize: '0.7rem', color: C.dim }}>período selecionado</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+          <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+            <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Total bits</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f59e0b' }}>{totalBits.toLocaleString('pt-BR')}</div>
+          </div>
+          <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+            <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Valor estimado</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: C.accent }}>{fmt(bitsBRL)}</div>
+            <div style={{ fontSize: '0.65rem', color: C.vdim, marginTop: '0.15rem' }}>{fmtUSD(bitsUSD)} aprox.</div>
+          </div>
+          <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+            <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Cheers</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: C.text }}>{cheers.length}</div>
+            <div style={{ fontSize: '0.65rem', color: C.vdim, marginTop: '0.15rem' }}>{uniqueCheerers} únicos</div>
+          </div>
+          <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+            <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.35rem' }}>Top cheerers</div>
+            {topCheerers.length === 0
+              ? <div style={{ fontSize: '0.8rem', color: C.vdim }}>Nenhum ainda</div>
+              : topCheerers.map(([name, bits], i) => (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: i < topCheerers.length - 1 ? '0.3rem' : 0 }}>
+                  <span style={{ fontSize: '0.78rem', color: C.text, fontWeight: i === 0 ? 700 : 400 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} {name}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 700 }}>{bits.toLocaleString('pt-BR')}</span>
+                </div>
+              ))
+            }
+          </div>
+        </div>
       </div>
 
       {/* Streamer + Repasse */}

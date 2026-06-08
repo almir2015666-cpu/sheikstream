@@ -215,7 +215,31 @@ async function handleNotification(payload: { subscription: { type: string }; eve
   if (eventType === 'channel.cheer') {
     const bits = (event.bits as number) ?? 0
     const username = ((event.user_name ?? '') as string)
+    const isAnon = (event.is_anonymous as boolean) ?? false
+    const cheerMsg = ((event.message as string) ?? '')
     const now = new Date()
+
+    // Fire chat command to thank the cheerer
+    fireEventCommand(broadcasterId, 'event:twitch:bits', {
+      user: username || 'Anônimo',
+      valor: String(bits),
+      msg: cheerMsg,
+    }).catch(e => console.error('[eventsub] bits cmd error:', e))
+
+    // Track in twitch_cheers
+    ;(async () => {
+      try {
+        const r = await db.from('twitch_cheers').insert({
+          broadcaster_id: broadcasterId,
+          username: isAnon ? null : (username || null),
+          bits,
+          message: cheerMsg || null,
+          is_anonymous: isAnon,
+          date: now.toISOString().split('T')[0],
+        })
+        if (r.error) console.warn('[eventsub] twitch_cheers insert skipped:', r.error.message)
+      } catch { /* ignore */ }
+    })()
 
     if (bits >= 100) {
       const units = Math.floor(bits / 100)

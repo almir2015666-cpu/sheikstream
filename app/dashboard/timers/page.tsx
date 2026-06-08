@@ -116,7 +116,6 @@ function TimerModal({
   saving,
   onSave,
   onClose,
-  overlayUrl,
 }: {
   editingId: string | null
   form: FormState
@@ -126,10 +125,7 @@ function TimerModal({
   saving: boolean
   onSave: () => void
   onClose: () => void
-  overlayUrl: string
-})
- {
-  const [copiedOverlay, setCopiedOverlay] = useState(false)
+}) {
 
   const isConnected = (key: string) => {
     if (key === 'twitch') return !!connections.twitch
@@ -346,31 +342,6 @@ function TimerModal({
           </div>
         </div>
 
-        {/* Overlay OBS */}
-        {overlayUrl && (
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 8 }}>
-              URL DO OVERLAY (OBS)
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#1f2937', border: '1px solid #374151', borderRadius: 8, padding: '8px 12px' }}>
-              <code style={{ flex: 1, fontSize: 11, color: '#818cf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {overlayUrl}
-              </code>
-              <button
-                type="button"
-                onClick={async () => {
-                  await navigator.clipboard.writeText(overlayUrl)
-                  setCopiedOverlay(true)
-                  setTimeout(() => setCopiedOverlay(false), 2000)
-                }}
-                style={{ background: copiedOverlay ? '#22c55e22' : '#374151', color: copiedOverlay ? '#22c55e' : '#94a3b8', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}
-              >
-                {copiedOverlay ? '✓ Copiado' : 'Copiar'}
-              </button>
-            </div>
-            <p style={{ margin: '5px 0 0', fontSize: 11, color: '#475569' }}>Cole esta URL em uma Browser Source no OBS.</p>
-          </div>
-        )}
 
         {/* Timer ativo */}
         <div
@@ -446,8 +417,6 @@ export default function TimersPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [connections, setConnections] = useState<UserConnections>({})
   const [userId, setUserId] = useState('')
-  const [copied, setCopied] = useState(false)
-
   const fetchTimers = useCallback(async () => {
     try {
       const res = await fetch('/api/timers')
@@ -534,10 +503,6 @@ export default function TimersPage() {
     })
   }
 
-  const overlayUrl = userId
-    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://www.sheikstream.com.br'}/overlay/timer/${userId}`
-    : ''
-
   return (
     <div style={{ padding: '32px 24px', maxWidth: 860, margin: '0 auto' }}>
       {/* Header */}
@@ -590,45 +555,6 @@ export default function TimersPage() {
         ))}
       </div>
 
-      {/* Overlay URL */}
-      {overlayUrl && (
-        <div
-          style={{
-            background: '#111827',
-            border: '1px solid #1f2937',
-            borderRadius: 10,
-            padding: '14px 18px',
-            marginBottom: 24,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            flexWrap: 'wrap',
-          }}
-        >
-          <span style={{ fontSize: 12, color: '#64748b', flexShrink: 0 }}>Overlay OBS:</span>
-          <code style={{ flex: 1, fontSize: 11, color: '#818cf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {overlayUrl}
-          </code>
-          <button
-            onClick={async () => {
-              await navigator.clipboard.writeText(overlayUrl)
-              setCopied(true)
-              setTimeout(() => setCopied(false), 2000)
-            }}
-            style={{
-              background: copied ? '#22c55e' : '#1f2937',
-              color: '#f1f5f9',
-              border: 'none',
-              borderRadius: 6,
-              padding: '5px 12px',
-              fontSize: 12,
-              cursor: 'pointer',
-            }}
-          >
-            {copied ? 'Copiado!' : 'Copiar'}
-          </button>
-        </div>
-      )}
 
       {/* List */}
       {loading ? (
@@ -757,7 +683,6 @@ export default function TimersPage() {
           saving={saving}
           onSave={handleSave}
           onClose={() => setShowModal(false)}
-          overlayUrl={overlayUrl}
         />
       )}
     </div>
