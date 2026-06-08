@@ -102,15 +102,18 @@ export async function GET(req: NextRequest) {
   results.cheersTableExists = !cheerErr
   results.cheersTableError = cheerErr?.message ?? null
 
-  // 6. Recent twitch_events log
+  // 6. Recent twitch_events log (own events + webhook diagnostic)
   const { data: events, error: eventsErr } = await db
     .from('twitch_events')
-    .select('event_type')
-    .eq('broadcaster_id', user.id)
-    .limit(10)
+    .select('broadcaster_id, event_type, event_data')
+    .or(`broadcaster_id.eq.${user.id},broadcaster_id.eq._webhook`)
+    .limit(20)
 
   results.recentEvents = events ?? []
   results.eventsTableError = eventsErr?.message ?? null
+
+  // 7. Webhook callback URL being used
+  results.webhookUrl = `${process.env.APP_URL ?? 'https://sheikstream.com.br'}/api/twitch/eventsub`
 
   return NextResponse.json(results)
 }

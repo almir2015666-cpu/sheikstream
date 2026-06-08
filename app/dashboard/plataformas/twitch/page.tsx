@@ -461,7 +461,7 @@ export default function TwitchSubsPage() {
                   }
                 </div>
 
-                {/* DB tables */}
+                {/* DB tables + webhook log */}
                 <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
                   <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Tabelas do banco</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.76rem' }}>
@@ -471,11 +471,29 @@ export default function TwitchSubsPage() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                       <span style={{ color: !eventsTableError ? '#22c55e' : '#f59e0b', fontWeight: 700 }}>{!eventsTableError ? '✓' : '!'}</span>
-                      <span style={{ color: C.text }}>twitch_events {eventsTableError ? `— ${eventsTableError}` : `(${recentEvents.length} recentes)`}</span>
+                      <span style={{ color: C.text }}>twitch_events {eventsTableError ? `— ${eventsTableError}` : `(${recentEvents.length} entradas)`}</span>
                     </div>
                     {!cheersTableExists && (
                       <div style={{ marginTop: '0.4rem', padding: '0.4rem 0.6rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', fontSize: '0.71rem', color: '#ef4444' }}>
                         Execute o SQL do supabase-schema.sql no Supabase SQL Editor para criar a tabela twitch_cheers.
+                      </div>
+                    )}
+                    <div style={{ marginTop: '0.4rem', fontSize: '0.68rem', color: C.dim }}>
+                      URL webhook: <span style={{ color: C.vdim, wordBreak: 'break-all' }}>{String(d.webhookUrl ?? '?')}</span>
+                    </div>
+                    {recentEvents.length > 0 && (
+                      <div style={{ marginTop: '0.4rem' }}>
+                        <div style={{ fontSize: '0.67rem', color: C.dim, marginBottom: '0.3rem' }}>Últimas entradas:</div>
+                        {(recentEvents as Array<{ broadcaster_id: string; event_type: string }>).map((e, i) => (
+                          <div key={i} style={{ fontSize: '0.68rem', color: e.broadcaster_id === '_webhook' ? '#f59e0b' : C.dim, marginBottom: '0.15rem' }}>
+                            {e.broadcaster_id === '_webhook' ? '⚡ ' : ''}{e.event_type}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {recentEvents.length === 0 && !eventsTableError && (
+                      <div style={{ marginTop: '0.3rem', fontSize: '0.71rem', color: '#ef4444' }}>
+                        Nenhuma entrada — a Twitch não está chegando no webhook (URL errada ou rota inacessível)
                       </div>
                     )}
                   </div>
