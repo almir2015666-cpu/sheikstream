@@ -385,12 +385,12 @@ export default function TwitchSubsPage() {
                       <span style={{ color: tv?.valid ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{tv?.valid ? '✓' : '✗'}</span>
                       <span style={{ color: C.text }}>Token válido {tv?.valid ? `(${String(tv.login)})` : `— ${String(tv?.error ?? 'expirado')}`}</span>
                     </div>
-                    {tv?.valid && (
+                    {tv?.valid === true && (
                       <div style={{ fontSize: '0.7rem', color: C.dim, marginTop: '0.2rem' }}>
                         Escopos: {(tv.scopes as string[] | undefined)?.join(', ') ?? '?'}
                       </div>
                     )}
-                    {!tv?.valid && (
+                    {tv?.valid !== true && (
                       <div style={{ marginTop: '0.4rem', padding: '0.4rem 0.6rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', fontSize: '0.71rem', color: '#ef4444' }}>
                         Reconecte a Twitch em Conexões para renovar o token.
                       </div>
