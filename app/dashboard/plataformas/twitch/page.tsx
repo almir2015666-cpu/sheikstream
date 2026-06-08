@@ -196,14 +196,16 @@ export default function TwitchSubsPage() {
   const totalBruto = subs.reduce((acc, s) => acc + tierValue(s.tier, tiers), 0)
   const totalLiquid = totalBruto * 0.5
 
-  const totalBitsDB = cheers.reduce((acc, c) => acc + c.bits, 0)
-  // Prefer Twitch API historical total (includes pre-EventSub bits), fallback to DB
-  const totalBits = Math.max(totalBitsDB, channelStats?.bits_total_historical ?? 0)
+  const totalBits = cheers.reduce((acc, c) => acc + c.bits, 0)  // respects period filter
+  const bitsHistorical = channelStats?.bits_total_historical ?? 0  // all-time from Twitch API
   const bitsUSD = totalBits * 0.01
   const bitsBRL = bitsUSD * EXCHANGE
+  const bitsHistoricalUSD = bitsHistorical * 0.01
+  const bitsHistoricalBRL = bitsHistoricalUSD * EXCHANGE
 
-  // Combined repasse: 50% of subs + bits ($0.01/bit, no split)
-  const totalUSD = totalLiquid / EXCHANGE + bitsUSD
+  // Repasse uses historical bits (all-time) for payout threshold calculation
+  const effectiveBitsUSD = bitsHistorical > 0 ? bitsHistoricalUSD : bitsUSD
+  const totalUSD = totalLiquid / EXCHANGE + effectiveBitsUSD
   const totalLiquidAll = totalUSD * EXCHANGE
   const pctPayout = Math.min(100, (totalUSD / PAYOUT_THRESHOLD) * 100)
   const uniqueCheerers = new Set(cheers.filter(c => !c.is_anonymous && c.username).map(c => c.username)).size
@@ -581,6 +583,12 @@ export default function TwitchSubsPage() {
             }
           </div>
         </div>
+        {bitsHistorical > totalBits && (
+          <div style={{ marginTop: '0.6rem', fontSize: '0.71rem', color: C.dim }}>
+            Total histórico (todos os tempos): <span style={{ color: '#f59e0b', fontWeight: 700 }}>{bitsHistorical.toLocaleString('pt-BR')} bits</span>
+            {' '}≈ <span style={{ color: C.accent }}>{fmt(bitsHistoricalBRL)}</span>
+          </div>
+        )}
       </div>
 
       {/* Streamer + Repasse */}
@@ -628,7 +636,7 @@ export default function TwitchSubsPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
             {[
-              { label: 'Arrecadado bruto', value: fmt(totalBruto + bitsBRL), sub: `subs + ${totalBits} bits`, color: C.text },
+              { label: 'Arrecadado bruto', value: fmt(totalBruto + (bitsHistorical > 0 ? bitsHistoricalBRL : bitsBRL)), sub: `subs + ${(bitsHistorical > 0 ? bitsHistorical : totalBits).toLocaleString('pt-BR')} bits`, color: C.text },
               { label: 'Repasse líquido', value: fmt(totalLiquidAll), sub: '50% subs + bits diretos', color: C.accent },
               { label: 'Equivalente em U$', value: fmtUSD(totalUSD), sub: `cotação R$${EXCHANGE.toFixed(2)}`, color: C.text },
             ].map(r => (
