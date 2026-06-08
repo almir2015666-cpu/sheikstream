@@ -111,6 +111,10 @@ export default function ConexoesPage() {
   const [livepixSyncing, setLivepixSyncing] = useState(false)
   const [livepixSyncMsg, setLivepixSyncMsg] = useState('')
   const [syncResult, setSyncResult] = useState<{ synced: number; totalInDb: number } | null>(null)
+  const [webhookCopied, setWebhookCopied] = useState(false)
+  const [livepixDisconnecting, setLivepixDisconnecting] = useState(false)
+  const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
+  const [webhookOrigin, setWebhookOrigin] = useState('')
   const [tokenStatus, setTokenStatus] = useState({ twitch: false, youtube: false })
   const [disconnecting, setDisconnecting] = useState(false)
 
@@ -207,6 +211,9 @@ export default function ConexoesPage() {
       const d = await res.json().catch(() => ({}))
       if (res.ok) {
         setSyncResult({ synced: d.synced ?? 0, totalInDb: d.totalInDb ?? 0 })
+        const today = new Date().toISOString().slice(0, 10)
+        setLastSyncDate(today)
+        try { localStorage.setItem('livepix-last-sync', today) } catch { /**/ }
       } else {
         setLivepixSyncMsg(`Erro: ${d.error ?? 'Falha ao sincronizar'}`)
       }
@@ -216,6 +223,53 @@ export default function ConexoesPage() {
       setLivepixSyncing(false)
     }
   }
+
+  async function handleLivepixDisconnect() {
+    if (!confirm('Tem certeza que quer desconectar o Livepix? As doações já sincronizadas serão mantidas.')) return
+    setLivepixDisconnecting(true)
+    try {
+      await fetch('/api/livepix/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: null, client_secret: null, slug: null, channel_id: null }),
+      })
+      setLivepixSaved(false)
+      setLivepix({ clientId: '', clientSecret: '', slug: '' })
+      setLivepixErr('')
+    } catch { /* ignore */ } finally {
+      setLivepixDisconnecting(false)
+    }
+  }
+
+  async function handleSaveSlug(e: React.FormEvent) {
+    e.preventDefault()
+    setLivepixSaving(true)
+    try {
+      await fetch('/api/livepix/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: livepix.slug || null }),
+      })
+    } catch { /* ignore */ } finally {
+      setLivepixSaving(false)
+    }
+  }
+
+  function copyWebhook() {
+    const url = `${webhookOrigin}/api/livepix/webhook/${encodeURIComponent(livepix.slug || 'meu-canal')}`
+    navigator.clipboard.writeText(url).then(() => {
+      setWebhookCopied(true)
+      setTimeout(() => setWebhookCopied(false), 2000)
+    }).catch(() => {})
+  }
+
+  useEffect(() => {
+    setWebhookOrigin(window.location.origin)
+    try {
+      const d = localStorage.getItem('livepix-last-sync')
+      if (d) setLastSyncDate(d)
+    } catch { /**/ }
+  }, [])
 
   useEffect(() => {
     fetch('/api/livepix/config')
@@ -393,109 +447,105 @@ export default function ConexoesPage() {
           {['Doações recebidas', 'Histórico', 'Sorteios'].map(f => <FeatureChip key={f} label={f} />)}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '1.25rem', alignItems: 'start' }}>
-          {/* How to connect instructions */}
-          <div style={{ padding: '0.9rem 1rem', background: 'rgba(57,255,20,0.04)', border: '1px solid rgba(57,255,20,0.15)', borderRadius: '10px' }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#39ff14', marginBottom: '0.65rem' }}>Como conectar</div>
-            <ol style={{ margin: 0, padding: '0 0 0 1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {[
-                'Acesse sua conta Livepix e abra a área de integrações/API.',
-                'Copie o Client ID e o Client Secret da aplicação.',
-                'Cole os dados abaixo e clique em Verificar e Conectar.',
-                'Depois de conectado, use Sync Doações para importar o histórico permitido.',
-              ].map((step, i) => (
-                <li key={i} style={{ fontSize: '0.76rem', color: C.dim, lineHeight: 1.5 }}>{step}</li>
-              ))}
-            </ol>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleLivepixConnect} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            <input
-              value={livepix.clientId}
-              onChange={e => setLivepix(p => ({ ...p, clientId: e.target.value }))}
-              placeholder="Client ID"
-              autoComplete="off"
-              style={inputStyle}
-            />
-            <input
-              type="password"
-              value={livepix.clientSecret}
-              onChange={e => setLivepix(p => ({ ...p, clientSecret: e.target.value }))}
-              placeholder={livepixSaved ? 'Client Secret (deixe em branco para manter)' : 'Client Secret'}
-              autoComplete="new-password"
-              style={inputStyle}
-            />
-            <input
-              value={livepix.slug}
-              onChange={e => setLivepix(p => ({ ...p, slug: e.target.value }))}
-              placeholder="Slug da vaquinha (ex: minha-campanha)"
-              autoComplete="off"
-              style={inputStyle}
-            />
-            <div style={{ fontSize: '0.72rem', color: C.dim }}>
-              O Channel ID é detectado automaticamente ao sincronizar. O Slug é usado nos links de sorteio.
-            </div>
-            {livepixErr && (
-              <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.5rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
-                {livepixErr}
-                {livepixTableSql && (
-                  <pre style={{ marginTop: '0.5rem', padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.4)', borderRadius: '6px', fontSize: '0.7rem', color: '#f0f0f0', whiteSpace: 'pre-wrap', wordBreak: 'break-all', userSelect: 'all' }}>
-                    {livepixTableSql}
-                  </pre>
-                )}
-              </div>
-            )}
-            <button
-              type="submit"
-              disabled={livepixSaving}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
-                padding: '0.58rem 0',
-                background: 'transparent',
-                border: '1px solid rgba(57,255,20,0.3)',
-                color: '#39ff14',
-                borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700,
-                cursor: livepixSaving ? 'default' : 'pointer',
-                opacity: livepixSaving ? 0.6 : 1,
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-              </svg>
-              {livepixSaving ? 'Salvando...' : livepixSaved ? '✓ Salvo — atualizar credenciais' : 'Salvar e Conectar'}
-            </button>
-
-            {livepixSaved && (
-              <button
-                type="button"
-                disabled={livepixSyncing}
-                onClick={handleLivepixSync}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
-                  padding: '0.58rem 0',
-                  background: livepixSyncing ? 'rgba(255,105,180,0.05)' : 'rgba(255,105,180,0.08)',
-                  border: '1px solid rgba(255,105,180,0.3)',
-                  color: '#ff69b4',
-                  borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700,
-                  cursor: livepixSyncing ? 'default' : 'pointer',
-                  opacity: livepixSyncing ? 0.7 : 1,
-                }}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                </svg>
-                {livepixSyncing ? 'Sincronizando...' : '↻ Sincronizar doações Livepix'}
+        {livepixSaved ? (
+          /* ── CONFIGURED STATE ── */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* Slug save */}
+            <form onSubmit={handleSaveSlug} style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                value={livepix.slug}
+                onChange={e => setLivepix(p => ({ ...p, slug: e.target.value }))}
+                placeholder="Link Livepix (slug)"
+                autoComplete="off"
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <button type="submit" disabled={livepixSaving}
+                style={{ padding: '0.55rem 1rem', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+                {livepixSaving ? '...' : 'Salvar link Livepix'}
               </button>
-            )}
+            </form>
+
+            {/* Webhook section */}
+            <div style={{ padding: '0.9rem 1rem', background: 'rgba(57,255,20,0.05)', border: '1px solid rgba(57,255,20,0.2)', borderRadius: '10px' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#39ff14', marginBottom: '0.3rem' }}>Webhook Livepix (doações em tempo real)</div>
+              <div style={{ fontSize: '0.74rem', color: C.dim, marginBottom: '0.65rem' }}>Cole esta URL nas integrações da Livepix para receber doações automaticamente na sua conta.</div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ flex: 1, padding: '0.45rem 0.75rem', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '0.75rem', color: C.muted, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                  {webhookOrigin}/api/livepix/webhook/{encodeURIComponent(livepix.slug || 'meu-canal')}
+                </div>
+                <button onClick={copyWebhook}
+                  style={{ width: 34, height: 34, flexShrink: 0, background: webhookCopied ? 'rgba(57,255,20,0.12)' : 'transparent', border: `1px solid ${webhookCopied ? 'rgba(57,255,20,0.3)' : C.border}`, borderRadius: '7px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: webhookCopied ? '#39ff14' : C.dim }}>
+                  {webhookCopied
+                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  }
+                </button>
+              </div>
+            </div>
+
             {livepixSyncMsg && (
               <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.4rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
                 {livepixSyncMsg}
               </div>
             )}
-          </form>
-        </div>
+
+            {/* Sync button */}
+            {(() => {
+              const today = new Date().toISOString().slice(0, 10)
+              const canSync = !lastSyncDate || lastSyncDate < today
+              const nextDate = lastSyncDate ? new Date(new Date(lastSyncDate).getTime() + 86400000).toLocaleDateString('pt-BR') : ''
+              return (
+                <button type="button" disabled={!canSync || livepixSyncing} onClick={handleLivepixSync}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.58rem 0', background: (canSync && !livepixSyncing) ? 'rgba(255,105,180,0.08)' : 'transparent', border: '1px solid rgba(255,105,180,0.25)', color: (canSync && !livepixSyncing) ? '#ff69b4' : C.dim, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: (canSync && !livepixSyncing) ? 'pointer' : 'default', opacity: livepixSyncing ? 0.6 : 1 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                  {livepixSyncing ? 'Sincronizando...' : canSync ? 'Sync Livepix' : `Sync (disp. ${nextDate})`}
+                </button>
+              )
+            })()}
+
+            {/* Disconnect */}
+            <button type="button" disabled={livepixDisconnecting} onClick={handleLivepixDisconnect}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.58rem 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', opacity: livepixDisconnecting ? 0.6 : 1 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              {livepixDisconnecting ? 'Desconectando...' : 'Desconectar'}
+            </button>
+          </div>
+        ) : (
+          /* ── NOT CONFIGURED STATE ── */
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '1.25rem', alignItems: 'start' }}>
+            <div style={{ padding: '0.9rem 1rem', background: 'rgba(57,255,20,0.04)', border: '1px solid rgba(57,255,20,0.15)', borderRadius: '10px' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#39ff14', marginBottom: '0.65rem' }}>Como conectar</div>
+              <ol style={{ margin: 0, padding: '0 0 0 1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {[
+                  'Acesse sua conta Livepix e abra a área de integrações/API.',
+                  'Crie uma aplicação e copie o Client ID e Client Secret.',
+                  'Cole os dados abaixo e clique em Salvar e Conectar.',
+                  'Depois de conectado, use Sync para importar o histórico.',
+                ].map((step, i) => (
+                  <li key={i} style={{ fontSize: '0.76rem', color: C.dim, lineHeight: 1.5 }}>{step}</li>
+                ))}
+              </ol>
+            </div>
+            <form onSubmit={handleLivepixConnect} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <input value={livepix.clientId} onChange={e => setLivepix(p => ({ ...p, clientId: e.target.value }))} placeholder="Client ID" autoComplete="off" style={inputStyle} />
+              <input type="password" value={livepix.clientSecret} onChange={e => setLivepix(p => ({ ...p, clientSecret: e.target.value }))} placeholder="Client Secret" autoComplete="new-password" style={inputStyle} />
+              <input value={livepix.slug} onChange={e => setLivepix(p => ({ ...p, slug: e.target.value }))} placeholder="Slug (ex: meu-canal)" autoComplete="off" style={inputStyle} />
+              {livepixErr && (
+                <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.5rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
+                  {livepixErr}
+                  {livepixTableSql && <pre style={{ marginTop: '0.5rem', padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.4)', borderRadius: '6px', fontSize: '0.7rem', color: '#f0f0f0', whiteSpace: 'pre-wrap', wordBreak: 'break-all', userSelect: 'all' }}>{livepixTableSql}</pre>}
+                </div>
+              )}
+              <button type="submit" disabled={livepixSaving} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.58rem 0', background: 'transparent', border: '1px solid rgba(57,255,20,0.3)', color: '#39ff14', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: livepixSaving ? 'default' : 'pointer', opacity: livepixSaving ? 0.6 : 1 }}>
+                {livepixSaving ? 'Salvando...' : 'Salvar e Conectar'}
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       {/* Sync success modal */}
