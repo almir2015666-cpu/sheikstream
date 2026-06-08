@@ -15,7 +15,7 @@ const DEFAULT_EVENT_COMMANDS = [
   { trigger: 'event:twitch:bits',    resposta: 'Valeu pelos $valor bits, $user! $msg' },
 ]
 
-// Most webhook subscriptions use app access token
+// All webhook subscriptions use app access token (Twitch requirement)
 const APP_TOKEN_SUBS = [
   { type: 'channel.subscribe',            version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.subscription.gift',    version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
@@ -23,12 +23,11 @@ const APP_TOKEN_SUBS = [
   { type: 'channel.cheer',               version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.raid',                version: '1', cond: (id: string) => ({ to_broadcaster_user_id: id }) },
   { type: 'channel.follow',             version: '2', cond: (id: string) => ({ broadcaster_user_id: id, moderator_user_id: id }) },
+  { type: 'channel.chat.message',        version: '1', cond: (id: string) => ({ broadcaster_user_id: id, user_id: id }) },
 ]
 
-// channel.chat.message requires the broadcaster's user access token
-const USER_TOKEN_SUBS = [
-  { type: 'channel.chat.message', version: '1', cond: (id: string) => ({ broadcaster_user_id: id, user_id: id }) },
-]
+// channel.chat.message also requires app access token for webhook transport
+const USER_TOKEN_SUBS: typeof APP_TOKEN_SUBS = []
 
 async function getAppToken(): Promise<string> {
   const res = await fetch('https://id.twitch.tv/oauth2/token', {

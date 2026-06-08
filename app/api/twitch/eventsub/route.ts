@@ -17,12 +17,14 @@ export async function POST(req: NextRequest) {
   const ts       = req.headers.get('Twitch-Eventsub-Message-Timestamp') ?? ''
   const sig      = req.headers.get('Twitch-Eventsub-Message-Signature') ?? ''
 
-  // Log incoming request BEFORE responding (awaited so Vercel doesn't kill it early)
-  await getSupabaseAdmin().from('twitch_events').insert({
+  // Log incoming request so we can confirm Twitch reaches this endpoint
+  console.log('[eventsub] POST received:', msgType || 'unknown', 'bodyLen:', body.length)
+  const { error: diagErr } = await getSupabaseAdmin().from('twitch_events').insert({
     broadcaster_id: '_webhook',
     event_type: `incoming:${msgType || 'unknown'}`,
     event_data: { msgId: msgId.slice(0, 16), sig: sig.slice(0, 20), bodyLen: body.length },
   })
+  if (diagErr) console.error('[eventsub] diagnostic insert failed:', diagErr.message, diagErr.code)
 
   // Respond to verification challenge immediately — HMAC check applies to notifications only
   if (msgType === 'webhook_callback_verification') {
