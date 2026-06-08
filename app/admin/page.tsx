@@ -186,11 +186,11 @@ export default function AdminPage() {
   type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean }
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
-  type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string }
+  type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; target_username: string | null }
   const [notifyList, setNotifyList] = useState<AdminNotification[]>([])
   const [notifyLoading, setNotifyLoading] = useState(false)
   const [notifySaving, setNotifySaving] = useState(false)
-  const [notifyForm, setNotifyForm] = useState({ title: '', message: '', icon: '📢', color: '#9b30ff' })
+  const [notifyForm, setNotifyForm] = useState({ title: '', message: '', icon: '📢', color: '#9b30ff', target_username: '' })
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -730,7 +730,7 @@ export default function AdminPage() {
                     {!navSearch && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem', paddingLeft: '0.25rem' }}>{group}</div>}
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       {visible.map(({ v, label }) => (
-                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw); if (v === 'notify') fetchNotifications(storedPw) }}
+                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw); if (v === 'notify') { fetchNotifications(storedPw); if (users.length === 0) fetchUsers(storedPw) } }}
                           className={`sk-tab${view === v ? ' active' : ''}`}
                           style={{ color: view === v ? C.primary : C.muted }}>
                           {label}
@@ -1642,6 +1642,35 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* Destinatário */}
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>Destinatário</div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button onClick={() => setNotifyForm(p => ({ ...p, target_username: '' }))}
+                      style={{ padding: '0.35rem 0.9rem', borderRadius: '7px', border: `1px solid ${!notifyForm.target_username ? C.primary + '60' : C.border}`, background: !notifyForm.target_username ? C.primaryBg : 'transparent', color: !notifyForm.target_username ? C.primary : C.muted, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+                      👥 Todos os usuários
+                    </button>
+                    <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
+                      <select
+                        value={notifyForm.target_username}
+                        onChange={e => setNotifyForm(p => ({ ...p, target_username: e.target.value }))}
+                        style={{ width: '100%', padding: '0.38rem 0.75rem', background: C.inputBg, border: `1px solid ${notifyForm.target_username ? C.primary + '60' : C.inputBorder}`, borderRadius: '7px', color: notifyForm.target_username ? C.text : C.dim, fontSize: '0.82rem', outline: 'none', appearance: 'auto' }}>
+                        <option value="">— Selecionar usuário específico —</option>
+                        {users.filter(u => u.status === 'approved').map(u => (
+                          <option key={u.id} value={u.platform_username ?? u.email ?? ''}>
+                            {u.platform_username || u.email || u.id.slice(0, 8)} ({u.platform})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  {notifyForm.target_username && (
+                    <div style={{ fontSize: '0.72rem', color: C.primary, marginTop: '0.35rem' }}>
+                      ↳ Aviso visível apenas para <strong>{notifyForm.target_username}</strong>
+                    </div>
+                  )}
+                </div>
+
                 {/* Title (optional) */}
                 <div style={{ marginBottom: '0.75rem' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Título (opcional)</div>
@@ -1691,7 +1720,12 @@ export default function AdminPage() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           {n.title && <div style={{ fontWeight: 700, fontSize: '0.82rem', color: n.color, marginBottom: '0.15rem' }}>{n.title}</div>}
                           <div style={{ fontSize: '0.8rem', color: C.muted }}>{n.message}</div>
-                          <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.3rem' }}>{new Date(n.created_at).toLocaleString('pt-BR')}</div>
+                          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginTop: '0.3rem' }}>
+                            <span style={{ fontSize: '0.68rem', color: C.vdim }}>{new Date(n.created_at).toLocaleString('pt-BR')}</span>
+                            <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '999px', background: n.target_username ? 'rgba(155,48,255,0.12)' : 'rgba(255,255,255,0.05)', color: n.target_username ? C.primary : C.vdim, border: `1px solid ${n.target_username ? C.border : 'rgba(255,255,255,0.06)'}` }}>
+                              {n.target_username ? `👤 ${n.target_username}` : '👥 Todos'}
+                            </span>
+                          </div>
                         </div>
                         <button onClick={() => deleteNotification(n.id)} style={{ background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', padding: '0.28rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Remover</button>
                       </div>

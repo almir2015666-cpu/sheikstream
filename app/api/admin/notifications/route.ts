@@ -26,12 +26,13 @@ export async function POST(req: NextRequest) {
     const { data, error } = await getSupabaseAdmin()
       .from('admin_notifications')
       .insert({
-        title:      body.title?.trim() || null,
-        message:    body.message.trim(),
-        icon:       body.icon || '📢',
-        color:      body.color || '#9b30ff',
-        active:     true,
-        created_at: new Date().toISOString(),
+        title:           body.title?.trim() || null,
+        message:         body.message.trim(),
+        icon:            body.icon || '📢',
+        color:           body.color || '#9b30ff',
+        target_username: body.target_username?.trim() || null,
+        active:          true,
+        created_at:      new Date().toISOString(),
       })
       .select()
       .single()
