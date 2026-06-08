@@ -7,9 +7,8 @@ function getUser(req: NextRequest) {
   return token ? decodeSession(token) : null
 }
 
-async function getLivepixToken(clientId: string, clientSecret: string): Promise<{ token: string | null; error?: string }> {
-  // Correct endpoint per LivePix docs: https://oauth.livepix.gg/oauth2/token
-  const body = `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=payments:read`
+async function getLivepixToken(clientId: string, clientSecret: string, scope = 'payments:read'): Promise<{ token: string | null; error?: string }> {
+  const body = `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=${encodeURIComponent(scope)}`
   try {
     const res = await fetch('https://oauth.livepix.gg/oauth2/token', {
       method: 'POST',
@@ -97,7 +96,10 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
   const { data: cfg } = await db.from('livepix_config').select('client_id, client_secret').eq('user_id', user.id).maybeSingle()
   if (!cfg?.client_id || !cfg?.client_secret) return NextResponse.json({ error: 'not configured' }, { status: 400 })
-  const { token, error: tokenError } = await getLivepixToken(cfg.client_id, cfg.client_secret)
+
+  // Try with broad scopes
+  const allScopes = 'payments:read messages:read wallet:read'
+  const { token, error: tokenError } = await getLivepixToken(cfg.client_id, cfg.client_secret, allScopes)
   if (!token) return NextResponse.json({ error: tokenError }, { status: 400 })
 
   async function probe(url: string) {
@@ -106,13 +108,14 @@ export async function GET(req: NextRequest) {
     try { return { status: r.status, data: JSON.parse(t) } } catch { return { status: r.status, data: t } }
   }
 
-  const [payments, messages, walletBRL] = await Promise.all([
+  const [payments, paymentsBRL, messages, walletBRL] = await Promise.all([
     probe('https://api.livepix.gg/v2/payments?page=1&limit=5'),
+    probe('https://api.livepix.gg/v2/payments?page=1&limit=5&currency=BRL'),
     probe('https://api.livepix.gg/v2/messages?page=1&limit=5'),
     probe('https://api.livepix.gg/v2/wallet/BRL/transactions?page=1&limit=5'),
   ])
 
-  return NextResponse.json({ payments, messages, walletBRL })
+  return NextResponse.json({ payments, paymentsBRL, messages, walletBRL })
 }
 
 export async function POST(req: NextRequest) {
