@@ -345,7 +345,7 @@ export default function ConexoesPage() {
           </button>
         ) : (
           <button
-            onClick={() => { window.location.href = '/api/auth/twitch' }}
+            onClick={openTwitchPopup}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.1rem', background: '#9147ff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             <PlatIcon id="twitch" color="#fff" />
@@ -403,7 +403,7 @@ export default function ConexoesPage() {
 
               {/* Auth button */}
               <button
-                onClick={() => p.id === 'twitch' ? (window.location.href = '/api/auth/twitch') : undefined}
+                onClick={() => { if (p.id === 'twitch') openTwitchPopup() }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
                   padding: '0.55rem 0',
