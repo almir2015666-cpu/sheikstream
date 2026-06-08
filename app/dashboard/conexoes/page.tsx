@@ -470,9 +470,14 @@ export default function ConexoesPage() {
               <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#39ff14', marginBottom: '0.3rem' }}>Webhook Livepix (doações em tempo real)</div>
               <div style={{ fontSize: '0.74rem', color: C.dim, marginBottom: '0.65rem' }}>Cole esta URL nas integrações da Livepix para receber doações automaticamente na sua conta.</div>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <div style={{ flex: 1, padding: '0.45rem 0.75rem', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '0.75rem', color: C.muted, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                  {webhookOrigin}/api/livepix/webhook/{encodeURIComponent(livepix.slug || 'meu-canal')}
-                </div>
+                <input
+                  readOnly
+                  value={`${webhookOrigin}/api/livepix/webhook/${encodeURIComponent(livepix.slug || 'meu-canal')}`}
+                  data-gramm="false"
+                  data-gramm_editor="false"
+                  data-enable-grammarly="false"
+                  style={{ flex: 1, padding: '0.45rem 0.75rem', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '0.75rem', color: C.muted, fontFamily: 'monospace', outline: 'none', cursor: 'text' }}
+                />
                 <button onClick={copyWebhook}
                   style={{ width: 34, height: 34, flexShrink: 0, background: webhookCopied ? 'rgba(57,255,20,0.12)' : 'transparent', border: `1px solid ${webhookCopied ? 'rgba(57,255,20,0.3)' : C.border}`, borderRadius: '7px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: webhookCopied ? '#39ff14' : C.dim }}>
                   {webhookCopied
