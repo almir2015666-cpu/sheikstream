@@ -63,7 +63,8 @@ export async function registerEventSubSubscriptions(broadcasterId: string): Prom
   }
 }
 
-export async function registerChatSubscription(broadcasterId: string, userToken: string): Promise<void> {
+export async function registerChatSubscription(broadcasterId: string): Promise<void> {
+  const token = await getAppToken()
   const appUrl = process.env.APP_URL ?? 'https://sheikstream.com.br'
   const secret = WEBHOOK_SECRET
 
@@ -76,7 +77,7 @@ export async function registerChatSubscription(broadcasterId: string, userToken:
     try {
       const res = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}`, 'Client-Id': process.env.TWITCH_CLIENT_ID! },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'Client-Id': process.env.TWITCH_CLIENT_ID! },
         body: JSON.stringify({ ...sub, transport: { method: 'webhook', callback: `${appUrl}/api/twitch/eventsub`, secret } }),
       })
       if (!res.ok && res.status !== 409) {

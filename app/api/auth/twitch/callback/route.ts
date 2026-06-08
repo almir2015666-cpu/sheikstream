@@ -167,7 +167,6 @@ export async function GET(req: NextRequest) {
 
   // Register EventSub webhooks for this broadcaster (async, doesn't block login)
   registerEventSubSubscriptions(tw.id).catch(e => console.error('[callback] eventsub register error:', e))
-  // Register chat message subscription using broadcaster's user token
-  registerChatSubscription(tw.id, access_token).catch(e => console.error('[callback] chat sub error:', e))
+  registerChatSubscription(tw.id).catch(e => console.error('[callback] chat sub error:', e))
   return res
 }
