@@ -8,34 +8,56 @@ function getUser(req: NextRequest) {
 }
 
 async function getLivepixToken(clientId: string, clientSecret: string): Promise<{ token: string | null; error?: string }> {
-  // Try Basic auth first (RFC 6749 recommended)
-  try {
-    const creds = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-    const res = await fetch('https://oauth.livepix.gg/oauth/token', {
+  const attempts = [
+    // Attempt 1: Basic auth, form body
+    () => {
+      const creds = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+      return fetch('https://oauth.livepix.gg/oauth/token', {
+        method: 'POST',
+        headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+        body: 'grant_type=client_credentials&scope=payments:read',
+      })
+    },
+    // Attempt 2: credentials in body (some providers prefer this)
+    () => fetch('https://oauth.livepix.gg/oauth/token', {
       method: 'POST',
-      headers: {
-        Authorization: `Basic ${creds}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'grant_type=client_credentials&scope=payments:read',
-    })
-    const data = await res.json().catch(() => ({}))
-    if (res.ok && data.access_token) return { token: data.access_token }
-
-    // Fallback: credentials in body
-    const res2 = await fetch('https://oauth.livepix.gg/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
       body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=payments:read`,
-    })
-    const data2 = await res2.json().catch(() => ({}))
-    if (res2.ok && data2.access_token) return { token: data2.access_token }
+    }),
+    // Attempt 3: JSON body
+    () => fetch('https://oauth.livepix.gg/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ grant_type: 'client_credentials', client_id: clientId, client_secret: clientSecret, scope: 'payments:read' }),
+    }),
+    // Attempt 4: api.livepix.gg domain with form body
+    () => fetch('https://api.livepix.gg/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=payments:read`,
+    }),
+    // Attempt 5: v2 path
+    () => fetch('https://api.livepix.gg/v2/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=payments:read`,
+    }),
+  ]
 
-    const errMsg = data2.error_description ?? data2.error ?? data.error_description ?? data.error ?? `HTTP ${res.status}`
-    return { token: null, error: String(errMsg) }
-  } catch (e) {
-    return { token: null, error: String(e) }
+  const errors: string[] = []
+  for (let i = 0; i < attempts.length; i++) {
+    try {
+      const res = await attempts[i]()
+      const text = await res.text()
+      let data: Record<string, unknown> = {}
+      try { data = JSON.parse(text) } catch { /* not json */ }
+      if (res.ok && data.access_token) return { token: String(data.access_token) }
+      errors.push(`[${i + 1}] HTTP ${res.status}: ${data.error_description ?? data.error ?? text.slice(0, 80)}`)
+    } catch (e) {
+      errors.push(`[${i + 1}] ${String(e)}`)
+    }
   }
+  return { token: null, error: errors.join(' | ') }
 }
 
 async function getLivepixChannelId(token: string): Promise<string | null> {
