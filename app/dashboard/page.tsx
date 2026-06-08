@@ -53,7 +53,7 @@ function daysAgoStr(n: number) {
 
 type Stats = {
   livepix_total: number; livepix_donors: number; livepix_unique: number
-  twitch_subs: number; twitch_tickets: number; tickets_total: number; participants: number
+  twitch_subs: number; twitch_tickets: number; twitch_total: number; tickets_total: number; participants: number
 }
 type DonorRow = { id: string; username: string; amount: number; message: string | null; date: string; created_at: string }
 type ChannelStats = {
@@ -321,7 +321,7 @@ export default function DashboardPage() {
               <span style={{ color: C.primary, fontSize: '0.8rem' }}>↗</span>
               Total arrecadado — todas as plataformas
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px' }}>{statsLoading ? '...' : fmtBRL(stats?.livepix_total ?? 0)}</div>
+            <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px' }}>{statsLoading ? '...' : fmtBRL((stats?.livepix_total ?? 0) + (stats?.twitch_total ?? 0))}</div>
           </div>
           <div style={{ display: 'flex', gap: '1.2rem', flexWrap: 'wrap', alignItems: 'center' }}>
             {PLAT_TOTALS.map(p => (
@@ -330,7 +330,7 @@ export default function DashboardPage() {
                 <div>
                   <div style={{ fontSize: '0.65rem', color: C.vdim }}>{p.name}</div>
                   <div style={{ fontSize: '0.78rem', color: C.muted, fontWeight: 600 }}>
-                    {p.name === 'Livepix' ? fmtBRL(stats?.livepix_total ?? 0) : 'R$ 0,00'}
+                    {p.name === 'Livepix' ? fmtBRL(stats?.livepix_total ?? 0) : p.name === 'Twitch' ? fmtBRL(stats?.twitch_total ?? 0) : 'R$ 0,00'}
                   </div>
                 </div>
               </div>
@@ -380,7 +380,7 @@ export default function DashboardPage() {
           <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>Estimativa de repasse</div>
             {(() => {
-              const values: Record<string, number> = { Livepix: stats?.livepix_total ?? 0 }
+              const values: Record<string, number> = { Livepix: stats?.livepix_total ?? 0, Twitch: stats?.twitch_total ?? 0 }
               const maxVal = Math.max(...REPASSE.map(r => values[r.label] ?? 0), 0.01)
               return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.62rem' }}>
@@ -415,9 +415,10 @@ export default function DashboardPage() {
             </div>
             {(() => {
               const livepixNet = (stats?.livepix_total ?? 0) * 0.95
+              const twitchNet = (stats?.twitch_total ?? 0) * 0.50
               const allPlats = [
                 { label: 'Livepix', color: '#ff69b4', value: livepixNet },
-                { label: 'Twitch',  color: '#9147ff', value: 0 },
+                { label: 'Twitch',  color: '#9147ff', value: twitchNet },
                 { label: 'YouTube', color: '#ff4444', value: 0 },
               ]
               const total = allPlats.reduce((s, p) => s + p.value, 0)
