@@ -13,8 +13,9 @@ export async function POST(req: NextRequest) {
   const { platform } = await req.json() as { platform: string }
 
   const field: Record<string, string> = {
-    twitch: 'twitch_token',
+    twitch:  'twitch_token',
     youtube: 'youtube_token',
+    spotify: 'spotify_token',
   }
 
   if (!field[platform]) {

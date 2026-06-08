@@ -1722,7 +1722,7 @@ export default function AdminPage() {
                     const joinDate = new Date(u.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
                     return (
                       <div key={u.id} style={{ background: C.cardBg, border: `1px solid ${u.is_live ? 'rgba(239,68,68,0.35)' : isOn ? 'rgba(34,197,94,0.3)' : C.border}`, borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: u.is_live ? '#ef4444' : isOn ? '#22c55e' : 'transparent', borderRadius: '3px 0 0 3px' }} />}
+                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: u.is_live ? '#ef4444' : isOn ? '#22c55e' : 'transparent', borderRadius: '3px 0 0 3px' }} />
                         {/* Avatar */}
                         <div style={{ width: 42, height: 42, borderRadius: '50%', background: isOn ? 'rgba(34,197,94,0.12)' : C.primaryBg, border: `2px solid ${isOn ? 'rgba(34,197,94,0.35)' : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.05rem', color: isOn ? '#22c55e' : C.primary, flexShrink: 0 }}>
                           {(u.username ?? '?')[0].toUpperCase()}

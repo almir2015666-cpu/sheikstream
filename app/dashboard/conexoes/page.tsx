@@ -116,8 +116,9 @@ export default function ConexoesPage() {
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
   const [webhookOrigin, setWebhookOrigin] = useState('')
   const [livepixConfigOpen, setLivepixConfigOpen] = useState(false)
-  const [tokenStatus, setTokenStatus] = useState({ twitch: false, youtube: false })
+  const [tokenStatus, setTokenStatus] = useState<{ twitch: boolean; youtube: boolean; spotify: boolean; spotify_username?: string | null }>({ twitch: false, youtube: false, spotify: false })
   const [disconnecting, setDisconnecting] = useState(false)
+  const [spotifyDisconnecting, setSpotifyDisconnecting] = useState(false)
 
   async function handleDisconnect(platform: string) {
     setDisconnecting(true)
@@ -180,6 +181,51 @@ export default function ConexoesPage() {
         setTimeout(refreshStatus, 600)
       }
     }, 500)
+  }
+
+  function openSpotifyPopup() {
+    const w = 500, h = 700
+    const left = window.screen.width - w - 20
+    const top = Math.max(0, (window.screen.height - h) / 2)
+    const popup = window.open(
+      '/api/auth/spotify?popup=1',
+      'spotify_oauth',
+      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
+    )
+    if (!popup) { window.location.href = '/api/auth/spotify'; return }
+
+    function refreshStatus() {
+      fetch('/api/tokens/status').then(r => r.json()).then(s => setTokenStatus(s)).catch(() => {})
+    }
+    function onMessage(e: MessageEvent) {
+      if (e.data?.type === 'spotify_connected') {
+        window.removeEventListener('message', onMessage)
+        clearInterval(check)
+        refreshStatus()
+      } else if (e.data?.type === 'spotify_error') {
+        window.removeEventListener('message', onMessage)
+        clearInterval(check)
+        alert(`Erro ao conectar Spotify: ${e.data.error ?? 'desconhecido'}`)
+      }
+    }
+    window.addEventListener('message', onMessage)
+    const check = setInterval(() => {
+      if (popup.closed) { clearInterval(check); window.removeEventListener('message', onMessage); setTimeout(refreshStatus, 600) }
+    }, 500)
+  }
+
+  async function handleSpotifyDisconnect() {
+    setSpotifyDisconnecting(true)
+    try {
+      await fetch('/api/tokens/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: 'spotify' }),
+      })
+      setTokenStatus(s => ({ ...s, spotify: false, spotify_username: null }))
+    } finally {
+      setSpotifyDisconnecting(false)
+    }
   }
 
   useEffect(() => {
@@ -450,6 +496,65 @@ export default function ConexoesPage() {
             </div>
           )
         })}
+
+        {/* Spotify card */}
+        <div style={{ background: C.card, border: `1px solid ${tokenStatus.spotify ? 'rgba(30,215,96,0.30)' : C.border}`, borderRadius: '12px', padding: '1.1rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {/* Title row */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: 'rgba(30,215,96,0.12)', border: '1px solid rgba(30,215,96,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#1ed760">
+                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontWeight: 800, fontSize: '0.88rem' }}>Spotify</span>
+                </div>
+                <StatusPill connected={tokenStatus.spotify} />
+              </div>
+            </div>
+          </div>
+
+          {/* Feature chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+            {['Música atual', 'Estado de reprodução', 'Histórico'].map(f => <FeatureChip key={f} label={f} />)}
+          </div>
+
+          {tokenStatus.spotify ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {tokenStatus.spotify_username && (
+                <div style={{ fontSize: '0.74rem', color: C.dim, padding: '0.45rem 0.65rem', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: '6px', fontFamily: 'monospace' }}>
+                  Conta: <span style={{ color: C.muted }}>@{tokenStatus.spotify_username}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                disabled={spotifyDisconnecting}
+                onClick={handleSpotifyDisconnect}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.5rem 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: spotifyDisconnecting ? 0.6 : 1 }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
+                </svg>
+                {spotifyDisconnecting ? 'Desconectando...' : 'Desconectar'}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={openSpotifyPopup}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.55rem 0', background: 'transparent', border: '1px solid rgba(30,215,96,0.4)', color: '#1ed760', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', width: '100%' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(30,215,96,0.08)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#1ed760">
+                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+              </svg>
+              Conectar Spotify
+            </button>
+          )}
+        </div>
 
         {/* Livepix card — 6th item in grid */}
         <div style={{ background: C.card, border: `1px solid ${livepixSaved ? 'rgba(255,105,180,0.30)' : C.border}`, borderRadius: '12px', padding: '1.1rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
