@@ -183,7 +183,7 @@ export default function AdminPage() {
   const [bannerSaving, setBannerSaving] = useState(false)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerSaved, setBannerSaved] = useState(false)
-  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean }
+  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean; is_live: boolean; twitch_url: string | null }
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
   type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; target_username: string | null; duration_seconds?: number }
@@ -1721,8 +1721,8 @@ export default function AdminPage() {
                         : 'nunca'
                     const joinDate = new Date(u.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
                     return (
-                      <div key={u.id} style={{ background: C.cardBg, border: `1px solid ${isOn ? 'rgba(34,197,94,0.3)' : C.border}`, borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', position: 'relative', overflow: 'hidden' }}>
-                        {isOn && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: '#22c55e', borderRadius: '3px 0 0 3px' }} />}
+                      <div key={u.id} style={{ background: C.cardBg, border: `1px solid ${u.is_live ? 'rgba(239,68,68,0.35)' : isOn ? 'rgba(34,197,94,0.3)' : C.border}`, borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: u.is_live ? '#ef4444' : isOn ? '#22c55e' : 'transparent', borderRadius: '3px 0 0 3px' }} />}
                         {/* Avatar */}
                         <div style={{ width: 42, height: 42, borderRadius: '50%', background: isOn ? 'rgba(34,197,94,0.12)' : C.primaryBg, border: `2px solid ${isOn ? 'rgba(34,197,94,0.35)' : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.05rem', color: isOn ? '#22c55e' : C.primary, flexShrink: 0 }}>
                           {(u.username ?? '?')[0].toUpperCase()}
@@ -1730,7 +1730,21 @@ export default function AdminPage() {
                         {/* Main info */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.22rem' }}>
-                            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: C.text }}>{u.username ?? '—'}</span>
+                            {u.twitch_url ? (
+                              <a href={u.twitch_url} target="_blank" rel="noopener noreferrer"
+                                style={{ fontWeight: 700, fontSize: '0.9rem', color: u.is_live ? '#bf94ff' : C.text, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                {u.username ?? '—'}
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.45 }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                              </a>
+                            ) : (
+                              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: C.text }}>{u.username ?? '—'}</span>
+                            )}
+                            {u.is_live && (
+                              <a href={u.twitch_url!} target="_blank" rel="noopener noreferrer"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.28rem', fontSize: '0.66rem', fontWeight: 800, padding: '0.14rem 0.55rem', borderRadius: '999px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171', textDecoration: 'none', animation: 'sk-pulse 2s ease-in-out infinite' }}>
+                                🔴 AO VIVO
+                              </a>
+                            )}
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.28rem', fontSize: '0.66rem', fontWeight: 700, padding: '0.12rem 0.5rem', borderRadius: '999px', background: isOn ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${isOn ? 'rgba(34,197,94,0.28)' : 'rgba(255,255,255,0.08)'}`, color: isOn ? '#22c55e' : C.dim }}>
                               <span style={{ width: 5, height: 5, borderRadius: '50%', background: isOn ? '#22c55e' : C.dim, display: 'inline-block', ...(isOn ? { animation: 'sk-pulse 1.8s ease-in-out infinite' } : {}) }} />
                               {isOn ? 'online' : 'offline'}
