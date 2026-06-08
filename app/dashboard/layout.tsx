@@ -184,6 +184,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [suggMsg, setSuggMsg] = useState('')
   const [suggSending, setSuggSending] = useState(false)
   const [suggSent, setSuggSent] = useState(false)
+  // Admin notifications (global — all pages)
+  type AdminNotif = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string }
+  const [notifications, setNotifications] = useState<AdminNotif[]>([])
+  const [dismissedNotifs, setDismissedNotifs] = useState<Set<string>>(new Set())
+  const [activeNotif, setActiveNotif] = useState<AdminNotif | null>(null)
+  const notifLoadedRef = useRef<boolean>(false)
 
   const S = theme === 'dark' ? DARK_S : LIGHT_S
   const isDark = theme === 'dark'
@@ -299,6 +305,39 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const iv = setInterval(ping, 60000)
     return () => clearInterval(iv)
   }, [user])
+
+  // Load notifications once per session after user is confirmed
+  useEffect(() => {
+    if (!user) return
+    try {
+      const seen = JSON.parse(sessionStorage.getItem('sk-dismissed-notifs') || '[]')
+      setDismissedNotifs(new Set(seen))
+    } catch {}
+    if (!notifLoadedRef.current) {
+      notifLoadedRef.current = true
+      fetch('/api/me/notifications')
+        .then(r => r.ok ? r.json() : [])
+        .then((d: AdminNotif[]) => { if (Array.isArray(d)) setNotifications(d) })
+        .catch(() => {})
+    }
+  }, [user])
+
+  // Show next pending notification one at a time
+  useEffect(() => {
+    if (activeNotif) return
+    const pending = notifications.filter(n => !dismissedNotifs.has(n.id))
+    if (!pending.length) return
+    setActiveNotif(pending[0])
+  }, [notifications, dismissedNotifs, activeNotif])
+
+  function dismissNotif(id: string) {
+    setActiveNotif(null)
+    setDismissedNotifs(prev => {
+      const next = new Set(prev); next.add(id)
+      try { sessionStorage.setItem('sk-dismissed-notifs', JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
 
   function moveItem(id: string, dir: 'up' | 'down') {
     const base = navOrder.length > 0 ? navOrder : NAV_ALL.map(i => i.id)
@@ -609,6 +648,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <BannerBar banner={banner} S={S} isDark={isDark} onDismiss={() => setBannerDismissed(true)} />
         )}
       </div>
+
+      {/* Admin notifications — visible on ALL dashboard pages, blur backdrop */}
+      {activeNotif && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: isDark ? '#111219' : '#ffffff', border: `1px solid ${activeNotif.color}45`, borderRadius: '20px', padding: '2rem 2rem 1.75rem', maxWidth: '480px', width: '100%', boxShadow: `0 0 60px ${activeNotif.color}25, 0 24px 48px rgba(0,0,0,0.8)`, textAlign: 'center', position: 'relative' }}>
+            <button onClick={() => dismissNotif(activeNotif.id)}
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '0.3rem 0.55rem' }}>
+              ✕
+            </button>
+            <div style={{ fontSize: '3rem', marginBottom: '0.75rem', lineHeight: 1 }}>{activeNotif.icon}</div>
+            {activeNotif.title && (
+              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: activeNotif.color, marginBottom: '0.6rem', letterSpacing: '-0.01em' }}>{activeNotif.title}</div>
+            )}
+            <div style={{ fontSize: '0.92rem', color: S.muted, lineHeight: 1.7, marginBottom: '1.75rem', whiteSpace: 'pre-wrap' }}>{activeNotif.message}</div>
+            <button onClick={() => dismissNotif(activeNotif.id)}
+              style={{ padding: '0.72rem 2.5rem', background: `${activeNotif.color}18`, border: `1px solid ${activeNotif.color}50`, borderRadius: '12px', color: activeNotif.color, fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>
+              Entendi ✓
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Suggestion / bug report — visible on ALL dashboard pages */}
       {user && (

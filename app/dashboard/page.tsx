@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 const C = {
@@ -76,11 +76,6 @@ export default function DashboardPage() {
   const [channelErr, setChannelErr] = useState('')
   const [refreshTick, setRefreshTick] = useState(0)
   const [donors, setDonors] = useState<DonorRow[] | null>(null)
-  type AdminNotif = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; duration_seconds?: number }
-  const [notifications, setNotifications] = useState<AdminNotif[]>([])
-  const [dismissedNotifs, setDismissedNotifs] = useState<Set<string>>(new Set())
-  const [activeNotif, setActiveNotif] = useState<AdminNotif | null>(null)
-  const notifLoadedRef = useRef(false)
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
 
   function periodDates() {
@@ -100,41 +95,6 @@ export default function DashboardPage() {
     const iv = setInterval(() => setRefreshTick(t => t + 1), 60000)
     return () => clearInterval(iv)
   }, [])
-
-  useEffect(() => {
-    // Use sessionStorage so notifications re-appear on every new dashboard session/entry
-    try {
-      const seen = JSON.parse(sessionStorage.getItem('sk-dismissed-notifs') || '[]')
-      setDismissedNotifs(new Set(seen))
-    } catch {}
-
-    // Load notifications once on entry
-    if (!notifLoadedRef.current) {
-      notifLoadedRef.current = true
-      fetch('/api/me/notifications')
-        .then(r => r.ok ? r.json() : [])
-        .then((d: AdminNotif[]) => { if (Array.isArray(d)) setNotifications(d) })
-        .catch(() => {})
-    }
-  }, [])
-
-  // Show notifications one at a time — no auto-dismiss, user must click X
-  useEffect(() => {
-    if (activeNotif) return
-    const pending = notifications.filter(n => !dismissedNotifs.has(n.id))
-    if (!pending.length) return
-    setActiveNotif(pending[0])
-  }, [notifications, dismissedNotifs, activeNotif])
-
-  function dismissNotif(id: string) {
-    setActiveNotif(null)
-    setDismissedNotifs(prev => {
-      const next = new Set(prev); next.add(id)
-      try { sessionStorage.setItem('sk-dismissed-notifs', JSON.stringify([...next])) } catch {}
-      return next
-    })
-  }
-
 
   useEffect(() => {
     const { from, to } = periodDates()
@@ -166,32 +126,6 @@ export default function DashboardPage() {
 
   return (
     <div style={{ background: '#08090d', minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
-
-      {/* Admin notification modal */}
-      {activeNotif && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: '#111219', border: `1px solid ${activeNotif.color}45`, borderRadius: '20px', padding: '2rem 2rem 1.75rem', maxWidth: '480px', width: '100%', boxShadow: `0 0 60px ${activeNotif.color}25, 0 20px 40px rgba(0,0,0,0.7)`, textAlign: 'center', position: 'relative' }}>
-            {/* Close X */}
-            <button onClick={() => dismissNotif(activeNotif.id)}
-              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '0.3rem 0.55rem' }}>
-              ✕
-            </button>
-            {/* Icon */}
-            <div style={{ fontSize: '3rem', marginBottom: '0.75rem', lineHeight: 1 }}>{activeNotif.icon}</div>
-            {/* Title */}
-            {activeNotif.title && (
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: activeNotif.color, marginBottom: '0.6rem', letterSpacing: '-0.01em' }}>{activeNotif.title}</div>
-            )}
-            {/* Message */}
-            <div style={{ fontSize: '0.92rem', color: C.muted, lineHeight: 1.7, marginBottom: '1.75rem', whiteSpace: 'pre-wrap' }}>{activeNotif.message}</div>
-            {/* Dismiss button */}
-            <button onClick={() => dismissNotif(activeNotif.id)}
-              style={{ padding: '0.72rem 2.5rem', background: `${activeNotif.color}18`, border: `1px solid ${activeNotif.color}50`, borderRadius: '12px', color: activeNotif.color, fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>
-              Entendi ✓
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Banner de boas-vindas */}
       <div style={{ background: 'linear-gradient(90deg,rgba(59,130,246,0.12),rgba(99,102,241,0.06))', borderBottom: '1px solid rgba(59,130,246,0.15)', padding: isMobile ? '0.6rem 1rem' : '0.6rem 2rem', display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap' }}>
