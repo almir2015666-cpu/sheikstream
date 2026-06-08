@@ -190,12 +190,15 @@ export default function TwitchSubsPage() {
   const totalTickets = subs.reduce((acc, s) => acc + s.tickets, 0)
   const totalBruto = subs.reduce((acc, s) => acc + tierValue(s.tier, tiers), 0)
   const totalLiquid = totalBruto * 0.5
-  const totalUSD = totalLiquid / EXCHANGE
-  const pctPayout = Math.min(100, (totalUSD / PAYOUT_THRESHOLD) * 100)
 
   const totalBits = cheers.reduce((acc, c) => acc + c.bits, 0)
   const bitsUSD = totalBits * 0.01
   const bitsBRL = bitsUSD * EXCHANGE
+
+  // Combined repasse: 50% of subs + bits ($0.01/bit, no split)
+  const totalUSD = totalLiquid / EXCHANGE + bitsUSD
+  const totalLiquidAll = totalUSD * EXCHANGE
+  const pctPayout = Math.min(100, (totalUSD / PAYOUT_THRESHOLD) * 100)
   const uniqueCheerers = new Set(cheers.filter(c => !c.is_anonymous && c.username).map(c => c.username)).size
   const cheersByUser = cheers.filter(c => c.username).reduce<Record<string, number>>((acc, c) => {
     acc[c.username!] = (acc[c.username!] ?? 0) + c.bits
@@ -618,8 +621,8 @@ export default function TwitchSubsPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
             {[
-              { label: 'Arrecadado bruto', value: fmt(totalBruto), sub: 'pago pelos subs', color: C.text },
-              { label: 'Repasse líquido', value: fmt(totalLiquid), sub: '50% do bruto', color: C.accent },
+              { label: 'Arrecadado bruto', value: fmt(totalBruto + bitsBRL), sub: `subs + ${totalBits} bits`, color: C.text },
+              { label: 'Repasse líquido', value: fmt(totalLiquidAll), sub: '50% subs + bits diretos', color: C.accent },
               { label: 'Equivalente em U$', value: fmtUSD(totalUSD), sub: `cotação R$${EXCHANGE.toFixed(2)}`, color: C.text },
             ].map(r => (
               <div key={r.label} style={{ background: '#0b0d1a', borderRadius: '8px', padding: '0.65rem' }}>

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const payload = JSON.parse(body)
 
   if (msgType === 'notification') {
-    handleNotification(payload).catch(e => console.error('[eventsub] handler error:', e))
+    await handleNotification(payload).catch(e => console.error('[eventsub] handler error:', e))
   }
 
   return new NextResponse(null, { status: 204 })
@@ -123,7 +123,7 @@ async function handleNotification(payload: { subscription: { type: string }; eve
   // ── Follow ───────────────────────────────────────────────────────────────
   if (eventType === 'channel.follow') {
     const username = ((event.user_name ?? event.user_login) as string) ?? ''
-    fireEventCommand(broadcasterId, 'event:twitch:follow', { user: username })
+    await fireEventCommand(broadcasterId, 'event:twitch:follow', { user: username })
       .catch(e => console.error('[eventsub] follow cmd error:', e))
     return
   }
@@ -137,29 +137,25 @@ async function handleNotification(payload: { subscription: { type: string }; eve
 
     // Record the sub in twitch_subs (new sub + gift subs; skip resub to avoid duplication)
     if (eventType === 'channel.subscribe') {
-      ;(async () => {
-        try {
-          await db.from('twitch_subs').insert({
-            broadcaster_id: broadcasterId,
-            username,
-            tier: tierKey,
-            is_gift: isGift,
-            tickets: 1,
-            date: now.toISOString().split('T')[0],
-          })
-        } catch { /* ignore */ }
-      })()
+      await db.from('twitch_subs').insert({
+        broadcaster_id: broadcasterId,
+        username,
+        tier: tierKey,
+        is_gift: isGift,
+        tickets: 1,
+        date: now.toISOString().split('T')[0],
+      }).then(() => {}).catch(() => {})
     }
 
     // Fire event command
     if (eventType === 'channel.subscribe' && !isGift) {
-      fireEventCommand(broadcasterId, 'event:twitch:sub', {
+      await fireEventCommand(broadcasterId, 'event:twitch:sub', {
         user: username, tier: tierLabel(event.tier), tickets: '1',
       }).catch(e => console.error('[eventsub] sub cmd error:', e))
     } else if (eventType === 'channel.subscription.message') {
       const months = String((event.cumulative_months as number) ?? 1)
       const msgText = ((event.message as Record<string, unknown>)?.text as string) ?? ''
-      fireEventCommand(broadcasterId, 'event:twitch:resub', {
+      await fireEventCommand(broadcasterId, 'event:twitch:resub', {
         user: username, months, tier: tierLabel(event.tier), msg: msgText, tickets: '1',
       }).catch(e => console.error('[eventsub] resub cmd error:', e))
     }
@@ -207,7 +203,7 @@ async function handleNotification(payload: { subscription: { type: string }; eve
     const now = new Date()
 
     // Fire event command
-    fireEventCommand(broadcasterId, 'event:twitch:giftsub', {
+    await fireEventCommand(broadcasterId, 'event:twitch:giftsub', {
       user: username, count: String(total), tier: tierLabel(event.tier), tickets: String(total),
     }).catch(e => console.error('[eventsub] giftsub cmd error:', e))
 
@@ -236,26 +232,22 @@ async function handleNotification(payload: { subscription: { type: string }; eve
     const now = new Date()
 
     // Fire chat command to thank the cheerer
-    fireEventCommand(broadcasterId, 'event:twitch:bits', {
+    await fireEventCommand(broadcasterId, 'event:twitch:bits', {
       user: username || 'Anônimo',
       valor: String(bits),
       msg: cheerMsg,
     }).catch(e => console.error('[eventsub] bits cmd error:', e))
 
     // Track in twitch_cheers
-    ;(async () => {
-      try {
-        const r = await db.from('twitch_cheers').insert({
-          broadcaster_id: broadcasterId,
-          username: isAnon ? null : (username || null),
-          bits,
-          message: cheerMsg || null,
-          is_anonymous: isAnon,
-          date: now.toISOString().split('T')[0],
-        })
-        if (r.error) console.warn('[eventsub] twitch_cheers insert skipped:', r.error.message)
-      } catch { /* ignore */ }
-    })()
+    await db.from('twitch_cheers').insert({
+      broadcaster_id: broadcasterId,
+      username: isAnon ? null : (username || null),
+      bits,
+      message: cheerMsg || null,
+      is_anonymous: isAnon,
+      date: now.toISOString().split('T')[0],
+    }).then(r => { if (r.error) console.warn('[eventsub] twitch_cheers insert skipped:', r.error.message) })
+      .catch(() => {})
 
     if (bits >= 100) {
       const units = Math.floor(bits / 100)
