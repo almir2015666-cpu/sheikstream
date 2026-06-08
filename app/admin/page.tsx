@@ -147,6 +147,10 @@ export default function AdminPage() {
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
   const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles'>('users')
+  const [userSearch, setUserSearch] = useState('')
+  type LoginLog = { id: string; ip: string; user_agent: string; success: boolean; created_at: string }
+  const [loginLogs, setLoginLogs] = useState<LoginLog[]>([])
+  const [loginLogsLoading, setLoginLogsLoading] = useState(false)
   type UserRole = { id: string; user_id: string; role: string; created_at: string }
   const [roles, setRoles] = useState<UserRole[]>([])
   const [rolesLoading, setRolesLoading] = useState(false)
@@ -159,7 +163,7 @@ export default function AdminPage() {
   const [pwSaving, setPwSaving] = useState(false)
   const [logs, setLogs] = useState<Log[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
-  const [logTab, setLogTab] = useState<'admin' | 'auth' | 'dashboard' | 'feature' | 'errors' | 'system'>('admin')
+  const [logTab, setLogTab] = useState<'admin' | 'auth' | 'dashboard' | 'feature' | 'errors' | 'system' | 'logins'>('admin')
   const [activity, setActivity] = useState<ActivityLog[]>([])
   const [activityLoading, setActivityLoading] = useState(false)
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([])
@@ -239,6 +243,16 @@ export default function AdminPage() {
       if (res.ok) setSystemLogs(await res.json())
     } catch { /* ignore */ } finally {
       setSystemLogsLoading(false)
+    }
+  }, [])
+
+  const fetchLoginLogs = useCallback(async (pw: string) => {
+    setLoginLogsLoading(true)
+    try {
+      const res = await fetch('/api/admin/login-logs', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setLoginLogs(await res.json())
+    } catch { /* ignore */ } finally {
+      setLoginLogsLoading(false)
     }
   }, [])
 
@@ -463,7 +477,13 @@ export default function AdminPage() {
     return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
   }
 
-  const filtered = users.filter(u => filter === 'all' || u.status === filter)
+  const filtered = users.filter(u => {
+    const matchStatus = filter === 'all' || u.status === filter
+    if (!matchStatus) return false
+    if (!userSearch) return true
+    const q = userSearch.toLowerCase()
+    return (u.platform_username ?? '').toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q) || u.platform.toLowerCase().includes(q)
+  })
   const counts = {
     all: users.length,
     pending: users.filter(u => u.status === 'pending').length,
@@ -584,7 +604,7 @@ export default function AdminPage() {
               { v: 'passwords', label: '🔑 Senhas Admin' },
               { v: 'roles',     label: '🏷 Funções' },
             ] as const).map(({ v, label }) => (
-              <button key={v} onClick={() => { setView(v); if (v === 'logs') fetchLogs(storedPw); if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } }}
+              <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } }}
                 className={`sk-tab${view === v ? ' active' : ''}`}
                 style={{ color: view === v ? C.primary : C.muted }}>
                 {label}
@@ -608,7 +628,8 @@ export default function AdminPage() {
               {/* Log sub-tabs */}
               <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 {([
-                  { key: 'admin',     label: '🛡 Admin' },
+                  { key: 'logins',    label: '🔐 Logins Admin' },
+                  { key: 'admin',     label: '🛡 Ações Admin' },
                   { key: 'auth',      label: '🔑 Autenticação' },
                   { key: 'dashboard', label: '📊 Navegação' },
                   { key: 'feature',   label: '⚡ Funcionalidades' },
@@ -618,7 +639,8 @@ export default function AdminPage() {
                   <button key={t.key}
                     onClick={() => {
                       setLogTab(t.key)
-                      if (t.key === 'admin') fetchLogs(storedPw)
+                      if (t.key === 'logins') fetchLoginLogs(storedPw)
+                      else if (t.key === 'admin') fetchLogs(storedPw)
                       else if (t.key === 'errors') fetchErrorLogs(storedPw)
                       else if (t.key === 'system') fetchSystemLogs(storedPw)
                       else fetchActivity(storedPw, t.key)
@@ -634,7 +656,7 @@ export default function AdminPage() {
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
                   <span style={{ fontWeight: 700, fontSize: '0.9rem', color: C.text }}>
-                    {{ admin: '🛡 Ações do admin', auth: '🔑 Autenticação', dashboard: '📊 Navegação no dashboard', feature: '⚡ Uso de funcionalidades', errors: '⚠ Logs de erro', system: '⚙ Logs do sistema' }[logTab]}
+                    {{ logins: '🔐 Logins no painel admin', admin: '🛡 Ações do admin', auth: '🔑 Autenticação', dashboard: '📊 Navegação no dashboard', feature: '⚡ Uso de funcionalidades', errors: '⚠ Logs de erro', system: '⚙ Logs do sistema' }[logTab]}
                   </span>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   {logTab === 'errors' && (
@@ -648,8 +670,8 @@ export default function AdminPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => { if (logTab === 'admin') fetchLogs(storedPw); else if (logTab === 'errors') fetchErrorLogs(storedPw); else if (logTab === 'system') fetchSystemLogs(storedPw); else fetchActivity(storedPw, logTab) }}
-                    disabled={logTab === 'admin' ? logsLoading : logTab === 'errors' ? errorLogsLoading : logTab === 'system' ? systemLogsLoading : activityLoading}
+                    onClick={() => { if (logTab === 'logins') fetchLoginLogs(storedPw); else if (logTab === 'admin') fetchLogs(storedPw); else if (logTab === 'errors') fetchErrorLogs(storedPw); else if (logTab === 'system') fetchSystemLogs(storedPw); else fetchActivity(storedPw, logTab) }}
+                    disabled={logTab === 'logins' ? loginLogsLoading : logTab === 'admin' ? logsLoading : logTab === 'errors' ? errorLogsLoading : logTab === 'system' ? systemLogsLoading : activityLoading}
                     style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -658,6 +680,42 @@ export default function AdminPage() {
                   </button>
                   </div>
                 </div>
+
+                {/* Login logs tab */}
+                {logTab === 'logins' && (
+                  loginLogsLoading ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
+                  ) : loginLogs.length === 0 ? (
+                    <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum login registrado ainda.</div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                            {['Data / Hora', 'Status', 'IP', 'Navegador'].map(h => (
+                              <th key={h} style={{ padding: '0.75rem 1.2rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, color: C.dim, letterSpacing: '1px', textTransform: 'uppercase' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {loginLogs.map(l => (
+                            <tr key={l.id} className="sk-user-row" style={{ borderBottom: `1px solid ${C.vdim}`, background: 'transparent' }}>
+                              <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.78rem', color: C.dim, whiteSpace: 'nowrap' }}>{fmtDate(l.created_at)}</td>
+                              <td style={{ padding: '0.85rem 1.2rem' }}>
+                                {l.success
+                                  ? <span style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBorder}`, borderRadius: '999px', padding: '0.18rem 0.65rem', fontSize: '0.7rem', fontWeight: 700 }}>✓ Sucesso</span>
+                                  : <span style={{ background: C.dangerBg, color: C.danger, border: `1px solid ${C.dangerBorder}`, borderRadius: '999px', padding: '0.18rem 0.65rem', fontSize: '0.7rem', fontWeight: 700 }}>✕ Falhou</span>
+                                }
+                              </td>
+                              <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.8rem', color: C.text, fontFamily: 'monospace' }}>{l.ip}</td>
+                              <td style={{ padding: '0.85rem 1.2rem', fontSize: '0.72rem', color: C.muted, maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.user_agent}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                )}
 
                 {/* Admin tab — approve/reject/ban */}
                 {logTab === 'admin' && (
@@ -784,7 +842,7 @@ export default function AdminPage() {
                 )}
 
                 {/* Auth / Dashboard / Feature tabs */}
-                {logTab !== 'admin' && logTab !== 'errors' && logTab !== 'system' && (
+                {logTab !== 'logins' && logTab !== 'admin' && logTab !== 'errors' && logTab !== 'system' && (
                   activityLoading ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
                   ) : activity.length === 0 ? (
@@ -950,14 +1008,19 @@ export default function AdminPage() {
           {/* Table card */}
           <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
             {/* Toolbar */}
-            <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: '0.5rem', padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
-              <div style={{ display: 'flex', gap: '0.3rem' }}>
+            <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: '0.5rem', padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
                 {(['all', 'approved', 'pending', 'rejected', 'banned'] as const).map(f => (
                   <button key={f} onClick={() => setFilter(f)} className={`sk-tab${filter === f ? ' active' : ''}`} style={{ color: filter === f ? C.primary : C.muted }}>
                     {{ all: 'Todos', pending: 'Pendentes', approved: 'Ativos', rejected: 'Rejeitados', banned: 'Banidos' }[f]}
                     <span style={{ marginLeft: '0.3rem', fontSize: '0.7rem', opacity: 0.7 }}>({counts[f]})</span>
                   </button>
                 ))}
+              </div>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <svg style={{ position: 'absolute', left: '0.6rem', color: C.dim, pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Buscar usuário..." style={{ padding: '0.4rem 0.7rem 0.4rem 2rem', background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none', width: '200px' }} />
+                {userSearch && <button onClick={() => setUserSearch('')} style={{ position: 'absolute', right: '0.5rem', background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>✕</button>}
               </div>
               <button onClick={handleResetSessions} disabled={resetLoading}
                 style={{ background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>
@@ -978,7 +1041,7 @@ export default function AdminPage() {
               <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando usuários...</div>
             ) : filtered.length === 0 ? (
               <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>
-                Nenhum usuário {filter !== 'all' ? `com status "${filter}"` : ''} encontrado.
+                Nenhum usuário {userSearch ? `com "${userSearch}"` : filter !== 'all' ? `com status "${filter}"` : ''} encontrado.
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

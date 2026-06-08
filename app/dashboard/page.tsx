@@ -58,7 +58,7 @@ type Stats = {
 type ChannelStats = {
   broadcaster_name: string; title: string; game_name: string
   is_live: boolean; viewer_count: number; started_at: string | null
-  follower_count: number | null; language: string; broadcaster_login: string
+  follower_count: number | null; view_count: number | null; language: string; broadcaster_login: string
 }
 
 function fmtBRL(v: number) { return `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
@@ -73,6 +73,7 @@ export default function DashboardPage() {
   const [statsLoading, setStatsLoading] = useState(false)
   const [channel, setChannel] = useState<ChannelStats | null>(null)
   const [channelErr, setChannelErr] = useState('')
+  const [refreshTick, setRefreshTick] = useState(0)
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
 
   function periodDates() {
@@ -89,6 +90,11 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
+    const iv = setInterval(() => setRefreshTick(t => t + 1), 60000)
+    return () => clearInterval(iv)
+  }, [])
+
+  useEffect(() => {
     const { from, to } = periodDates()
     setStatsLoading(true)
     fetch(`/api/dashboard/stats?from=${from}&to=${to}`)
@@ -96,13 +102,17 @@ export default function DashboardPage() {
       .then(d => { if (d) setStats(d) })
       .catch(() => {})
       .finally(() => setStatsLoading(false))
-  }, [period, customFrom, customTo])
+  }, [period, customFrom, customTo, refreshTick])
 
   useEffect(() => {
-    fetch('/api/twitch/channel-stats')
-      .then(r => r.ok ? r.json() : r.json().then((d: {error: string}) => Promise.reject(d.error)))
-      .then((d: ChannelStats) => setChannel(d))
-      .catch((e: string) => setChannelErr(e || 'Conta Twitch não conectada'))
+    const load = () =>
+      fetch('/api/twitch/channel-stats')
+        .then(r => r.ok ? r.json() : r.json().then((d: {error: string}) => Promise.reject(d.error)))
+        .then((d: ChannelStats) => { setChannel(d); setChannelErr('') })
+        .catch((e: string) => setChannelErr(e || 'Conta Twitch não conectada'))
+    load()
+    const iv = setInterval(load, 60000)
+    return () => clearInterval(iv)
   }, [])
 
   return (
@@ -155,6 +165,12 @@ export default function DashboardPage() {
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '1rem', fontWeight: 800, color: '#ff4444' }}>{fmtNum(channel.viewer_count)}</div>
                     <div style={{ fontSize: '0.63rem', color: C.vdim }}>Viewers</div>
+                  </div>
+                )}
+                {channel.view_count !== null && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: C.text }}>{fmtNum(channel.view_count)}</div>
+                    <div style={{ fontSize: '0.63rem', color: C.vdim }}>Views totais</div>
                   </div>
                 )}
                 {channel.game_name && (

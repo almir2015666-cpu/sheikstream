@@ -46,31 +46,45 @@ const I = {
 type Badge = 'NOVO' | 'ATUALIZADO'
 type Child = { id: string; label: string; href: string; badge?: 'NOVO' }
 type Item  = { id: string; label: string; href: string; icon: React.ReactNode; badge?: Badge; children?: Child[] }
+type Group = { label: string; items: Item[] }
 
-const NAV: Item[] = [
-  { id: 'dashboard',   label: 'Dashboard',   href: '/dashboard',              icon: I.dash },
-  { id: 'plataformas', label: 'Plataformas', href: '/dashboard/plataformas', icon: I.plat, badge: 'NOVO',
-    children: [
-      { id: 'p-twitch',  label: 'Twitch',  href: '/dashboard/plataformas/twitch' },
-      { id: 'p-livepix', label: 'Livepix', href: '/dashboard/plataformas/livepix' },
-    ]
-  },
-  { id: 'sorteios',    label: 'Sorteios',    href: '/dashboard/sorteios',    icon: I.sort,
-    children: [
-      { id: 's-criar',   label: 'Criar / Editar', href: '/dashboard/sorteios' },
-      { id: 's-tickets', label: 'Tickets',         href: '/dashboard/sorteios/tickets', badge: 'NOVO' },
-    ]
-  },
-  { id: 'subathon',    label: 'Subathon',    href: '/dashboard/subathon',    icon: I.suba, badge: 'NOVO' },
-  { id: 'banners',     label: 'Banners',     href: '/dashboard/banners',     icon: I.ban,  badge: 'NOVO' },
-  { id: 'metas',       label: 'Metas',       href: '/dashboard/metas',       icon: I.meta },
-  { id: 'comandos',    label: 'Comandos',    href: '/dashboard/comandos',    icon: I.cmd  },
-  { id: 'timers',      label: 'Timers',      href: '/dashboard/timers',      icon: I.time },
-  { id: 'overlays',    label: 'Overlays',    href: '/dashboard/overlays',    icon: I.over },
-  { id: 'conexoes',    label: 'Conexões',    href: '/dashboard/conexoes',    icon: I.link, badge: 'ATUALIZADO' },
-  { id: 'perfil',      label: 'Meu perfil',  href: '/dashboard/perfil',      icon: I.prof },
-  { id: 'convites',    label: 'Convites',    href: '/dashboard/convites',    icon: I.inv,  badge: 'NOVO' },
+const NAV_GROUPS: Group[] = [
+  { label: '', items: [
+    { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: I.dash },
+  ]},
+  { label: 'AO VIVO', items: [
+    { id: 'subathon', label: 'Subathon', href: '/dashboard/subathon', icon: I.suba, badge: 'NOVO' },
+    { id: 'timers',   label: 'Timers',   href: '/dashboard/timers',   icon: I.time },
+    { id: 'comandos', label: 'Comandos', href: '/dashboard/comandos', icon: I.cmd  },
+  ]},
+  { label: 'SORTEIO', items: [
+    { id: 'sorteios', label: 'Sorteios', href: '/dashboard/sorteios', icon: I.sort,
+      children: [
+        { id: 's-criar',   label: 'Criar / Editar', href: '/dashboard/sorteios' },
+        { id: 's-tickets', label: 'Tickets',         href: '/dashboard/sorteios/tickets', badge: 'NOVO' },
+      ]
+    },
+  ]},
+  { label: 'FINANCEIRO', items: [
+    { id: 'plataformas', label: 'Plataformas', href: '/dashboard/plataformas', icon: I.plat, badge: 'NOVO',
+      children: [
+        { id: 'p-twitch',  label: 'Twitch',  href: '/dashboard/plataformas/twitch' },
+        { id: 'p-livepix', label: 'Livepix', href: '/dashboard/plataformas/livepix' },
+      ]
+    },
+    { id: 'metas', label: 'Metas', href: '/dashboard/metas', icon: I.meta },
+  ]},
+  { label: 'OVERLAYS', items: [
+    { id: 'overlays', label: 'Overlays', href: '/dashboard/overlays', icon: I.over },
+    { id: 'banners',  label: 'Banners',  href: '/dashboard/banners',  icon: I.ban, badge: 'NOVO' },
+  ]},
+  { label: 'CONTA', items: [
+    { id: 'conexoes', label: 'Conexões',  href: '/dashboard/conexoes', icon: I.link, badge: 'ATUALIZADO' },
+    { id: 'convites', label: 'Convites',  href: '/dashboard/convites', icon: I.inv,  badge: 'NOVO' },
+    { id: 'perfil',   label: 'Meu perfil', href: '/dashboard/perfil', icon: I.prof },
+  ]},
 ]
+const NAV_ALL: Item[] = NAV_GROUPS.flatMap(g => g.items)
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -150,6 +164,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [navSearch, setNavSearch] = useState('')
   const lastTrackedPath = useRef<string | null>(null)
   const [seenBadges, setSeenBadges] = useState<Set<string>>(new Set())
   const [banner, setBanner] = useState<BannerCfg | null>(null)
@@ -176,7 +191,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Auto-dismiss badge when navigating to that page
   useEffect(() => {
     const toAdd: string[] = []
-    NAV.forEach(item => {
+    NAV_ALL.forEach(item => {
       if (item.badge) {
         const isHere = item.href === '/dashboard' ? pathname === '/dashboard' : pathname === item.href || pathname.startsWith(item.href + '/')
         if (isHere) toAdd.push(item.id)
@@ -259,6 +274,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return pathname === item.href || pathname.startsWith(item.href + '/')
   }
 
+  function matchSearch(q: string) {
+    const lq = q.toLowerCase()
+    const hits: { item: Item; child?: Child; groupLabel: string }[] = []
+    for (const group of NAV_GROUPS) {
+      for (const item of group.items) {
+        if (item.label.toLowerCase().includes(lq)) {
+          hits.push({ item, groupLabel: group.label })
+        }
+        for (const ch of item.children ?? []) {
+          if (ch.label.toLowerCase().includes(lq)) {
+            hits.push({ item, child: ch, groupLabel: group.label })
+          }
+        }
+      }
+    }
+    return hits
+  }
+
   function toggle(id: string, e: React.MouseEvent) {
     e.preventDefault()
     setOpen(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -333,59 +366,95 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </div>
 
+      {/* Search */}
+      <div style={{ padding: '0.4rem 0.6rem 0.2rem', flexShrink: 0 }}>
+        <div style={{ position: 'relative' }}>
+          <svg style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: S.dim, flexShrink: 0, pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            value={navSearch}
+            onChange={e => setNavSearch(e.target.value)}
+            placeholder="Pesquisar..."
+            style={{ width: '100%', padding: '0.45rem 0.6rem 0.45rem 2rem', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${S.border}`, borderRadius: '8px', color: S.text, fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }}
+          />
+          {navSearch && (
+            <button onClick={() => setNavSearch('')} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>✕</button>
+          )}
+        </div>
+      </div>
+
       {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '0.6rem 0.5rem' }}>
-        {NAV.map(item => {
-          const isAct = active(item)
-          const isExp = open.has(item.id)
-          const hasCh = !!item.children
-          return (
-            <div key={item.id}>
-              <Link
-                href={hasCh ? '#' : item.href}
-                onClick={hasCh ? (e) => { toggle(item.id, e); if (item.badge) dismissBadge(item.id) } : () => { setMobileOpen(false); if (item.badge) dismissBadge(item.id) }}
-                className={isAct ? 'sk-nl-act' : 'sk-nl'}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.7rem',
-                  padding: '0.6rem 0.75rem', borderRadius: '9px', marginBottom: '2px',
-                  color: isAct ? '#fff' : S.muted, textDecoration: 'none',
-                  fontSize: '0.9rem', fontWeight: isAct ? 600 : 400,
-                  background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent',
-                  border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent',
-                  cursor: 'pointer', letterSpacing: '-0.1px',
-                }}
-              >
-                <span style={{ color: isAct ? S.iconActive : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-                {item.badge && !seenBadges.has(item.id) && <Chip type={item.badge} />}
-                {hasCh && !isAct && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>{I.chev}</span>}
-                {isAct && <span style={{ color: S.iconActive, flexShrink: 0, display: 'flex' }}>{I.arr}</span>}
-              </Link>
-              {hasCh && isExp && item.children?.map(ch => {
-                const ca = pathname === ch.href
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '0.35rem 0.5rem' }}>
+        {navSearch ? (
+          /* Search results — flat list */
+          (() => {
+            const hits = matchSearch(navSearch)
+            if (!hits.length) return (
+              <div style={{ padding: '1.5rem 0.75rem', textAlign: 'center', color: S.vdim, fontSize: '0.78rem' }}>Nenhum resultado</div>
+            )
+            return hits.map(({ item, child }) => {
+              const href = child ? child.href : item.href
+              const label = child ? `${item.label} › ${child.label}` : item.label
+              const id = child ? child.id : item.id
+              const badge = child ? child.badge : item.badge
+              const isAct = pathname === href || (!child && active(item))
+              return (
+                <Link key={id} href={href}
+                  onClick={() => { setMobileOpen(false); setNavSearch(''); if (badge) dismissBadge(id) }}
+                  className={isAct ? 'sk-nl-act' : 'sk-nl'}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 0.75rem', borderRadius: '9px', marginBottom: '2px', color: isAct ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.85rem', fontWeight: isAct ? 600 : 400, background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent', border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent' }}>
+                  {!child && <span style={{ color: isAct ? S.iconActive : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>}
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                  {badge && !seenBadges.has(id) && <Chip type={badge} />}
+                </Link>
+              )
+            })
+          })()
+        ) : (
+          /* Grouped nav */
+          NAV_GROUPS.map(group => (
+            <div key={group.label || '__root'}>
+              {group.label && (
+                <div style={{ padding: '0.65rem 0.75rem 0.25rem', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', color: S.vdim, textTransform: 'uppercase' }}>
+                  {group.label}
+                </div>
+              )}
+              {group.items.map(item => {
+                const isAct = active(item)
+                const isExp = open.has(item.id)
+                const hasCh = !!item.children
                 return (
-                  <Link
-                    key={ch.id} href={ch.href}
-                    onClick={() => { setMobileOpen(false); if (ch.badge) dismissBadge(ch.id) }}
-                    className={ca ? 'sk-nl-act' : 'sk-nl'}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '0.5rem',
-                      padding: '0.48rem 0.75rem 0.48rem 2.8rem', borderRadius: '9px', marginBottom: '2px',
-                      color: ca ? '#fff' : S.muted, textDecoration: 'none',
-                      fontSize: '0.84rem', fontWeight: ca ? 600 : 400,
-                      background: ca ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.28),rgba(109,40,217,0.22)' : 'rgba(123,46,255,0.12),rgba(90,30,200,0.08)'})` : 'transparent',
-                      border: ca ? `1px solid ${isDark ? 'rgba(155,48,255,0.25)' : 'rgba(123,46,255,0.2)'}` : '1px solid transparent',
-                    }}
-                  >
-                    <span style={{ flex: 1 }}>{ch.label}</span>
-                    {ch.badge && !seenBadges.has(ch.id) && <Chip type={ch.badge} />}
-                    {ca && <span style={{ color: S.iconActive, display: 'flex' }}>{I.arr}</span>}
-                  </Link>
+                  <div key={item.id}>
+                    <Link
+                      href={hasCh ? '#' : item.href}
+                      onClick={hasCh ? (e) => { toggle(item.id, e); if (item.badge) dismissBadge(item.id) } : () => { setMobileOpen(false); if (item.badge) dismissBadge(item.id) }}
+                      className={isAct ? 'sk-nl-act' : 'sk-nl'}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.6rem 0.75rem', borderRadius: '9px', marginBottom: '2px', color: isAct ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.9rem', fontWeight: isAct ? 600 : 400, background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent', border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent', cursor: 'pointer', letterSpacing: '-0.1px' }}
+                    >
+                      <span style={{ color: isAct ? S.iconActive : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                      {item.badge && !seenBadges.has(item.id) && <Chip type={item.badge} />}
+                      {hasCh && !isAct && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>{I.chev}</span>}
+                      {isAct && <span style={{ color: S.iconActive, flexShrink: 0, display: 'flex' }}>{I.arr}</span>}
+                    </Link>
+                    {hasCh && isExp && item.children?.map(ch => {
+                      const ca = pathname === ch.href
+                      return (
+                        <Link key={ch.id} href={ch.href}
+                          onClick={() => { setMobileOpen(false); if (ch.badge) dismissBadge(ch.id) }}
+                          className={ca ? 'sk-nl-act' : 'sk-nl'}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.48rem 0.75rem 0.48rem 2.8rem', borderRadius: '9px', marginBottom: '2px', color: ca ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.84rem', fontWeight: ca ? 600 : 400, background: ca ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.28),rgba(109,40,217,0.22)' : 'rgba(123,46,255,0.12),rgba(90,30,200,0.08)'})` : 'transparent', border: ca ? `1px solid ${isDark ? 'rgba(155,48,255,0.25)' : 'rgba(123,46,255,0.2)'}` : '1px solid transparent' }}>
+                          <span style={{ flex: 1 }}>{ch.label}</span>
+                          {ch.badge && !seenBadges.has(ch.id) && <Chip type={ch.badge} />}
+                          {ca && <span style={{ color: S.iconActive, display: 'flex' }}>{I.arr}</span>}
+                        </Link>
+                      )
+                    })}
+                  </div>
                 )
               })}
             </div>
-          )
-        })}
+          ))
+        )}
       </nav>
 
       {/* Admin link */}

@@ -78,7 +78,11 @@ export default function TwitchSubsPage() {
       if (!res.ok) {
         notify(data.error || 'Erro ao sincronizar', 'error')
       } else {
-        notify(data.message || 'Sincronizado com sucesso!', 'success')
+        if (data.inserted > 0) {
+          notify(data.message || 'Sincronizado com sucesso!', 'success')
+        } else if (data.total === 0) {
+          notify('Nenhum inscrito encontrado na Twitch.', 'info')
+        }
         loadSubs()
       }
     } catch {
@@ -413,7 +417,7 @@ export default function TwitchSubsPage() {
                   <div style={{ padding: '0.5rem 1.2rem 0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: C.dim }}>
                     <span>Ticket owner: <span style={{ color: s.is_gift && s.gifted_by ? C.text : C.text }}>{s.is_gift && s.gifted_by ? s.gifted_by : s.username}</span></span>
                     {s.is_gift && <span style={{ padding: '0.1rem 0.45rem', background: 'rgba(251,191,36,0.1)', color: '#fbbf24', borderRadius: 99, border: '1px solid rgba(251,191,36,0.25)', fontSize: '0.65rem', fontWeight: 700 }}>GIFT</span>}
-                    <span style={{ marginLeft: 'auto', background: C.primaryBg, color: C.primary, border: `1px solid ${C.primaryB}`, borderRadius: 99, padding: '0.1rem 0.5rem', fontSize: '0.68rem', fontWeight: 700 }}>+{s.tickets} ticket{s.tickets !== 1 ? 's' : ''}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: C.dim }}>{s.tickets} ticket{s.tickets !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
               )
