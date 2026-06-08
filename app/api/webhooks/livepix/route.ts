@@ -14,13 +14,14 @@ export async function POST(req: NextRequest) {
 
   let broadcasterId = channelId
   if (channelId) {
-    const { data: cfgRow } = await db
-      .from('livepix_config')
-      .select('user_id')
-      .eq('channel_id', channelId)
-      .maybeSingle()
-      .catch(() => ({ data: null }))
-    if (cfgRow?.user_id) broadcasterId = cfgRow.user_id
+    try {
+      const { data: cfgRow } = await db
+        .from('livepix_config')
+        .select('user_id')
+        .eq('channel_id', channelId)
+        .maybeSingle()
+      if (cfgRow?.user_id) broadcasterId = cfgRow.user_id
+    } catch { /* table may not exist yet */ }
   }
 
   if (channelId && amount > 0) {
