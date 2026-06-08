@@ -491,9 +491,14 @@ export default function TwitchSubsPage() {
                         ))}
                       </div>
                     )}
-                    {recentEvents.length === 0 && !eventsTableError && (
+                    {recentEvents.length === 0 && !eventsTableError && activeTypes.length === 0 && (
                       <div style={{ marginTop: '0.3rem', fontSize: '0.71rem', color: '#ef4444' }}>
                         Nenhuma entrada — a Twitch não está chegando no webhook (URL errada ou rota inacessível)
+                      </div>
+                    )}
+                    {recentEvents.length === 0 && !eventsTableError && activeTypes.length > 0 && (
+                      <div style={{ marginTop: '0.3rem', fontSize: '0.71rem', color: '#22c55e' }}>
+                        Webhook funcionando — entradas aparecerão quando ocorrerem eventos reais (follows, subs, bits...)
                       </div>
                     )}
                   </div>
