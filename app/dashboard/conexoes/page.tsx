@@ -112,7 +112,6 @@ export default function ConexoesPage() {
   const [livepixSyncMsg, setLivepixSyncMsg] = useState('')
   const [syncResult, setSyncResult] = useState<{ synced: number; totalInDb: number } | null>(null)
   const [webhookCopied, setWebhookCopied] = useState(false)
-  const [showQr, setShowQr] = useState(false)
   const [livepixDisconnecting, setLivepixDisconnecting] = useState(false)
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
   const [webhookOrigin, setWebhookOrigin] = useState('')
@@ -486,35 +485,8 @@ export default function ConexoesPage() {
                     : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                   }
                 </button>
-                {/* QR code button */}
-                <button onClick={() => setShowQr(true)}
-                  style={{ width: 34, height: 34, flexShrink: 0, background: 'transparent', border: `1px solid ${C.border}`, borderRadius: '7px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.dim }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                    <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/>
-                    <path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/>
-                  </svg>
-                </button>
               </div>
             </div>
-
-            {/* QR code modal */}
-            {showQr && (() => {
-              const url = `${webhookOrigin}/api/livepix/webhook/${encodeURIComponent(livepix.slug || 'meu-canal')}`
-              const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(url)}`
-              return (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
-                  onClick={() => setShowQr(false)}>
-                  <div style={{ background: '#111219', border: '1px solid rgba(57,255,20,0.2)', borderRadius: '16px', padding: '1.5rem', textAlign: 'center', position: 'relative' }}
-                    onClick={e => e.stopPropagation()}>
-                    <button onClick={() => setShowQr(false)} style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '1rem' }}>✕</button>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#39ff14', marginBottom: '0.75rem' }}>QR Code — Webhook Livepix</div>
-                    <img src={qrSrc} alt="QR Code" width={200} height={200} style={{ borderRadius: '8px', display: 'block', margin: '0 auto' }} />
-                    <div style={{ fontSize: '0.68rem', color: C.dim, marginTop: '0.75rem', maxWidth: 220, wordBreak: 'break-all' }}>{url}</div>
-                  </div>
-                </div>
-              )
-            })()}
 
             {livepixSyncMsg && (
               <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.4rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
