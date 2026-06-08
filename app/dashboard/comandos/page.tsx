@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 const C = {
   page: '#08090d', card: '#0d0f18', border: 'rgba(255,255,255,0.07)',
@@ -125,14 +125,36 @@ export default function ComandosPage() {
   const [saveOk, setSaveOk]       = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => {
-    type DbRow = { id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string }
+  type DbRow = { id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string }
 
+  // Merge DB rows into cmds state (called on load and after every save)
+  const applyDbRows = useCallback((rows: DbRow[], dbByTrigger: Map<string, DbRow>) => {
+    const dbRegular = rows.filter(r => !isEventTrigger(r.trigger))
+    const mergedDefaults = DEFAULTS.map(def => {
+      const db = dbByTrigger.get(def.trigger)
+      if (db) return { ...def, id: db.id, resposta: db.resposta, cooldown: db.cooldown_s, habilitado: db.habilitado, db: true }
+      return def
+    })
+    const regularCmds: Cmd[] = dbRegular.map(r => ({
+      id: r.id, label: '!' + r.trigger, trigger: '!' + r.trigger, resposta: r.resposta,
+      cooldown: r.cooldown_s, habilitado: r.habilitado,
+      isEvento: false, origem: r.permissao ?? 'todos', platform: r.platform ?? 'Twitch', db: true,
+    }))
+    setCmds([...mergedDefaults, ...regularCmds])
+  }, [])
+
+  // Reload commands from server (no seeding) — called after save to sync state with DB
+  const reloadFromDB = useCallback(async () => {
+    const rows: DbRow[] = await fetch('/api/comandos').then(r => r.ok ? r.json() : []).catch(() => [])
+    const dbEvents = rows.filter(r => isEventTrigger(r.trigger))
+    const dbByTrigger = new Map<string, DbRow>(dbEvents.map(r => [r.trigger, r]))
+    applyDbRows(rows, dbByTrigger)
+  }, [applyDbRows])
+
+  useEffect(() => {
     async function loadAndSeed() {
       const rows: DbRow[] = await fetch('/api/comandos').then(r => r.ok ? r.json() : []).catch(() => [])
-
       const dbEvents  = rows.filter(r => isEventTrigger(r.trigger))
-      const dbRegular = rows.filter(r => !isEventTrigger(r.trigger))
       const dbByTrigger = new Map<string, DbRow>(dbEvents.map(r => [r.trigger, r]))
 
       // Seed any default events not yet in DB so fireEventCommand can find them
@@ -145,25 +167,11 @@ export default function ComandosPage() {
         }).then(r => r.ok ? r.json() as Promise<DbRow> : null).catch(() => null)
       ))
       for (const s of seeded) { if (s) dbByTrigger.set(s.trigger, s) }
-
-      // Merge: DB record (real UUID) overrides local default
-      const mergedDefaults = DEFAULTS.map(def => {
-        const db = dbByTrigger.get(def.trigger)
-        if (db) return { ...def, id: db.id, resposta: db.resposta, cooldown: db.cooldown_s, habilitado: db.habilitado, db: true }
-        return def
-      })
-
-      const regularCmds: Cmd[] = dbRegular.map(r => ({
-        id: r.id, label: '!' + r.trigger, trigger: '!' + r.trigger, resposta: r.resposta,
-        cooldown: r.cooldown_s, habilitado: r.habilitado,
-        isEvento: false, origem: r.permissao ?? 'todos', platform: r.platform ?? 'Twitch', db: true,
-      }))
-
-      setCmds([...mergedDefaults, ...regularCmds])
+      applyDbRows(rows.concat(seeded.filter((s): s is DbRow => s !== null && !dbEvents.some(e => e.trigger === s.trigger))), dbByTrigger)
     }
 
     loadAndSeed()
-  }, [])
+  }, [applyDbRows])
 
   function insertVar(v: string) {
     const ta = taRef.current
@@ -237,6 +245,8 @@ export default function ComandosPage() {
       })
       setSaveOk(true)
       setSaving(false)
+      // Reload from server to guarantee list shows persisted data
+      reloadFromDB().catch(() => {})
       setTimeout(() => { setForm(emptyForm); setCreating(false); setEditingId(null); setSaveOk(false) }, 1200)
     } catch (err) {
       setSaveErr('Erro de conexão: ' + String(err))

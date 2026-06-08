@@ -115,10 +115,28 @@ async function handleNotification(payload: { subscription: { type: string }; eve
   // ── Subs / Resubs ────────────────────────────────────────────────────────
   if (eventType === 'channel.subscribe' || eventType === 'channel.subscription.message') {
     const username = ((event.user_name ?? event.user_login) as string) ?? ''
+    const isGift = (event.is_gift as boolean) === true
     const now = new Date()
+    const tierKey = String(event.tier ?? '1000') === '2000' ? 'tier2' : String(event.tier ?? '1000') === '3000' ? 'tier3' : 'tier1'
+
+    // Record the sub in twitch_subs (new sub + gift subs; skip resub to avoid duplication)
+    if (eventType === 'channel.subscribe') {
+      ;(async () => {
+        try {
+          await db.from('twitch_subs').insert({
+            broadcaster_id: broadcasterId,
+            username,
+            tier: tierKey,
+            is_gift: isGift,
+            tickets: 1,
+            date: now.toISOString().split('T')[0],
+          })
+        } catch { /* ignore */ }
+      })()
+    }
 
     // Fire event command
-    if (eventType === 'channel.subscribe' && !(event.is_gift as boolean)) {
+    if (eventType === 'channel.subscribe' && !isGift) {
       fireEventCommand(broadcasterId, 'event:twitch:sub', {
         user: username, tier: tierLabel(event.tier), tickets: '1',
       }).catch(e => console.error('[eventsub] sub cmd error:', e))
