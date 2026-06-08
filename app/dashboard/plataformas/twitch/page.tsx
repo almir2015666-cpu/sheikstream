@@ -141,7 +141,7 @@ export default function TwitchSubsPage() {
       fetch('/api/twitch/tier-config').then(r => r.json()).catch(() => ({})),
       fetch('/api/sorteios').then(r => r.json()).catch(() => []),
       fetch('/api/me').then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/api/twitch/channel-stats').then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`/api/twitch/channel-stats?from=${useCustom ? customFrom : daysAgoStr(days)}&to=${useCustom ? customTo : today()}`).then(r => r.ok ? r.json() : null).catch(() => null),
     ])
     setSubs(Array.isArray(subsRes) ? subsRes : [])
     setCheers(Array.isArray(cheersRes) ? cheersRes : [])

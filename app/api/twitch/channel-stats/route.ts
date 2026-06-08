@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, decodeSession } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 
+function dateToPeriod(fromDate: string): string {
+  const now = new Date()
+  const from = new Date(fromDate)
+  const diffDays = Math.round((now.getTime() - from.getTime()) / 86400000)
+  if (diffDays <= 1) return 'day'
+  if (diffDays <= 8) return 'week'
+  if (diffDays <= 32) return 'month'
+  if (diffDays <= 366) return 'year'
+  return 'all'
+}
+
 export async function GET(req: NextRequest) {
   const token = req.cookies.get(COOKIE_NAME)?.value
   const user = token ? decodeSession(token) : null
@@ -51,7 +62,13 @@ export async function GET(req: NextRequest) {
       fetch(`https://api.twitch.tv/helix/streams?user_id=${broadcasterId}`, { headers }),
       fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=1`, { headers }),
       fetch(`https://api.twitch.tv/helix/users?id=${broadcasterId}`, { headers }),
-      fetch(`https://api.twitch.tv/helix/bits/leaderboard?broadcaster_id=${broadcasterId}&count=100&period=all`, { headers }),
+      (() => {
+        const url = new URL(req.url)
+        const fromParam = url.searchParams.get('from')
+        const period = fromParam ? dateToPeriod(fromParam) : 'all'
+        const startedAt = fromParam ? `&started_at=${new Date(fromParam).toISOString()}` : ''
+        return fetch(`https://api.twitch.tv/helix/bits/leaderboard?broadcaster_id=${broadcasterId}&count=100&period=${period}${startedAt}`, { headers })
+      })(),
     ])
 
     if (channelRes.status === 401) {
