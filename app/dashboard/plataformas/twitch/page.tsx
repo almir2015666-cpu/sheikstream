@@ -196,16 +196,14 @@ export default function TwitchSubsPage() {
   const totalBruto = subs.reduce((acc, s) => acc + tierValue(s.tier, tiers), 0)
   const totalLiquid = totalBruto * 0.5
 
-  const totalBits = cheers.reduce((acc, c) => acc + c.bits, 0)  // respects period filter
-  const bitsHistorical = channelStats?.bits_total_historical ?? 0  // all-time from Twitch API
+  const totalBits = cheers.reduce((acc, c) => acc + c.bits, 0)  // period-filtered
+  const bitsHistorical = channelStats?.bits_total_historical ?? 0  // all-time, info only
   const bitsUSD = totalBits * 0.01
   const bitsBRL = bitsUSD * EXCHANGE
-  const bitsHistoricalUSD = bitsHistorical * 0.01
-  const bitsHistoricalBRL = bitsHistoricalUSD * EXCHANGE
+  const bitsHistoricalBRL = bitsHistorical * 0.01 * EXCHANGE
 
-  // Repasse uses historical bits (all-time) for payout threshold calculation
-  const effectiveBitsUSD = bitsHistorical > 0 ? bitsHistoricalUSD : bitsUSD
-  const totalUSD = totalLiquid / EXCHANGE + effectiveBitsUSD
+  // Repasse uses same period-filtered values for consistency
+  const totalUSD = totalLiquid / EXCHANGE + bitsUSD
   const totalLiquidAll = totalUSD * EXCHANGE
   const pctPayout = Math.min(100, (totalUSD / PAYOUT_THRESHOLD) * 100)
   const uniqueCheerers = new Set(cheers.filter(c => !c.is_anonymous && c.username).map(c => c.username)).size
@@ -636,7 +634,7 @@ export default function TwitchSubsPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
             {[
-              { label: 'Arrecadado bruto', value: fmt(totalBruto + (bitsHistorical > 0 ? bitsHistoricalBRL : bitsBRL)), sub: `subs + ${(bitsHistorical > 0 ? bitsHistorical : totalBits).toLocaleString('pt-BR')} bits`, color: C.text },
+              { label: 'Arrecadado bruto', value: fmt(totalBruto + bitsBRL), sub: `subs + ${totalBits.toLocaleString('pt-BR')} bits`, color: C.text },
               { label: 'Repasse líquido', value: fmt(totalLiquidAll), sub: '50% subs + bits diretos', color: C.accent },
               { label: 'Equivalente em U$', value: fmtUSD(totalUSD), sub: `cotação R$${EXCHANGE.toFixed(2)}`, color: C.text },
             ].map(r => (
