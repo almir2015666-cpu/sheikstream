@@ -183,7 +183,7 @@ export default function AdminPage() {
   const [bannerSaving, setBannerSaving] = useState(false)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerSaved, setBannerSaved] = useState(false)
-  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; twitch_bot: boolean; livepix_connected: boolean }
+  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean }
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
   type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; target_username: string | null; duration_seconds?: number }
@@ -1735,17 +1735,12 @@ export default function AdminPage() {
                             <span style={{ fontSize: '0.66rem', color: C.vdim }}>{timeLabel}</span>
                           </div>
                           <div style={{ fontSize: '0.74rem', color: C.muted, marginBottom: '0.45rem' }}>{u.email ?? '—'}</div>
-                          {/* Platform chips */}
+                          {/* Platform chips — only show platforms explicitly connected in Conexões */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                             {u.twitch_connected && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(145,71,255,0.12)', border: '1px solid rgba(145,71,255,0.25)', color: '#9147ff' }}>
                                 <svg width="10" height="10" viewBox="0 0 24 28" fill="#9147ff"><path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/></svg>
                                 Twitch
-                              </span>
-                            )}
-                            {u.twitch_bot && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(145,71,255,0.07)', border: '1px solid rgba(145,71,255,0.18)', color: '#b588ff' }}>
-                                🤖 Bot
                               </span>
                             )}
                             {u.livepix_connected && (
@@ -1754,7 +1749,7 @@ export default function AdminPage() {
                                 Livepix
                               </span>
                             )}
-                            {!u.twitch_bot && !u.livepix_connected && (
+                            {!u.twitch_connected && !u.livepix_connected && (
                               <span style={{ fontSize: '0.63rem', color: C.vdim }}>nenhuma plataforma conectada</span>
                             )}
                           </div>
