@@ -241,15 +241,17 @@ async function handleNotification(payload: { subscription: { type: string }; eve
     }).catch(e => console.error('[eventsub] bits cmd error:', e))
 
     // Track in twitch_cheers
-    await db.from('twitch_cheers').insert({
-      broadcaster_id: broadcasterId,
-      username: isAnon ? null : (username || null),
-      bits,
-      message: cheerMsg || null,
-      is_anonymous: isAnon,
-      date: now.toISOString().split('T')[0],
-    }).then(r => { if (r.error) console.warn('[eventsub] twitch_cheers insert skipped:', r.error.message) })
-      .catch(() => {})
+    try {
+      const r = await db.from('twitch_cheers').insert({
+        broadcaster_id: broadcasterId,
+        username: isAnon ? null : (username || null),
+        bits,
+        message: cheerMsg || null,
+        is_anonymous: isAnon,
+        date: now.toISOString().split('T')[0],
+      })
+      if (r.error) console.warn('[eventsub] twitch_cheers insert skipped:', r.error.message)
+    } catch { /* ignore */ }
 
     if (bits >= 100) {
       const units = Math.floor(bits / 100)
