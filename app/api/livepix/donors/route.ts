@@ -10,9 +10,6 @@ function getUser(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const url = new URL(req.url)
-  const days = Number(url.searchParams.get('days') || 30)
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const db = getSupabaseAdmin()
   let bids = [user.id]
   try {
@@ -23,7 +20,6 @@ export async function GET(req: NextRequest) {
     .from('livepix_donors')
     .select('*')
     .in('broadcaster_id', bids)
-    .gte('date', since)
     .order('created_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data ?? [])

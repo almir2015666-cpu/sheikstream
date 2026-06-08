@@ -27,6 +27,8 @@ export default function LivepixDonorsPage() {
   const [donors, setDonors] = useState<Donor[]>([])
   const [sorteios, setSorteios] = useState<Sorteio[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState('')
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<'tickets' | 'amount' | 'newest'>('tickets')
   const [activeTab, setActiveTab] = useState<'list' | 'add'>('list')
@@ -36,13 +38,33 @@ export default function LivepixDonorsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     const [donorsRes, sorteiosRes] = await Promise.all([
-      fetch('/api/livepix/donors?days=30').then(r => r.json()).catch(() => []),
+      fetch('/api/livepix/donors').then(r => r.json()).catch(() => []),
       fetch('/api/sorteios').then(r => r.json()).catch(() => []),
     ])
     setDonors(Array.isArray(donorsRes) ? donorsRes : [])
     setSorteios(Array.isArray(sorteiosRes) ? sorteiosRes.filter((s: Sorteio) => s.status === 'active') : [])
     setLoading(false)
   }, [])
+
+  async function syncLivepix() {
+    setSyncing(true)
+    setSyncMsg('')
+    try {
+      const res = await fetch('/api/livepix/sync', { method: 'POST' })
+      const d = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setSyncMsg(d.synced > 0 ? `${d.synced} doação(ões) importada(s)!` : 'Já atualizado.')
+        await load()
+      } else {
+        setSyncMsg(`Erro: ${d.error ?? 'falha ao sincronizar'}`)
+      }
+    } catch {
+      setSyncMsg('Erro de conexão')
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncMsg(''), 5000)
+    }
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -102,10 +124,13 @@ export default function LivepixDonorsPage() {
           </div>
           <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Livepix</h2>
         </div>
-        <button onClick={load} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Sync Livepix
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
+          <button onClick={syncLivepix} disabled={syncing} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: 'transparent', border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: syncing ? 'default' : 'pointer', opacity: syncing ? 0.6 : 1 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            {syncing ? 'Sincronizando...' : 'Sync Livepix'}
+          </button>
+          {syncMsg && <span style={{ fontSize: '0.7rem', color: syncMsg.startsWith('Erro') ? C.red : C.accent }}>{syncMsg}</span>}
+        </div>
         <button onClick={() => setActiveTab('add')} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: C.blue, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
           + Adicionar Doador
         </button>

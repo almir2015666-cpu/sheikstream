@@ -39,9 +39,7 @@ async function getLivepixChannelId(token: string): Promise<string | null> {
   }
 }
 
-async function getLivepixPayments(token: string, page = 1): Promise<{
-  username: string; amount: number; message: string | null; created_at: string; raw?: unknown
-}[]> {
+async function fetchPaymentsPage(token: string, page: number): Promise<{ items: Record<string, unknown>[]; hasMore: boolean }> {
   const res = await fetch(
     `https://api.livepix.gg/v1/payments?page=${page}&per_page=100&sort=created_at&direction=desc`,
     { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
@@ -52,27 +50,43 @@ async function getLivepixPayments(token: string, page = 1): Promise<{
   }
   const data = await res.json()
   const items: Record<string, unknown>[] = data?.data ?? data?.payments ?? (Array.isArray(data) ? data : [])
+  const total = Number(data?.meta?.total ?? data?.total ?? 0)
+  const hasMore = items.length === 100 && (total === 0 || page * 100 < total)
+  return { items, hasMore }
+}
 
-  return items.map(p => {
-    // Livepix sender can be in p.sender.name, p.sender_name, p.user.name, etc.
-    const sender = p.sender as Record<string, unknown> | undefined
-    const user   = p.user   as Record<string, unknown> | undefined
-    const username = String(
-      sender?.name ?? sender?.username ?? sender?.display_name ??
-      user?.name   ?? user?.username   ?? user?.display_name   ??
-      p.sender_name ?? p.donor_name ?? p.username ?? p.name ?? 'Anônimo'
-    )
-    // Amount: Livepix returns integers in cents
-    const amountRaw = Number(p.amount ?? p.value ?? 0)
-    const amount = amountRaw >= 100 ? amountRaw / 100 : amountRaw
-    return {
-      username,
-      amount,
-      message:    p.message ? String(p.message) : null,
-      created_at: String(p.created_at ?? p.paid_at ?? new Date().toISOString()),
-      raw: p,
-    }
-  })
+function normalizePayment(p: Record<string, unknown>) {
+  const sender = p.sender as Record<string, unknown> | undefined
+  const user   = p.user   as Record<string, unknown> | undefined
+  const username = String(
+    sender?.name ?? sender?.username ?? sender?.display_name ??
+    user?.name   ?? user?.username   ?? user?.display_name   ??
+    p.sender_name ?? p.donor_name ?? p.username ?? p.name ?? 'Anônimo'
+  )
+  // Livepix can return amount in reais (float) or cents (int)
+  // Heuristic: if value > 1000 it's likely cents
+  const amountRaw = Number(p.amount ?? p.value ?? 0)
+  const amount = amountRaw > 1000 ? amountRaw / 100 : amountRaw
+  return {
+    username,
+    amount,
+    message:    p.message ? String(p.message) : null,
+    created_at: String(p.created_at ?? p.paid_at ?? new Date().toISOString()),
+  }
+}
+
+async function getLivepixPayments(token: string): Promise<{
+  username: string; amount: number; message: string | null; created_at: string
+}[]> {
+  const all: Record<string, unknown>[] = []
+  let page = 1
+  while (page <= 10) {
+    const { items, hasMore } = await fetchPaymentsPage(token, page)
+    all.push(...items)
+    if (!hasMore) break
+    page++
+  }
+  return all.map(normalizePayment)
 }
 
 export async function POST(req: NextRequest) {
@@ -116,24 +130,26 @@ export async function POST(req: NextRequest) {
   }
 
   if (payments.length === 0) {
-    return NextResponse.json({ ok: true, synced: 0, message: 'Nenhuma doação encontrada no Livepix.' })
+    return NextResponse.json({ ok: true, synced: 0, totalInDb: 0, message: 'Nenhuma doação encontrada no Livepix.' })
   }
 
-  // Get existing entries to avoid duplicates (by username + amount + created_at date)
+  // Get existing entries — match by broadcaster_id (all entries, not just is_manual=false, to prevent duplicates)
   const { data: existing } = await db
     .from('livepix_donors')
     .select('username, amount, date')
     .eq('broadcaster_id', broadcasterId)
-    .eq('is_manual', false)
 
+  // Build dedup set: username (lowercase) | rounded amount | date
   const existingSet = new Set(
-    (existing ?? []).map(e => `${e.username}|${Number(e.amount).toFixed(2)}|${e.date}`)
+    (existing ?? []).map(e =>
+      `${String(e.username).toLowerCase().trim()}|${Math.round(Number(e.amount) * 100)}|${e.date}`
+    )
   )
 
   const toInsert = payments
     .filter(p => {
       const dateStr = p.created_at.slice(0, 10)
-      const key = `${p.username}|${p.amount.toFixed(2)}|${dateStr}`
+      const key = `${p.username.toLowerCase().trim()}|${Math.round(p.amount * 100)}|${dateStr}`
       return !existingSet.has(key)
     })
     .map(p => ({
@@ -147,7 +163,10 @@ export async function POST(req: NextRequest) {
     }))
 
   if (toInsert.length > 0) {
-    await db.from('livepix_donors').insert(toInsert)
+    const { error: insertError } = await db.from('livepix_donors').insert(toInsert)
+    if (insertError) {
+      return NextResponse.json({ error: `Erro ao inserir doações: ${insertError.message}` }, { status: 500 })
+    }
   }
 
   const { count: totalInDb } = await db
@@ -155,5 +174,11 @@ export async function POST(req: NextRequest) {
     .select('id', { count: 'exact', head: true })
     .eq('broadcaster_id', broadcasterId)
 
-  return NextResponse.json({ ok: true, synced: toInsert.length, total: payments.length, totalInDb: totalInDb ?? 0 })
+  return NextResponse.json({
+    ok: true,
+    synced: toInsert.length,
+    total: payments.length,
+    existing: (existing ?? []).length,
+    totalInDb: totalInDb ?? 0,
+  })
 }
