@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
 
   // ── 1. Exchange code for token ──────────────────────────────────────────
   let access_token: string
+  let refresh_token = ''
   try {
     const tokenRes = await fetch('https://id.twitch.tv/oauth2/token', {
       method: 'POST',
@@ -43,6 +44,7 @@ export async function GET(req: NextRequest) {
     if (!tokenRes.ok) return NextResponse.redirect(`${BASE}/login?error=token_failed`)
     const tokenData = await tokenRes.json()
     access_token = tokenData.access_token
+    refresh_token = tokenData.refresh_token ?? ''
   } catch {
     return NextResponse.redirect(`${BASE}/login?error=token_failed`)
   }
@@ -128,6 +130,7 @@ export async function GET(req: NextRequest) {
         {
           user_id: tw.id,
           twitch_token: access_token,
+          twitch_refresh_token: refresh_token || undefined,
           twitch_channel_id: tw.id,
           twitch_username: tw.display_name,
           updated_at: new Date().toISOString(),

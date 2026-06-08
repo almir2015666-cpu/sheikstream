@@ -185,6 +185,7 @@ create index if not exists timers_user_id_idx on public.timers(user_id);
 create table if not exists public.user_tokens (
   user_id                text primary key,         -- Twitch user ID (numeric string)
   twitch_token           text,
+  twitch_refresh_token   text,
   twitch_channel_id      text,
   twitch_username        text,
   youtube_token          text,
@@ -198,6 +199,7 @@ create table if not exists public.user_tokens (
 -- alter table public.user_tokens add column if not exists spotify_token text;
 -- alter table public.user_tokens add column if not exists spotify_refresh_token text;
 -- alter table public.user_tokens add column if not exists spotify_username text;
+-- alter table public.user_tokens add column if not exists twitch_refresh_token text;
 -- notify pgrst, 'reload schema';
 
 alter table public.user_tokens enable row level security;
