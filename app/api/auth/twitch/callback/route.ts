@@ -8,7 +8,12 @@ import { registerEventSubSubscriptions } from '@/app/lib/eventsub'
 const BASE = 'https://sheikstream.com.br'
 const REDIRECT_URI = `${BASE}/api/auth/twitch/callback`
 
-const POPUP_HTML = `<!DOCTYPE html><html><body style="background:#0f172a;color:#94a3b8;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><p>Conectado! Fechando...</p><script>window.close()</script></body></html>`
+function makePopupHtml(ok: boolean, errMsg?: string) {
+  const msg = ok ? 'Conectado! Fechando...' : `Erro ao salvar token: ${errMsg ?? 'desconhecido'}`
+  const color = ok ? '#22c55e' : '#ef4444'
+  const postMsg = ok ? `{type:'twitch_connected'}` : `{type:'twitch_error',error:${JSON.stringify(errMsg ?? '')}}`
+  return `<!DOCTYPE html><html><body style="background:#0f172a;color:${color};font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><p style="max-width:300px">${msg}</p><script>try{window.opener&&window.opener.postMessage(${postMsg},'*')}catch(e){}setTimeout(()=>window.close(),400)</script></body></html>`
+}
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams
@@ -17,7 +22,7 @@ export async function GET(req: NextRequest) {
   const isPopup = searchParams.get('state') === 'popup'
 
   if (error || !code) {
-    if (isPopup) return new NextResponse(POPUP_HTML, { headers: { 'Content-Type': 'text/html' } })
+    if (isPopup) return new NextResponse(makePopupHtml(false, error ?? 'oauth_failed'), { headers: { 'Content-Type': 'text/html' } })
     return NextResponse.redirect(`${BASE}/login?error=oauth_failed`)
   }
 
@@ -114,8 +119,32 @@ export async function GET(req: NextRequest) {
     platform: 'Twitch',
   }
   const token = encodeSession(user)
+  // Persist Twitch token before building response so we know if it succeeded
+  let upsertErrMsg: string | undefined
+  try {
+    const { error: upsertErr } = await getSupabaseAdmin()
+      .from('user_tokens')
+      .upsert(
+        {
+          user_id: tw.id,
+          twitch_token: access_token,
+          twitch_channel_id: tw.id,
+          twitch_username: tw.display_name,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      )
+    if (upsertErr) {
+      upsertErrMsg = `${upsertErr.code}: ${upsertErr.message}`
+      console.error('[twitch/callback] user_tokens upsert error:', upsertErr)
+    }
+  } catch (e) {
+    upsertErrMsg = String(e)
+    console.error('[twitch/callback] user_tokens upsert exception:', e)
+  }
+
   const res = isPopup
-    ? new NextResponse(POPUP_HTML, { headers: { 'Content-Type': 'text/html' } })
+    ? new NextResponse(makePopupHtml(!upsertErrMsg, upsertErrMsg), { headers: { 'Content-Type': 'text/html' } })
     : NextResponse.redirect(`${BASE}/dashboard`)
   res.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
@@ -126,21 +155,6 @@ export async function GET(req: NextRequest) {
   })
   await logActivity('auth', 'login', tw.display_name, 'Twitch')
   await logSystem('auth.login', `Login Twitch: ${tw.display_name}`, tw.id, { platform: 'Twitch', username: tw.display_name, is_popup: isPopup })
-
-  // Persist Twitch token — awaited to garantir execução antes do serverless terminar
-  const { error: upsertErr } = await getSupabaseAdmin()
-    .from('user_tokens')
-    .upsert(
-      {
-        user_id: tw.id,
-        twitch_token: access_token,
-        twitch_channel_id: tw.id,
-        twitch_username: tw.display_name,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' }
-    )
-  if (upsertErr) console.error('[twitch/callback] user_tokens upsert error:', upsertErr)
 
   // Register EventSub webhooks for this broadcaster (async, doesn't block login)
   registerEventSubSubscriptions(tw.id).catch(e => console.error('[callback] eventsub register error:', e))

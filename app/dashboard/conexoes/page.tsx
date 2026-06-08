@@ -144,23 +144,40 @@ export default function ConexoesPage() {
       `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
     )
     if (!popup) {
-      // Popup blocked — fall back to full redirect
       window.location.href = '/api/auth/twitch'
       return
     }
+
+    function refreshStatus() {
+      Promise.all([
+        fetch('/api/tokens/status').then(r => r.json()).catch(() => null),
+        fetch('/api/me').then(r => r.ok ? r.json() : null).catch(() => null),
+      ]).then(([status, me]) => {
+        if (status) setTokenStatus(status)
+        if (me) setConnectedUser(me.name)
+      })
+    }
+
+    // postMessage listener — popup notifies when done (success or error)
+    function onMessage(e: MessageEvent) {
+      if (e.data?.type === 'twitch_connected') {
+        window.removeEventListener('message', onMessage)
+        clearInterval(check)
+        refreshStatus()
+      } else if (e.data?.type === 'twitch_error') {
+        window.removeEventListener('message', onMessage)
+        clearInterval(check)
+        alert(`Erro ao conectar Twitch: ${e.data.error ?? 'desconhecido'}`)
+      }
+    }
+    window.addEventListener('message', onMessage)
+
+    // Fallback: polling in case postMessage fails
     const check = setInterval(() => {
       if (popup.closed) {
         clearInterval(check)
-        // Small delay to ensure DB write has committed
-        setTimeout(() => {
-          Promise.all([
-            fetch('/api/tokens/status').then(r => r.json()).catch(() => null),
-            fetch('/api/me').then(r => r.ok ? r.json() : null).catch(() => null),
-          ]).then(([status, me]) => {
-            if (status) setTokenStatus(status)
-            if (me) setConnectedUser(me.name)
-          })
-        }, 800)
+        window.removeEventListener('message', onMessage)
+        setTimeout(refreshStatus, 600)
       }
     }, 500)
   }
