@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (!body.message?.trim()) return NextResponse.json({ error: 'message required' }, { status: 400 })
     const db = getSupabaseAdmin()
     const base = {
-      title:            body.title?.trim() || null,
+      title:            body.title?.trim() || '',  // empty string satisfies NOT NULL constraint; display code treats '' as falsy
       message:          body.message.trim(),
       icon:             body.icon || '📢',
       color:            body.color || '#9b30ff',

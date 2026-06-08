@@ -445,6 +445,9 @@ export default function AdminPage() {
         const d = await res.json()
         setNotifyList(prev => [d, ...prev])
         setNotifyForm(p => ({ ...p, title: '', message: '' }))
+      } else {
+        const d = await res.json().catch(() => ({}))
+        alert(`Erro ao salvar aviso: ${d.error ?? res.status}`)
       }
     } catch { /* ignore */ } finally {
       setNotifySaving(false)
