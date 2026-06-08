@@ -32,12 +32,13 @@ function Toggle({ on, onChange, size = 'md' }: { on: boolean; onChange: (v: bool
 type Cmd = { id: string; trigger: string; resposta: string; cooldown: number; habilitado: boolean; isEvento: boolean; origem: string; platform: string }
 
 type FormState = {
-  trigger: string; resposta: string; cooldown: number; ativo: boolean
-  permissao: string; responderComo: 'canal' | 'bot'; notifOverlay: boolean
-  template: string | null; extraVars: string[]; platforms: string[]
+  trigger: string; resposta: string; cooldown: number; cooldownUser: number
+  custoBase: number; custoInscritos: number
+  ativo: boolean; permissao: string; responderComo: 'canal' | 'bot'
+  notifOverlay: boolean; template: string | null; extraVars: string[]; platforms: string[]
 }
 
-const emptyForm: FormState = { trigger: '', resposta: '', cooldown: 5, ativo: true, permissao: 'todos', responderComo: 'canal', notifOverlay: false, template: null, extraVars: [], platforms: ['Twitch'] }
+const emptyForm: FormState = { trigger: '', resposta: '', cooldown: 5, cooldownUser: 0, custoBase: 0, custoInscritos: 0, ativo: true, permissao: 'todos', responderComo: 'canal', notifOverlay: false, template: null, extraVars: [], platforms: ['Twitch'] }
 
 const PERMS = [
   { id: 'todos',       label: 'Todos',       desc: 'Qualquer pessoa no chat',  color: '#22c55e' },
@@ -389,14 +390,45 @@ export default function ComandosPage() {
               </div>
             </button>
             {advOpen && (
-              <div style={{ padding: '0 1.2rem 1rem 1.2rem', borderTop: `1px solid ${C.border}`, paddingTop: '1rem' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.55rem' }}>Cooldown (segundos)</div>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {[5, 10, 15, 30, 60].map(s => (
-                    <button key={s} type="button" onClick={() => setForm(p => ({ ...p, cooldown: s }))} style={{ padding: '0.38rem 0.75rem', background: form.cooldown === s ? C.blueBg : 'transparent', border: `1px solid ${form.cooldown === s ? C.blue + '55' : 'rgba(255,255,255,0.08)'}`, color: form.cooldown === s ? C.blue : C.dim, borderRadius: '6px', fontSize: '0.79rem', cursor: 'pointer', transition: 'all 0.15s' }}>{s}s</button>
-                  ))}
-                  <input type="number" value={form.cooldown} onChange={e => setForm(p => ({ ...p, cooldown: Math.max(0, Number(e.target.value)) }))} min={0} style={{ ...inp, width: '70px', padding: '0.38rem 0.6rem', fontSize: '0.79rem' }} />
+              <div style={{ padding: '1rem 1.2rem', borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                {/* Cooldowns */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cooldowns</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>Global (segundos)</div>
+                      <input type="number" value={form.cooldown} onChange={e => setForm(p => ({ ...p, cooldown: Math.max(0, Number(e.target.value)) }))} min={0} style={{ ...inp, padding: '0.55rem 0.8rem' }} />
+                      <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.3rem' }}>Intervalo entre usos para todos</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>Por usuário (segundos)</div>
+                      <input type="number" value={form.cooldownUser} onChange={e => setForm(p => ({ ...p, cooldownUser: Math.max(0, Number(e.target.value)) }))} min={0} style={{ ...inp, padding: '0.55rem 0.8rem' }} />
+                      <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.3rem' }}>Intervalo por pessoa específica</div>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Custo em tickets */}
+                <div>
+                  <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>Custo em tickets</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>Custo base</div>
+                      <input type="number" value={form.custoBase} onChange={e => setForm(p => ({ ...p, custoBase: Math.max(0, Number(e.target.value)) }))} min={0} style={{ ...inp, padding: '0.55rem 0.8rem' }} />
+                      <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.3rem' }}>0 = gratuito</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>Custo para inscritos</div>
+                      <input type="number" value={form.custoInscritos} onChange={e => setForm(p => ({ ...p, custoInscritos: Math.max(0, Number(e.target.value)) }))} min={0} style={{ ...inp, padding: '0.55rem 0.8rem' }} />
+                      <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.3rem' }}>Valor diferenciado para subs/membros</div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
           </div>
