@@ -7,7 +7,8 @@ function getUser(req: NextRequest) {
   return token ? decodeSession(token) : null
 }
 
-async function getLivepixToken(clientId: string, clientSecret: string): Promise<string | null> {
+async function getLivepixToken(clientId: string, clientSecret: string): Promise<{ token: string | null; error?: string }> {
+  // Try Basic auth first (RFC 6749 recommended)
   try {
     const creds = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
     const res = await fetch('https://oauth.livepix.gg/oauth/token', {
@@ -18,11 +19,22 @@ async function getLivepixToken(clientId: string, clientSecret: string): Promise<
       },
       body: 'grant_type=client_credentials&scope=payments:read',
     })
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.access_token ?? null
-  } catch {
-    return null
+    const data = await res.json().catch(() => ({}))
+    if (res.ok && data.access_token) return { token: data.access_token }
+
+    // Fallback: credentials in body
+    const res2 = await fetch('https://oauth.livepix.gg/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=payments:read`,
+    })
+    const data2 = await res2.json().catch(() => ({}))
+    if (res2.ok && data2.access_token) return { token: data2.access_token }
+
+    const errMsg = data2.error_description ?? data2.error ?? data.error_description ?? data.error ?? `HTTP ${res.status}`
+    return { token: null, error: String(errMsg) }
+  } catch (e) {
+    return { token: null, error: String(e) }
   }
 }
 
@@ -77,9 +89,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Get OAuth token
-  const token = await getLivepixToken(cfg.client_id, cfg.client_secret)
+  const { token, error: tokenError } = await getLivepixToken(cfg.client_id, cfg.client_secret)
   if (!token) {
-    return NextResponse.json({ error: 'Não foi possível autenticar com o Livepix. Verifique o Client ID e Client Secret.' }, { status: 400 })
+    return NextResponse.json({ error: `Livepix OAuth falhou: ${tokenError ?? 'sem token na resposta'}` }, { status: 400 })
   }
 
   // Auto-detect channel_id if not set
