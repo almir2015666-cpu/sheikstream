@@ -194,8 +194,8 @@ export default function AdminPage() {
   type ChangelogEntry = { date: string; time?: string; title: string; desc: string }
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([])
   const [changelogLoading, setChangelogLoading] = useState(false)
-  type AdminInvite = { id: string; inviter_id: string; invitee_email: string; token: string; status: string; created_at: string }
-  type InviteQuota = { user_id: string; username: string; quota: number }
+  type AdminInvite = { id: string; inviter_id: string; inviter_username?: string; invitee_email: string; token: string; status: string; created_at: string }
+  type InviteQuota = { platform_username: string; quota: number }
   const [adminInvites, setAdminInvites] = useState<AdminInvite[]>([])
   const [inviteQuotas, setInviteQuotas] = useState<InviteQuota[]>([])
   const [adminInvitesLoading, setAdminInvitesLoading] = useState(false)
@@ -492,7 +492,7 @@ export default function AdminPage() {
         setAdminInvites(d.invites ?? [])
         setInviteQuotas(d.quotas ?? [])
         const edits: Record<string, number> = {}
-        ;(d.quotas ?? []).forEach((q: InviteQuota) => { edits[q.user_id] = q.quota })
+        ;(d.quotas ?? []).forEach((q: InviteQuota) => { edits[q.platform_username] = q.quota })
         setQuotaEdits(edits)
       }
     } catch { /* ignore */ } finally {
@@ -514,15 +514,20 @@ export default function AdminPage() {
     }
   }
 
-  async function saveQuota(userId: string) {
-    setQuotaSaving(userId)
+  async function saveQuota(platformUsername: string) {
+    setQuotaSaving(platformUsername)
     try {
       const res = await fetch('/api/admin/invites', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-        body: JSON.stringify({ user_id: userId, quota: quotaEdits[userId] ?? 0 }),
+        body: JSON.stringify({ platform_username: platformUsername, quota: quotaEdits[platformUsername] ?? 0 }),
       })
-      if (res.ok) setInviteQuotas(prev => prev.map(q => q.user_id === userId ? { ...q, quota: quotaEdits[userId] ?? 0 } : q))
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        alert(d.error || 'Erro ao salvar quota')
+      } else {
+        setInviteQuotas(prev => prev.map(q => q.platform_username === platformUsername ? { ...q, quota: quotaEdits[platformUsername] ?? 0 } : q))
+      }
     } finally {
       setQuotaSaving(null)
     }
@@ -1519,8 +1524,8 @@ export default function AdminPage() {
           )}
           {view === 'tickets' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
-                <div style={{ padding: '1.2rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px' }}>
+                <div style={{ padding: '1.2rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '16px 16px 0 0', overflow: 'hidden' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: C.text }}>Tickets de suporte</h3>
                     <div style={{ fontSize: '0.78rem', color: C.muted, marginTop: '0.2rem' }}>Enviados via formulário na landing page</div>
@@ -2010,11 +2015,14 @@ export default function AdminPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {inviteQuotas.map(q => {
-                      const sentCount = adminInvites.filter(i => i.inviter_id === q.user_id).length
+                      const sentCount = adminInvites.filter(i =>
+                        (i.inviter_username ?? i.inviter_id).toLowerCase() === q.platform_username.toLowerCase()
+                      ).length
+                      const key = q.platform_username
                       return (
-                        <div key={q.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', padding: '0.7rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
+                        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', padding: '0.7rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: C.text }}>@{q.username}</div>
+                            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: C.text }}>@{q.platform_username}</div>
                             <div style={{ fontSize: '0.72rem', color: C.dim }}>{sentCount} convite{sentCount !== 1 ? 's' : ''} enviado{sentCount !== 1 ? 's' : ''}</div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -2023,15 +2031,15 @@ export default function AdminPage() {
                               type="number"
                               min={0}
                               max={50}
-                              value={quotaEdits[q.user_id] ?? q.quota}
-                              onChange={e => setQuotaEdits(prev => ({ ...prev, [q.user_id]: Number(e.target.value) }))}
+                              value={quotaEdits[key] ?? q.quota}
+                              onChange={e => setQuotaEdits(prev => ({ ...prev, [key]: Number(e.target.value) }))}
                               style={{ width: '60px', padding: '0.35rem 0.5rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '6px', color: C.text, fontSize: '0.85rem', outline: 'none', textAlign: 'center' }}
                             />
                             <button
-                              onClick={() => saveQuota(q.user_id)}
-                              disabled={quotaSaving === q.user_id || (quotaEdits[q.user_id] ?? q.quota) === q.quota}
-                              style={{ padding: '0.35rem 0.75rem', background: (quotaEdits[q.user_id] ?? q.quota) === q.quota ? 'transparent' : C.primaryBg, border: `1px solid ${(quotaEdits[q.user_id] ?? q.quota) === q.quota ? C.border : C.borderStrong}`, color: (quotaEdits[q.user_id] ?? q.quota) === q.quota ? C.dim : C.primary, borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: (quotaEdits[q.user_id] ?? q.quota) === q.quota ? 'default' : 'pointer' }}>
-                              {quotaSaving === q.user_id ? '...' : 'Salvar'}
+                              onClick={() => saveQuota(key)}
+                              disabled={quotaSaving === key || (quotaEdits[key] ?? q.quota) === q.quota}
+                              style={{ padding: '0.35rem 0.75rem', background: (quotaEdits[key] ?? q.quota) === q.quota ? 'transparent' : C.primaryBg, border: `1px solid ${(quotaEdits[key] ?? q.quota) === q.quota ? C.border : C.borderStrong}`, color: (quotaEdits[key] ?? q.quota) === q.quota ? C.dim : C.primary, borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: (quotaEdits[key] ?? q.quota) === q.quota ? 'default' : 'pointer' }}>
+                              {quotaSaving === key ? '...' : 'Salvar'}
                             </button>
                           </div>
                         </div>
@@ -2053,7 +2061,7 @@ export default function AdminPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                     {adminInvites.map(inv => {
-                      const inviterQuota = inviteQuotas.find(q => q.user_id === inv.inviter_id)
+                      const inviterUsername = inv.inviter_username ?? inv.inviter_id
                       const statusColor =
                         inv.status === 'aceito'  ? C.accent :
                         inv.status === 'vetado'  ? C.danger :
@@ -2066,7 +2074,7 @@ export default function AdminPage() {
                         <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '8px' }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.1rem' }}>
-                              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: C.muted }}>@{inviterQuota?.username ?? inv.inviter_id}</span>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: C.muted }}>@{inviterUsername}</span>
                               <span style={{ fontSize: '0.72rem', color: C.vdim }}>→</span>
                               <span style={{ fontSize: '0.82rem', fontWeight: 600, color: C.text }}>@{inv.invitee_email}</span>
                             </div>

@@ -8,13 +8,14 @@ function getUser(req: NextRequest) {
   return token ? decodeSession(token) : null
 }
 
-async function getUserQuota(userId: string): Promise<number> {
+async function getUserQuota(username: string): Promise<number> {
   try {
     const db = getSupabaseAdmin()
     const { data, error } = await db
-      .from('user_tokens')
+      .from('waitlist')
       .select('invite_quota')
-      .eq('user_id', userId)
+      .ilike('platform_username', username)
+      .eq('status', 'approved')
       .maybeSingle()
     if (error) return 0
     return (data as Record<string, unknown> | null)?.invite_quota as number ?? 0
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
   const [{ data }, quota] = await Promise.all([
     db.from('invites').select('*').eq('inviter_id', user.id).order('created_at', { ascending: false }),
-    getUserQuota(user.id),
+    getUserQuota(user.name),
   ])
   return NextResponse.json({ invites: data ?? [], quota })
 }
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   const db = getSupabaseAdmin()
 
   const [quota, { count }] = await Promise.all([
-    getUserQuota(user.id),
+    getUserQuota(user.name),
     db.from('invites').select('*', { count: 'exact', head: true }).eq('inviter_id', user.id),
   ])
 

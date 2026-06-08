@@ -8,38 +8,37 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  const { data: invites, error: invErr } = await db
-    .from('invites')
-    .select('*')
-    .order('created_at', { ascending: false })
+  // Fetch all invites and approved waitlist users in parallel
+  const [{ data: invites, error: invErr }, { data: waitlist }] = await Promise.all([
+    db.from('invites').select('*').order('created_at', { ascending: false }),
+    db.from('waitlist').select('id,platform_username,invite_quota').eq('status', 'approved').eq('platform', 'Twitch'),
+  ])
 
   if (invErr) return NextResponse.json({ error: invErr.message }, { status: 500 })
 
-  // Try selecting invite_quota — column may not exist yet
-  let quotas: { user_id: string; username: string; quota: number }[] = []
-  const { data: tokensWithQuota, error: quotaErr } = await db
-    .from('user_tokens')
-    .select('user_id, twitch_username, invite_quota')
+  // Try to look up Twitch IDs (inviter_id) for each invite via user_tokens
+  let tokenMap: Record<string, string> = {} // user_id → twitch_username
+  try {
+    const { data: tokens } = await db.from('user_tokens').select('user_id, twitch_username')
+    if (tokens) {
+      for (const t of tokens) {
+        if (t.user_id && t.twitch_username) tokenMap[t.user_id] = t.twitch_username
+      }
+    }
+  } catch { /* user_tokens may not exist */ }
 
-  if (!quotaErr && tokensWithQuota) {
-    quotas = tokensWithQuota.map(t => ({
-      user_id: t.user_id,
-      username: t.twitch_username ?? t.user_id,
-      quota: (t as Record<string, unknown>).invite_quota as number ?? 0,
-    }))
-  } else {
-    // Column doesn't exist yet — still show users with quota 0
-    const { data: tokensBasic } = await db
-      .from('user_tokens')
-      .select('user_id, twitch_username')
-    quotas = (tokensBasic ?? []).map(t => ({
-      user_id: t.user_id,
-      username: t.twitch_username ?? t.user_id,
-      quota: 0,
-    }))
-  }
+  const quotas = (waitlist ?? []).map(u => ({
+    platform_username: u.platform_username,
+    quota: (u as Record<string, unknown>).invite_quota as number ?? 0,
+  }))
 
-  return NextResponse.json({ invites: invites ?? [], quotas })
+  // Enrich invites with username from tokenMap
+  const enrichedInvites = (invites ?? []).map(i => ({
+    ...i,
+    inviter_username: tokenMap[i.inviter_id] ?? i.inviter_id,
+  }))
+
+  return NextResponse.json({ invites: enrichedInvites, quotas })
 }
 
 export async function PATCH(req: NextRequest) {
@@ -59,17 +58,20 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // Set invite quota for a user
-  if (body.user_id !== undefined && body.quota !== undefined) {
+  // Set invite quota for a waitlist user by platform_username
+  if (body.platform_username !== undefined && body.quota !== undefined) {
     const { error } = await db
-      .from('user_tokens')
+      .from('waitlist')
       .update({ invite_quota: Number(body.quota) })
-      .eq('user_id', body.user_id)
+      .ilike('platform_username', body.platform_username)
+      .eq('status', 'approved')
     if (error) {
-      // Column likely doesn't exist — return helpful message
-      return NextResponse.json({
-        error: 'Coluna invite_quota não existe em user_tokens. Execute no Supabase SQL Editor: ALTER TABLE user_tokens ADD COLUMN IF NOT EXISTS invite_quota integer DEFAULT 0;',
-      }, { status: 500 })
+      if (error.code === '42703') {
+        return NextResponse.json({
+          error: 'Coluna invite_quota não existe em waitlist. Execute no Supabase SQL Editor: ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS invite_quota integer DEFAULT 0;',
+        }, { status: 500 })
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
     return NextResponse.json({ ok: true })
   }

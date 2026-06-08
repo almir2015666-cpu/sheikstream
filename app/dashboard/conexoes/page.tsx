@@ -143,17 +143,24 @@ export default function ConexoesPage() {
       'twitch_oauth',
       `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
     )
+    if (!popup) {
+      // Popup blocked — fall back to full redirect
+      window.location.href = '/api/auth/twitch'
+      return
+    }
     const check = setInterval(() => {
-      if (popup?.closed) {
+      if (popup.closed) {
         clearInterval(check)
-        fetch('/api/tokens/status')
-          .then(r => r.json())
-          .then(s => setTokenStatus(s))
-          .catch(() => {})
-        fetch('/api/me')
-          .then(r => r.ok ? r.json() : null)
-          .then(u => { if (u) setConnectedUser(u.name) })
-          .catch(() => {})
+        // Small delay to ensure DB write has committed
+        setTimeout(() => {
+          Promise.all([
+            fetch('/api/tokens/status').then(r => r.json()).catch(() => null),
+            fetch('/api/me').then(r => r.ok ? r.json() : null).catch(() => null),
+          ]).then(([status, me]) => {
+            if (status) setTokenStatus(status)
+            if (me) setConnectedUser(me.name)
+          })
+        }, 800)
       }
     }, 500)
   }
