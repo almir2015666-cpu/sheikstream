@@ -147,7 +147,7 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites'>('users')
   const [userSearch, setUserSearch] = useState('')
   const [navSearch, setNavSearch] = useState('')
   type LoginLog = { id: string; ip: string; user_agent: string; success: boolean; created_at: string }
@@ -194,6 +194,14 @@ export default function AdminPage() {
   type ChangelogEntry = { date: string; time?: string; title: string; desc: string }
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([])
   const [changelogLoading, setChangelogLoading] = useState(false)
+  type AdminInvite = { id: string; inviter_id: string; invitee_email: string; token: string; status: string; created_at: string }
+  type InviteQuota = { user_id: string; username: string; quota: number }
+  const [adminInvites, setAdminInvites] = useState<AdminInvite[]>([])
+  const [inviteQuotas, setInviteQuotas] = useState<InviteQuota[]>([])
+  const [adminInvitesLoading, setAdminInvitesLoading] = useState(false)
+  const [inviteVetoLoading, setInviteVetoLoading] = useState<string | null>(null)
+  const [quotaEdits, setQuotaEdits] = useState<Record<string, number>>({})
+  const [quotaSaving, setQuotaSaving] = useState<string | null>(null)
   const NAV_ITEMS_LIST = [
     { id: 'dashboard',   label: 'Dashboard' },
     { id: 'subathon',    label: 'Subathon' },
@@ -475,6 +483,51 @@ export default function AdminPage() {
     }
   }, [])
 
+  const fetchAdminInvites = useCallback(async (pw: string) => {
+    setAdminInvitesLoading(true)
+    try {
+      const res = await fetch('/api/admin/invites', { headers: { 'x-admin-password': pw } })
+      if (res.ok) {
+        const d = await res.json()
+        setAdminInvites(d.invites ?? [])
+        setInviteQuotas(d.quotas ?? [])
+        const edits: Record<string, number> = {}
+        ;(d.quotas ?? []).forEach((q: InviteQuota) => { edits[q.user_id] = q.quota })
+        setQuotaEdits(edits)
+      }
+    } catch { /* ignore */ } finally {
+      setAdminInvitesLoading(false)
+    }
+  }, [])
+
+  async function vetoInvite(inviteId: string) {
+    setInviteVetoLoading(inviteId)
+    try {
+      const res = await fetch('/api/admin/invites', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+        body: JSON.stringify({ invite_id: inviteId }),
+      })
+      if (res.ok) setAdminInvites(prev => prev.map(i => i.id === inviteId ? { ...i, status: 'vetado' } : i))
+    } finally {
+      setInviteVetoLoading(null)
+    }
+  }
+
+  async function saveQuota(userId: string) {
+    setQuotaSaving(userId)
+    try {
+      const res = await fetch('/api/admin/invites', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+        body: JSON.stringify({ user_id: userId, quota: quotaEdits[userId] ?? 0 }),
+      })
+      if (res.ok) setInviteQuotas(prev => prev.map(q => q.user_id === userId ? { ...q, quota: quotaEdits[userId] ?? 0 } : q))
+    } finally {
+      setQuotaSaving(null)
+    }
+  }
+
   const fetchBanner = useCallback(async (pw: string) => {
     setBannerLoading(true)
     try {
@@ -745,7 +798,7 @@ export default function AdminPage() {
         /* ── Admin dashboard ── */
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
           {/* View switcher: full when on main views, compact back-button otherwise */}
-          {(view === 'users' || view === 'banner' || view === 'notify') ? (
+          {(view === 'users' || view === 'banner' || view === 'notify' || view === 'invites') ? (
             <div style={{ marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center' }}>
                 <div style={{ position: 'relative', flex: 1, maxWidth: 280 }}>
@@ -761,6 +814,7 @@ export default function AdminPage() {
                   { v: 'roles',   label: '🏷 Funções' },
                   { v: 'tickets', label: '🎫 Tickets' },
                   { v: 'notify',  label: '📣 Avisos' },
+                  { v: 'invites', label: '✉️ Convites' },
                 ]},
                 { group: 'Sistema', items: [
                   { v: 'logs',      label: '📋 Logs' },
@@ -768,7 +822,7 @@ export default function AdminPage() {
                   { v: 'passwords', label: '🔑 Senhas Admin' },
                   { v: 'navorder',  label: '⠿ Ordem do Menu' },
                 ]},
-              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder'; label: string }[] }[]).map(({ group, items }) => {
+              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites'; label: string }[] }[]).map(({ group, items }) => {
                 const visible = navSearch
                   ? items.filter(i => i.label.toLowerCase().includes(navSearch.toLowerCase()))
                   : items
@@ -778,7 +832,7 @@ export default function AdminPage() {
                     {!navSearch && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem', paddingLeft: '0.25rem' }}>{group}</div>}
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       {visible.map(({ v, label }) => (
-                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw); if (v === 'notify') { fetchNotifications(storedPw); if (users.length === 0) fetchUsers(storedPw) } }}
+                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw); if (v === 'notify') { fetchNotifications(storedPw); if (users.length === 0) fetchUsers(storedPw) } if (v === 'invites') fetchAdminInvites(storedPw) }}
                           className={`sk-tab${view === v ? ' active' : ''}`}
                           style={{ color: view === v ? C.primary : C.muted }}>
                           {label}
@@ -1941,6 +1995,103 @@ export default function AdminPage() {
               </div>
             )
           })()}
+
+          {view === 'invites' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+              {/* Quota management */}
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>✉️ Quotas de Convite</h3>
+                <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Defina quantos convites cada usuário pode enviar. Padrão inicial: 0.</p>
+                {adminInvitesLoading ? (
+                  <div style={{ color: C.muted, fontSize: '0.85rem' }}>Carregando...</div>
+                ) : inviteQuotas.length === 0 ? (
+                  <div style={{ color: C.dim, fontSize: '0.84rem' }}>Nenhum usuário registrado ainda.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {inviteQuotas.map(q => {
+                      const sentCount = adminInvites.filter(i => i.inviter_id === q.user_id).length
+                      return (
+                        <div key={q.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', padding: '0.7rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: C.text }}>@{q.username}</div>
+                            <div style={{ fontSize: '0.72rem', color: C.dim }}>{sentCount} convite{sentCount !== 1 ? 's' : ''} enviado{sentCount !== 1 ? 's' : ''}</div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.75rem', color: C.muted }}>Quota:</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={50}
+                              value={quotaEdits[q.user_id] ?? q.quota}
+                              onChange={e => setQuotaEdits(prev => ({ ...prev, [q.user_id]: Number(e.target.value) }))}
+                              style={{ width: '60px', padding: '0.35rem 0.5rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '6px', color: C.text, fontSize: '0.85rem', outline: 'none', textAlign: 'center' }}
+                            />
+                            <button
+                              onClick={() => saveQuota(q.user_id)}
+                              disabled={quotaSaving === q.user_id || (quotaEdits[q.user_id] ?? q.quota) === q.quota}
+                              style={{ padding: '0.35rem 0.75rem', background: (quotaEdits[q.user_id] ?? q.quota) === q.quota ? 'transparent' : C.primaryBg, border: `1px solid ${(quotaEdits[q.user_id] ?? q.quota) === q.quota ? C.border : C.borderStrong}`, color: (quotaEdits[q.user_id] ?? q.quota) === q.quota ? C.dim : C.primary, borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: (quotaEdits[q.user_id] ?? q.quota) === q.quota ? 'default' : 'pointer' }}>
+                              {quotaSaving === q.user_id ? '...' : 'Salvar'}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* All invites */}
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.2rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: C.text }}>Todos os convites</h3>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.55rem', background: C.primaryBg, color: C.primary, borderRadius: 999, border: `1px solid ${C.borderStrong}` }}>{adminInvites.length}</span>
+                  <button onClick={() => fetchAdminInvites(storedPw)} style={{ marginLeft: 'auto', background: 'transparent', border: `1px solid ${C.border}`, color: C.dim, borderRadius: '6px', padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>↺ Atualizar</button>
+                </div>
+                {adminInvites.length === 0 ? (
+                  <div style={{ color: C.dim, fontSize: '0.84rem' }}>Nenhum convite enviado ainda.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {adminInvites.map(inv => {
+                      const inviterQuota = inviteQuotas.find(q => q.user_id === inv.inviter_id)
+                      const statusColor =
+                        inv.status === 'aceito'  ? C.accent :
+                        inv.status === 'vetado'  ? C.danger :
+                        C.primary
+                      const statusBg =
+                        inv.status === 'aceito'  ? C.accentBg :
+                        inv.status === 'vetado'  ? C.dangerBg :
+                        C.primaryBg
+                      return (
+                        <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '8px' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.1rem' }}>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: C.muted }}>@{inviterQuota?.username ?? inv.inviter_id}</span>
+                              <span style={{ fontSize: '0.72rem', color: C.vdim }}>→</span>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: C.text }}>@{inv.invitee_email}</span>
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: C.dim }}>{new Date(inv.created_at).toLocaleDateString('pt-BR')}</div>
+                          </div>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.12rem 0.5rem', background: statusBg, color: statusColor, borderRadius: 999, border: `1px solid ${statusColor}40` }}>
+                            {inv.status}
+                          </span>
+                          {inv.status === 'pendente' && (
+                            <button
+                              onClick={() => vetoInvite(inv.id)}
+                              disabled={inviteVetoLoading === inv.id}
+                              className="sk-btn-reject"
+                              style={{ flexShrink: 0 }}>
+                              {inviteVetoLoading === inv.id ? '...' : 'Vetar'}
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

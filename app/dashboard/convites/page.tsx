@@ -8,9 +8,9 @@ const C = {
   primary: '#3b82f6', primaryBg: 'rgba(59,130,246,0.1)', primaryB: 'rgba(59,130,246,0.3)',
   warn: '#fbbf24', warnBg: 'rgba(251,191,36,0.1)', warnB: 'rgba(251,191,36,0.3)',
   green: '#22c55e', greenBg: 'rgba(34,197,94,0.08)',
+  red: '#ef4444', redBg: 'rgba(239,68,68,0.08)',
 }
 
-const MAX_INVITES = 10
 const inp: React.CSSProperties = { flex: 1, padding: '0.65rem 1rem', background: '#0b0d1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: C.text, fontSize: '0.88rem', outline: 'none' }
 
 type Invite = { id: string; inviter_id: string; invitee_email: string; token: string; status: string; created_at: string }
@@ -19,8 +19,21 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const cfg =
+    status === 'aceito'  ? { bg: C.greenBg, color: C.green,  border: 'rgba(34,197,94,0.25)' } :
+    status === 'vetado'  ? { bg: C.redBg,   color: C.red,    border: 'rgba(239,68,68,0.25)' } :
+                           { bg: C.warnBg,  color: C.warn,   border: C.warnB }
+  return (
+    <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: cfg.bg, color: cfg.color, borderRadius: 999, border: `1px solid ${cfg.border}` }}>
+      {status}
+    </span>
+  )
+}
+
 export default function ConvitesPage() {
   const [invites, setInvites] = useState<Invite[]>([])
+  const [quota, setQuota] = useState(0)
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -29,7 +42,11 @@ export default function ConvitesPage() {
   const load = useCallback(async () => {
     setLoading(true)
     const res = await fetch('/api/convites').catch(() => null)
-    if (res?.ok) setInvites(await res.json())
+    if (res?.ok) {
+      const d = await res.json()
+      setInvites(d.invites ?? [])
+      setQuota(d.quota ?? 0)
+    }
     setLoading(false)
   }, [])
 
@@ -60,7 +77,9 @@ export default function ConvitesPage() {
   }
 
   const used = invites.length
-  const slots = Array.from({ length: MAX_INVITES }, (_, i) => i < used)
+  const remaining = Math.max(0, quota - used)
+  const slots = Array.from({ length: Math.max(quota, used) }, (_, i) => i < used)
+  const atLimit = quota <= 0 || used >= quota
 
   return (
     <div style={{ background: '#08090d', minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
@@ -78,14 +97,18 @@ export default function ConvitesPage() {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.2rem' }}>Seus convites</div>
-            <div style={{ fontSize: '0.78rem', color: C.dim }}>Voce pode convidar mais {MAX_INVITES - used} streamer{MAX_INVITES - used !== 1 ? 's' : ''} ({used}/{MAX_INVITES} usados)</div>
+            {quota <= 0
+              ? <div style={{ fontSize: '0.78rem', color: C.vdim }}>Você ainda não possui convites disponíveis</div>
+              : <div style={{ fontSize: '0.78rem', color: C.dim }}>Você pode convidar mais {remaining} streamer{remaining !== 1 ? 's' : ''} ({used}/{quota} usados)</div>
+            }
           </div>
-          {/* Slot circles */}
-          <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
-            {slots.map((used, i) => (
-              <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: used ? C.primary : 'rgba(255,255,255,0.1)', border: used ? `1px solid ${C.primaryB}` : '1px solid rgba(255,255,255,0.12)' }} />
-            ))}
-          </div>
+          {quota > 0 && (
+            <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
+              {slots.map((u, i) => (
+                <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: u ? C.primary : 'rgba(255,255,255,0.1)', border: u ? `1px solid ${C.primaryB}` : '1px solid rgba(255,255,255,0.12)' }} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Input */}
@@ -95,19 +118,19 @@ export default function ConvitesPage() {
             onChange={e => setUsername(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') sendInvite() }}
             placeholder="@ usuario_twitch"
-            disabled={used >= MAX_INVITES || sending}
-            style={{ ...inp, opacity: used >= MAX_INVITES ? 0.5 : 1 }}
+            disabled={atLimit || sending}
+            style={{ ...inp, opacity: atLimit ? 0.5 : 1 }}
           />
           <button
             onClick={sendInvite}
-            disabled={!username.trim() || used >= MAX_INVITES || sending}
-            style={{ padding: '0.65rem 1.2rem', background: (!username.trim() || used >= MAX_INVITES) ? 'rgba(59,130,246,0.3)' : C.primary, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.88rem', fontWeight: 700, cursor: (!username.trim() || used >= MAX_INVITES) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+            disabled={!username.trim() || atLimit || sending}
+            style={{ padding: '0.65rem 1.2rem', background: (!username.trim() || atLimit) ? 'rgba(59,130,246,0.3)' : C.primary, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.88rem', fontWeight: 700, cursor: (!username.trim() || atLimit) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
             {sending ? 'Enviando...' : 'Convidar'}
           </button>
         </div>
-        {used >= MAX_INVITES && (
-          <div style={{ marginTop: '0.6rem', fontSize: '0.75rem', color: C.warn }}>Limite de {MAX_INVITES} convites atingido.</div>
+        {atLimit && quota > 0 && (
+          <div style={{ marginTop: '0.6rem', fontSize: '0.75rem', color: C.warn }}>Limite de {quota} convite{quota !== 1 ? 's' : ''} atingido.</div>
         )}
       </div>
 
@@ -121,23 +144,23 @@ export default function ConvitesPage() {
         </div>
       ) : (
         <div style={{ maxWidth: 700 }}>
-          <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>Streamer que você convidou</div>
+          <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>Streamers que você convidou</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {invites.map(inv => (
               <div key={inv.id} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '10px', padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
                     <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>@{inv.invitee_email}</span>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: inv.status === 'aceito' ? C.greenBg : C.warnBg, color: inv.status === 'aceito' ? C.green : C.warn, borderRadius: 999, border: `1px solid ${inv.status === 'aceito' ? 'rgba(34,197,94,0.25)' : C.warnB}` }}>
-                      {inv.status}
-                    </span>
+                    <StatusBadge status={inv.status} />
                   </div>
                   <div style={{ fontSize: '0.72rem', color: C.vdim }}>{fmtDate(inv.created_at)}</div>
                 </div>
-                <button onClick={() => copyLink(inv.token)} style={{ padding: '0.4rem 0.85rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  {copied === inv.token ? '✓ Copiado!' : 'Copiar link'}
-                </button>
+                {inv.status === 'pendente' && (
+                  <button onClick={() => copyLink(inv.token)} style={{ padding: '0.4rem 0.85rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    {copied === inv.token ? '✓ Copiado!' : 'Copiar link'}
+                  </button>
+                )}
               </div>
             ))}
           </div>

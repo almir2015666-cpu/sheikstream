@@ -8,12 +8,29 @@ function getUser(req: NextRequest) {
   return token ? decodeSession(token) : null
 }
 
+async function getUserQuota(userId: string): Promise<number> {
+  try {
+    const db = getSupabaseAdmin()
+    const { data } = await db
+      .from('user_tokens')
+      .select('invite_quota')
+      .eq('user_id', userId)
+      .maybeSingle()
+    return data?.invite_quota ?? 0
+  } catch {
+    return 0
+  }
+}
+
 export async function GET(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   const db = getSupabaseAdmin()
-  const { data } = await db.from('invites').select('*').eq('inviter_id', user.id).order('created_at', { ascending: false })
-  return NextResponse.json(data ?? [])
+  const [{ data }, quota] = await Promise.all([
+    db.from('invites').select('*').eq('inviter_id', user.id).order('created_at', { ascending: false }),
+    getUserQuota(user.id),
+  ])
+  return NextResponse.json({ invites: data ?? [], quota })
 }
 
 export async function POST(req: NextRequest) {
@@ -23,10 +40,18 @@ export async function POST(req: NextRequest) {
   const username = (body.username || '').trim().replace(/^@/, '')
   if (!username) return NextResponse.json({ error: 'Nome de usuário inválido' }, { status: 400 })
   const db = getSupabaseAdmin()
-  const { count } = await db.from('invites').select('*', { count: 'exact', head: true }).eq('inviter_id', user.id)
-  if ((count || 0) >= 10) return NextResponse.json({ error: 'Limite de 10 convites atingido' }, { status: 400 })
+
+  const [quota, { count }] = await Promise.all([
+    getUserQuota(user.id),
+    db.from('invites').select('*', { count: 'exact', head: true }).eq('inviter_id', user.id),
+  ])
+
+  if (quota <= 0) return NextResponse.json({ error: 'Você não possui convites disponíveis' }, { status: 400 })
+  if ((count || 0) >= quota) return NextResponse.json({ error: `Limite de ${quota} convite${quota !== 1 ? 's' : ''} atingido` }, { status: 400 })
+
   const { data: existing } = await db.from('invites').select('id').eq('inviter_id', user.id).eq('invitee_email', username).single()
   if (existing) return NextResponse.json({ error: 'Usuário já foi convidado' }, { status: 400 })
+
   const token = crypto.randomBytes(12).toString('hex')
   const { data, error } = await db.from('invites').insert({
     inviter_id: user.id,
