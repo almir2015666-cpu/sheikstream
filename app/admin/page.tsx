@@ -1580,7 +1580,7 @@ export default function AdminPage() {
                                   disabled={ticketUpdating === t.id || !adminReply[t.id]?.trim()}
                                   onClick={() => updateTicket(t.id, { admin_reply: adminReply[t.id]!.trim() })}
                                   style={{ marginTop: '0.65rem', padding: '0.5rem 1rem', background: adminReply[t.id]?.trim() ? C.primaryBg : C.vvdim, border: `1px solid ${adminReply[t.id]?.trim() ? C.borderStrong : C.border}`, color: adminReply[t.id]?.trim() ? C.primary : C.dim, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: adminReply[t.id]?.trim() ? 'pointer' : 'not-allowed', alignSelf: 'flex-end', whiteSpace: 'nowrap' as const }}>
-                                  {ticketUpdating === t.id ? '...' : t.admin_reply ? '✏ Editar' : '➤ Enviar'}
+                                  {ticketUpdating === t.id ? '...' : adminReply[t.id]?.trim() ? '➤ Enviar' : t.admin_reply ? '✏ Editar' : '➤ Enviar'}
                                 </button>
                               </div>
                             </div>
