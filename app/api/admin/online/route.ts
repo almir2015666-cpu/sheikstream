@@ -40,6 +40,11 @@ export async function GET(req: NextRequest) {
   const result = (users ?? []).map(u => {
     const key      = (u.platform_username ?? '').toLowerCase()
     const userId   = tokenByName.get(key) ?? null
+    // Twitch: all approved waitlist users logged in via Twitch OAuth
+    const twitchConnected = u.platform === 'Twitch' || u.platform === 'twitch'
+    // Bot token: only if user actually connected their channel in Conexões
+    const botConnected = !!tokenByName.get(key)
+    // Livepix: user has livepix_config with their user_id
     const livepix  = userId ? lpUserIds.has(userId) : false
     return {
       id:               u.id,
@@ -51,7 +56,8 @@ export async function GET(req: NextRequest) {
       last_seen_at:     lastSeenMap.get(key) ?? null,
       is_online:        onlineSet.has(key),
       access_count:     accessCount.get(key) ?? 0,
-      twitch_connected: !!tokenByName.get(key),
+      twitch_connected: twitchConnected,
+      twitch_bot:       botConnected,
       livepix_connected: livepix,
     }
   })

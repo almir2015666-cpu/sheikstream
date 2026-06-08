@@ -80,15 +80,7 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<AdminNotif[]>([])
   const [dismissedNotifs, setDismissedNotifs] = useState<Set<string>>(new Set())
   const [activeNotif, setActiveNotif] = useState<AdminNotif | null>(null)
-  const [notifCountdown, setNotifCountdown] = useState(0)
-  const notifTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const notifLoadedRef = useRef(false)
-  // Suggestion form
-  const [showSugg, setShowSugg] = useState(false)
-  const [suggType, setSuggType] = useState<'suggestion' | 'bug'>('suggestion')
-  const [suggMsg, setSuggMsg] = useState('')
-  const [suggSending, setSuggSending] = useState(false)
-  const [suggSent, setSuggSent] = useState(false)
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
 
   function periodDates() {
@@ -126,30 +118,15 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Show notifications one at a time as a modal
+  // Show notifications one at a time — no auto-dismiss, user must click X
   useEffect(() => {
     if (activeNotif) return
     const pending = notifications.filter(n => !dismissedNotifs.has(n.id))
     if (!pending.length) return
-    const next = pending[0]
-    setActiveNotif(next)
-    const dur = (next.duration_seconds ?? 30)
-    setNotifCountdown(dur)
-    if (notifTimerRef.current) clearInterval(notifTimerRef.current)
-    notifTimerRef.current = setInterval(() => {
-      setNotifCountdown(c => {
-        if (c <= 1) {
-          dismissNotif(next.id)
-          return 0
-        }
-        return c - 1
-      })
-    }, 1000)
-    return () => { if (notifTimerRef.current) clearInterval(notifTimerRef.current) }
+    setActiveNotif(pending[0])
   }, [notifications, dismissedNotifs, activeNotif])
 
   function dismissNotif(id: string) {
-    if (notifTimerRef.current) clearInterval(notifTimerRef.current)
     setActiveNotif(null)
     setDismissedNotifs(prev => {
       const next = new Set(prev); next.add(id)
@@ -158,20 +135,6 @@ export default function DashboardPage() {
     })
   }
 
-  async function submitSuggestion() {
-    if (!suggMsg.trim()) return
-    setSuggSending(true)
-    try {
-      const res = await fetch('/api/suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: suggType, message: suggMsg.trim() }),
-      })
-      if (res.ok) { setSuggSent(true); setSuggMsg('') }
-    } catch { /* ignore */ } finally {
-      setSuggSending(false)
-    }
-  }
 
   useEffect(() => {
     const { from, to } = periodDates()
@@ -207,32 +170,25 @@ export default function DashboardPage() {
       {/* Admin notification modal */}
       {activeNotif && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: '#111219', border: `1px solid ${activeNotif.color}45`, borderRadius: '20px', padding: '2rem 2rem 1.5rem', maxWidth: '480px', width: '100%', boxShadow: `0 0 60px ${activeNotif.color}25, 0 20px 40px rgba(0,0,0,0.7)`, textAlign: 'center', position: 'relative' }}>
+          <div style={{ background: '#111219', border: `1px solid ${activeNotif.color}45`, borderRadius: '20px', padding: '2rem 2rem 1.75rem', maxWidth: '480px', width: '100%', boxShadow: `0 0 60px ${activeNotif.color}25, 0 20px 40px rgba(0,0,0,0.7)`, textAlign: 'center', position: 'relative' }}>
+            {/* Close X */}
+            <button onClick={() => dismissNotif(activeNotif.id)}
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '0.3rem 0.55rem' }}>
+              ✕
+            </button>
             {/* Icon */}
-            <div style={{ fontSize: '2.8rem', marginBottom: '0.75rem', lineHeight: 1 }}>{activeNotif.icon}</div>
+            <div style={{ fontSize: '3rem', marginBottom: '0.75rem', lineHeight: 1 }}>{activeNotif.icon}</div>
             {/* Title */}
             {activeNotif.title && (
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: activeNotif.color, marginBottom: '0.5rem', letterSpacing: '-0.01em' }}>{activeNotif.title}</div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: activeNotif.color, marginBottom: '0.6rem', letterSpacing: '-0.01em' }}>{activeNotif.title}</div>
             )}
             {/* Message */}
-            <div style={{ fontSize: '0.9rem', color: C.muted, lineHeight: 1.65, marginBottom: '1.5rem', whiteSpace: 'pre-wrap' }}>{activeNotif.message}</div>
-            {/* Countdown ring + dismiss button */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-              <div style={{ position: 'relative', width: '40px', height: '40px', flexShrink: 0 }}>
-                <svg width="40" height="40" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
-                  <circle cx="20" cy="20" r="16" fill="none" stroke={activeNotif.color} strokeWidth="3"
-                    strokeDasharray={`${2 * Math.PI * 16}`}
-                    strokeDashoffset={`${2 * Math.PI * 16 * (1 - notifCountdown / (activeNotif.duration_seconds ?? 30))}`}
-                    style={{ transition: 'stroke-dashoffset 1s linear' }} />
-                </svg>
-                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: C.text }}>{notifCountdown}</span>
-              </div>
-              <button onClick={() => dismissNotif(activeNotif.id)}
-                style={{ flex: 1, padding: '0.65rem 1.5rem', background: `${activeNotif.color}18`, border: `1px solid ${activeNotif.color}50`, borderRadius: '10px', color: activeNotif.color, fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
-                Entendi
-              </button>
-            </div>
+            <div style={{ fontSize: '0.92rem', color: C.muted, lineHeight: 1.7, marginBottom: '1.75rem', whiteSpace: 'pre-wrap' }}>{activeNotif.message}</div>
+            {/* Dismiss button */}
+            <button onClick={() => dismissNotif(activeNotif.id)}
+              style={{ padding: '0.72rem 2.5rem', background: `${activeNotif.color}18`, border: `1px solid ${activeNotif.color}50`, borderRadius: '12px', color: activeNotif.color, fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>
+              Entendi ✓
+            </button>
           </div>
         </div>
       )}
@@ -577,68 +533,6 @@ export default function DashboardPage() {
         </div>
 
       </div>
-
-      {/* Suggestion / bug report floating button */}
-      <button
-        onClick={() => { setShowSugg(true); setSuggSent(false) }}
-        title="Enviar sugestão ou reportar bug"
-        style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(155,48,255,0.45)', zIndex: 200, fontSize: '1.4rem' }}>
-        💬
-      </button>
-
-      {/* Suggestion modal */}
-      {showSugg && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
-          onClick={e => { if (e.target === e.currentTarget) setShowSugg(false) }}>
-          <div style={{ background: '#111219', border: '1px solid rgba(155,48,255,0.25)', borderRadius: '20px', padding: '2rem', maxWidth: '460px', width: '100%', boxShadow: '0 0 60px rgba(155,48,255,0.15), 0 20px 40px rgba(0,0,0,0.7)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: C.text }}>Enviar feedback</div>
-                <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: '0.15rem' }}>Sugestões e bugs vão direto para o admin</div>
-              </div>
-              <button onClick={() => setShowSugg(false)} style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem', lineHeight: 1 }}>✕</button>
-            </div>
-
-            {suggSent ? (
-              <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✅</div>
-                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: C.text, marginBottom: '0.4rem' }}>Obrigado pelo feedback!</div>
-                <div style={{ fontSize: '0.78rem', color: C.muted, marginBottom: '1.5rem' }}>Sua mensagem foi enviada ao admin.</div>
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                  <button onClick={() => setSuggSent(false)} style={{ padding: '0.6rem 1.2rem', background: 'rgba(155,48,255,0.1)', border: '1px solid rgba(155,48,255,0.3)', borderRadius: '10px', color: C.primary, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>Enviar outro</button>
-                  <button onClick={() => setShowSugg(false)} style={{ padding: '0.6rem 1.2rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: C.muted, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Fechar</button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Type selector */}
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                  {(['suggestion', 'bug'] as const).map(t => (
-                    <button key={t} onClick={() => setSuggType(t)}
-                      style={{ flex: 1, padding: '0.55rem', borderRadius: '10px', border: `1px solid ${suggType === t ? 'rgba(155,48,255,0.45)' : 'rgba(255,255,255,0.07)'}`, background: suggType === t ? 'rgba(155,48,255,0.12)' : 'transparent', color: suggType === t ? C.primary : C.muted, fontWeight: suggType === t ? 700 : 500, fontSize: '0.85rem', cursor: 'pointer' }}>
-                      {t === 'suggestion' ? '💡 Sugestão' : '🐛 Bug'}
-                    </button>
-                  ))}
-                </div>
-                {/* Message */}
-                <textarea
-                  value={suggMsg}
-                  onChange={e => setSuggMsg(e.target.value)}
-                  placeholder={suggType === 'suggestion' ? 'Descreva sua sugestão de melhoria...' : 'Descreva o bug encontrado (como reproduzir, o que era esperado)...'}
-                  rows={5}
-                  style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(155,48,255,0.2)', borderRadius: '10px', color: C.text, fontSize: '0.85rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', lineHeight: 1.6 }}
-                />
-                <button
-                  disabled={suggSending || !suggMsg.trim()}
-                  onClick={submitSuggestion}
-                  style={{ marginTop: '0.75rem', width: '100%', padding: '0.75rem', background: suggMsg.trim() ? 'linear-gradient(135deg,#9b30ff,#6b1fc2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${suggMsg.trim() ? 'rgba(155,48,255,0.5)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '10px', color: suggMsg.trim() ? '#fff' : C.vdim, fontWeight: 700, fontSize: '0.9rem', cursor: suggMsg.trim() ? 'pointer' : 'not-allowed' }}>
-                  {suggSending ? 'Enviando...' : '➤ Enviar'}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
