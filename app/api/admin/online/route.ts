@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     db.from('waitlist').select('id,platform,platform_username,email,status,created_at').eq('status', 'approved').order('created_at', { ascending: false }),
     db.from('activity_logs').select('username,performed_at').gte('performed_at', fifteenMinAgo).not('username', 'is', null),
     db.from('activity_logs').select('username,performed_at').gte('performed_at', sevenDaysAgo).not('username', 'is', null).order('performed_at', { ascending: false }).limit(5000),
-    db.from('user_tokens').select('user_id,twitch_token,twitch_username').limit(1000),
+    db.from('user_tokens').select('user_id,twitch_token,twitch_username,spotify_token').limit(1000),
     db.from('livepix_config').select('user_id').not('client_id', 'is', null).limit(1000),
     db.from('system_logs').select('user_id,data').eq('type', 'auth.login').not('user_id', 'is', null).order('created_at', { ascending: false }).limit(2000),
   ])
@@ -78,11 +78,13 @@ export async function GET(req: NextRequest) {
     accessCount.set(k, (accessCount.get(k) ?? 0) + 1)
   }
 
-  const tokenByName    = new Map<string, string>()
-  const userIdHasToken = new Set<string>()
+  const tokenByName      = new Map<string, string>()
+  const userIdHasToken   = new Set<string>()
+  const userIdHasSpotify = new Set<string>()
   for (const t of tokens ?? []) {
     if (t.twitch_username) tokenByName.set(t.twitch_username.toLowerCase(), t.user_id)
     if (t.twitch_token)    userIdHasToken.add(t.user_id)
+    if (t.spotify_token)   userIdHasSpotify.add(t.user_id)
   }
 
   const logUserIdToName = new Map<string, string>()
@@ -100,8 +102,10 @@ export async function GET(req: NextRequest) {
 
   const twitchUsernames  = new Set<string>()
   const livepixUsernames = new Set<string>()
-  for (const uid of userIdHasToken) { const n = userIdToName.get(uid); if (n) twitchUsernames.add(n) }
-  for (const uid of lpUserIds)      { const n = userIdToName.get(uid); if (n) livepixUsernames.add(n) }
+  const spotifyUsernames = new Set<string>()
+  for (const uid of userIdHasToken)   { const n = userIdToName.get(uid); if (n) twitchUsernames.add(n) }
+  for (const uid of lpUserIds)        { const n = userIdToName.get(uid); if (n) livepixUsernames.add(n) }
+  for (const uid of userIdHasSpotify) { const n = userIdToName.get(uid); if (n) spotifyUsernames.add(n) }
 
   // Check live status on Twitch for all approved users
   const allUsernames = (users ?? []).map(u => u.platform_username).filter(Boolean) as string[]
@@ -121,6 +125,7 @@ export async function GET(req: NextRequest) {
       access_count:      accessCount.get(key) ?? 0,
       twitch_connected:  twitchUsernames.has(key),
       livepix_connected: livepixUsernames.has(key),
+      spotify_connected: spotifyUsernames.has(key),
       is_live:           liveUsernames.has(key),
       twitch_url:        u.platform_username ? `https://twitch.tv/${u.platform_username}` : null,
     }

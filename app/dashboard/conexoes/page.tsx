@@ -512,6 +512,7 @@ export default function ConexoesPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <span style={{ fontWeight: 800, fontSize: '0.88rem' }}>Spotify</span>
+                  <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: 'rgba(57,255,20,0.1)', color: '#39ff14', borderRadius: '999px', border: '1px solid rgba(57,255,20,0.2)' }}>ATUALIZADO</span>
                 </div>
                 <StatusPill connected={tokenStatus.spotify} />
               </div>
@@ -520,24 +521,29 @@ export default function ConexoesPage() {
 
           {/* Feature chips */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-            {['Música atual', 'Estado de reprodução', 'Histórico'].map(f => <FeatureChip key={f} label={f} />)}
+            {['Música atual', 'Top músicas', 'Estado de reprodução'].map(f => <FeatureChip key={f} label={f} />)}
           </div>
 
           {tokenStatus.spotify ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {tokenStatus.spotify_username && (
-                <div style={{ fontSize: '0.74rem', color: C.dim, padding: '0.45rem 0.65rem', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: '6px', fontFamily: 'monospace' }}>
-                  Conta: <span style={{ color: C.muted }}>@{tokenStatus.spotify_username}</span>
+              {/* Integração ativa toggle */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.65rem 0.8rem', background: 'rgba(30,215,96,0.06)', border: '1px solid rgba(30,215,96,0.15)', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: C.text }}>Integração ativa</div>
+                    <div style={{ fontSize: '0.7rem', color: C.dim }}>Comandos !musica e leitura do player</div>
+                  </div>
+                  <Toggle on={true} onChange={() => {}} />
                 </div>
-              )}
+              </div>
               <button
                 type="button"
                 disabled={spotifyDisconnecting}
                 onClick={handleSpotifyDisconnect}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.5rem 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: spotifyDisconnecting ? 0.6 : 1 }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.55rem 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', opacity: spotifyDisconnecting ? 0.6 : 1, width: '100%' }}
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
                 </svg>
                 {spotifyDisconnecting ? 'Desconectando...' : 'Desconectar'}
               </button>
