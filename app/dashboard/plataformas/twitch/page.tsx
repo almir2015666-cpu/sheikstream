@@ -148,7 +148,12 @@ export default function TwitchSubsPage() {
     if (tiersRes && !tiersRes.error) { setTiers(tiersRes); setTiersEdit(tiersRes) }
     setSorteios(Array.isArray(sorteiosRes) ? sorteiosRes.filter((s: Sorteio) => s.status === 'active') : [])
     setUser(meRes)
-    if (statsRes && !statsRes.error) setChannelStats({ follower_count: statsRes.follower_count ?? null, view_count: statsRes.view_count ?? null })
+    if (statsRes && !statsRes.error) setChannelStats({
+      follower_count: statsRes.follower_count ?? null,
+      view_count: statsRes.view_count ?? null,
+      bits_total_historical: statsRes.bits_total_historical ?? undefined,
+      bits_leaderboard: statsRes.bits_leaderboard ?? undefined,
+    })
     setLoading(false)
   }, [days, useCustom, customFrom, customTo])
 
