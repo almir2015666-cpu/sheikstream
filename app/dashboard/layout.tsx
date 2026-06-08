@@ -548,8 +548,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
       </nav>
 
-      {/* Admin link */}
+      {/* Admin link + Feedback */}
       <div style={{ padding: '0.3rem 0.5rem', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+        <button onClick={() => { setShowSugg(true); setSuggSent(false); setMobileOpen(false) }}
+          className="sk-nl"
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.45rem 0.75rem', borderRadius: '9px', background: 'transparent', border: `1px solid ${S.border}`, color: S.muted, fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', letterSpacing: '0.1px', textAlign: 'left' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Sugestão / Bug
+        </button>
         <Link href="/admin" onClick={() => setMobileOpen(false)}
           className="sk-nl"
           style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.45rem 0.75rem', borderRadius: '9px', background: 'rgba(255,68,68,0.07)', border: '1px solid rgba(255,68,68,0.18)', textDecoration: 'none', color: '#ff6b6b', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.1px' }}>
@@ -652,16 +658,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      {/* Suggestion / bug report — visible on ALL dashboard pages */}
+      {/* Suggestion / bug report modal */}
       {user && (
         <>
-          <button
-            onClick={() => { setShowSugg(true); setSuggSent(false) }}
-            title="Enviar sugestão ou reportar bug"
-            style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(155,48,255,0.45)', zIndex: 200, fontSize: '1.3rem' }}>
-            💬
-          </button>
-
           {showSugg && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
               onClick={e => { if (e.target === e.currentTarget) setShowSugg(false) }}>
