@@ -3,6 +3,13 @@ import { verifySignature } from '@/app/lib/eventsub'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { fireEventCommand } from '@/app/lib/event-commands'
 
+export async function GET() {
+  return new NextResponse(JSON.stringify({ ok: true, endpoint: 'twitch-eventsub', ts: Date.now() }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const msgType  = req.headers.get('Twitch-Eventsub-Message-Type') ?? ''

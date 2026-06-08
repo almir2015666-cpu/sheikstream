@@ -15,19 +15,15 @@ const DEFAULT_EVENT_COMMANDS = [
   { trigger: 'event:twitch:bits',    resposta: 'Valeu pelos $valor bits, $user! $msg' },
 ]
 
-// Subscriptions registered with app token (client credentials)
+// All webhook subscriptions use app access token (Twitch requirement for webhook transport)
 const APP_TOKEN_SUBS = [
   { type: 'channel.subscribe',            version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.subscription.gift',    version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.subscription.message', version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.cheer',               version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
   { type: 'channel.raid',                version: '1', cond: (id: string) => ({ to_broadcaster_user_id: id }) },
-]
-
-// Subscriptions that require user token
-const USER_TOKEN_SUBS = [
-  { type: 'channel.chat.message', version: '1', condition: (id: string) => ({ broadcaster_user_id: id, user_id: id }) },
-  { type: 'channel.follow',       version: '2', condition: (id: string) => ({ broadcaster_user_id: id, moderator_user_id: id }) },
+  { type: 'channel.chat.message',        version: '1', cond: (id: string) => ({ broadcaster_user_id: id, user_id: id }) },
+  { type: 'channel.follow',             version: '2', cond: (id: string) => ({ broadcaster_user_id: id, moderator_user_id: id }) },
 ]
 
 async function getAppToken(): Promise<string> {
@@ -116,23 +112,6 @@ export async function POST(req: NextRequest) {
   }
 
   // 4. Register user-token subscriptions
-  const { data: tok } = await db.from('user_tokens').select('twitch_token').eq('user_id', user.id).single()
-
-  if (tok?.twitch_token) {
-    for (const sub of USER_TOKEN_SUBS) {
-      try {
-        const r = await registerSub(sub.type, sub.version, sub.condition(user.id), tok.twitch_token, appUrl, secret)
-        subResults[sub.type] = r.ok ? (r.status === 409 ? 'already_exists' : 'registered') : `error_${r.status}: ${r.body ?? ''}`
-      } catch (e) {
-        subResults[sub.type] = `exception: ${e}`
-      }
-    }
-  } else {
-    for (const sub of USER_TOKEN_SUBS) {
-      subResults[sub.type] = 'skipped: no user token (reconecte a Twitch)'
-    }
-  }
-
   // 5. Seed missing event commands
   const seeded: string[] = []
   for (const cmd of DEFAULT_EVENT_COMMANDS) {
