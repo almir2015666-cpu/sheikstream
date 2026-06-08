@@ -46,6 +46,8 @@ export async function POST(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
+  const notifOverlay = body.notif_overlay ?? false
+
   // UPDATE if real id provided
   if (body.id) {
     const { data, error } = await db
@@ -53,10 +55,11 @@ export async function POST(req: NextRequest) {
       .update({
         trigger,
         resposta,
-        cooldown_s: body.cooldown_s ?? 0,
-        habilitado: body.habilitado ?? true,
-        permissao:  body.permissao  ?? 'todos',
-        platform:   body.platform   ?? 'Twitch',
+        cooldown_s:    body.cooldown_s ?? 0,
+        habilitado:    body.habilitado ?? true,
+        permissao:     body.permissao  ?? 'todos',
+        platform:      body.platform   ?? 'Twitch',
+        notif_overlay: notifOverlay,
       })
       .eq('id', body.id)
       .eq('user_id', user.id)
@@ -79,10 +82,11 @@ export async function POST(req: NextRequest) {
         .from('comandos')
         .update({
           resposta,
-          cooldown_s: body.cooldown_s ?? 0,
-          habilitado: body.habilitado ?? true,
-          permissao:  body.permissao  ?? 'todos',
-          platform:   body.platform   ?? 'Twitch',
+          cooldown_s:    body.cooldown_s ?? 0,
+          habilitado:    body.habilitado ?? true,
+          permissao:     body.permissao  ?? 'todos',
+          platform:      body.platform   ?? 'Twitch',
+          notif_overlay: notifOverlay,
         })
         .eq('id', existing.id)
         .select().single()
@@ -95,13 +99,14 @@ export async function POST(req: NextRequest) {
   const { data, error } = await db
     .from('comandos')
     .insert({
-      user_id:    user.id,
+      user_id:       user.id,
       trigger,
       resposta,
-      cooldown_s: body.cooldown_s ?? 0,
-      habilitado: body.habilitado ?? true,
-      permissao:  body.permissao  ?? 'todos',
-      platform:   body.platform   ?? 'Twitch',
+      cooldown_s:    body.cooldown_s ?? 0,
+      habilitado:    body.habilitado ?? true,
+      permissao:     body.permissao  ?? 'todos',
+      platform:      body.platform   ?? 'Twitch',
+      notif_overlay: notifOverlay,
     })
     .select().single()
 

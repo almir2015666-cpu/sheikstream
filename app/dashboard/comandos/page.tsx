@@ -43,7 +43,7 @@ const isUUID = (id: string | null): boolean =>
 
 type Cmd = {
   id: string; label: string; trigger: string; resposta: string; cooldown: number
-  habilitado: boolean; isEvento: boolean; origem: string; platform: string; db?: boolean
+  habilitado: boolean; isEvento: boolean; origem: string; platform: string; notifOverlay?: boolean; db?: boolean
 }
 
 type FormState = {
@@ -126,19 +126,19 @@ export default function ComandosPage() {
   const [saveOk, setSaveOk]       = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
-  type DbRow = { id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string }
+  type DbRow = { id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string; notif_overlay: boolean }
 
   // Merge DB rows into cmds state (called on load and after every save)
   const applyDbRows = useCallback((rows: DbRow[], dbByTrigger: Map<string, DbRow>) => {
     const dbRegular = rows.filter(r => !isEventTrigger(r.trigger))
     const mergedDefaults = DEFAULTS.map(def => {
       const db = dbByTrigger.get(def.trigger)
-      if (db) return { ...def, id: db.id, resposta: db.resposta, cooldown: db.cooldown_s, habilitado: db.habilitado, db: true }
+      if (db) return { ...def, id: db.id, resposta: db.resposta, cooldown: db.cooldown_s, habilitado: db.habilitado, notifOverlay: db.notif_overlay ?? false, db: true }
       return def
     })
     const regularCmds: Cmd[] = dbRegular.map(r => ({
       id: r.id, label: '!' + r.trigger, trigger: '!' + r.trigger, resposta: r.resposta,
-      cooldown: r.cooldown_s, habilitado: r.habilitado,
+      cooldown: r.cooldown_s, habilitado: r.habilitado, notifOverlay: r.notif_overlay ?? false,
       isEvento: false, origem: r.permissao ?? 'todos', platform: r.platform ?? 'Twitch', db: true,
     }))
     setCmds([...mergedDefaults, ...regularCmds])
@@ -195,7 +195,7 @@ export default function ComandosPage() {
       trigger, isEvento: cmd.isEvento, eventoLabel: cmd.label,
       resposta: cmd.resposta, cooldown: cmd.cooldown, cooldownUser: 0, custoBase: 0, custoInscritos: 0,
       ativo: cmd.habilitado, permissao: cmd.origem.toLowerCase() === 'automatico' ? 'todos' : cmd.origem.toLowerCase(),
-      responderComo: 'canal', notifOverlay: false, template: null, extraVars: [], platforms: [cmd.platform],
+      responderComo: 'canal', notifOverlay: cmd.notifOverlay ?? false, template: null, extraVars: [], platforms: [cmd.platform],
     })
     setCreating(true)
   }
@@ -210,13 +210,14 @@ export default function ComandosPage() {
     setSaving(true)
     const platform = form.platforms[0] ?? 'Twitch'
     const body = {
-      id:         isUUID(editingId) ? editingId : undefined,
-      trigger:    form.trigger,
-      resposta:   form.resposta,
-      cooldown_s: form.cooldown,
-      habilitado: form.ativo,
-      permissao:  form.permissao,
+      id:           isUUID(editingId) ? editingId : undefined,
+      trigger:      form.trigger,
+      resposta:     form.resposta,
+      cooldown_s:   form.cooldown,
+      habilitado:   form.ativo,
+      permissao:    form.permissao,
       platform,
+      notif_overlay: form.notifOverlay,
     }
     try {
       const res = await fetch('/api/comandos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
