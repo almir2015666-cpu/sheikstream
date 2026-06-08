@@ -142,5 +142,10 @@ export async function POST(req: NextRequest) {
     await db.from('livepix_donors').insert(toInsert)
   }
 
-  return NextResponse.json({ ok: true, synced: toInsert.length, total: payments.length })
+  const { count: totalInDb } = await db
+    .from('livepix_donors')
+    .select('id', { count: 'exact', head: true })
+    .eq('broadcaster_id', broadcasterId)
+
+  return NextResponse.json({ ok: true, synced: toInsert.length, total: payments.length, totalInDb: totalInDb ?? 0 })
 }

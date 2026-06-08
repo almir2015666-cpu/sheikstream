@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 const C = {
   page: '#08090d',
@@ -99,6 +100,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 }
 
 export default function ConexoesPage() {
+  const router = useRouter()
   const [connectedUser, setConnectedUser] = useState<string | null>(null)
   const [botActive, setBotActive] = useState(false)
   const [livepix, setLivepix] = useState({ clientId: '', clientSecret: '', slug: '' })
@@ -108,6 +110,7 @@ export default function ConexoesPage() {
   const [livepixTableSql, setLivepixTableSql] = useState('')
   const [livepixSyncing, setLivepixSyncing] = useState(false)
   const [livepixSyncMsg, setLivepixSyncMsg] = useState('')
+  const [syncResult, setSyncResult] = useState<{ synced: number; totalInDb: number } | null>(null)
   const [tokenStatus, setTokenStatus] = useState({ twitch: false, youtube: false })
   const [disconnecting, setDisconnecting] = useState(false)
 
@@ -198,11 +201,12 @@ export default function ConexoesPage() {
   async function handleLivepixSync() {
     setLivepixSyncing(true)
     setLivepixSyncMsg('')
+    setSyncResult(null)
     try {
       const res = await fetch('/api/livepix/sync', { method: 'POST' })
       const d = await res.json().catch(() => ({}))
       if (res.ok) {
-        setLivepixSyncMsg(d.synced > 0 ? `✓ ${d.synced} doações sincronizadas!` : (d.message ?? '✓ Sincronizado — sem novas doações.'))
+        setSyncResult({ synced: d.synced ?? 0, totalInDb: d.totalInDb ?? 0 })
       } else {
         setLivepixSyncMsg(`Erro: ${d.error ?? 'Falha ao sincronizar'}`)
       }
@@ -486,13 +490,58 @@ export default function ConexoesPage() {
               </button>
             )}
             {livepixSyncMsg && (
-              <div style={{ fontSize: '0.76rem', color: livepixSyncMsg.startsWith('Erro') ? '#ef4444' : '#22c55e', padding: '0.4rem 0.7rem', background: livepixSyncMsg.startsWith('Erro') ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', border: `1px solid ${livepixSyncMsg.startsWith('Erro') ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'}`, borderRadius: '6px' }}>
+              <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.4rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
                 {livepixSyncMsg}
               </div>
             )}
           </form>
         </div>
       </div>
+
+      {/* Sync success modal */}
+      {syncResult && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={() => setSyncResult(null)}>
+          <div style={{ background: '#111219', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '2rem', maxWidth: '420px', width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.7)' }}
+            onClick={e => e.stopPropagation()}>
+            {/* Close */}
+            <button onClick={() => setSyncResult(null)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: 'rgba(232,230,248,0.3)', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}>✕</button>
+
+            {/* Icon */}
+            <div style={{ width: 64, height: 64, borderRadius: '16px', background: 'rgba(57,255,20,0.1)', border: '1px solid rgba(57,255,20,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '1.8rem' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#39ff14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+              </svg>
+            </div>
+
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: C.text, marginBottom: '0.35rem' }}>Livepix sincronizado!</div>
+              <div style={{ fontSize: '0.85rem', color: C.muted }}>
+                {syncResult.synced > 0 ? `${syncResult.synced} doações importadas` : 'Nenhuma doação nova — já estava atualizado.'}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '0.9rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <span style={{ fontSize: '0.82rem', color: C.muted }}>Total na base</span>
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#39ff14' }}>{syncResult.totalInDb} doação{syncResult.totalInDb !== 1 ? 'ões' : ''}</span>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '0.65rem' }}>
+              <button onClick={() => router.push('/dashboard/plataformas/livepix')}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.65rem', background: 'rgba(57,255,20,0.1)', border: '1px solid rgba(57,255,20,0.3)', color: '#39ff14', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Ver doadores
+              </button>
+              <button onClick={() => setSyncResult(null)}
+                style={{ flex: 1, padding: '0.65rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: C.muted, borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
