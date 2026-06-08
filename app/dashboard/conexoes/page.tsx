@@ -101,10 +101,12 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 export default function ConexoesPage() {
   const [connectedUser, setConnectedUser] = useState<string | null>(null)
   const [botActive, setBotActive] = useState(false)
-  const [livepix, setLivepix] = useState({ clientId: '', clientSecret: '', channelId: '', slug: '' })
+  const [livepix, setLivepix] = useState({ clientId: '', clientSecret: '', slug: '' })
   const [livepixSaving, setLivepixSaving] = useState(false)
   const [livepixSaved, setLivepixSaved] = useState(false)
   const [livepixErr, setLivepixErr] = useState('')
+  const [livepixSyncing, setLivepixSyncing] = useState(false)
+  const [livepixSyncMsg, setLivepixSyncMsg] = useState('')
   const [tokenStatus, setTokenStatus] = useState({ twitch: false, youtube: false })
   const [disconnecting, setDisconnecting] = useState(false)
 
@@ -163,18 +165,19 @@ export default function ConexoesPage() {
     setLivepixSaving(true)
     setLivepixErr('')
     try {
+      const body: Record<string, string | null> = {
+        client_id: livepix.clientId || null,
+        slug: livepix.slug || null,
+      }
+      if (livepix.clientSecret) body.client_secret = livepix.clientSecret
       const res = await fetch('/api/livepix/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: livepix.clientId || null,
-          client_secret: livepix.clientSecret || null,
-          channel_id: livepix.channelId || null,
-          slug: livepix.slug || null,
-        }),
+        body: JSON.stringify(body),
       })
       if (res.ok) {
         setLivepixSaved(true)
+        setLivepix(p => ({ ...p, clientSecret: '' }))
       } else {
         const d = await res.json().catch(() => ({}))
         setLivepixErr(d?.error ?? 'Erro ao salvar configuração')
@@ -186,12 +189,30 @@ export default function ConexoesPage() {
     }
   }
 
+  async function handleLivepixSync() {
+    setLivepixSyncing(true)
+    setLivepixSyncMsg('')
+    try {
+      const res = await fetch('/api/livepix/sync', { method: 'POST' })
+      const d = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setLivepixSyncMsg(d.synced > 0 ? `✓ ${d.synced} doações sincronizadas!` : (d.message ?? '✓ Sincronizado — sem novas doações.'))
+      } else {
+        setLivepixSyncMsg(`Erro: ${d.error ?? 'Falha ao sincronizar'}`)
+      }
+    } catch {
+      setLivepixSyncMsg('Erro de conexão')
+    } finally {
+      setLivepixSyncing(false)
+    }
+  }
+
   useEffect(() => {
     fetch('/api/livepix/config')
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        if (d?.client_id || d?.channel_id || d?.slug) {
-          setLivepix(p => ({ ...p, clientId: d.client_id ?? '', channelId: d.channel_id ?? '', slug: d.slug ?? '' }))
+        if (d?.client_id || d?.has_secret || d?.slug) {
+          setLivepix(p => ({ ...p, clientId: d.client_id ?? '', slug: d.slug ?? '' }))
           setLivepixSaved(true)
         }
       })
@@ -379,29 +400,26 @@ export default function ConexoesPage() {
               value={livepix.clientId}
               onChange={e => setLivepix(p => ({ ...p, clientId: e.target.value }))}
               placeholder="Client ID"
+              autoComplete="off"
               style={inputStyle}
             />
             <input
               type="password"
               value={livepix.clientSecret}
               onChange={e => setLivepix(p => ({ ...p, clientSecret: e.target.value }))}
-              placeholder="Client Secret"
-              style={inputStyle}
-            />
-            <input
-              value={livepix.channelId}
-              onChange={e => setLivepix(p => ({ ...p, channelId: e.target.value }))}
-              placeholder="Channel ID (ex: 123456) — em Integrações > Webhook"
+              placeholder={livepixSaved ? 'Client Secret (deixe em branco para manter)' : 'Client Secret'}
+              autoComplete="new-password"
               style={inputStyle}
             />
             <input
               value={livepix.slug}
               onChange={e => setLivepix(p => ({ ...p, slug: e.target.value }))}
               placeholder="Slug da vaquinha (ex: minha-campanha)"
+              autoComplete="off"
               style={inputStyle}
             />
             <div style={{ fontSize: '0.72rem', color: C.dim }}>
-              O Channel ID vincula doações do webhook ao seu canal. O Slug é usado nos links de sorteio.
+              O Channel ID é detectado automaticamente ao sincronizar. O Slug é usado nos links de sorteio.
             </div>
             {livepixErr && (
               <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.4rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
@@ -426,8 +444,36 @@ export default function ConexoesPage() {
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                 <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
-              {livepixSaving ? 'Verificando...' : livepixSaved ? '✓ Conectado!' : 'Verificar e Conectar'}
+              {livepixSaving ? 'Salvando...' : livepixSaved ? '✓ Salvo — atualizar credenciais' : 'Salvar e Conectar'}
             </button>
+
+            {livepixSaved && (
+              <button
+                type="button"
+                disabled={livepixSyncing}
+                onClick={handleLivepixSync}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
+                  padding: '0.58rem 0',
+                  background: livepixSyncing ? 'rgba(255,105,180,0.05)' : 'rgba(255,105,180,0.08)',
+                  border: '1px solid rgba(255,105,180,0.3)',
+                  color: '#ff69b4',
+                  borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700,
+                  cursor: livepixSyncing ? 'default' : 'pointer',
+                  opacity: livepixSyncing ? 0.7 : 1,
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                {livepixSyncing ? 'Sincronizando...' : '↻ Sincronizar doações Livepix'}
+              </button>
+            )}
+            {livepixSyncMsg && (
+              <div style={{ fontSize: '0.76rem', color: livepixSyncMsg.startsWith('Erro') ? '#ef4444' : '#22c55e', padding: '0.4rem 0.7rem', background: livepixSyncMsg.startsWith('Erro') ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', border: `1px solid ${livepixSyncMsg.startsWith('Erro') ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'}`, borderRadius: '6px' }}>
+                {livepixSyncMsg}
+              </div>
+            )}
           </form>
         </div>
       </div>

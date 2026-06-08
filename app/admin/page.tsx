@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 
 const DARK = {
   bg: '#08090d', navBg: 'rgba(8,9,13,0.95)',
@@ -147,7 +147,7 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder'>('users')
   const [userSearch, setUserSearch] = useState('')
   const [navSearch, setNavSearch] = useState('')
   type LoginLog = { id: string; ip: string; user_agent: string; success: boolean; created_at: string }
@@ -735,8 +735,9 @@ export default function AdminPage() {
                   { v: 'logs',      label: '📋 Logs' },
                   { v: 'banner',    label: '🎗 Banner' },
                   { v: 'passwords', label: '🔑 Senhas Admin' },
+                  { v: 'navorder',  label: '⠿ Ordem do Menu' },
                 ]},
-              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify'; label: string }[] }[]).map(({ group, items }) => {
+              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder'; label: string }[] }[]).map(({ group, items }) => {
                 const visible = navSearch
                   ? items.filter(i => i.label.toLowerCase().includes(navSearch.toLowerCase()))
                   : items
@@ -1828,6 +1829,87 @@ export default function AdminPage() {
                       })}
                     </div>
                   )}
+                </div>
+              </div>
+            )
+          })()}
+
+          {view === 'navorder' && (() => {
+            const NAV_ITEMS = [
+              { id: 'dashboard',  label: 'Dashboard' },
+              { id: 'subathon',   label: 'Subathon' },
+              { id: 'timers',     label: 'Timers' },
+              { id: 'comandos',   label: 'Comandos' },
+              { id: 'sorteios',   label: 'Sorteios' },
+              { id: 'plataformas',label: 'Plataformas' },
+              { id: 'metas',      label: 'Metas' },
+              { id: 'overlays',   label: 'Overlays' },
+              { id: 'banners',    label: 'Banners' },
+              { id: 'conexoes',   label: 'Conexões' },
+              { id: 'convites',   label: 'Convites' },
+              { id: 'perfil',     label: 'Meu Perfil' },
+            ]
+
+            const [localOrder, setLocalOrder] = React.useState<string[]>(() => {
+              try { const s = localStorage.getItem('sk-nav-order'); return s ? JSON.parse(s) : NAV_ITEMS.map(i => i.id) } catch { return NAV_ITEMS.map(i => i.id) }
+            })
+
+            const ordered = localOrder.length > 0
+              ? [...localOrder.filter(id => NAV_ITEMS.some(i => i.id === id)).map(id => NAV_ITEMS.find(i => i.id === id)!),
+                 ...NAV_ITEMS.filter(i => !localOrder.includes(i.id))]
+              : NAV_ITEMS
+
+            function move(id: string, dir: 'up' | 'down') {
+              const arr = [...ordered.map(i => i.id)]
+              const idx = arr.indexOf(id)
+              const newIdx = dir === 'up' ? idx - 1 : idx + 1
+              if (newIdx < 0 || newIdx >= arr.length) return
+              ;[arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]]
+              setLocalOrder(arr)
+            }
+
+            function save() {
+              const arr = ordered.map(i => i.id)
+              try { localStorage.setItem('sk-nav-order', JSON.stringify(arr)) } catch {}
+              alert('Ordem salva! A sidebar do dashboard vai refletir a nova ordem.')
+            }
+
+            function reset() {
+              setLocalOrder(NAV_ITEMS.map(i => i.id))
+              try { localStorage.removeItem('sk-nav-order') } catch {}
+            }
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>⠿ Ordem do Menu lateral</h3>
+                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Arraste ou use os botões ▲/▼ para reordenar os itens da sidebar do dashboard. Clique em Salvar para aplicar.</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
+                    {ordered.map((item, idx) => (
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.65rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.vdim, width: 18, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                        <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600, color: C.text }}>{item.label}</span>
+                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          <button disabled={idx === 0} onClick={() => move(item.id, 'up')}
+                            style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
+                          <button disabled={idx === ordered.length - 1} onClick={() => move(item.id, 'down')}
+                            style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === ordered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === ordered.length - 1 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.65rem' }}>
+                    <button onClick={save}
+                      style={{ flex: 1, padding: '0.55rem 0', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+                      ✓ Salvar ordem
+                    </button>
+                    <button onClick={reset}
+                      style={{ padding: '0.55rem 1rem', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+                      ↺ Reset
+                    </button>
+                  </div>
                 </div>
               </div>
             )

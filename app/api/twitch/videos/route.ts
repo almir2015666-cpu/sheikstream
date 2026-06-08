@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   // Fetch past broadcasts from Twitch (up to 100)
   const helix = new URL('https://api.twitch.tv/helix/videos')
-  helix.searchParams.set('broadcaster_id', broadcasterId)
+  helix.searchParams.set('user_id', broadcasterId)
   helix.searchParams.set('type', 'archive')
   helix.searchParams.set('first', '100')
   helix.searchParams.set('sort', 'time')

@@ -13,10 +13,16 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
   const { data } = await db
     .from('livepix_config')
-    .select('channel_id, client_id, slug')
+    .select('channel_id, client_id, client_secret, slug')
     .eq('user_id', user.id)
     .maybeSingle()
-  return NextResponse.json(data ?? {})
+  if (!data) return NextResponse.json({})
+  return NextResponse.json({
+    client_id:  data.client_id ?? '',
+    has_secret: !!data.client_secret,
+    channel_id: data.channel_id ?? '',
+    slug:       data.slug ?? '',
+  })
 }
 
 export async function POST(req: NextRequest) {
