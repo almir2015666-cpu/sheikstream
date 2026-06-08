@@ -129,7 +129,6 @@ export async function GET(req: NextRequest) {
           user_id: tw.id,
           twitch_token: access_token,
           twitch_channel_id: tw.id,
-          twitch_username: tw.display_name,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' }
