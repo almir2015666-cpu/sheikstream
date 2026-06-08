@@ -191,6 +191,9 @@ export default function AdminPage() {
   const [notifyLoading, setNotifyLoading] = useState(false)
   const [notifySaving, setNotifySaving] = useState(false)
   const [notifyForm, setNotifyForm] = useState({ title: '', message: '', icon: '📢', color: '#9b30ff', target_username: '' })
+  type ChangelogEntry = { date: string; title: string; desc: string }
+  const [changelog, setChangelog] = useState<ChangelogEntry[]>([])
+  const [changelogLoading, setChangelogLoading] = useState(false)
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -365,7 +368,10 @@ export default function AdminPage() {
     setTicketUpdating(id)
     try {
       await fetch('/api/admin/tickets', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify({ id, ...updates }) })
-      setTickets(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))
+      setTickets(prev => prev.map(t => t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t))
+      if (updates.admin_reply !== undefined) {
+        setAdminReply(prev => { const next = { ...prev }; delete next[id]; return next })
+      }
     } finally {
       setTicketUpdating(null)
     }
@@ -417,6 +423,16 @@ export default function AdminPage() {
       setNotifyList(prev => prev.filter(n => n.id !== id))
     } catch { /* ignore */ }
   }
+
+  const fetchChangelog = useCallback(async (pw: string) => {
+    setChangelogLoading(true)
+    try {
+      const res = await fetch('/api/admin/changelog', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setChangelog(await res.json())
+    } catch { /* ignore */ } finally {
+      setChangelogLoading(false)
+    }
+  }, [])
 
   const fetchOnlineUsers = useCallback(async (pw: string) => {
     setOnlineLoading(true)
@@ -795,7 +811,8 @@ export default function AdminPage() {
                       else if (t.key === 'admin') fetchLogs(storedPw)
                       else if (t.key === 'errors') fetchErrorLogs(storedPw)
                       else if (t.key === 'system') fetchSystemLogs(storedPw)
-                      else if (t.key !== 'changelog') fetchActivity(storedPw, t.key)
+                      else if (t.key === 'changelog') fetchChangelog(storedPw)
+                      else fetchActivity(storedPw, t.key)
                     }}
                     className={`sk-tab${logTab === t.key ? ' active' : ''}`}
                     style={{ color: logTab === t.key ? (t.key === 'errors' ? C.danger : C.primary) : C.muted }}>
@@ -829,8 +846,8 @@ export default function AdminPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => { if (logTab === 'logins') fetchLoginLogs(storedPw); else if (logTab === 'admin') fetchLogs(storedPw); else if (logTab === 'errors') fetchErrorLogs(storedPw); else if (logTab === 'system') fetchSystemLogs(storedPw); else if (logTab !== 'changelog') fetchActivity(storedPw, logTab) }}
-                    disabled={logTab === 'changelog' || (logTab === 'logins' ? loginLogsLoading : logTab === 'admin' ? logsLoading : logTab === 'errors' ? errorLogsLoading : logTab === 'system' ? systemLogsLoading : activityLoading)}
+                    onClick={() => { if (logTab === 'logins') fetchLoginLogs(storedPw); else if (logTab === 'admin') fetchLogs(storedPw); else if (logTab === 'errors') fetchErrorLogs(storedPw); else if (logTab === 'system') fetchSystemLogs(storedPw); else if (logTab === 'changelog') fetchChangelog(storedPw); else fetchActivity(storedPw, logTab) }}
+                    disabled={logTab === 'logins' ? loginLogsLoading : logTab === 'admin' ? logsLoading : logTab === 'errors' ? errorLogsLoading : logTab === 'system' ? systemLogsLoading : logTab === 'changelog' ? changelogLoading : activityLoading}
                     style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -1011,33 +1028,11 @@ export default function AdminPage() {
                 {/* Auth / Dashboard / Feature tabs */}
                 {logTab === 'changelog' && (() => {
                   const lq = logSearch.toLowerCase()
-                  const CHANGELOG = [
-                    { date: '2026-06-07', title: 'Sistema de Tickets', desc: 'Formulário de ticket no chat da landing page, API pública POST /api/tickets, API admin GET/PATCH /api/admin/tickets, view completa de tickets no painel admin com status e resposta.' },
-                    { date: '2026-06-07', title: 'Animação de entrada na landing page', desc: 'Overlay verde com logo SheikSTREAM e efeito de scanline ao abrir o site pela primeira vez. Executado uma vez por sessão via sessionStorage.' },
-                    { date: '2026-06-07', title: 'Opções de cor/efeito no Banner', desc: 'Campos de cor independente para texto principal, secundário e nota. Toggle de efeito Glow (text-shadow). Preview atualizado em tempo real.' },
-                    { date: '2026-06-07', title: 'Avatar do canal na seção Funções', desc: 'Admin/Funções agora exibe a foto de perfil real do usuário (da coluna image_url do waitlist) em vez de iniciais.' },
-                    { date: '2026-06-07', title: 'IA mais direta e concisa', desc: 'System prompt do assistente atualizado: máximo 2 frases, proibido saudações e enrolação. Reduz verbosidade das respostas.' },
-                    { date: '2026-06-07', title: 'Polling de função no perfil (5s)', desc: 'Reduzido de 30s para 5s o intervalo de atualização da função do usuário na página de perfil.' },
-                    { date: '2026-06-07', title: 'RULE_TAGS dinâmicas no overlay de subathon', desc: 'As tags "+2m TWITCH SUB", "+1m LIVEPIX", "+30s BITS" agora usam os valores reais do BD (seconds_per_sub, seconds_per_livepix, seconds_per_bits100).' },
-                    { date: '2026-06-06', title: 'Changelog do admin', desc: 'Esta tela — histórico de alterações do sistema com data, título e descrição.' },
-                    { date: '2026-06-06', title: 'Opções de cor no Banner (base)', desc: 'Campo text_main_color, text_sub_color, text_note_color e toggle glow adicionados à API dev-banner.' },
-                    { date: '2026-06-06', title: 'Logs de Login Admin', desc: 'Tabela admin_login_logs com IP, user-agent e resultado. API GET /api/admin/login-logs. Tab "Logins Admin" no painel de Logs.' },
-                    { date: '2026-06-06', title: 'Navegação categorizada com busca', desc: 'Sidebar do dashboard reorganizada em grupos: AO VIVO, SORTEIO, FINANCEIRO, OVERLAYS, CONTA. Campo de busca em tempo real para filtrar itens.' },
-                    { date: '2026-06-06', title: 'Auto-refresh do dashboard (60s)', desc: 'Stats do dashboard e canal Twitch atualizam automaticamente a cada 60 segundos sem interação do usuário.' },
-                    { date: '2026-06-06', title: 'Fix broadcaster ID Twitch', desc: 'Quando twitch_channel_id é null, auto-busca via Helix /users e salva no banco. Corrige seguidores mostrando "—" permanentemente.' },
-                    { date: '2026-06-05', title: 'Overlay auto-update (config do BD)', desc: 'Configuração do overlay salva no banco, overlay busca a cada 10s. Remove necessidade de recarregar URL ao mudar configurações.' },
-                    { date: '2026-06-05', title: 'Stats do dashboard real', desc: 'Métricas do dashboard conectadas a dados reais do banco (subscribers, arrecadação, etc).' },
-                    { date: '2026-06-05', title: 'Senhas admin temporárias e permanentes', desc: 'Sistema de senhas admin com validade configurável, toggle ativo/inativo e geração de senha aleatória.' },
-                    { date: '2026-06-04', title: 'Roles/Funções de usuário', desc: 'Tabela user_roles, API /api/admin/roles e /api/me/role, atribuição de funções (admin, moderador, vip, streamer, parceiro, editor) pelo painel admin.' },
-                    { date: '2026-06-04', title: 'Fix coluna invitee_email', desc: 'Corrigida coluna invitee_username → invitee_email no sistema de convites.' },
-                    { date: '2026-06-03', title: 'Sync de subs Twitch (Helix API)', desc: 'Botão de sincronização busca subs reais via API Helix. Insere novos subs no banco sem duplicatas.' },
-                    { date: '2026-06-03', title: 'Posição do banner (topo/rodapé)', desc: 'Campo position no banner config. Banner pode ser fixado no topo ou no rodapé do dashboard.' },
-                    { date: '2026-06-03', title: 'CSS white mode improvements', desc: 'Melhorias de contraste no modo claro com !important overrides para textos e backgrounds.' },
-                  ]
-                  const filtered = lq ? CHANGELOG.filter(e => e.title.toLowerCase().includes(lq) || e.desc.toLowerCase().includes(lq) || e.date.includes(lq)) : CHANGELOG
+                  const filtered = changelogLoading ? [] : lq ? changelog.filter(e => e.title.toLowerCase().includes(lq) || e.desc.toLowerCase().includes(lq) || e.date.includes(lq)) : changelog
                   return (
                     <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {!filtered.length && <div style={{ textAlign: 'center', color: C.dim, fontSize: '0.9rem', padding: '2rem' }}>Nenhum resultado.</div>}
+                      {changelogLoading && <div style={{ textAlign: 'center', color: C.dim, fontSize: '0.9rem', padding: '2rem' }}>Carregando...</div>}
+                      {!changelogLoading && !filtered.length && <div style={{ textAlign: 'center', color: C.dim, fontSize: '0.9rem', padding: '2rem' }}>{changelog.length === 0 ? 'Clique em Atualizar para carregar o changelog.' : 'Nenhum resultado.'}</div>}
                       {filtered.map((entry, i) => (
                         <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', padding: '0.9rem 1rem', background: C.cardBgAlt, borderRadius: '10px', border: `1px solid ${C.border}` }}>
                           <div style={{ flexShrink: 0, minWidth: '86px' }}>
@@ -1210,7 +1205,7 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-          ) : (
+          ) : view === 'users' ? (
           /* ── Users view ── */
           <>
           {/* Stats row */}
@@ -1357,7 +1352,7 @@ export default function AdminPage() {
             </div>
           </div>
           </>
-          )}
+          ) : null}
           {view === 'passwords' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Create form */}
@@ -1477,11 +1472,9 @@ export default function AdminPage() {
                             <span style={{ color: C.dim, fontSize: '0.85rem' }}>{isExpanded ? '▲' : '▼'}</span>
                           </div>
                           {isExpanded && (
-                            <div style={{ padding: '0 1.5rem 1.2rem', borderTop: `1px solid ${C.vdim}`, background: C.cardBgAlt }}>
-                              <div style={{ fontSize: '0.82rem', color: C.text, lineHeight: 1.7, padding: '1rem 0', whiteSpace: 'pre-wrap' }}>{t.message}</div>
-
-                              {/* Status + actions row */}
-                              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+                            <div style={{ borderTop: `1px solid ${C.vdim}`, background: C.cardBgAlt }}>
+                              {/* Status bar */}
+                              <div style={{ padding: '0.65rem 1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${C.vdim}` }}>
                                 {(['open','in_progress','resolved','closed','archived'] as const).map(s => {
                                   const extra: Record<string, { bg: string; color: string; border: string }> = {
                                     archived: { bg: 'rgba(148,163,184,0.12)', color: '#94a3b8', border: 'rgba(148,163,184,0.28)' },
@@ -1490,27 +1483,71 @@ export default function AdminPage() {
                                   return (
                                     <button key={s} disabled={t.status === s || ticketUpdating === t.id}
                                       onClick={() => updateTicket(t.id, { status: s })}
-                                      style={{ padding: '0.28rem 0.75rem', background: t.status === s ? sc2.bg : 'transparent', border: `1px solid ${sc2.border}`, color: t.status === s ? sc2.color : C.dim, borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: t.status === s ? 'default' : 'pointer' }}>
+                                      style={{ padding: '0.22rem 0.65rem', background: t.status === s ? sc2.bg : 'transparent', border: `1px solid ${sc2.border}`, color: t.status === s ? sc2.color : C.dim, borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: t.status === s ? 'default' : 'pointer' }}>
                                       {s === 'archived' ? '🗃 Arquivar' : s}
                                     </button>
                                   )
                                 })}
                                 <button disabled={ticketUpdating === t.id}
                                   onClick={() => { if (confirm('Excluir este ticket permanentemente?')) deleteTicket(t.id) }}
-                                  style={{ marginLeft: 'auto', padding: '0.28rem 0.75rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                                  style={{ marginLeft: 'auto', padding: '0.22rem 0.65rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}>
                                   🗑 Excluir
                                 </button>
                               </div>
 
-                              {/* Reply row */}
-                              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Resposta ao usuário</div>
-                              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <textarea value={adminReply[t.id] ?? t.admin_reply ?? ''} onChange={e => setAdminReply(p => ({ ...p, [t.id]: e.target.value }))} placeholder="Escreva a resposta para o usuário..."
-                                  rows={3}
-                                  style={{ flex: 1, padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
-                                <button disabled={ticketUpdating === t.id} onClick={() => updateTicket(t.id, { admin_reply: adminReply[t.id] ?? '' })}
-                                  style={{ padding: '0.5rem 0.9rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-end' }}>
-                                  Responder
+                              {/* Chat thread */}
+                              <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', minHeight: '100px' }}>
+                                {/* User message — left bubble */}
+                                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+                                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
+                                    {(t.username ?? '?')[0].toUpperCase()}
+                                  </div>
+                                  <div style={{ maxWidth: '78%' }}>
+                                    <div style={{ fontSize: '0.62rem', color: C.dim, marginBottom: '0.25rem' }}>
+                                      {t.username || 'Usuário'} · {new Date(t.created_at).toLocaleString('pt-BR')}
+                                    </div>
+                                    <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '0 10px 10px 10px', padding: '0.65rem 0.9rem', fontSize: '0.82rem', color: C.text, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
+                                      {t.message}
+                                    </div>
+                                    {t.reply_email && (
+                                      <div style={{ fontSize: '0.62rem', color: C.vdim, marginTop: '0.2rem' }}>✉ {t.reply_email}</div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Admin reply — right bubble */}
+                                {t.admin_reply && (
+                                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+                                    <div style={{ maxWidth: '78%' }}>
+                                      <div style={{ fontSize: '0.62rem', color: C.dim, marginBottom: '0.25rem', textAlign: 'right' }}>
+                                        Admin · {t.updated_at ? new Date(t.updated_at).toLocaleString('pt-BR') : ''}
+                                      </div>
+                                      <div style={{ background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: '10px 0 10px 10px', padding: '0.65rem 0.9rem', fontSize: '0.82rem', color: C.primary, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
+                                        {t.admin_reply}
+                                      </div>
+                                    </div>
+                                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
+                                      A
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Reply input */}
+                              <div style={{ padding: '0 1.5rem 0.85rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', borderTop: `1px solid ${C.vdim}` }}>
+                                <textarea
+                                  value={adminReply[t.id] ?? ''}
+                                  onChange={e => setAdminReply(p => ({ ...p, [t.id]: e.target.value }))}
+                                  onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && adminReply[t.id]?.trim()) { e.preventDefault(); updateTicket(t.id, { admin_reply: adminReply[t.id].trim() }) } }}
+                                  placeholder={t.admin_reply ? 'Editar resposta... (Ctrl+Enter para enviar)' : 'Escreva uma resposta... (Ctrl+Enter para enviar)'}
+                                  rows={2}
+                                  style={{ flex: 1, marginTop: '0.65rem', padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                                />
+                                <button
+                                  disabled={ticketUpdating === t.id || !adminReply[t.id]?.trim()}
+                                  onClick={() => updateTicket(t.id, { admin_reply: adminReply[t.id]!.trim() })}
+                                  style={{ marginTop: '0.65rem', padding: '0.5rem 1rem', background: adminReply[t.id]?.trim() ? C.primaryBg : C.vvdim, border: `1px solid ${adminReply[t.id]?.trim() ? C.borderStrong : C.border}`, color: adminReply[t.id]?.trim() ? C.primary : C.dim, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: adminReply[t.id]?.trim() ? 'pointer' : 'not-allowed', alignSelf: 'flex-end', whiteSpace: 'nowrap' as const }}>
+                                  {ticketUpdating === t.id ? '...' : t.admin_reply ? '✏ Editar' : '➤ Enviar'}
                                 </button>
                               </div>
                             </div>
