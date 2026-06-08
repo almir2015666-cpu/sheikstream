@@ -40,25 +40,39 @@ async function getLivepixChannelId(token: string): Promise<string | null> {
 }
 
 async function getLivepixPayments(token: string, page = 1): Promise<{
-  username: string; amount: number; message: string | null; created_at: string
+  username: string; amount: number; message: string | null; created_at: string; raw?: unknown
 }[]> {
-  try {
-    const res = await fetch(
-      `https://api.livepix.gg/v1/payments?page=${page}&per_page=100&sort=created_at&direction=desc`,
-      { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
-    )
-    if (!res.ok) return []
-    const data = await res.json()
-    const items = data?.data ?? data?.payments ?? data ?? []
-    return (Array.isArray(items) ? items : []).map((p: Record<string, unknown>) => ({
-      username: String(p.sender_name ?? p.donor_name ?? p.name ?? 'Anônimo'),
-      amount:   Number(p.amount ?? 0) / 100,
-      message:  p.message ? String(p.message) : null,
-      created_at: String(p.created_at ?? new Date().toISOString()),
-    }))
-  } catch {
-    return []
+  const res = await fetch(
+    `https://api.livepix.gg/v1/payments?page=${page}&per_page=100&sort=created_at&direction=desc`,
+    { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
+  )
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`payments API ${res.status}: ${text.slice(0, 200)}`)
   }
+  const data = await res.json()
+  const items: Record<string, unknown>[] = data?.data ?? data?.payments ?? (Array.isArray(data) ? data : [])
+
+  return items.map(p => {
+    // Livepix sender can be in p.sender.name, p.sender_name, p.user.name, etc.
+    const sender = p.sender as Record<string, unknown> | undefined
+    const user   = p.user   as Record<string, unknown> | undefined
+    const username = String(
+      sender?.name ?? sender?.username ?? sender?.display_name ??
+      user?.name   ?? user?.username   ?? user?.display_name   ??
+      p.sender_name ?? p.donor_name ?? p.username ?? p.name ?? 'Anônimo'
+    )
+    // Amount: Livepix returns integers in cents
+    const amountRaw = Number(p.amount ?? p.value ?? 0)
+    const amount = amountRaw >= 100 ? amountRaw / 100 : amountRaw
+    return {
+      username,
+      amount,
+      message:    p.message ? String(p.message) : null,
+      created_at: String(p.created_at ?? p.paid_at ?? new Date().toISOString()),
+      raw: p,
+    }
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -94,7 +108,13 @@ export async function POST(req: NextRequest) {
   const broadcasterId = channelId || user.id
 
   // Fetch payments from Livepix
-  const payments = await getLivepixPayments(token)
+  let payments: Awaited<ReturnType<typeof getLivepixPayments>> = []
+  try {
+    payments = await getLivepixPayments(token)
+  } catch (e) {
+    return NextResponse.json({ error: `Erro ao buscar pagamentos: ${String(e)}` }, { status: 500 })
+  }
+
   if (payments.length === 0) {
     return NextResponse.json({ ok: true, synced: 0, message: 'Nenhuma doação encontrada no Livepix.' })
   }

@@ -495,20 +495,13 @@ export default function ConexoesPage() {
             )}
 
             {/* Sync button */}
-            {(() => {
-              const today = new Date().toISOString().slice(0, 10)
-              const canSync = !lastSyncDate || lastSyncDate < today
-              const nextDate = lastSyncDate ? new Date(new Date(lastSyncDate).getTime() + 86400000).toLocaleDateString('pt-BR') : ''
-              return (
-                <button type="button" disabled={!canSync || livepixSyncing} onClick={handleLivepixSync}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.58rem 0', background: (canSync && !livepixSyncing) ? 'rgba(255,105,180,0.08)' : 'transparent', border: '1px solid rgba(255,105,180,0.25)', color: (canSync && !livepixSyncing) ? '#ff69b4' : C.dim, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: (canSync && !livepixSyncing) ? 'pointer' : 'default', opacity: livepixSyncing ? 0.6 : 1 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                  </svg>
-                  {livepixSyncing ? 'Sincronizando...' : canSync ? 'Sync Livepix' : `Sync (disp. ${nextDate})`}
-                </button>
-              )
-            })()}
+            <button type="button" disabled={livepixSyncing} onClick={handleLivepixSync}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.58rem 0', background: !livepixSyncing ? 'rgba(255,105,180,0.08)' : 'transparent', border: '1px solid rgba(255,105,180,0.25)', color: !livepixSyncing ? '#ff69b4' : C.dim, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: !livepixSyncing ? 'pointer' : 'default', opacity: livepixSyncing ? 0.6 : 1 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+              {livepixSyncing ? 'Sincronizando...' : 'Sync Livepix'}
+            </button>
 
             {/* Disconnect */}
             <button type="button" disabled={livepixDisconnecting} onClick={handleLivepixDisconnect}
