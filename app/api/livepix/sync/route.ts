@@ -8,56 +8,60 @@ function getUser(req: NextRequest) {
 }
 
 async function getLivepixToken(clientId: string, clientSecret: string): Promise<{ token: string | null; error?: string }> {
-  const attempts = [
-    // Attempt 1: Basic auth, form body
-    () => {
-      const creds = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-      return fetch('https://oauth.livepix.gg/oauth/token', {
-        method: 'POST',
-        headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-        body: 'grant_type=client_credentials&scope=payments:read',
-      })
-    },
-    // Attempt 2: credentials in body (some providers prefer this)
-    () => fetch('https://oauth.livepix.gg/oauth/token', {
+  const formBody = `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=payments:read`
+  const basicCreds = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+
+  const attempts: Array<{ label: string; fn: () => Promise<Response> }> = [
+    // IdentityServer pattern (common .NET OAuth)
+    { label: 'oauth.gg/connect/token basic', fn: () => fetch('https://oauth.livepix.gg/connect/token', {
+      method: 'POST',
+      headers: { Authorization: `Basic ${basicCreds}`, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: 'grant_type=client_credentials&scope=payments:read',
+    })},
+    { label: 'oauth.gg/connect/token body', fn: () => fetch('https://oauth.livepix.gg/connect/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=payments:read`,
-    }),
-    // Attempt 3: JSON body
-    () => fetch('https://oauth.livepix.gg/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ grant_type: 'client_credentials', client_id: clientId, client_secret: clientSecret, scope: 'payments:read' }),
-    }),
-    // Attempt 4: api.livepix.gg domain with form body
-    () => fetch('https://api.livepix.gg/oauth/token', {
+      body: formBody,
+    })},
+    // Plain /token path
+    { label: 'oauth.gg/token', fn: () => fetch('https://oauth.livepix.gg/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=payments:read`,
-    }),
-    // Attempt 5: v2 path
-    () => fetch('https://api.livepix.gg/v2/oauth/token', {
+      body: formBody,
+    })},
+    // oauth2 path
+    { label: 'oauth.gg/oauth2/token', fn: () => fetch('https://oauth.livepix.gg/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=payments:read`,
-    }),
+      body: formBody,
+    })},
+    // api.livepix.gg paths
+    { label: 'api.gg/v1/oauth/token', fn: () => fetch('https://api.livepix.gg/v1/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: formBody,
+    })},
+    { label: 'api.gg/v1/auth/token', fn: () => fetch('https://api.livepix.gg/v1/auth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: formBody,
+    })},
   ]
 
   const errors: string[] = []
-  for (let i = 0; i < attempts.length; i++) {
+  for (const { label, fn } of attempts) {
     try {
-      const res = await attempts[i]()
+      const res = await fn()
       const text = await res.text()
       let data: Record<string, unknown> = {}
       try { data = JSON.parse(text) } catch { /* not json */ }
       if (res.ok && data.access_token) return { token: String(data.access_token) }
-      errors.push(`[${i + 1}] HTTP ${res.status}: ${data.error_description ?? data.error ?? text.slice(0, 80)}`)
+      errors.push(`${label}: ${res.status} ${data.error_description ?? data.error ?? text.slice(0, 60)}`)
     } catch (e) {
-      errors.push(`[${i + 1}] ${String(e)}`)
+      errors.push(`${label}: ${String(e)}`)
     }
   }
-  return { token: null, error: errors.join(' | ') }
+  return { token: null, error: errors.join(' || ') }
 }
 
 async function getLivepixChannelId(token: string): Promise<string | null> {
