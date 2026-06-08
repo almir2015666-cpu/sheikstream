@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
   const db = getSupabaseAdmin()
   const appUrl = process.env.APP_URL ?? 'https://sheikstream.com.br'
-  const secret = process.env.TWITCH_WEBHOOK_SECRET ?? ''
+  const secret = process.env.TWITCH_WEBHOOK_SECRET ?? 'sheikstream-eventsub-secret-2024'
   const subResults: Record<string, string> = {}
 
   // 1. Get app token

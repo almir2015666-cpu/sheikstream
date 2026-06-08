@@ -105,9 +105,8 @@ export async function GET(req: NextRequest) {
   // 6. Recent twitch_events log
   const { data: events, error: eventsErr } = await db
     .from('twitch_events')
-    .select('event_type, created_at')
+    .select('event_type')
     .eq('broadcaster_id', user.id)
-    .order('created_at', { ascending: false })
     .limit(10)
 
   results.recentEvents = events ?? []

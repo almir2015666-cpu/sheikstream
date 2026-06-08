@@ -27,10 +27,12 @@ async function getAppToken(): Promise<string> {
   return _appToken.value
 }
 
+const WEBHOOK_SECRET = process.env.TWITCH_WEBHOOK_SECRET ?? 'sheikstream-eventsub-secret-2024'
+
 export async function registerEventSubSubscriptions(broadcasterId: string): Promise<void> {
   const token = await getAppToken()
   const appUrl = process.env.APP_URL ?? 'https://sheikstream.com.br'
-  const secret = process.env.TWITCH_WEBHOOK_SECRET ?? ''
+  const secret = WEBHOOK_SECRET
 
   for (const sub of EVENT_TYPES) {
     try {
@@ -63,7 +65,7 @@ export async function registerEventSubSubscriptions(broadcasterId: string): Prom
 
 export async function registerChatSubscription(broadcasterId: string, userToken: string): Promise<void> {
   const appUrl = process.env.APP_URL ?? 'https://sheikstream.com.br'
-  const secret = process.env.TWITCH_WEBHOOK_SECRET ?? ''
+  const secret = WEBHOOK_SECRET
 
   const subs = [
     { type: 'channel.chat.message', version: '1', condition: { broadcaster_user_id: broadcasterId, user_id: broadcasterId } },

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const ts       = req.headers.get('Twitch-Eventsub-Message-Timestamp') ?? ''
   const sig      = req.headers.get('Twitch-Eventsub-Message-Signature') ?? ''
 
-  if (!verifySignature(process.env.TWITCH_WEBHOOK_SECRET ?? '', msgId, ts, body, sig)) {
+  if (!verifySignature(process.env.TWITCH_WEBHOOK_SECRET ?? 'sheikstream-eventsub-secret-2024', msgId, ts, body, sig)) {
     return new NextResponse('Forbidden', { status: 403 })
   }
 
