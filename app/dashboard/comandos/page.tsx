@@ -122,6 +122,7 @@ export default function ComandosPage() {
   const [advOpen, setAdvOpen]     = useState(false)
   const [saving, setSaving]       = useState(false)
   const [saveErr, setSaveErr]     = useState('')
+  const [saveOk, setSaveOk]       = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -192,10 +193,13 @@ export default function ComandosPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.trigger || !form.resposta) return
-    setSaving(true); setSaveErr('')
+    setSaveErr(''); setSaveOk(false)
+
+    if (!form.trigger) { setSaveErr('O trigger não pode estar vazio'); return }
+    if (!form.resposta.trim()) { setSaveErr('A resposta do bot não pode estar vazia'); return }
+
+    setSaving(true)
     const platform = form.platforms[0] ?? 'Twitch'
-    // Only send id if it's a real UUID (not a local default id like 'evt-twitch-sub')
     const body = {
       id:         isUUID(editingId) ? editingId : undefined,
       trigger:    form.trigger,
@@ -208,8 +212,11 @@ export default function ComandosPage() {
     try {
       const res = await fetch('/api/comandos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        setSaveErr(d.error ?? 'Erro ao salvar'); setSaving(false); return
+        let msg = 'Erro ao salvar'
+        try { const d = await res.json(); msg = d.error ?? msg } catch { /* ignore */ }
+        setSaveErr(`Erro ${res.status}: ${msg}`)
+        setSaving(false)
+        return
       }
       const saved = await res.json()
       const isEvt = isEventTrigger(saved.trigger)
@@ -221,15 +228,18 @@ export default function ComandosPage() {
         resposta: saved.resposta, cooldown: saved.cooldown_s, habilitado: saved.habilitado,
         isEvento: isEvt, origem: saved.permissao ?? 'todos', platform: saved.platform ?? 'Twitch', db: true,
       }
-      if (editingId) {
-        setCmds(p => p.map(c => c.id === editingId ? dbCmd : c))
-      } else {
-        setCmds(p => [...p, dbCmd])
-      }
-      setForm(emptyForm); setCreating(false); setEditingId(null)
-    } catch {
-      setSaveErr('Erro de conexão')
-    } finally {
+      setCmds(p => {
+        const updated = p.map(c =>
+          // match by id OR by trigger for events (handles race with seed)
+          c.id === editingId || (isEvt && c.isEvento && c.trigger === dbCmd.trigger) ? dbCmd : c
+        )
+        return editingId ? updated : [...p, dbCmd]
+      })
+      setSaveOk(true)
+      setSaving(false)
+      setTimeout(() => { setForm(emptyForm); setCreating(false); setEditingId(null); setSaveOk(false) }, 1200)
+    } catch (err) {
+      setSaveErr('Erro de conexão: ' + String(err))
       setSaving(false)
     }
   }
@@ -363,6 +373,13 @@ export default function ComandosPage() {
       </div>
 
       <div style={{ padding: '1.5rem 2rem', maxWidth: '760px' }}>
+
+        {/* Global error banner */}
+        {saveErr && (
+          <div style={{ marginBottom: '1rem', padding: '0.85rem 1rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '10px', fontSize: '0.84rem', color: '#f87171', fontWeight: 600 }}>
+            ⚠ {saveErr}
+          </div>
+        )}
 
         {/* Templates — only for new regular commands */}
         {!form.isEvento && (
@@ -576,10 +593,12 @@ export default function ComandosPage() {
 
           {/* Submit */}
           {saveErr && (
-            <div style={{ padding: '0.6rem 0.8rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', fontSize: '0.8rem', color: '#ef4444' }}>{saveErr}</div>
+            <div style={{ padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '10px', fontSize: '0.84rem', color: '#f87171', fontWeight: 600 }}>
+              ⚠ {saveErr}
+            </div>
           )}
-          <button type="submit" disabled={saving} style={{ width: '100%', padding: '0.85rem', background: saving ? 'rgba(59,130,246,0.5)' : C.blue, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 700, cursor: saving ? 'default' : 'pointer' }}>
-            {saving ? 'Salvando...' : 'Salvar alterações'}
+          <button type="submit" disabled={saving || saveOk} style={{ width: '100%', padding: '0.85rem', background: saveOk ? '#22c55e' : saving ? 'rgba(59,130,246,0.5)' : C.blue, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 700, cursor: saving || saveOk ? 'default' : 'pointer', transition: 'background 0.2s' }}>
+            {saveOk ? '✓ Salvo!' : saving ? 'Salvando...' : 'Salvar alterações'}
           </button>
         </form>
       </div>
