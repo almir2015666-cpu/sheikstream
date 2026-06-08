@@ -69,6 +69,7 @@ export default function TwitchSubsPage() {
   const [saving, setSaving] = useState(false)
   const [savingTiers, setSavingTiers] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [channelStats, setChannelStats] = useState<{ follower_count: number | null; view_count: number | null } | null>(null)
 
   async function syncSubs() {
     setSyncing(true)
@@ -97,16 +98,18 @@ export default function TwitchSubsPage() {
     const subsUrl = useCustom
       ? `/api/twitch/subs?from=${customFrom}&to=${customTo}`
       : `/api/twitch/subs?days=${days}`
-    const [subsRes, tiersRes, sorteiosRes, meRes] = await Promise.all([
+    const [subsRes, tiersRes, sorteiosRes, meRes, statsRes] = await Promise.all([
       fetch(subsUrl).then(r => r.json()).catch(() => []),
       fetch('/api/twitch/tier-config').then(r => r.json()).catch(() => ({})),
       fetch('/api/sorteios').then(r => r.json()).catch(() => []),
       fetch('/api/me').then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/api/twitch/channel-stats').then(r => r.ok ? r.json() : null).catch(() => null),
     ])
     setSubs(Array.isArray(subsRes) ? subsRes : [])
     if (tiersRes && !tiersRes.error) { setTiers(tiersRes); setTiersEdit(tiersRes) }
     setSorteios(Array.isArray(sorteiosRes) ? sorteiosRes.filter((s: Sorteio) => s.status === 'active') : [])
     setUser(meRes)
+    if (statsRes && !statsRes.error) setChannelStats({ follower_count: statsRes.follower_count ?? null, view_count: statsRes.view_count ?? null })
     setLoading(false)
   }, [days, useCustom, customFrom, customTo])
 
@@ -190,8 +193,8 @@ export default function TwitchSubsPage() {
         </Link>
         <span style={{ color: C.vdim }}>/</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-          <div style={{ width: 28, height: 28, borderRadius: '7px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '0.95rem', fontWeight: 900, color: C.primary }}>T</span>
+          <div style={{ width: 28, height: 28, borderRadius: '7px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 28" fill={C.primary}><path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/></svg>
           </div>
           <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Subs da Twitch</h2>
         </div>
@@ -306,11 +309,15 @@ export default function TwitchSubsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
             <div style={{ background: '#0b0d1a', borderRadius: '8px', padding: '0.65rem' }}>
               <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.2rem' }}>Seguidores</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>—</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>
+                {channelStats ? (channelStats.follower_count !== null ? channelStats.follower_count.toLocaleString('pt-BR') : <span style={{ color: C.dim, fontSize: '0.8rem' }}>Reconecte</span>) : '…'}
+              </div>
             </div>
             <div style={{ background: '#0b0d1a', borderRadius: '8px', padding: '0.65rem' }}>
-              <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.2rem' }}>Views (30d)</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>—</div>
+              <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.2rem' }}>Views totais</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>
+                {channelStats ? (channelStats.view_count !== null ? channelStats.view_count.toLocaleString('pt-BR') : '—') : '…'}
+              </div>
             </div>
           </div>
           <div style={{ marginTop: '0.5rem', background: '#0b0d1a', borderRadius: '8px', padding: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

@@ -149,6 +149,7 @@ export default function AdminPage() {
   const [dbError, setDbError] = useState('')
   const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets'>('users')
   const [userSearch, setUserSearch] = useState('')
+  const [navSearch, setNavSearch] = useState('')
   type LoginLog = { id: string; ip: string; user_agent: string; success: boolean; created_at: string }
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([])
   const [loginLogsLoading, setLoginLogsLoading] = useState(false)
@@ -622,22 +623,46 @@ export default function AdminPage() {
       ) : (
         /* ── Admin dashboard ── */
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
-          {/* View switcher */}
-          <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem' }}>
+          {/* View switcher with search */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center' }}>
+              <div style={{ position: 'relative', flex: 1, maxWidth: 280 }}>
+                <svg style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: C.dim, pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input value={navSearch} onChange={e => setNavSearch(e.target.value)} placeholder="Buscar seção..." style={{ width: '100%', padding: '0.45rem 0.6rem 0.45rem 2rem', background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '0.82rem', outline: 'none' }} />
+                {navSearch && <button onClick={() => setNavSearch('')} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: C.dim, fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>✕</button>}
+              </div>
+            </div>
             {([
-              { v: 'users',     label: '👥 Usuários' },
-              { v: 'tickets',   label: '🎫 Tickets' },
-              { v: 'logs',      label: '📋 Logs' },
-              { v: 'banner',    label: '🎗 Banner' },
-              { v: 'passwords', label: '🔑 Senhas Admin' },
-              { v: 'roles',     label: '🏷 Funções' },
-            ] as const).map(({ v, label }) => (
-              <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
-                className={`sk-tab${view === v ? ' active' : ''}`}
-                style={{ color: view === v ? C.primary : C.muted }}>
-                {label}
-              </button>
-            ))}
+              { group: 'Usuários', items: [
+                { v: 'users',   label: '👥 Usuários' },
+                { v: 'roles',   label: '🏷 Funções' },
+                { v: 'tickets', label: '🎫 Tickets' },
+              ]},
+              { group: 'Sistema', items: [
+                { v: 'logs',      label: '📋 Logs' },
+                { v: 'banner',    label: '🎗 Banner' },
+                { v: 'passwords', label: '🔑 Senhas Admin' },
+              ]},
+            ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets'; label: string }[] }[]).map(({ group, items }) => {
+              const visible = navSearch
+                ? items.filter(i => i.label.toLowerCase().includes(navSearch.toLowerCase()))
+                : items
+              if (!visible.length) return null
+              return (
+                <div key={group} style={{ marginBottom: '0.5rem' }}>
+                  {!navSearch && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem', paddingLeft: '0.25rem' }}>{group}</div>}
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    {visible.map(({ v, label }) => (
+                      <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
+                        className={`sk-tab${view === v ? ' active' : ''}`}
+                        style={{ color: view === v ? C.primary : C.muted }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           {/* DB error banner */}

@@ -432,10 +432,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             })
           })()
         ) : (
-          /* Grouped nav */
+          /* Flat nav — no group labels */
           NAV_GROUPS.map(group => (
             <div key={group.label || '__root'}>
-              {group.label && (
+              {false && group.label && (
                 <div style={{ padding: '0.65rem 0.75rem 0.25rem', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', color: S.vdim, textTransform: 'uppercase' }}>
                   {group.label}
                 </div>
