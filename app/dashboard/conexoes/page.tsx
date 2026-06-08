@@ -119,6 +119,7 @@ export default function ConexoesPage() {
   const [tokenStatus, setTokenStatus] = useState<{ twitch: boolean; youtube: boolean; spotify: boolean; spotify_username?: string | null }>({ twitch: false, youtube: false, spotify: false })
   const [disconnecting, setDisconnecting] = useState(false)
   const [spotifyDisconnecting, setSpotifyDisconnecting] = useState(false)
+  const [spotifySuccess, setSpotifySuccess] = useState(false)
 
   async function handleDisconnect(platform: string) {
     setDisconnecting(true)
@@ -202,6 +203,7 @@ export default function ConexoesPage() {
         window.removeEventListener('message', onMessage)
         clearInterval(check)
         refreshStatus()
+        setSpotifySuccess(true)
       } else if (e.data?.type === 'spotify_error') {
         window.removeEventListener('message', onMessage)
         clearInterval(check)
@@ -717,6 +719,49 @@ export default function ConexoesPage() {
               </button>
               <button onClick={() => setSyncResult(null)}
                 style={{ flex: 1, padding: '0.65rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: C.muted, borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spotify success modal */}
+      {spotifySuccess && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={() => setSpotifySuccess(false)}
+        >
+          <div
+            style={{ background: '#111219', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '2rem', maxWidth: '400px', width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.7)', textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button onClick={() => setSpotifySuccess(false)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}>✕</button>
+
+            {/* Icon */}
+            <div style={{ width: 72, height: 72, borderRadius: '18px', background: 'rgba(30,215,96,0.12)', border: '1px solid rgba(30,215,96,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#1ed760" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+              </svg>
+            </div>
+
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: C.text, marginBottom: '0.5rem' }}>Spotify conectado!</div>
+            <div style={{ fontSize: '0.85rem', color: C.muted, marginBottom: '1.75rem' }}>A integração está ativa. Explore os recursos disponíveis.</div>
+
+            <div style={{ display: 'flex', gap: '0.65rem' }}>
+              <button
+                onClick={() => { setSpotifySuccess(false); router.push('/dashboard') }}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.65rem', background: 'transparent', border: '1px solid rgba(30,215,96,0.4)', color: '#1ed760', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                Ver comandos
+              </button>
+              <button
+                onClick={() => setSpotifySuccess(false)}
+                style={{ flex: 1, padding: '0.65rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: C.muted, borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}
+              >
                 Fechar
               </button>
             </div>
