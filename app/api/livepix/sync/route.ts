@@ -91,6 +91,24 @@ async function getLivepixPayments(token: string): Promise<{
   return all.map(normalizePayment)
 }
 
+export async function GET(req: NextRequest) {
+  const user = getUser(req)
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const db = getSupabaseAdmin()
+  const { data: cfg } = await db.from('livepix_config').select('client_id, client_secret').eq('user_id', user.id).maybeSingle()
+  if (!cfg?.client_id || !cfg?.client_secret) return NextResponse.json({ error: 'not configured' }, { status: 400 })
+  const { token, error: tokenError } = await getLivepixToken(cfg.client_id, cfg.client_secret)
+  if (!token) return NextResponse.json({ error: tokenError }, { status: 400 })
+  // Fetch raw first page to inspect structure
+  const res = await fetch('https://api.livepix.gg/v2/payments?page=1&per_page=5', {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  })
+  const text = await res.text()
+  let raw: unknown
+  try { raw = JSON.parse(text) } catch { raw = text }
+  return NextResponse.json({ status: res.status, raw })
+}
+
 export async function POST(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
