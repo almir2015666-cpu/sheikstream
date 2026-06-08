@@ -115,6 +115,7 @@ export default function ConexoesPage() {
   const [livepixDisconnecting, setLivepixDisconnecting] = useState(false)
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
   const [webhookOrigin, setWebhookOrigin] = useState('')
+  const [livepixConfigOpen, setLivepixConfigOpen] = useState(false)
   const [tokenStatus, setTokenStatus] = useState({ twitch: false, youtube: false })
   const [disconnecting, setDisconnecting] = useState(false)
 
@@ -186,6 +187,8 @@ export default function ConexoesPage() {
       if (res.ok) {
         setLivepixSaved(true)
         setLivepix(p => ({ ...p, clientSecret: '' }))
+        setLivepixConfigOpen(false)
+        handleLivepixSync()
       } else {
         const d = await res.json().catch(() => ({}))
         if (d?.error === 'table_missing') {
@@ -423,110 +426,99 @@ export default function ConexoesPage() {
             </div>
           )
         })}
-      </div>
 
-      {/* Livepix — full width */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1.25rem 1.4rem' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.6rem' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: 'rgba(255,105,180,0.12)', border: '1px solid rgba(255,105,180,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <PlatIcon id="livepix" color="#ff69b4" />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 800, fontSize: '0.92rem' }}>Livepix</span>
-            <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: 'rgba(57,255,20,0.1)', color: '#39ff14', borderRadius: '999px', border: '1px solid rgba(57,255,20,0.2)' }}>ATUALIZADO</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', fontWeight: 600, padding: '0.18rem 0.55rem', borderRadius: '999px', background: livepixSaved ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)', border: livepixSaved ? '1px solid rgba(34,197,94,0.2)' : `1px solid ${C.border}`, color: livepixSaved ? '#22c55e' : C.dim }}>
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/></svg>
-              {livepixSaved ? 'configurado' : 'não configurado'}
-            </span>
-          </div>
-        </div>
-
-        {/* Feature chips */}
-        <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          {['Doações recebidas', 'Histórico', 'Sorteios'].map(f => <FeatureChip key={f} label={f} />)}
-        </div>
-
-        {livepixSaved ? (
-          /* ── CONFIGURED STATE ── */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {/* Slug save */}
-            <form onSubmit={handleSaveSlug} style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                value={livepix.slug}
-                onChange={e => setLivepix(p => ({ ...p, slug: e.target.value }))}
-                placeholder="Link Livepix (slug)"
-                autoComplete="off"
-                style={{ ...inputStyle, flex: 1 }}
-              />
-              <button type="submit" disabled={livepixSaving}
-                style={{ padding: '0.55rem 1rem', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
-                {livepixSaving ? '...' : 'Salvar link Livepix'}
-              </button>
-            </form>
-
-            {/* Webhook section */}
-            <div style={{ padding: '0.9rem 1rem', background: 'rgba(57,255,20,0.05)', border: '1px solid rgba(57,255,20,0.2)', borderRadius: '10px' }}>
-              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#39ff14', marginBottom: '0.3rem' }}>Webhook Livepix (doações em tempo real)</div>
-              <div style={{ fontSize: '0.74rem', color: C.dim, marginBottom: '0.65rem' }}>Cole esta URL nas integrações da Livepix para receber doações automaticamente na sua conta.</div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <input
-                  readOnly
-                  value={`${webhookOrigin}/api/livepix/webhook/${encodeURIComponent(livepix.slug || 'meu-canal')}`}
-                  data-gramm="false"
-                  data-gramm_editor="false"
-                  data-enable-grammarly="false"
-                  style={{ flex: 1, padding: '0.45rem 0.75rem', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '0.75rem', color: C.muted, fontFamily: 'monospace', outline: 'none', cursor: 'text' }}
-                />
-                <button onClick={copyWebhook}
-                  style={{ width: 34, height: 34, flexShrink: 0, background: webhookCopied ? 'rgba(57,255,20,0.12)' : 'transparent', border: `1px solid ${webhookCopied ? 'rgba(57,255,20,0.3)' : C.border}`, borderRadius: '7px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: webhookCopied ? '#39ff14' : C.dim }}>
-                  {webhookCopied
-                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  }
-                </button>
+        {/* Livepix card — 6th item in grid */}
+        <div style={{ background: C.card, border: `1px solid ${livepixSaved ? 'rgba(255,105,180,0.30)' : C.border}`, borderRadius: '12px', padding: '1.1rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {/* Title row */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: 'rgba(255,105,180,0.12)', border: '1px solid rgba(255,105,180,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <PlatIcon id="livepix" color="#ff69b4" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontWeight: 800, fontSize: '0.88rem' }}>Livepix</span>
+                  <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: 'rgba(57,255,20,0.1)', color: '#39ff14', borderRadius: '999px', border: '1px solid rgba(57,255,20,0.2)' }}>ATUALIZADO</span>
+                </div>
+                <StatusPill connected={livepixSaved} />
               </div>
             </div>
+          </div>
 
-            {livepixSyncMsg && (
-              <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.4rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
-                {livepixSyncMsg}
-              </div>
-            )}
+          {/* Feature chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+            {['Doações recebidas', 'Histórico', 'Sorteios'].map(f => <FeatureChip key={f} label={f} />)}
+          </div>
 
-            {/* Sync button */}
-            <button type="button" disabled={livepixSyncing} onClick={handleLivepixSync}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.58rem 0', background: !livepixSyncing ? 'rgba(255,105,180,0.08)' : 'transparent', border: '1px solid rgba(255,105,180,0.25)', color: !livepixSyncing ? '#ff69b4' : C.dim, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: !livepixSyncing ? 'pointer' : 'default', opacity: livepixSyncing ? 0.6 : 1 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-              {livepixSyncing ? 'Sincronizando...' : 'Sync Livepix'}
-            </button>
-
-            {/* Disconnect */}
-            <button type="button" disabled={livepixDisconnecting} onClick={handleLivepixDisconnect}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.58rem 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', opacity: livepixDisconnecting ? 0.6 : 1 }}>
+          {livepixSaved ? (
+            /* Configured: compact */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {/* Webhook URL compact */}
+              {livepix.slug && (
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <input
+                    readOnly
+                    value={`${webhookOrigin}/api/livepix/webhook/${encodeURIComponent(livepix.slug)}`}
+                    data-gramm="false"
+                    data-gramm_editor="false"
+                    data-enable-grammarly="false"
+                    style={{ flex: 1, minWidth: 0, padding: '0.32rem 0.55rem', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.border}`, borderRadius: '6px', fontSize: '0.62rem', color: C.dim, fontFamily: 'monospace', outline: 'none', cursor: 'text' }}
+                  />
+                  <button onClick={copyWebhook}
+                    style={{ width: 28, height: 28, flexShrink: 0, background: webhookCopied ? 'rgba(57,255,20,0.12)' : 'transparent', border: `1px solid ${webhookCopied ? 'rgba(57,255,20,0.3)' : C.border}`, borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: webhookCopied ? '#39ff14' : C.dim }}>
+                    {webhookCopied
+                      ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    }
+                  </button>
+                </div>
+              )}
+              {livepixSyncMsg && (
+                <div style={{ fontSize: '0.7rem', color: '#ef4444' }}>{livepixSyncMsg}</div>
+              )}
+              <button type="button" disabled={livepixSyncing} onClick={handleLivepixSync}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.5rem 0', background: !livepixSyncing ? 'rgba(255,105,180,0.08)' : 'transparent', border: '1px solid rgba(255,105,180,0.25)', color: !livepixSyncing ? '#ff69b4' : C.dim, borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: !livepixSyncing ? 'pointer' : 'default', opacity: livepixSyncing ? 0.6 : 1 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                {livepixSyncing ? 'Sincronizando...' : 'Sync Livepix'}
+              </button>
+              <button type="button" disabled={livepixDisconnecting} onClick={handleLivepixDisconnect}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.5rem 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: livepixDisconnecting ? 0.6 : 1 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                {livepixDisconnecting ? 'Desconectando...' : 'Desconectar'}
+              </button>
+            </div>
+          ) : (
+            /* Not configured: single button opens modal */
+            <button type="button" onClick={() => setLivepixConfigOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.55rem 0', background: 'transparent', border: '1px solid rgba(255,105,180,0.4)', color: '#ff69b4', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', width: '100%' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
-              {livepixDisconnecting ? 'Desconectando...' : 'Desconectar'}
+              Configurar Livepix
             </button>
-          </div>
-        ) : (
-          /* ── NOT CONFIGURED STATE ── */
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '1.25rem', alignItems: 'start' }}>
-            <div style={{ padding: '0.9rem 1rem', background: 'rgba(57,255,20,0.04)', border: '1px solid rgba(57,255,20,0.15)', borderRadius: '10px' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#39ff14', marginBottom: '0.65rem' }}>Como conectar</div>
-              <ol style={{ margin: 0, padding: '0 0 0 1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {[
-                  'Acesse sua conta Livepix e abra a área de integrações/API.',
-                  'Crie uma aplicação e copie o Client ID e Client Secret.',
-                  'Cole os dados abaixo e clique em Salvar e Conectar.',
-                  'Depois de conectado, use Sync para importar o histórico.',
-                ].map((step, i) => (
-                  <li key={i} style={{ fontSize: '0.76rem', color: C.dim, lineHeight: 1.5 }}>{step}</li>
-                ))}
-              </ol>
+          )}
+        </div>
+      </div>
+
+      {/* Livepix config modal */}
+      {livepixConfigOpen && !livepixSaved && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={() => setLivepixConfigOpen(false)}>
+          <div style={{ background: '#111219', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '2rem', maxWidth: '440px', width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.7)' }}
+            onClick={e => e.stopPropagation()}>
+            <button onClick={() => setLivepixConfigOpen(false)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}>✕</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.5rem' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,105,180,0.12)', border: '1px solid rgba(255,105,180,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PlatIcon id="livepix" color="#ff69b4" />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1rem' }}>Configurar Livepix</div>
+                <div style={{ fontSize: '0.74rem', color: C.dim }}>Insira suas credenciais da API</div>
+              </div>
             </div>
             <form onSubmit={handleLivepixConnect} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               <input value={livepix.clientId} onChange={e => setLivepix(p => ({ ...p, clientId: e.target.value }))} placeholder="Client ID" autoComplete="off" style={inputStyle} />
@@ -538,13 +530,25 @@ export default function ConexoesPage() {
                   {livepixTableSql && <pre style={{ marginTop: '0.5rem', padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.4)', borderRadius: '6px', fontSize: '0.7rem', color: '#f0f0f0', whiteSpace: 'pre-wrap', wordBreak: 'break-all', userSelect: 'all' }}>{livepixTableSql}</pre>}
                 </div>
               )}
-              <button type="submit" disabled={livepixSaving} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.58rem 0', background: 'transparent', border: '1px solid rgba(57,255,20,0.3)', color: '#39ff14', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: livepixSaving ? 'default' : 'pointer', opacity: livepixSaving ? 0.6 : 1 }}>
+              <button type="submit" disabled={livepixSaving} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.65rem', background: 'transparent', border: '1px solid rgba(255,105,180,0.4)', color: '#ff69b4', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: livepixSaving ? 'default' : 'pointer', opacity: livepixSaving ? 0.6 : 1 }}>
                 {livepixSaving ? 'Salvando...' : 'Salvar e Conectar'}
               </button>
             </form>
+            <div style={{ marginTop: '1rem', padding: '0.8rem 1rem', background: 'rgba(57,255,20,0.04)', border: '1px solid rgba(57,255,20,0.15)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#39ff14', marginBottom: '0.4rem' }}>Como obter as credenciais</div>
+              <ol style={{ margin: 0, padding: '0 0 0 1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                {[
+                  'Acesse sua conta Livepix e abra Integrações / API.',
+                  'Crie uma aplicação e copie o Client ID e Client Secret.',
+                  'Após conectado, o sync importa seu histórico automaticamente.',
+                ].map((s, i) => (
+                  <li key={i} style={{ fontSize: '0.72rem', color: C.dim, lineHeight: 1.5 }}>{s}</li>
+                ))}
+              </ol>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Sync success modal */}
       {syncResult && (
