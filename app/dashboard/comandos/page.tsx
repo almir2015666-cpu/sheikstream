@@ -34,10 +34,10 @@ type Cmd = { id: string; trigger: string; resposta: string; cooldown: number; ha
 type FormState = {
   trigger: string; resposta: string; cooldown: number; ativo: boolean
   permissao: string; responderComo: 'canal' | 'bot'; notifOverlay: boolean
-  template: string | null; extraVars: string[]
+  template: string | null; extraVars: string[]; platforms: string[]
 }
 
-const emptyForm: FormState = { trigger: '', resposta: '', cooldown: 5, ativo: true, permissao: 'todos', responderComo: 'canal', notifOverlay: false, template: null, extraVars: [] }
+const emptyForm: FormState = { trigger: '', resposta: '', cooldown: 5, ativo: true, permissao: 'todos', responderComo: 'canal', notifOverlay: false, template: null, extraVars: [], platforms: ['Twitch'] }
 
 const PERMS = [
   { id: 'todos',       label: 'Todos',       desc: 'Qualquer pessoa no chat',  color: '#22c55e' },
@@ -86,12 +86,13 @@ const DEFAULTS: Cmd[] = [
 ]
 
 export default function ComandosPage() {
-  const [cmds, setCmds]       = useState<Cmd[]>(DEFAULTS)
+  const [cmds, setCmds]         = useState<Cmd[]>(DEFAULTS)
   const [creating, setCreating] = useState(false)
-  const [botOn, setBotOn]     = useState(false)
-  const [search, setSearch]   = useState('')
-  const [form, setForm]       = useState<FormState>(emptyForm)
-  const [advOpen, setAdvOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [botOn, setBotOn]       = useState(false)
+  const [search, setSearch]     = useState('')
+  const [form, setForm]         = useState<FormState>(emptyForm)
+  const [advOpen, setAdvOpen]   = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   function insertVar(v: string) {
@@ -108,11 +109,22 @@ export default function ComandosPage() {
     setForm({ trigger: tpl.trigger, resposta: tpl.resposta, cooldown: tpl.cooldown, ativo: true, permissao: tpl.permissao, responderComo: 'canal', notifOverlay: false, template: tpl.id, extraVars: tpl.extraVars ?? [] })
   }
 
+  function startEdit(cmd: Cmd) {
+    setEditingId(cmd.id)
+    setForm({ trigger: cmd.trigger.replace(/^!/, ''), resposta: cmd.resposta, cooldown: cmd.cooldown, ativo: cmd.habilitado, permissao: cmd.origem.toLowerCase() === 'todos' ? 'todos' : cmd.origem.toLowerCase(), responderComo: 'canal', notifOverlay: false, template: null, extraVars: [], platforms: [cmd.platform] })
+    setCreating(true)
+  }
+
   function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!form.trigger || !form.resposta) return
-    setCmds(p => [...p, { id: String(Date.now()), trigger: '!' + form.trigger, resposta: form.resposta, cooldown: form.cooldown, habilitado: form.ativo, isEvento: false, origem: form.permissao === 'todos' ? 'Todos' : form.permissao, platform: 'Twitch' }])
-    setForm(emptyForm); setCreating(false)
+    const platform = form.platforms[0] ?? 'Twitch'
+    if (editingId) {
+      setCmds(p => p.map(c => c.id === editingId ? { ...c, trigger: '!' + form.trigger, resposta: form.resposta, cooldown: form.cooldown, habilitado: form.ativo, origem: form.permissao === 'todos' ? 'Todos' : form.permissao, platform } : c))
+    } else {
+      setCmds(p => [...p, { id: String(Date.now()), trigger: '!' + form.trigger, resposta: form.resposta, cooldown: form.cooldown, habilitado: form.ativo, isEvento: false, origem: form.permissao === 'todos' ? 'Todos' : form.permissao, platform }])
+    }
+    setForm(emptyForm); setCreating(false); setEditingId(null)
   }
 
   const filtered    = cmds.filter(c => c.trigger.toLowerCase().includes(search.toLowerCase()) || c.resposta.toLowerCase().includes(search.toLowerCase()))
@@ -193,9 +205,11 @@ export default function ComandosPage() {
             <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{cmd.resposta}</span>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
               <Toggle on={cmd.habilitado} onChange={v => setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))} size="sm" />
-              <button style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', padding: '0.15rem', display: 'flex', opacity: 0.7 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
+              {!cmd.isEvento && (
+                <button onClick={() => startEdit(cmd)} style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', padding: '0.15rem', display: 'flex', opacity: 0.7 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+              )}
               {!cmd.isEvento && (
                 <button onClick={() => setCmds(p => p.filter(c => c.id !== cmd.id))} style={{ background: 'none', border: 'none', color: 'rgba(255,100,100,0.45)', cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -217,12 +231,12 @@ export default function ComandosPage() {
 
       {/* Top bar */}
       <div style={{ padding: '0.9rem 2rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-        <button onClick={() => setCreating(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'none', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '0.84rem', padding: 0 }}>
+        <button onClick={() => { setCreating(false); setEditingId(null) }} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'none', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '0.84rem', padding: 0 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           Voltar
         </button>
         <span style={{ color: C.vdim, fontSize: '0.9rem' }}>|</span>
-        <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>Novo comando</span>
+        <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>{editingId ? 'Editar comando' : 'Novo comando'}</span>
       </div>
 
       <div style={{ padding: '1.5rem 2rem', maxWidth: '760px' }}>
@@ -314,12 +328,20 @@ export default function ComandosPage() {
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
             <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.8rem' }}>Plataformas</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-              {['Twitch', 'YouTube'].map(pl => (
-                <button key={pl} type="button" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem', background: 'transparent', border: '1px dashed rgba(255,255,255,0.12)', borderRadius: '8px', color: C.dim, fontSize: '0.8rem', cursor: 'pointer' }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                  Conectar {pl}
-                </button>
-              ))}
+              {[{ id: 'Twitch', color: '#9147ff' }, { id: 'YouTube', color: '#ff4444' }].map(pl => {
+                const sel = form.platforms.includes(pl.id)
+                return (
+                  <button key={pl.id} type="button"
+                    onClick={() => setForm(p => ({ ...p, platforms: sel ? p.platforms.filter(x => x !== pl.id) : [...p.platforms, pl.id] }))}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem', background: sel ? `${pl.color}15` : 'transparent', border: `1px ${sel ? 'solid' : 'dashed'} ${sel ? pl.color + '55' : 'rgba(255,255,255,0.12)'}`, borderRadius: '8px', color: sel ? pl.color : C.dim, fontSize: '0.8rem', fontWeight: sel ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s' }}>
+                    {sel
+                      ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    }
+                    {sel ? pl.id : `Conectar ${pl.id}`}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -381,7 +403,7 @@ export default function ComandosPage() {
 
           {/* Submit */}
           <button type="submit" style={{ width: '100%', padding: '0.85rem', background: C.blue, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer' }}>
-            Criar comando
+            {editingId ? 'Salvar alterações' : 'Criar comando'}
           </button>
         </form>
       </div>
