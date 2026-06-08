@@ -186,14 +186,29 @@ export default function AdminPage() {
   type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean }
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
-  type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; target_username: string | null }
+  type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; target_username: string | null; duration_seconds?: number }
   const [notifyList, setNotifyList] = useState<AdminNotification[]>([])
   const [notifyLoading, setNotifyLoading] = useState(false)
   const [notifySaving, setNotifySaving] = useState(false)
-  const [notifyForm, setNotifyForm] = useState({ title: '', message: '', icon: '📢', color: '#9b30ff', target_username: '' })
-  type ChangelogEntry = { date: string; title: string; desc: string }
+  const [notifyForm, setNotifyForm] = useState({ title: '', message: '', icon: '📢', color: '#9b30ff', target_username: '', duration_seconds: 30 })
+  type ChangelogEntry = { date: string; time?: string; title: string; desc: string }
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([])
   const [changelogLoading, setChangelogLoading] = useState(false)
+  const NAV_ITEMS_LIST = [
+    { id: 'dashboard',   label: 'Dashboard' },
+    { id: 'subathon',    label: 'Subathon' },
+    { id: 'timers',      label: 'Timers' },
+    { id: 'comandos',    label: 'Comandos' },
+    { id: 'sorteios',    label: 'Sorteios' },
+    { id: 'plataformas', label: 'Plataformas' },
+    { id: 'metas',       label: 'Metas' },
+    { id: 'overlays',    label: 'Overlays' },
+    { id: 'banners',     label: 'Banners' },
+    { id: 'conexoes',    label: 'Conexões' },
+    { id: 'convites',    label: 'Convites' },
+    { id: 'perfil',      label: 'Meu Perfil' },
+  ]
+  const [navOrder, setNavOrder] = useState<string[]>(NAV_ITEMS_LIST.map(i => i.id))
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -433,6 +448,22 @@ export default function AdminPage() {
       setChangelogLoading(false)
     }
   }, [])
+
+  // Auto-refresh changelog every 5 minutes when on that tab
+  useEffect(() => {
+    if (logTab !== 'changelog' || !storedPw) return
+    const iv = setInterval(() => fetchChangelog(storedPw), 5 * 60 * 1000)
+    return () => clearInterval(iv)
+  }, [logTab, storedPw, fetchChangelog])
+
+  // Load nav order from localStorage when switching to navorder view
+  useEffect(() => {
+    if (view !== 'navorder') return
+    try {
+      const s = localStorage.getItem('sk-nav-order')
+      setNavOrder(s ? JSON.parse(s) : NAV_ITEMS_LIST.map(i => i.id))
+    } catch {}
+  }, [view])
 
   const fetchOnlineUsers = useCallback(async (pw: string) => {
     setOnlineLoading(true)
@@ -1038,6 +1069,7 @@ export default function AdminPage() {
                         <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', padding: '0.9rem 1rem', background: C.cardBgAlt, borderRadius: '10px', border: `1px solid ${C.border}` }}>
                           <div style={{ flexShrink: 0, minWidth: '86px' }}>
                             <div style={{ fontSize: '0.68rem', color: C.dim, fontWeight: 600 }}>{entry.date}</div>
+                            {entry.time && <div style={{ fontSize: '0.62rem', color: C.vdim, fontWeight: 500, marginTop: '0.1rem' }}>{entry.time}</div>}
                           </div>
                           <div>
                             <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, marginBottom: '0.2rem' }}>{entry.title}</div>
@@ -1709,6 +1741,20 @@ export default function AdminPage() {
                   )}
                 </div>
 
+                {/* Duration picker */}
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>Duração do aviso</div>
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                    {([10, 30, 60, 120, 300, 600] as const).map(s => (
+                      <button key={s} onClick={() => setNotifyForm(p => ({ ...p, duration_seconds: s }))}
+                        style={{ padding: '0.28rem 0.75rem', borderRadius: '7px', border: `1px solid ${notifyForm.duration_seconds === s ? C.primary + '60' : C.border}`, background: notifyForm.duration_seconds === s ? C.primaryBg : 'transparent', color: notifyForm.duration_seconds === s ? C.primary : C.muted, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                        {s < 60 ? `${s}s` : `${s/60}min`}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: C.vdim, marginTop: '0.3rem' }}>O modal fecha automaticamente após este tempo.</div>
+                </div>
+
                 {/* Title (optional) */}
                 <div style={{ marginBottom: '0.75rem' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Título (opcional)</div>
@@ -1835,47 +1881,28 @@ export default function AdminPage() {
           })()}
 
           {view === 'navorder' && (() => {
-            const NAV_ITEMS = [
-              { id: 'dashboard',  label: 'Dashboard' },
-              { id: 'subathon',   label: 'Subathon' },
-              { id: 'timers',     label: 'Timers' },
-              { id: 'comandos',   label: 'Comandos' },
-              { id: 'sorteios',   label: 'Sorteios' },
-              { id: 'plataformas',label: 'Plataformas' },
-              { id: 'metas',      label: 'Metas' },
-              { id: 'overlays',   label: 'Overlays' },
-              { id: 'banners',    label: 'Banners' },
-              { id: 'conexoes',   label: 'Conexões' },
-              { id: 'convites',   label: 'Convites' },
-              { id: 'perfil',     label: 'Meu Perfil' },
-            ]
+            const ordered = navOrder.length > 0
+              ? [...navOrder.filter(id => NAV_ITEMS_LIST.some(i => i.id === id)).map(id => NAV_ITEMS_LIST.find(i => i.id === id)!),
+                 ...NAV_ITEMS_LIST.filter(i => !navOrder.includes(i.id))]
+              : NAV_ITEMS_LIST
 
-            const [localOrder, setLocalOrder] = React.useState<string[]>(() => {
-              try { const s = localStorage.getItem('sk-nav-order'); return s ? JSON.parse(s) : NAV_ITEMS.map(i => i.id) } catch { return NAV_ITEMS.map(i => i.id) }
-            })
-
-            const ordered = localOrder.length > 0
-              ? [...localOrder.filter(id => NAV_ITEMS.some(i => i.id === id)).map(id => NAV_ITEMS.find(i => i.id === id)!),
-                 ...NAV_ITEMS.filter(i => !localOrder.includes(i.id))]
-              : NAV_ITEMS
-
-            function move(id: string, dir: 'up' | 'down') {
+            const moveNav = (id: string, dir: 'up' | 'down') => {
               const arr = [...ordered.map(i => i.id)]
               const idx = arr.indexOf(id)
               const newIdx = dir === 'up' ? idx - 1 : idx + 1
               if (newIdx < 0 || newIdx >= arr.length) return
               ;[arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]]
-              setLocalOrder(arr)
+              setNavOrder(arr)
             }
 
-            function save() {
+            const saveNav = () => {
               const arr = ordered.map(i => i.id)
               try { localStorage.setItem('sk-nav-order', JSON.stringify(arr)) } catch {}
               alert('Ordem salva! A sidebar do dashboard vai refletir a nova ordem.')
             }
 
-            function reset() {
-              setLocalOrder(NAV_ITEMS.map(i => i.id))
+            const resetNav = () => {
+              setNavOrder(NAV_ITEMS_LIST.map(i => i.id))
               try { localStorage.removeItem('sk-nav-order') } catch {}
             }
 
@@ -1883,7 +1910,7 @@ export default function AdminPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
                   <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>⠿ Ordem do Menu lateral</h3>
-                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Arraste ou use os botões ▲/▼ para reordenar os itens da sidebar do dashboard. Clique em Salvar para aplicar.</p>
+                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Use os botões ▲/▼ para reordenar os itens da sidebar do dashboard. Clique em Salvar para aplicar.</p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
                     {ordered.map((item, idx) => (
@@ -1891,9 +1918,9 @@ export default function AdminPage() {
                         <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.vdim, width: 18, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
                         <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600, color: C.text }}>{item.label}</span>
                         <div style={{ display: 'flex', gap: '0.25rem' }}>
-                          <button disabled={idx === 0} onClick={() => move(item.id, 'up')}
+                          <button disabled={idx === 0} onClick={() => moveNav(item.id, 'up')}
                             style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
-                          <button disabled={idx === ordered.length - 1} onClick={() => move(item.id, 'down')}
+                          <button disabled={idx === ordered.length - 1} onClick={() => moveNav(item.id, 'down')}
                             style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === ordered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === ordered.length - 1 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
                         </div>
                       </div>
@@ -1901,11 +1928,11 @@ export default function AdminPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.65rem' }}>
-                    <button onClick={save}
+                    <button onClick={saveNav}
                       style={{ flex: 1, padding: '0.55rem 0', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
                       ✓ Salvar ordem
                     </button>
-                    <button onClick={reset}
+                    <button onClick={resetNav}
                       style={{ padding: '0.55rem 1rem', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
                       ↺ Reset
                     </button>

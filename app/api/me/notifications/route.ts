@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data } = await getSupabaseAdmin()
       .from('admin_notifications')
-      .select('id,title,message,icon,color,created_at,target_username')
+      .select('id,title,message,icon,color,created_at,target_username,duration_seconds')
       .eq('active', true)
       .or(`target_username.is.null,target_username.ilike.${user.name}`)
       .order('created_at', { ascending: false })

@@ -33,7 +33,7 @@ function PlatIcon({ id, color }: { id: string; color: string }) {
   if (id === 'paypal')
     return <svg {...s} viewBox="0 0 24 24" fill={color}><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.147 1.232 2.407 1.012 3.841-.096.579-.handle.html.handle.html.handle.html0 0 0 0-.01.01L20.15 5.66h.001c-.292 3.123-2.182 6.062-6.36 6.062h-2.56a.698.698 0 0 0-.69.591l-.87 5.525-.063.4-.001.008-.636 4.04a.371.371 0 0 1-.366.316h-.001l-.529-.265zM9.27 7.47h2.135c1.354 0 2.248-.494 2.558-2.082.288-1.478-.508-2.016-1.806-2.016H9.948l-.678 4.098zm11.316-5.246c-.276 3.563-2.45 5.81-6.376 5.81H12.2l-.877 5.596h-.001l-.637 4.04H7.25L9.96 2.83h7.46c1.33 0 2.39.285 3.17.938-.047-.044 0 0 .054.055-.027-.02-.054-.04-.057-.04z"/></svg>
   if (id === 'livepix')
-    return <svg {...s} viewBox="0 0 24 24" fill={color}><path d="M12 21.593c-.425-.394-8.992-7.78-8.992-12.76a8.992 8.992 0 1 1 17.984 0c0 4.98-8.567 12.366-8.992 12.76z"/></svg>
+    return <svg {...s} viewBox="0 0 24 24" fill={color}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
   return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg>
 }
 
@@ -105,6 +105,7 @@ export default function ConexoesPage() {
   const [livepixSaving, setLivepixSaving] = useState(false)
   const [livepixSaved, setLivepixSaved] = useState(false)
   const [livepixErr, setLivepixErr] = useState('')
+  const [livepixTableSql, setLivepixTableSql] = useState('')
   const [livepixSyncing, setLivepixSyncing] = useState(false)
   const [livepixSyncMsg, setLivepixSyncMsg] = useState('')
   const [tokenStatus, setTokenStatus] = useState({ twitch: false, youtube: false })
@@ -180,7 +181,12 @@ export default function ConexoesPage() {
         setLivepix(p => ({ ...p, clientSecret: '' }))
       } else {
         const d = await res.json().catch(() => ({}))
-        setLivepixErr(d?.error ?? 'Erro ao salvar configuração')
+        if (d?.error === 'table_missing') {
+          setLivepixTableSql(d.sql ?? '')
+          setLivepixErr('Tabela livepix_config não encontrada no banco. Execute o SQL abaixo no Supabase para criá-la.')
+        } else {
+          setLivepixErr(d?.error ?? 'Erro ao salvar configuração')
+        }
       }
     } catch {
       setLivepixErr('Erro de conexão')
@@ -209,8 +215,13 @@ export default function ConexoesPage() {
 
   useEffect(() => {
     fetch('/api/livepix/config')
-      .then(r => r.ok ? r.json() : null)
+      .then(r => r.json())
       .then(d => {
+        if (d?.error === 'table_missing') {
+          setLivepixTableSql(d.sql ?? '')
+          setLivepixErr('Tabela livepix_config não encontrada no banco. Execute o SQL abaixo no Supabase para criá-la.')
+          return
+        }
         if (d?.client_id || d?.has_secret || d?.slug) {
           setLivepix(p => ({ ...p, clientId: d.client_id ?? '', slug: d.slug ?? '' }))
           setLivepixSaved(true)
@@ -422,8 +433,13 @@ export default function ConexoesPage() {
               O Channel ID é detectado automaticamente ao sincronizar. O Slug é usado nos links de sorteio.
             </div>
             {livepixErr && (
-              <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.4rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
+              <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.5rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
                 {livepixErr}
+                {livepixTableSql && (
+                  <pre style={{ marginTop: '0.5rem', padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.4)', borderRadius: '6px', fontSize: '0.7rem', color: '#f0f0f0', whiteSpace: 'pre-wrap', wordBreak: 'break-all', userSelect: 'all' }}>
+                    {livepixTableSql}
+                  </pre>
+                )}
               </div>
             )}
             <button

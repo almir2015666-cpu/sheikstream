@@ -23,19 +23,24 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     if (!body.message?.trim()) return NextResponse.json({ error: 'message required' }, { status: 400 })
-    const { data, error } = await getSupabaseAdmin()
-      .from('admin_notifications')
-      .insert({
-        title:           body.title?.trim() || null,
-        message:         body.message.trim(),
-        icon:            body.icon || '📢',
-        color:           body.color || '#9b30ff',
-        target_username: body.target_username?.trim() || null,
-        active:          true,
-        created_at:      new Date().toISOString(),
-      })
-      .select()
-      .single()
+    const db = getSupabaseAdmin()
+    const base = {
+      title:            body.title?.trim() || null,
+      message:          body.message.trim(),
+      icon:             body.icon || '📢',
+      color:            body.color || '#9b30ff',
+      target_username:  body.target_username?.trim() || null,
+      active:           true,
+      created_at:       new Date().toISOString(),
+    }
+    // Try with duration_seconds — fallback if column doesn't exist
+    let { data, error } = await db.from('admin_notifications')
+      .insert({ ...base, duration_seconds: Number(body.duration_seconds) || 30 })
+      .select().single()
+    if (error?.code === '42703') {
+      const r2 = await db.from('admin_notifications').insert(base).select().single()
+      data = r2.data; error = r2.error
+    }
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(data, { status: 201 })
   } catch (e) {
