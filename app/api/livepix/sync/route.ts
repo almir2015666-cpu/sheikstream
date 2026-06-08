@@ -99,14 +99,20 @@ export async function GET(req: NextRequest) {
   if (!cfg?.client_id || !cfg?.client_secret) return NextResponse.json({ error: 'not configured' }, { status: 400 })
   const { token, error: tokenError } = await getLivepixToken(cfg.client_id, cfg.client_secret)
   if (!token) return NextResponse.json({ error: tokenError }, { status: 400 })
-  // Fetch raw first page to inspect structure
-  const res = await fetch('https://api.livepix.gg/v2/payments?page=1&per_page=5', {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-  })
-  const text = await res.text()
-  let raw: unknown
-  try { raw = JSON.parse(text) } catch { raw = text }
-  return NextResponse.json({ status: res.status, raw })
+
+  async function probe(url: string) {
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } })
+    const t = await r.text()
+    try { return { status: r.status, data: JSON.parse(t) } } catch { return { status: r.status, data: t } }
+  }
+
+  const [payments, messages, walletBRL] = await Promise.all([
+    probe('https://api.livepix.gg/v2/payments?page=1&limit=5'),
+    probe('https://api.livepix.gg/v2/messages?page=1&limit=5'),
+    probe('https://api.livepix.gg/v2/wallet/BRL/transactions?page=1&limit=5'),
+  ])
+
+  return NextResponse.json({ payments, messages, walletBRL })
 }
 
 export async function POST(req: NextRequest) {
