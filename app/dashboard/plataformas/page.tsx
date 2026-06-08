@@ -1,5 +1,21 @@
 'use client'
 
+function PlatIcon({ id, color }: { id: string; color: string }) {
+  if (id === 'twitch')
+    return (
+      <svg width="24" height="24" viewBox="0 0 24 28" fill={color}>
+        <path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/>
+      </svg>
+    )
+  if (id === 'livepix')
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>
+      </svg>
+    )
+  return <span style={{ fontSize: '1.3rem', fontWeight: 900, color }}>{id[0].toUpperCase()}</span>
+}
+
 const C = {
   card: '#111219', cardB: 'rgba(255,255,255,0.05)',
   text: '#e8e6f8', dim: 'rgba(232,230,248,0.28)', vdim: 'rgba(232,230,248,0.12)',
@@ -38,7 +54,7 @@ export default function PlataformasPage() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: p.bg, border: `1px solid ${p.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: '1.3rem', fontWeight: 900, color: p.color }}>{p.label[0]}</span>
+                    <PlatIcon id={p.id} color={p.color} />
                   </div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '1rem', color: C.text, marginBottom: '0.2rem' }}>{p.label}</div>

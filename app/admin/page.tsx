@@ -624,47 +624,68 @@ export default function AdminPage() {
       ) : (
         /* ── Admin dashboard ── */
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
-          {/* View switcher with search */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center' }}>
-              <div style={{ position: 'relative', flex: 1, maxWidth: 280 }}>
-                <svg style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: C.dim, pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input value={navSearch} onChange={e => setNavSearch(e.target.value)} placeholder="Buscar seção..." style={{ width: '100%', padding: '0.45rem 0.6rem 0.45rem 2rem', background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '0.82rem', outline: 'none' }} />
-                {navSearch && <button onClick={() => setNavSearch('')} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: C.dim, fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>✕</button>}
+          {/* View switcher: full when on main views, compact back-button otherwise */}
+          {(view === 'users' || view === 'banner') ? (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center' }}>
+                <div style={{ position: 'relative', flex: 1, maxWidth: 280 }}>
+                  <svg style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: C.dim, pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input value={navSearch} onChange={e => setNavSearch(e.target.value)} placeholder="Buscar seção..." style={{ width: '100%', padding: '0.45rem 0.6rem 0.45rem 2rem', background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '0.82rem', outline: 'none' }} />
+                  {navSearch && <button onClick={() => setNavSearch('')} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: C.dim, fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>✕</button>}
+                </div>
+              </div>
+              {([
+                { group: 'Usuários', items: [
+                  { v: 'users',   label: '👥 Usuários' },
+                  { v: 'roles',   label: '🏷 Funções' },
+                  { v: 'tickets', label: '🎫 Tickets' },
+                ]},
+                { group: 'Sistema', items: [
+                  { v: 'logs',      label: '📋 Logs' },
+                  { v: 'banner',    label: '🎗 Banner' },
+                  { v: 'passwords', label: '🔑 Senhas Admin' },
+                ]},
+              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets'; label: string }[] }[]).map(({ group, items }) => {
+                const visible = navSearch
+                  ? items.filter(i => i.label.toLowerCase().includes(navSearch.toLowerCase()))
+                  : items
+                if (!visible.length) return null
+                return (
+                  <div key={group} style={{ marginBottom: '0.5rem' }}>
+                    {!navSearch && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem', paddingLeft: '0.25rem' }}>{group}</div>}
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {visible.map(({ v, label }) => (
+                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
+                          className={`sk-tab${view === v ? ' active' : ''}`}
+                          style={{ color: view === v ? C.primary : C.muted }}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.5rem' }}>
+              <button onClick={() => setView('users')} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: C.vvdim, border: `1px solid ${C.border}`, color: C.muted, borderRadius: '8px', padding: '0.42rem 0.9rem', fontSize: '0.82rem', cursor: 'pointer', fontWeight: 600 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                Voltar
+              </button>
+              <span style={{ fontSize: '0.72rem', color: C.vdim }}>·</span>
+              <span style={{ fontSize: '0.92rem', fontWeight: 700, color: C.text }}>
+                {({ roles: '🏷 Funções', tickets: '🎫 Tickets', logs: '📋 Logs', passwords: '🔑 Senhas Admin' } as Record<string, string>)[view]}
+              </span>
+              <div style={{ display: 'flex', gap: '0.35rem', marginLeft: 'auto' }}>
+                {(['roles', 'tickets', 'logs', 'passwords'] as const).map(v => (
+                  <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
+                    style={{ fontSize: '0.72rem', padding: '0.28rem 0.7rem', borderRadius: '6px', border: `1px solid ${view === v ? C.primary + '50' : C.border}`, background: view === v ? C.primaryBg : 'transparent', color: view === v ? C.primary : C.dim, cursor: 'pointer', fontWeight: view === v ? 700 : 400 }}>
+                    {({ roles: 'Funções', tickets: 'Tickets', logs: 'Logs', passwords: 'Senhas' } as Record<string, string>)[v]}
+                  </button>
+                ))}
               </div>
             </div>
-            {([
-              { group: 'Usuários', items: [
-                { v: 'users',   label: '👥 Usuários' },
-                { v: 'roles',   label: '🏷 Funções' },
-                { v: 'tickets', label: '🎫 Tickets' },
-              ]},
-              { group: 'Sistema', items: [
-                { v: 'logs',      label: '📋 Logs' },
-                { v: 'banner',    label: '🎗 Banner' },
-                { v: 'passwords', label: '🔑 Senhas Admin' },
-              ]},
-            ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets'; label: string }[] }[]).map(({ group, items }) => {
-              const visible = navSearch
-                ? items.filter(i => i.label.toLowerCase().includes(navSearch.toLowerCase()))
-                : items
-              if (!visible.length) return null
-              return (
-                <div key={group} style={{ marginBottom: '0.5rem' }}>
-                  {!navSearch && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem', paddingLeft: '0.25rem' }}>{group}</div>}
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {visible.map(({ v, label }) => (
-                      <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
-                        className={`sk-tab${view === v ? ' active' : ''}`}
-                        style={{ color: view === v ? C.primary : C.muted }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          )}
 
           {/* DB error banner */}
           {dbError && (

@@ -55,6 +55,7 @@ type Stats = {
   livepix_total: number; livepix_donors: number; livepix_unique: number
   twitch_subs: number; twitch_tickets: number; tickets_total: number; participants: number
 }
+type DonorRow = { id: string; username: string; amount: number; message: string | null; date: string; created_at: string }
 type ChannelStats = {
   broadcaster_name: string; title: string; game_name: string
   is_live: boolean; viewer_count: number; started_at: string | null
@@ -74,6 +75,7 @@ export default function DashboardPage() {
   const [channel, setChannel] = useState<ChannelStats | null>(null)
   const [channelErr, setChannelErr] = useState('')
   const [refreshTick, setRefreshTick] = useState(0)
+  const [donors, setDonors] = useState<DonorRow[] | null>(null)
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
 
   function periodDates() {
@@ -102,6 +104,13 @@ export default function DashboardPage() {
       .then(d => { if (d) setStats(d) })
       .catch(() => {})
       .finally(() => setStatsLoading(false))
+    const days = period === '7d' ? 7 : period === '90d' ? 90 : period === 'custom'
+      ? Math.max(1, Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / 86400000) + 1)
+      : 30
+    fetch(`/api/livepix/donors?days=${days}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: DonorRow[] | null) => { if (d) setDonors(d) })
+      .catch(() => {})
   }, [period, customFrom, customTo, refreshTick])
 
   useEffect(() => {
@@ -289,8 +298,8 @@ export default function DashboardPage() {
                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: r.color, flexShrink: 0, display: 'inline-block' }} />
                     {r.label}
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: C.dim, width: '48px' }}>R$ 0,00</div>
-                  <div style={{ fontSize: '0.74rem', color: C.text, fontWeight: 600, width: '56px' }}>→ R$ 0,00</div>
+                  <div style={{ fontSize: '0.74rem', color: C.dim, width: '48px' }}>{r.label === 'Livepix' ? fmtBRL(stats?.livepix_total ?? 0) : 'R$ 0,00'}</div>
+                  <div style={{ fontSize: '0.74rem', color: C.text, fontWeight: 600, width: '56px' }}>→ {r.label === 'Livepix' ? fmtBRL((stats?.livepix_total ?? 0) * r.pct / 100) : 'R$ 0,00'}</div>
                   <div style={{ fontSize: '0.7rem', color: C.dim, width: '32px' }}>{r.pct}%</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', position: 'relative', overflow: 'hidden' }}>
@@ -318,9 +327,21 @@ export default function DashboardPage() {
           <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <span style={{ color: C.primary }}>↗</span> Arrecadação no período
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: C.vdim, fontSize: '0.82rem' }}>
-            Nenhuma arrecadação no período
-          </div>
+          {!donors || donors.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: C.vdim, fontSize: '0.82rem' }}>
+              Nenhuma arrecadação no período
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: '200px', overflowY: 'auto' }}>
+              {[...donors].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(d => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.32rem 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 600, color: C.text, flex: 1 }}>{d.username}</span>
+                  <span style={{ fontSize: '0.72rem', color: C.vdim }}>{d.date}</span>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#ff69b4' }}>{fmtBRL(d.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Sorteios ativos + Atividade recente */}
@@ -341,9 +362,21 @@ export default function DashboardPage() {
           </div>
           <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>Atividade recente</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: C.vdim, fontSize: '0.82rem' }}>
-              Nenhuma atividade registrada
-            </div>
+            {!donors || donors.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: C.vdim, fontSize: '0.82rem' }}>
+                Nenhuma atividade registrada
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {donors.slice(0, 6).map(d => (
+                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff69b4', flexShrink: 0, display: 'inline-block' }} />
+                    <span style={{ fontSize: '0.76rem', color: C.muted, flex: 1 }}><strong style={{ color: C.text }}>{d.username}</strong> doou</span>
+                    <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#ff69b4' }}>{fmtBRL(d.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -352,9 +385,21 @@ export default function DashboardPage() {
           <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             🏆 Top doadores
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px', color: C.vdim, fontSize: '0.82rem' }}>
-            Nenhum doador registrado no período
-          </div>
+          {!donors || donors.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px', color: C.vdim, fontSize: '0.82rem' }}>
+              Nenhum doador registrado no período
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              {[...donors].sort((a, b) => b.amount - a.amount).slice(0, 5).map((d, i) => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, width: '20px', flexShrink: 0, color: i === 0 ? '#fbbf24' : i === 1 ? 'rgba(192,192,192,0.8)' : i === 2 ? '#b45309' : C.vdim }}>#{i + 1}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: C.text, flex: 1 }}>{d.username}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ff69b4' }}>{fmtBRL(d.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

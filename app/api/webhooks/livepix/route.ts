@@ -12,10 +12,21 @@ export async function POST(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
+  let broadcasterId = channelId
+  if (channelId) {
+    const { data: cfgRow } = await db
+      .from('livepix_config')
+      .select('user_id')
+      .eq('channel_id', channelId)
+      .maybeSingle()
+      .catch(() => ({ data: null }))
+    if (cfgRow?.user_id) broadcasterId = cfgRow.user_id
+  }
+
   if (channelId && amount > 0) {
     // Record in donors table
     await db.from('livepix_donors').insert({
-      broadcaster_id: channelId,
+      broadcaster_id: broadcasterId,
       username: donorName,
       amount,
       message: message || null,
@@ -24,7 +35,7 @@ export async function POST(req: NextRequest) {
       date: new Date().toISOString().split('T')[0],
     })
 
-    const { data: sub } = await db.from('subathon_state').select('*').eq('broadcaster_id', channelId).single()
+    const { data: sub } = await db.from('subathon_state').select('*').eq('broadcaster_id', broadcasterId).single()
     if (sub?.is_active) {
       const secsPerUnit = Number(sub.seconds_per_livepix ?? 120)
       const units = Math.max(1, Math.floor(amount))
@@ -35,16 +46,16 @@ export async function POST(req: NextRequest) {
         await db.from('subathon_state').update({
           end_time: new Date(base.getTime() + secondsToAdd * 1000).toISOString(),
           updated_at: now.toISOString(),
-        }).eq('broadcaster_id', channelId)
+        }).eq('broadcaster_id', broadcasterId)
       } else if (sub.is_paused) {
         await db.from('subathon_state').update({
           paused_remaining: (sub.paused_remaining ?? 0) + secondsToAdd,
           updated_at: now.toISOString(),
-        }).eq('broadcaster_id', channelId)
+        }).eq('broadcaster_id', broadcasterId)
       }
     }
 
-    const { data: metas } = await db.from('metas').select('id,current_value').eq('broadcaster_id', channelId).eq('type', 'donations').eq('status', 'active')
+    const { data: metas } = await db.from('metas').select('id,current_value').eq('broadcaster_id', broadcasterId).eq('type', 'donations').eq('status', 'active')
     for (const m of metas ?? []) {
       await db.from('metas').update({ current_value: Number(m.current_value) + amount }).eq('id', m.id)
     }

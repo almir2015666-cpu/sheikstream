@@ -101,9 +101,10 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 export default function ConexoesPage() {
   const [connectedUser, setConnectedUser] = useState<string | null>(null)
   const [botActive, setBotActive] = useState(false)
-  const [livepix, setLivepix] = useState({ clientId: '', clientSecret: '', slug: '' })
+  const [livepix, setLivepix] = useState({ clientId: '', clientSecret: '', channelId: '', slug: '' })
   const [livepixSaving, setLivepixSaving] = useState(false)
   const [livepixSaved, setLivepixSaved] = useState(false)
+  const [livepixErr, setLivepixErr] = useState('')
   const [tokenStatus, setTokenStatus] = useState({ twitch: false, youtube: false })
   const [disconnecting, setDisconnecting] = useState(false)
 
@@ -157,11 +158,45 @@ export default function ConexoesPage() {
       .catch(() => {})
   }, [])
 
-  function handleLivepixConnect(e: React.FormEvent) {
+  async function handleLivepixConnect(e: React.FormEvent) {
     e.preventDefault()
     setLivepixSaving(true)
-    setTimeout(() => { setLivepixSaving(false); setLivepixSaved(true) }, 1200)
+    setLivepixErr('')
+    try {
+      const res = await fetch('/api/livepix/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: livepix.clientId || null,
+          client_secret: livepix.clientSecret || null,
+          channel_id: livepix.channelId || null,
+          slug: livepix.slug || null,
+        }),
+      })
+      if (res.ok) {
+        setLivepixSaved(true)
+      } else {
+        const d = await res.json().catch(() => ({}))
+        setLivepixErr(d?.error ?? 'Erro ao salvar configuração')
+      }
+    } catch {
+      setLivepixErr('Erro de conexão')
+    } finally {
+      setLivepixSaving(false)
+    }
   }
+
+  useEffect(() => {
+    fetch('/api/livepix/config')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.client_id || d?.channel_id || d?.slug) {
+          setLivepix(p => ({ ...p, clientId: d.client_id ?? '', channelId: d.channel_id ?? '', slug: d.slug ?? '' }))
+          setLivepixSaved(true)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
@@ -354,14 +389,25 @@ export default function ConexoesPage() {
               style={inputStyle}
             />
             <input
+              value={livepix.channelId}
+              onChange={e => setLivepix(p => ({ ...p, channelId: e.target.value }))}
+              placeholder="Channel ID (ex: 123456) — em Integrações > Webhook"
+              style={inputStyle}
+            />
+            <input
               value={livepix.slug}
               onChange={e => setLivepix(p => ({ ...p, slug: e.target.value }))}
               placeholder="Slug da vaquinha (ex: minha-campanha)"
               style={inputStyle}
             />
             <div style={{ fontSize: '0.72rem', color: C.dim }}>
-              Usado nos links da página pública de sorteio (livepix.gg/vaquinha/…)
+              O Channel ID vincula doações do webhook ao seu canal. O Slug é usado nos links de sorteio.
             </div>
+            {livepixErr && (
+              <div style={{ fontSize: '0.76rem', color: '#ef4444', padding: '0.4rem 0.7rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px' }}>
+                {livepixErr}
+              </div>
+            )}
             <button
               type="submit"
               disabled={livepixSaving}
