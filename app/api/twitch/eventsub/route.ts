@@ -64,10 +64,12 @@ async function handleNotification(payload: { subscription: { type: string }; eve
 
   const db = getSupabaseAdmin()
   // Non-blocking log — table may not exist, never crash the handler
-  db.from('twitch_events')
-    .insert({ broadcaster_id: broadcasterId, event_type: eventType, event_data: event })
-    .then(r => { if (r.error) console.warn('[eventsub] twitch_events insert skipped:', r.error.message) })
-    .catch(() => {})
+  ;(async () => {
+    try {
+      const r = await db.from('twitch_events').insert({ broadcaster_id: broadcasterId, event_type: eventType, event_data: event })
+      if (r.error) console.warn('[eventsub] twitch_events insert skipped:', r.error.message)
+    } catch { /* ignore */ }
+  })()
 
   // ── Chat commands (!command) ──────────────────────────────────────────────
   if (eventType === 'channel.chat.message') {
