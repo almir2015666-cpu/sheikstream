@@ -112,7 +112,7 @@ export default function ComandosPage() {
 
   function startEdit(cmd: Cmd) {
     setEditingId(cmd.id)
-    setForm({ trigger: cmd.trigger.replace(/^!/, ''), resposta: cmd.resposta, cooldown: cmd.cooldown, ativo: cmd.habilitado, permissao: cmd.origem.toLowerCase() === 'todos' ? 'todos' : cmd.origem.toLowerCase(), responderComo: 'canal', notifOverlay: false, template: null, extraVars: [], platforms: [cmd.platform] })
+    setForm({ trigger: cmd.trigger.replace(/^!/, ''), resposta: cmd.resposta, cooldown: cmd.cooldown, cooldownUser: 0, custoBase: 0, custoInscritos: 0, ativo: cmd.habilitado, permissao: cmd.origem.toLowerCase() === 'todos' ? 'todos' : cmd.origem.toLowerCase(), responderComo: 'canal', notifOverlay: false, template: null, extraVars: [], platforms: [cmd.platform] })
     setCreating(true)
   }
 
