@@ -34,12 +34,12 @@ const STATS = [
 ]
 
 const REPASSE = [
-  { label: 'Livepix', color: '#ff4d6d', pct: 95, note: 'pago em R$' },
-  { label: 'Twitch',  color: '#9147ff', pct: 50, note: 'U$ 0,00 · 0,0% de U$50' },
-  { label: 'YouTube', color: '#ff0000', pct: 70, note: 'U$ 0,00 · 0,0% de U$100' },
-  { label: 'Kick',    color: '#53fc18', pct: 50, note: 'U$ 0,00 · 0,0% de U$50' },
-  { label: 'TikTok',  color: '#69c9d0', pct: 50, note: 'U$ 0,00 · 0,0% de U$50' },
-  { label: 'PayPal',  color: '#009cde', pct: 97, note: 'pago em R$' },
+  { label: 'Livepix', color: '#ff2d6b', pct: 95, note: 'pago em R$' },
+  { label: 'Twitch',  color: '#a855f7', pct: 50, note: 'U$ 0,00 · 0,0% de U$50' },
+  { label: 'YouTube', color: '#ff3333', pct: 70, note: 'U$ 0,00 · 0,0% de U$100' },
+  { label: 'Kick',    color: '#39ff14', pct: 50, note: 'U$ 0,00 · 0,0% de U$50' },
+  { label: 'TikTok',  color: '#00e5ff', pct: 50, note: 'U$ 0,00 · 0,0% de U$50' },
+  { label: 'PayPal',  color: '#00b4ff', pct: 97, note: 'pago em R$' },
 ]
 
 function todayStr() {
@@ -103,14 +103,20 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/me/notifications')
-      .then(r => r.ok ? r.json() : [])
-      .then((d: AdminNotif[]) => { if (Array.isArray(d)) setNotifications(d) })
-      .catch(() => {})
     try {
       const seen = JSON.parse(localStorage.getItem('sk-dismissed-notifs') || '[]')
       setDismissedNotifs(new Set(seen))
     } catch {}
+
+    const fetchNotifs = () => {
+      fetch('/api/me/notifications')
+        .then(r => r.ok ? r.json() : [])
+        .then((d: AdminNotif[]) => { if (Array.isArray(d)) setNotifications(d) })
+        .catch(() => {})
+    }
+    fetchNotifs()
+    const iv = setInterval(fetchNotifs, 15000) // poll every 15s
+    return () => clearInterval(iv)
   }, [])
 
   // Show notifications one at a time as a modal
@@ -373,25 +379,35 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
           <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>Estimativa de repasse</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.62rem' }}>
-              {REPASSE.map(r => (
+            {(() => {
+              const values: Record<string, number> = { Livepix: stats?.livepix_total ?? 0 }
+              const maxVal = Math.max(...REPASSE.map(r => values[r.label] ?? 0), 0.01)
+              return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.62rem' }}>
+              {REPASSE.map(r => {
+                const raw = values[r.label] ?? 0
+                const net = raw * r.pct / 100
+                const barPct = (raw / maxVal) * 100
+                return (
                 <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <div style={{ width: '58px', fontSize: '0.75rem', color: C.muted, flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: r.color, flexShrink: 0, display: 'inline-block' }} />
+                  <div style={{ width: '54px', fontSize: '0.75rem', color: raw > 0 ? C.muted : C.vdim, flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: r.color, flexShrink: 0, display: 'inline-block', opacity: raw > 0 ? 1 : 0.3 }} />
                     {r.label}
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: C.dim, width: '48px' }}>{r.label === 'Livepix' ? fmtBRL(stats?.livepix_total ?? 0) : 'R$ 0,00'}</div>
-                  <div style={{ fontSize: '0.74rem', color: C.text, fontWeight: 600, width: '56px' }}>→ {r.label === 'Livepix' ? fmtBRL((stats?.livepix_total ?? 0) * r.pct / 100) : 'R$ 0,00'}</div>
-                  <div style={{ fontSize: '0.7rem', color: C.dim, width: '32px' }}>{r.pct}%</div>
+                  <div style={{ fontSize: '0.74rem', color: raw > 0 ? C.dim : C.vdim, width: '50px' }}>{fmtBRL(raw)}</div>
+                  <div style={{ fontSize: '0.74rem', color: raw > 0 ? C.text : C.vdim, fontWeight: raw > 0 ? 700 : 400, width: '58px' }}>→ {fmtBRL(net)}</div>
+                  <div style={{ fontSize: '0.7rem', color: C.vdim, width: '28px' }}>{r.pct}%</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${r.pct}%`, background: r.color, borderRadius: '2px', opacity: 0.35 }} />
+                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${barPct}%`, background: r.color, borderRadius: '2px', opacity: raw > 0 ? 0.85 : 0.12, boxShadow: raw > 0 ? `0 0 6px ${r.color}80` : 'none', transition: 'width 0.4s ease' }} />
                     </div>
                   </div>
-                  <div style={{ fontSize: '0.64rem', color: C.vdim, minWidth: '78px', textAlign: 'right' }}>{r.note}</div>
+                  <div style={{ fontSize: '0.63rem', color: C.vdim, minWidth: '76px', textAlign: 'right' }}>{r.note}</div>
                 </div>
-              ))}
+              )})}
             </div>
+              )
+            })()}
           </div>
           <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
