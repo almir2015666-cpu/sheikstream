@@ -10,15 +10,17 @@ export async function POST(req: NextRequest) {
   const ts       = req.headers.get('Twitch-Eventsub-Message-Timestamp') ?? ''
   const sig      = req.headers.get('Twitch-Eventsub-Message-Signature') ?? ''
 
+  // Respond to verification challenge immediately — HMAC check applies to notifications only
+  if (msgType === 'webhook_callback_verification') {
+    const payload = JSON.parse(body)
+    return new NextResponse(payload.challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } })
+  }
+
   if (!verifySignature(process.env.TWITCH_WEBHOOK_SECRET ?? 'sheikstream-eventsub-secret-2024', msgId, ts, body, sig)) {
     return new NextResponse('Forbidden', { status: 403 })
   }
 
   const payload = JSON.parse(body)
-
-  if (msgType === 'webhook_callback_verification') {
-    return new NextResponse(payload.challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } })
-  }
 
   if (msgType === 'notification') {
     handleNotification(payload).catch(e => console.error('[eventsub] handler error:', e))
