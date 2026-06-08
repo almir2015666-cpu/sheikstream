@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     .from('user_tokens')
     .select('twitch_token, twitch_channel_id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!tokenRow?.twitch_token) {
     return NextResponse.json({ error: 'Conta Twitch não conectada. Vá em Conexões e conecte sua conta Twitch.' }, { status: 400 })

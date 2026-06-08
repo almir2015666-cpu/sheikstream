@@ -253,6 +253,84 @@ create policy "support_tickets: insert publico" on public.support_tickets
   for insert with check (true);
 
 -- ==========================================
+-- TWITCH_SUBS  (histórico de inscritos por streamer)
+-- ==========================================
+create table if not exists public.twitch_subs (
+  id             uuid primary key default gen_random_uuid(),
+  broadcaster_id text not null,
+  username       text not null,
+  tier           text not null default 'tier1',
+  is_gift        boolean default false,
+  gifted_by      text,
+  sorteio_id     uuid,
+  tickets        integer default 1,
+  date           date not null default current_date,
+  created_at     timestamptz default now()
+);
+alter table public.twitch_subs enable row level security;
+create index if not exists twitch_subs_broadcaster_idx on public.twitch_subs(broadcaster_id);
+create index if not exists twitch_subs_date_idx on public.twitch_subs(date);
+
+-- ==========================================
+-- TWITCH_TIER_CONFIG  (preços dos tiers por streamer)
+-- ==========================================
+create table if not exists public.twitch_tier_config (
+  broadcaster_id text primary key,
+  tier1_name     text default 'Tier 1',
+  tier1_value    numeric default 9.9,
+  tier2_name     text default 'Tier 2',
+  tier2_value    numeric default 25.9,
+  tier3_name     text default 'Tier 3',
+  tier3_value    numeric default 49.9,
+  updated_at     timestamptz default now()
+);
+alter table public.twitch_tier_config enable row level security;
+
+-- ==========================================
+-- LIVEPIX_CONFIG  (credenciais Livepix por usuário)
+-- ==========================================
+create table if not exists public.livepix_config (
+  user_id        text primary key,
+  channel_id     text,
+  client_id      text,
+  client_secret  text,
+  slug           text,
+  updated_at     timestamptz default now()
+);
+alter table public.livepix_config enable row level security;
+
+-- ==========================================
+-- LIVEPIX_DONORS  (doações recebidas via Livepix)
+-- ==========================================
+create table if not exists public.livepix_donors (
+  id             uuid primary key default gen_random_uuid(),
+  broadcaster_id text not null,
+  username       text not null,
+  amount         numeric not null default 0,
+  date           date not null default current_date,
+  external_id    text,
+  created_at     timestamptz default now()
+);
+alter table public.livepix_donors enable row level security;
+create index if not exists livepix_donors_broadcaster_idx on public.livepix_donors(broadcaster_id);
+create index if not exists livepix_donors_date_idx on public.livepix_donors(date);
+
+-- ==========================================
+-- SORTEIO_TICKETS  (tickets de participantes em sorteios)
+-- ==========================================
+create table if not exists public.sorteio_tickets (
+  id             uuid primary key default gen_random_uuid(),
+  broadcaster_id text not null,
+  sorteio_id     uuid,
+  donor_name     text not null,
+  amount         numeric default 0,
+  platform       text default 'livepix',
+  created_at     timestamptz default now()
+);
+alter table public.sorteio_tickets enable row level security;
+create index if not exists sorteio_tickets_broadcaster_idx on public.sorteio_tickets(broadcaster_id);
+
+-- ==========================================
 -- CONVITES
 -- ==========================================
 create table if not exists public.convites (
