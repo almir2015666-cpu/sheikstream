@@ -1564,9 +1564,9 @@ export default function AdminPage() {
                             <span style={{ color: C.dim, fontSize: '0.85rem' }}>{isExpanded ? '▲' : '▼'}</span>
                           </div>
                           {isExpanded && (
-                            <div style={{ borderTop: `1px solid ${C.vdim}`, background: C.cardBgAlt }}>
+                            <div style={{ borderTop: `1px solid ${C.vdim}`, background: C.cardBgAlt, display: 'flex', flexDirection: 'column', maxHeight: '520px' }}>
                               {/* Status bar */}
-                              <div style={{ padding: '0.65rem 1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${C.vdim}` }}>
+                              <div style={{ padding: '0.65rem 1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${C.vdim}`, flexShrink: 0 }}>
                                 {(['open','in_progress','resolved','closed','archived'] as const).map(s => {
                                   const extra: Record<string, { bg: string; color: string; border: string }> = {
                                     archived: { bg: 'rgba(148,163,184,0.12)', color: '#94a3b8', border: 'rgba(148,163,184,0.28)' },
@@ -1588,7 +1588,7 @@ export default function AdminPage() {
                               </div>
 
                               {/* Chat thread */}
-                              <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', minHeight: '100px' }}>
+                              <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', minHeight: '100px', flex: 1, overflowY: 'auto' }}>
                                 {/* User message — left bubble */}
                                 <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
                                   <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
@@ -1626,7 +1626,7 @@ export default function AdminPage() {
                               </div>
 
                               {/* Reply input */}
-                              <div style={{ padding: '0 1.5rem 0.85rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', borderTop: `1px solid ${C.vdim}` }}>
+                              <div style={{ padding: '0 1.5rem 0.85rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', borderTop: `1px solid ${C.vdim}`, flexShrink: 0 }}>
                                 <textarea
                                   value={adminReply[t.id] ?? ''}
                                   onChange={e => setAdminReply(p => ({ ...p, [t.id]: e.target.value }))}

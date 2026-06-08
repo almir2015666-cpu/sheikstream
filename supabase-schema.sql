@@ -169,6 +169,90 @@ alter table public.timers enable row level security;
 create index if not exists timers_user_id_idx on public.timers(user_id);
 
 -- ==========================================
+-- USER_TOKENS  (OAuth tokens por usuário — Twitch bot, YouTube etc.)
+-- ==========================================
+create table if not exists public.user_tokens (
+  user_id            text primary key,         -- Twitch user ID (numeric string)
+  twitch_token       text,
+  twitch_channel_id  text,
+  twitch_username    text,
+  youtube_token      text,
+  updated_at         timestamptz default now()
+);
+
+alter table public.user_tokens enable row level security;
+
+create policy "user_tokens: acesso proprio" on public.user_tokens
+  for all using (auth.uid()::text = user_id);
+
+-- ==========================================
+-- WAITLIST  (fila de acesso à plataforma)
+-- ==========================================
+create table if not exists public.waitlist (
+  id                uuid primary key default gen_random_uuid(),
+  platform          text not null default 'Twitch',
+  platform_username text not null,
+  email             text,
+  status            text not null default 'pending', -- pending | approved | rejected | banned
+  invite_quota      integer default 0,
+  created_at        timestamptz default now()
+);
+
+alter table public.waitlist enable row level security;
+
+-- ==========================================
+-- INVITES  (convites entre usuários aprovados)
+-- ==========================================
+create table if not exists public.invites (
+  id            uuid primary key default gen_random_uuid(),
+  inviter_id    text not null,      -- Twitch user ID de quem enviou
+  invitee_email text not null,      -- Twitch username do convidado
+  token         text not null unique,
+  status        text not null default 'pendente', -- pendente | aceito | vetado
+  created_at    timestamptz default now()
+);
+
+alter table public.invites enable row level security;
+
+-- ==========================================
+-- ADMIN_NOTIFICATIONS
+-- ==========================================
+create table if not exists public.admin_notifications (
+  id               uuid primary key default gen_random_uuid(),
+  title            text not null,
+  message          text,
+  icon             text default '📢',
+  color            text default '#9b30ff',
+  active           boolean default true,
+  target_username  text,           -- NULL = para todos
+  duration_seconds integer default 10,
+  created_at       timestamptz default now()
+);
+
+alter table public.admin_notifications enable row level security;
+
+-- ==========================================
+-- SUPPORT_TICKETS  (tickets de suporte da landing page)
+-- ==========================================
+create table if not exists public.support_tickets (
+  id          uuid primary key default gen_random_uuid(),
+  subject     text not null,
+  message     text not null,
+  reply_email text,
+  username    text,
+  status      text not null default 'open',  -- open | in_progress | resolved | closed | archived
+  admin_reply text,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+
+alter table public.support_tickets enable row level security;
+
+-- Anyone can insert a ticket (anon + authenticated)
+create policy "support_tickets: insert publico" on public.support_tickets
+  for insert with check (true);
+
+-- ==========================================
 -- CONVITES
 -- ==========================================
 create table if not exists public.convites (

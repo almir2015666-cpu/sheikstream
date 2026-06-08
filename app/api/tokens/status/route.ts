@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     .from('user_tokens')
     .select('twitch_token, youtube_token')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   return NextResponse.json({
     twitch: !!data?.twitch_token,
