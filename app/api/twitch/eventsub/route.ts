@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySignature } from '@/app/lib/eventsub'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
+import { fireEventCommand } from '@/app/lib/event-commands'
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   return new NextResponse(null, { status: 204 })
 }
 
-function resolveVars(text: string, chatter: string, channel: string, args: string[]): string {
+function resolveChatVars(text: string, chatter: string, channel: string, args: string[]): string {
   return text
     .replace(/\$\(user\)/gi, chatter)
     .replace(/\$\(channel\)/gi, channel)
@@ -35,6 +36,10 @@ function resolveVars(text: string, chatter: string, channel: string, args: strin
     .replace(/\$\(2\)/g, args[1] ?? '')
     .replace(/\$\(3\)/g, args[2] ?? '')
     .trim()
+}
+
+function tierLabel(tier: unknown): string {
+  return ({ '1000': 'Tier 1', '2000': 'Tier 2', '3000': 'Tier 3' } as Record<string, string>)[String(tier ?? '1000')] ?? 'Tier 1'
 }
 
 async function sendChat(broadcasterId: string, message: string): Promise<void> {
@@ -60,7 +65,7 @@ async function handleNotification(payload: { subscription: { type: string }; eve
   const db = getSupabaseAdmin()
   await db.from('twitch_events').insert({ broadcaster_id: broadcasterId, event_type: eventType, event_data: event })
 
-  // ── Chat commands ─────────────────────────────────────────────────────────
+  // ── Chat commands (!command) ──────────────────────────────────────────────
   if (eventType === 'channel.chat.message') {
     const msgObj = event.message as { text?: string } | undefined
     const rawText = (msgObj?.text ?? '').trim()
@@ -82,16 +87,22 @@ async function handleNotification(payload: { subscription: { type: string }; eve
     const cmd = (cmds ?? []).find(c => c.trigger.toLowerCase() === trigger)
     if (!cmd) return
 
-    // Cooldown check
     if (cmd.last_used_at) {
       const elapsed = (now.getTime() - new Date(cmd.last_used_at).getTime()) / 1000
       if (elapsed < (cmd.cooldown_s ?? 30)) return
     }
 
     await db.from('comandos').update({ last_used_at: now.toISOString() }).eq('id', cmd.id)
-
-    const response = resolveVars(cmd.resposta, chatter, channel, args)
+    const response = resolveChatVars(cmd.resposta, chatter, channel, args)
     await sendChat(broadcasterId, response)
+    return
+  }
+
+  // ── Follow ───────────────────────────────────────────────────────────────
+  if (eventType === 'channel.follow') {
+    const username = ((event.user_name ?? event.user_login) as string) ?? ''
+    fireEventCommand(broadcasterId, 'event:twitch:follow', { user: username })
+      .catch(e => console.error('[eventsub] follow cmd error:', e))
     return
   }
 
@@ -99,6 +110,19 @@ async function handleNotification(payload: { subscription: { type: string }; eve
   if (eventType === 'channel.subscribe' || eventType === 'channel.subscription.message') {
     const username = ((event.user_name ?? event.user_login) as string) ?? ''
     const now = new Date()
+
+    // Fire event command
+    if (eventType === 'channel.subscribe' && !(event.is_gift as boolean)) {
+      fireEventCommand(broadcasterId, 'event:twitch:sub', {
+        user: username, tier: tierLabel(event.tier), tickets: '1',
+      }).catch(e => console.error('[eventsub] sub cmd error:', e))
+    } else if (eventType === 'channel.subscription.message') {
+      const months = String((event.cumulative_months as number) ?? 1)
+      const msgText = ((event.message as Record<string, unknown>)?.text as string) ?? ''
+      fireEventCommand(broadcasterId, 'event:twitch:resub', {
+        user: username, months, tier: tierLabel(event.tier), msg: msgText, tickets: '1',
+      }).catch(e => console.error('[eventsub] resub cmd error:', e))
+    }
 
     // Extend subathon
     const { data: sub } = await db.from('subathon_state').select('*').eq('broadcaster_id', broadcasterId).single()
@@ -139,7 +163,13 @@ async function handleNotification(payload: { subscription: { type: string }; eve
   // ── Gift subs ────────────────────────────────────────────────────────────
   if (eventType === 'channel.subscription.gift') {
     const total = (event.total as number) ?? 1
+    const username = ((event.user_name ?? event.user_login ?? 'Anônimo') as string)
     const now = new Date()
+
+    // Fire event command
+    fireEventCommand(broadcasterId, 'event:twitch:giftsub', {
+      user: username, count: String(total), tier: tierLabel(event.tier), tickets: String(total),
+    }).catch(e => console.error('[eventsub] giftsub cmd error:', e))
 
     const { data: sub } = await db.from('subathon_state').select('*').eq('broadcaster_id', broadcasterId).single()
     if (sub?.is_active && !sub.is_paused && sub.end_time) {

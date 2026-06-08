@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
+import { fireEventCommand } from '@/app/lib/event-commands'
 
 // Livepix sends a POST to this URL when a donation is received.
 // URL pattern: /api/livepix/webhook/[slug]
@@ -51,15 +52,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (existing) return NextResponse.json({ ok: true, skipped: 'duplicate' })
 
+  const tickets = Math.max(1, Math.floor(amount))
+
   await db.from('livepix_donors').insert({
     broadcaster_id: broadcasterId,
     username,
     amount,
     message,
     is_manual: false,
-    tickets: Math.max(1, Math.floor(amount)),
+    tickets,
     date: dateStr,
   })
+
+  // Fire donation:livepix event command in Twitch chat (async, non-blocking)
+  fireEventCommand(cfg.user_id, 'donation:livepix', {
+    user:    username,
+    valor:   `R$${amount.toFixed(2)}`,
+    tickets: String(tickets),
+    nums:    '',
+    msg:     message ?? '',
+    platform: 'Livepix',
+  }).catch(e => console.error('[livepix webhook] event cmd error:', e))
 
   console.log(`[livepix webhook] ${slug}: ${username} R$${amount} — ${key}`)
   return NextResponse.json({ ok: true })

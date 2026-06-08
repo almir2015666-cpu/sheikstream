@@ -183,7 +183,7 @@ export default function AdminPage() {
   const [bannerSaving, setBannerSaving] = useState(false)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerSaved, setBannerSaved] = useState(false)
-  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean; spotify_connected: boolean; is_live: boolean; twitch_url: string | null }
+  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean; spotify_connected: boolean; youtube_connected: boolean; is_live: boolean; twitch_url: string | null }
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
   type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; target_username: string | null; duration_seconds?: number }
@@ -1772,7 +1772,13 @@ export default function AdminPage() {
                                 Spotify
                               </span>
                             )}
-                            {!u.twitch_connected && !u.livepix_connected && !u.spotify_connected && (
+                            {u.youtube_connected && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(255,0,0,0.08)', border: '1px solid rgba(255,0,0,0.2)', color: '#ff4444' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="#ff4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                YouTube
+                              </span>
+                            )}
+                            {!u.twitch_connected && !u.livepix_connected && !u.spotify_connected && !u.youtube_connected && (
                               <span style={{ fontSize: '0.63rem', color: C.vdim }}>nenhuma plataforma conectada</span>
                             )}
                           </div>

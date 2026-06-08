@@ -177,7 +177,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [navOrder, setNavOrder] = useState<string[]>([])
-  const [reorderMode, setReorderMode] = useState(false)
   // Suggestion/bug form (global — all pages)
   const [showSugg, setShowSugg] = useState(false)
   const [suggType, setSuggType] = useState<'suggestion' | 'bug'>('suggestion')
@@ -322,13 +321,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user])
 
-  // Show next pending notification one at a time
+  // Show next pending notification — only on the main dashboard page (first entry)
   useEffect(() => {
     if (activeNotif) return
+    if (pathname !== '/dashboard') return
     const pending = notifications.filter(n => !dismissedNotifs.has(n.id))
     if (!pending.length) return
     setActiveNotif(pending[0])
-  }, [notifications, dismissedNotifs, activeNotif])
+  }, [notifications, dismissedNotifs, activeNotif, pathname])
 
   function dismissNotif(id: string) {
     setActiveNotif(null)
@@ -337,18 +337,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       try { sessionStorage.setItem('sk-dismissed-notifs', JSON.stringify([...next])) } catch {}
       return next
     })
-  }
-
-  function moveItem(id: string, dir: 'up' | 'down') {
-    const base = navOrder.length > 0 ? navOrder : NAV_ALL.map(i => i.id)
-    const arr = [...base]
-    const idx = arr.indexOf(id)
-    if (idx === -1) return
-    const newIdx = dir === 'up' ? idx - 1 : idx + 1
-    if (newIdx < 0 || newIdx >= arr.length) return
-    ;[arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]]
-    setNavOrder(arr)
-    try { localStorage.setItem('sk-nav-order', JSON.stringify(arr)) } catch {}
   }
 
   const orderedItems = (() => {
@@ -532,7 +520,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   href={hasCh ? '#' : item.href}
                   onClick={hasCh ? (e) => { toggle(item.id, e); if (item.badge) dismissBadge(item.id) } : () => { setMobileOpen(false); if (item.badge) dismissBadge(item.id) }}
                   className={isAct ? 'sk-nl-act' : 'sk-nl'}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: `0.6rem ${reorderMode ? '2.6rem' : '0.75rem'} 0.6rem 0.75rem`, borderRadius: '9px', marginBottom: '2px', color: isAct ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.9rem', fontWeight: isAct ? 600 : 400, background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent', border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent', cursor: 'pointer', letterSpacing: '-0.1px' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: `0.6rem 0.75rem`, borderRadius: '9px', marginBottom: '2px', color: isAct ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.9rem', fontWeight: isAct ? 600 : 400, background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent', border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent', cursor: 'pointer', letterSpacing: '-0.1px' }}
                 >
                   <span style={{ color: isAct ? S.iconActive : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
@@ -540,12 +528,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {hasCh && !isAct && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>{I.chev}</span>}
                   {isAct && <span style={{ color: S.iconActive, flexShrink: 0, display: 'flex' }}>{I.arr}</span>}
                 </Link>
-                {reorderMode && (
-                  <div style={{ position: 'absolute', right: '0.35rem', top: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px' }}>
-                    <button onClick={() => moveItem(item.id, 'up')} disabled={idx === 0} style={{ background: 'none', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? S.vdim : S.primary, padding: '1px 4px', fontSize: '0.55rem', lineHeight: 1 }}>▲</button>
-                    <button onClick={() => moveItem(item.id, 'down')} disabled={idx === orderedItems.length - 1} style={{ background: 'none', border: 'none', cursor: idx === orderedItems.length - 1 ? 'default' : 'pointer', color: idx === orderedItems.length - 1 ? S.vdim : S.primary, padding: '1px 4px', fontSize: '0.55rem', lineHeight: 1 }}>▼</button>
-                  </div>
-                )}
                 {hasCh && isExp && item.children?.map(ch => {
                   const ca = pathname === ch.href
                   return (
