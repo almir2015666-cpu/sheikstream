@@ -367,6 +367,11 @@ export default function TwitchSubsPage() {
             const cmds = (d.eventCommands as Array<{ trigger: string; habilitado: boolean }> | undefined) ?? []
             const EXPECTED = ['channel.follow', 'channel.subscribe', 'channel.subscription.gift', 'channel.subscription.message', 'channel.cheer', 'channel.chat.message']
             const activeTypes = subs.filter(s => s.status === 'enabled').map(s => s.type)
+            const eventsubError = d.eventsubError as string | undefined
+            const cheersTableExists = Boolean(d.cheersTableExists)
+            const cheersTableError = d.cheersTableError as string | null
+            const eventsTableError = d.eventsTableError as string | undefined
+            const recentEvents = (d.recentEvents as unknown[]) ?? []
             return (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 {/* Token status */}
@@ -403,7 +408,7 @@ export default function TwitchSubsPage() {
                   <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
                     EventSub ({subs.length} inscrições)
                   </div>
-                  {d.eventsubError && <div style={{ fontSize: '0.72rem', color: '#ef4444' }}>Erro: {String(d.eventsubError)}</div>}
+                  {eventsubError && <div style={{ fontSize: '0.72rem', color: '#ef4444' }}>Erro: {eventsubError}</div>}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     {EXPECTED.map(type => {
                       const found = subs.find(s => s.type === type)
@@ -418,7 +423,7 @@ export default function TwitchSubsPage() {
                         </div>
                       )
                     })}
-                    {subs.length === 0 && !d.eventsubError && (
+                    {subs.length === 0 && !eventsubError && (
                       <div style={{ fontSize: '0.75rem', color: '#ef4444' }}>Nenhuma inscrição ativa — clique em "Forçar Resync"</div>
                     )}
                   </div>
@@ -443,14 +448,14 @@ export default function TwitchSubsPage() {
                   <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Tabelas do banco</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.76rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <span style={{ color: d.cheersTableExists ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{d.cheersTableExists ? '✓' : '✗'}</span>
-                      <span style={{ color: C.text }}>twitch_cheers {!d.cheersTableExists && `— ${String(d.cheersTableError)}`}</span>
+                      <span style={{ color: cheersTableExists ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{cheersTableExists ? '✓' : '✗'}</span>
+                      <span style={{ color: C.text }}>twitch_cheers {!cheersTableExists && `— ${cheersTableError ?? ''}`}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <span style={{ color: !d.eventsTableError ? '#22c55e' : '#f59e0b', fontWeight: 700 }}>{!d.eventsTableError ? '✓' : '!'}</span>
-                      <span style={{ color: C.text }}>twitch_events {d.eventsTableError ? `— ${String(d.eventsTableError)}` : `(${((d.recentEvents as unknown[]) ?? []).length} recentes)`}</span>
+                      <span style={{ color: !eventsTableError ? '#22c55e' : '#f59e0b', fontWeight: 700 }}>{!eventsTableError ? '✓' : '!'}</span>
+                      <span style={{ color: C.text }}>twitch_events {eventsTableError ? `— ${eventsTableError}` : `(${recentEvents.length} recentes)`}</span>
                     </div>
-                    {!d.cheersTableExists && (
+                    {!cheersTableExists && (
                       <div style={{ marginTop: '0.4rem', padding: '0.4rem 0.6rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', fontSize: '0.71rem', color: '#ef4444' }}>
                         Execute o SQL do supabase-schema.sql no Supabase SQL Editor para criar a tabela twitch_cheers.
                       </div>
