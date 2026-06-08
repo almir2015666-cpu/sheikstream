@@ -290,8 +290,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
   function buildUrl() {
     const base = typeof window !== 'undefined' ? window.location.origin : 'https://sheikstream.com.br'
     const id = uid || 'SEU_ID'
-    const cfg = buildCfgParam()
-    return `${base}${meta.overlayPath}?uid=${id}${cfg ? `&cfg=${cfg}` : ''}`
+    return `${base}${meta.overlayPath}?uid=${id}`
   }
 
   async function save() {
@@ -317,6 +316,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
     navigator.clipboard.writeText(buildUrl()).catch(() => {})
     setCopiedOk(true)
     setTimeout(() => setCopiedOk(false), 2000)
+    notify('URL copiada! Cole no OBS como Browser Source.', 'success')
   }
 
   const overlayUrl = buildUrl()

@@ -294,6 +294,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     main [style*="rgb(13, 14, 22)"]{background:rgba(0,0,0,0.04)!important;}
     main [style*="rgb(11, 13, 26)"]{background:rgba(0,0,0,0.04)!important;}
     main [style*="rgb(15, 16, 24)"]{background:${S.card}!important;}
+    main [style*="rgb(13, 15, 24)"]{background:${S.card}!important;}
+    main [style*="rgb(17, 20, 32)"]{background:rgba(0,0,0,0.04)!important;}
     main [style*="#08090d"]{background:${S.bg}!important;color:${S.text}!important;}
     main [style*="#111219"]{background:${S.card}!important;color:${S.text}!important;}
     main [style*="#0b0c17"]{background:${S.bg}!important;}
@@ -301,10 +303,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     main [style*="#0b0d1a"]{background:rgba(0,0,0,0.04)!important;}
     main [style*="#0f1018"]{background:${S.card}!important;}
     main [style*="#1a1b24"]{background:${S.card}!important;}
+    main [style*="#0d0f18"]{background:${S.card}!important;color:${S.text}!important;}
+    main [style*="#111420"]{background:rgba(0,0,0,0.04)!important;}
     main [style*="color:#e8e6f8"],main [style*="color: #e8e6f8"]{color:${S.text}!important;}
     main [style*="color: rgb(232, 230, 248)"]{color:${S.text}!important;}
     main [style*="rgba(232,230,248"]{color:${S.muted}!important;}
     main [style*="rgba(232, 230, 248"]{color:${S.muted}!important;}
+    main [style*="color:#0f0e24"],main [style*="color: #0f0e24"]{color:${S.text}!important;}
+    main [style*="color: rgb(15, 14, 36)"]{color:${S.text}!important;}
     main input,main select,main textarea{background:rgba(0,0,0,0.05)!important;color:${S.text}!important;border-color:rgba(0,0,0,0.15)!important;}
     ` : ''}
   `

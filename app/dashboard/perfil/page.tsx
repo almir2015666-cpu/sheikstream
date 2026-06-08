@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 
-const C = {
+const DARK_C = {
   page: '#08090d',
   card: '#0d0f18',
   cardHi: '#111420',
@@ -18,14 +18,27 @@ const C = {
   blueBg: 'rgba(59,130,246,0.12)',
   blueBorder: 'rgba(59,130,246,0.25)',
 }
+const LIGHT_C = {
+  ...DARK_C,
+  page: '#f0effe',
+  card: '#ffffff',
+  cardHi: '#f5f3ff',
+  border: 'rgba(0,0,0,0.08)',
+  text: '#0f0e24',
+  muted: 'rgba(15,14,36,0.55)',
+  dim: 'rgba(15,14,36,0.38)',
+  vdim: 'rgba(15,14,36,0.15)',
+  primaryBg: 'rgba(123,46,255,0.08)',
+  primaryBorder: 'rgba(123,46,255,0.2)',
+}
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '0.6rem 0.9rem',
-  background: '#08090d',
-  border: '1px solid rgba(255,255,255,0.1)',
+  background: 'transparent',
+  border: '1px solid rgba(128,128,128,0.2)',
   borderRadius: '8px',
-  color: '#e8e6f8',
+  color: 'inherit',
   fontSize: '0.875rem',
   outline: 'none',
   boxSizing: 'border-box',
@@ -52,7 +65,7 @@ type UserData = {
   createdAt?: string
 }
 
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ on, onChange, blue }: { on: boolean; onChange: (v: boolean) => void; blue?: string }) {
   return (
     <button
       type="button"
@@ -60,7 +73,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
       style={{
         width: '44px', height: '24px',
         borderRadius: '12px',
-        background: on ? C.blue : 'rgba(255,255,255,0.1)',
+        background: on ? (blue ?? '#3b82f6') : 'rgba(128,128,128,0.2)',
         border: 'none',
         cursor: 'pointer',
         position: 'relative',
@@ -82,11 +95,11 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   )
 }
 
-function SummaryRow({ label, value, highlight }: { label: string; value: React.ReactNode; highlight?: boolean }) {
+function SummaryRow({ label, value, highlight, colors }: { label: string; value: React.ReactNode; highlight?: boolean; colors: typeof DARK_C }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: `1px solid ${C.border}` }}>
-      <span style={{ fontSize: '0.82rem', color: C.dim }}>{label}</span>
-      <span style={{ fontSize: '0.82rem', color: highlight ? C.accent : C.text, fontWeight: 600 }}>{value}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: `1px solid ${colors.border}` }}>
+      <span style={{ fontSize: '0.82rem', color: colors.dim }}>{label}</span>
+      <span style={{ fontSize: '0.82rem', color: highlight ? colors.accent : colors.text, fontWeight: 600 }}>{value}</span>
     </div>
   )
 }
@@ -103,6 +116,27 @@ export default function PerfilPage() {
   const [platforms, setPlatforms] = useState({ twitch: false, youtube: false, discord: false })
   const [saved, setSaved] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const C = theme === 'dark' ? DARK_C : LIGHT_C
+
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
+      if (t) setTheme(t)
+    } catch {}
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'sk-theme' && (e.newValue === 'dark' || e.newValue === 'light')) setTheme(e.newValue)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
+  function fetchRole() {
+    fetch('/api/me/role')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setUserRole(d?.role ?? null) })
+      .catch(() => {})
+  }
 
   useEffect(() => {
     fetch('/api/me')
@@ -119,12 +153,11 @@ export default function PerfilPage() {
           youtube: '',
         })
         setPlatforms(p => ({ ...p, twitch: isTwitch }))
-        fetch('/api/me/role')
-          .then(r => r.ok ? r.json() : null)
-          .then(d => { if (d?.role) setUserRole(d.role) })
-          .catch(() => {})
       })
       .catch(() => {})
+    fetchRole()
+    const iv = setInterval(fetchRole, 30000)
+    return () => clearInterval(iv)
   }, [])
 
   function handleSave(e: React.FormEvent) {
@@ -199,7 +232,7 @@ export default function PerfilPage() {
               <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
                 {(['twitch', 'youtube', 'discord'] as const).map(pl => (
                   <label key={pl} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', userSelect: 'none' }}>
-                    <Toggle on={platforms[pl]} onChange={v => setPlatforms(p => ({ ...p, [pl]: v }))} />
+                    <Toggle on={platforms[pl]} onChange={v => setPlatforms(p => ({ ...p, [pl]: v }))} blue={C.blue} />
                     <span style={{ fontSize: '0.875rem', color: platforms[pl] ? C.text : C.dim, textTransform: 'capitalize', transition: 'color 0.2s' }}>{pl.charAt(0).toUpperCase() + pl.slice(1)}</span>
                   </label>
                 ))}
@@ -257,16 +290,16 @@ export default function PerfilPage() {
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '1.1rem 1.25rem' }}>
             <div style={{ fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.25rem' }}>Resumo</div>
             <div>
-              <SummaryRow
+              <SummaryRow colors={C}
                 label="Status"
                 value={
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: '#22c55e', fontSize: '0.74rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '999px' }}>
                     <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: statusColor, display: 'inline-block' }} />
-                    {statusLabel === 'approved' ? 'active' : statusLabel}
+                    {statusLabel === 'approved' ? 'ativo' : statusLabel}
                   </span>
                 }
               />
-              <SummaryRow
+              <SummaryRow colors={C}
                 label="Função"
                 value={userRole ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: `${ROLE_COLORS[userRole] ?? C.primaryBg}22`, border: `1px solid ${ROLE_COLORS[userRole] ?? C.primaryBg}44`, color: ROLE_COLORS[userRole] ?? C.primary, fontSize: '0.74rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '999px', textTransform: 'capitalize' }}>
@@ -274,7 +307,7 @@ export default function PerfilPage() {
                   </span>
                 ) : <span style={{ color: C.dim }}>Usuário</span>}
               />
-              <SummaryRow
+              <SummaryRow colors={C}
                 label="Discord"
                 value={<span style={{ color: C.dim }}>Não vinculado</span>}
               />

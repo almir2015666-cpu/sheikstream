@@ -82,7 +82,16 @@ function SubathonOverlayContent() {
     const loadCfg = () =>
       fetch(`/api/overlay-config/subathon?uid=${uid}`)
         .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d && Object.keys(d).length) setCfg(prev => ({ ...prev, ...d.style, ...d })) })
+        .then(d => {
+          if (!d || !Object.keys(d).length) return
+          const mapped: Partial<Cfg> = {
+            ...(d.style ?? {}),
+            showTitle:      d.vis?.title       ?? d.showTitle       ?? true,
+            showTags:       d.vis?.tags        ?? d.showTags        ?? true,
+            showLastContrib: d.vis?.lastContrib ?? d.showLastContrib ?? true,
+          }
+          setCfg(prev => ({ ...prev, ...mapped }))
+        })
         .catch(() => {})
     loadCfg()
     const iv = setInterval(loadCfg, 10000)
