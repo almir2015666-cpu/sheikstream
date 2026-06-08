@@ -137,14 +137,16 @@ async function handleNotification(payload: { subscription: { type: string }; eve
 
     // Record the sub in twitch_subs (new sub + gift subs; skip resub to avoid duplication)
     if (eventType === 'channel.subscribe') {
-      await db.from('twitch_subs').insert({
-        broadcaster_id: broadcasterId,
-        username,
-        tier: tierKey,
-        is_gift: isGift,
-        tickets: 1,
-        date: now.toISOString().split('T')[0],
-      }).then(() => {}).catch(() => {})
+      try {
+        await db.from('twitch_subs').insert({
+          broadcaster_id: broadcasterId,
+          username,
+          tier: tierKey,
+          is_gift: isGift,
+          tickets: 1,
+          date: now.toISOString().split('T')[0],
+        })
+      } catch { /* ignore */ }
     }
 
     // Fire event command

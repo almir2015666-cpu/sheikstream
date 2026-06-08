@@ -72,7 +72,7 @@ export default function TwitchSubsPage() {
   const [saving, setSaving] = useState(false)
   const [savingTiers, setSavingTiers] = useState(false)
   const [syncing, setSyncing] = useState(false)
-  const [channelStats, setChannelStats] = useState<{ follower_count: number | null; view_count: number | null } | null>(null)
+  const [channelStats, setChannelStats] = useState<{ follower_count: number | null; view_count: number | null; bits_total_historical?: number; bits_leaderboard?: Array<{ username: string; bits: number }> } | null>(null)
   const [videos, setVideos] = useState<TwitchVideo[]>([])
   const [videosLoading, setVideosLoading] = useState(false)
   const [videosError, setVideosError] = useState('')
@@ -191,7 +191,9 @@ export default function TwitchSubsPage() {
   const totalBruto = subs.reduce((acc, s) => acc + tierValue(s.tier, tiers), 0)
   const totalLiquid = totalBruto * 0.5
 
-  const totalBits = cheers.reduce((acc, c) => acc + c.bits, 0)
+  const totalBitsDB = cheers.reduce((acc, c) => acc + c.bits, 0)
+  // Prefer Twitch API historical total (includes pre-EventSub bits), fallback to DB
+  const totalBits = Math.max(totalBitsDB, channelStats?.bits_total_historical ?? 0)
   const bitsUSD = totalBits * 0.01
   const bitsBRL = bitsUSD * EXCHANGE
 

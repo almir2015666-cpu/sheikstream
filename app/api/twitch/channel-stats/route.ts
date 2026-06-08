@@ -46,11 +46,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [channelRes, streamRes, followersRes, usersRes] = await Promise.all([
+    const [channelRes, streamRes, followersRes, usersRes, bitsRes] = await Promise.all([
       fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${broadcasterId}`, { headers }),
       fetch(`https://api.twitch.tv/helix/streams?user_id=${broadcasterId}`, { headers }),
       fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=1`, { headers }),
       fetch(`https://api.twitch.tv/helix/users?id=${broadcasterId}`, { headers }),
+      fetch(`https://api.twitch.tv/helix/bits/leaderboard?broadcaster_id=${broadcasterId}&count=100&period=all`, { headers }),
     ])
 
     if (channelRes.status === 401) {
@@ -61,11 +62,16 @@ export async function GET(req: NextRequest) {
     const streamData = streamRes.ok ? await streamRes.json() : null
     const followersData = followersRes.ok ? await followersRes.json() : null
     const usersData = usersRes.ok ? await usersRes.json() : null
+    const bitsData = bitsRes.ok ? await bitsRes.json() : null
 
     const channel = channelData?.data?.[0] ?? null
     const stream = streamData?.data?.[0] ?? null
     const twitchUser = usersData?.data?.[0] ?? null
     const followerCount = followersData?.total ?? null
+
+    // Sum all bits from the leaderboard (historical total)
+    const bitsLeaderboard: Array<{ user_id: string; user_login: string; user_name: string; rank: number; score: number }> = bitsData?.data ?? []
+    const totalBitsHistorical = bitsLeaderboard.reduce((acc, e) => acc + e.score, 0)
 
     return NextResponse.json({
       broadcaster_name: channel?.broadcaster_name ?? twitchUser?.display_name ?? user.name,
@@ -78,6 +84,8 @@ export async function GET(req: NextRequest) {
       follower_count: followerCount,
       view_count: twitchUser?.view_count ?? null,
       language: channel?.broadcaster_language ?? '',
+      bits_total_historical: totalBitsHistorical,
+      bits_leaderboard: bitsLeaderboard.slice(0, 10).map(e => ({ username: e.user_name, bits: e.score })),
     })
   } catch {
     return NextResponse.json({ error: 'Falha de conexão com a Twitch' }, { status: 502 })
