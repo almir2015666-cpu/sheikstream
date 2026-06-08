@@ -525,19 +525,21 @@ export default function AdminPage() {
     }
   }
 
-  async function saveQuota(platformUsername: string) {
+  async function saveQuota(platformUsername: string, overrideValue?: number) {
     setQuotaSaving(platformUsername)
+    const newQuota = overrideValue !== undefined ? overrideValue : (quotaEdits[platformUsername] ?? 0)
     try {
       const res = await fetch('/api/admin/invites', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-        body: JSON.stringify({ platform_username: platformUsername, quota: quotaEdits[platformUsername] ?? 0 }),
+        body: JSON.stringify({ platform_username: platformUsername, quota: newQuota }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         alert(d.error || 'Erro ao salvar quota')
       } else {
-        setInviteQuotas(prev => prev.map(q => q.platform_username === platformUsername ? { ...q, quota: quotaEdits[platformUsername] ?? 0 } : q))
+        setInviteQuotas(prev => prev.map(q => q.platform_username === platformUsername ? { ...q, quota: newQuota } : q))
+        setQuotaEdits(prev => ({ ...prev, [platformUsername]: newQuota }))
       }
     } finally {
       setQuotaSaving(null)
@@ -2064,6 +2066,13 @@ export default function AdminPage() {
                               disabled={quotaSaving === key || (quotaEdits[key] ?? q.quota) === q.quota}
                               style={{ padding: '0.35rem 0.75rem', background: (quotaEdits[key] ?? q.quota) === q.quota ? 'transparent' : C.primaryBg, border: `1px solid ${(quotaEdits[key] ?? q.quota) === q.quota ? C.border : C.borderStrong}`, color: (quotaEdits[key] ?? q.quota) === q.quota ? C.dim : C.primary, borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: (quotaEdits[key] ?? q.quota) === q.quota ? 'default' : 'pointer' }}>
                               {quotaSaving === key ? '...' : 'Salvar'}
+                            </button>
+                            <button
+                              onClick={() => saveQuota(key, 0)}
+                              disabled={quotaSaving === key || q.quota === 0}
+                              title="Resetar quota para 0"
+                              style={{ padding: '0.35rem 0.6rem', background: 'transparent', border: `1px solid ${q.quota === 0 ? C.border : 'rgba(255,68,68,0.3)'}`, color: q.quota === 0 ? C.vdim : '#ff6b6b', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: q.quota === 0 ? 'default' : 'pointer' }}>
+                              ↺ 0
                             </button>
                           </div>
                         </div>
