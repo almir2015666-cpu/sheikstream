@@ -8,6 +8,9 @@ type SubathonState = {
   paused_remaining: number | null
   is_active: boolean
   is_paused: boolean
+  seconds_per_sub: number
+  seconds_per_bits100: number
+  seconds_per_livepix: number
 }
 
 type Cfg = {
@@ -131,10 +134,16 @@ function SubathonOverlayContent() {
     ? 'transparent'
     : `rgba(${hexToRgb(cfg.bgColor)},${cfg.bgOpacity})`
 
+  function fmtDur(secs: number): string {
+    if (secs >= 3600) return `${Math.floor(secs / 3600)}h`
+    if (secs >= 60) return `${Math.floor(secs / 60)}m${secs % 60 > 0 ? ` ${secs % 60}s` : ''}`
+    return `${secs}s`
+  }
+
   const RULE_TAGS = [
-    { label: '+2m TWITCH SUB', color: cfg.timerColor },
-    { label: '+1m LIVEPIX',    color: '#39ff14' },
-    { label: '+30s BITS',      color: '#fbbf24' },
+    { label: `+${fmtDur(state.seconds_per_sub || 120)} TWITCH SUB`, color: cfg.timerColor },
+    { label: `+${fmtDur(state.seconds_per_livepix || 60)} LIVEPIX`, color: '#39ff14' },
+    { label: `+${fmtDur(state.seconds_per_bits100 || 30)} BITS/100`, color: '#fbbf24' },
   ]
 
   return (

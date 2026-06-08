@@ -115,6 +115,16 @@ function makeCSS(C: typeof DARK) {
   @keyframes sk-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
   @keyframes sk-badge-pulse { 0%,100% { box-shadow: 0 0 0 0 ${C.primary}55; } 70% { box-shadow: 0 0 0 7px ${C.primary}00; } }
   @keyframes sk-bar { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+  @keyframes sk-intro-bg { 0% { opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes sk-intro-logo { 0% { opacity: 0; transform: scale(0.88) translateY(10px); } 30% { opacity: 1; transform: scale(1.04) translateY(0); } 70% { opacity: 1; transform: scale(1) translateY(0); } 100% { opacity: 0; transform: scale(1.08) translateY(-8px); } }
+  @keyframes sk-intro-scan { 0% { top: -4px; } 100% { top: 100%; } }
+  @keyframes sk-intro-glitch { 0%,90%,100% { clip-path: none; transform: none; } 91% { clip-path: inset(40% 0 50% 0); transform: translateX(-4px); } 94% { clip-path: inset(10% 0 80% 0); transform: translateX(3px); } 97% { clip-path: inset(70% 0 5% 0); transform: translateX(-2px); } }
+  @keyframes sk-intro-out { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100vh); opacity: 0; } }
+  .sk-intro-overlay { animation: sk-intro-bg 2.7s ease forwards; position: fixed; inset: 0; z-index: 9999; background: #000; pointer-events: all; }
+  .sk-intro-overlay.out { animation: sk-intro-out 0.8s cubic-bezier(0.55, 0, 0.45, 1) forwards; }
+  .sk-intro-logo { animation: sk-intro-logo 2.3s ease forwards; opacity: 0; }
+  .sk-intro-glitch { animation: sk-intro-glitch 2.3s ease forwards; }
+  .sk-intro-scanline { position: absolute; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, transparent, #39ff14aa, transparent); animation: sk-intro-scan 1.1s linear infinite; pointer-events: none; }
   .sk-mock-float { animation: sk-float 5s ease-in-out infinite; }
   .sk-chat-window { animation: sk-pop-in 0.07s ease; }
   .sk-chat-msg { animation: sk-slide-up 0.06s ease; }
@@ -209,12 +219,20 @@ export default function Home() {
   const isMobile = windowWidth < 768
 
   const [chatOpen, setChatOpen] = useState(false)
+  const [chatTab, setChatTab] = useState<'chat' | 'ticket'>('chat')
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([
     { role: 'assistant', content: 'Olá! Sou o assistente do Sheikstream. Pode me perguntar qualquer coisa sobre a plataforma!' },
   ])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
+  const [ticketForm, setTicketForm] = useState({ subject: '', message: '', reply_email: '' })
+  const [ticketSending, setTicketSending] = useState(false)
+  const [ticketDone, setTicketDone] = useState(false)
+  const [ticketError, setTicketError] = useState('')
   const chatEndRef = useRef<HTMLDivElement>(null)
+
+  const [showIntro, setShowIntro] = useState(false)
+  const [introOut, setIntroOut] = useState(false)
 
   const [logoOpacity, setLogoOpacity] = useState(1)
   const [faqOpen, setFaqOpen] = useState<number | null>(null)
@@ -333,6 +351,33 @@ useEffect(() => {
     }
   }
 
+  async function sendTicket(e: React.SyntheticEvent) {
+    e.preventDefault()
+    if (!ticketForm.subject.trim() || !ticketForm.message.trim()) return
+    setTicketSending(true)
+    setTicketError('')
+    try {
+      const res = await fetch('/api/tickets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ticketForm) })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Erro ao enviar')
+      setTicketDone(true)
+      setTicketForm({ subject: '', message: '', reply_email: '' })
+    } catch (err) {
+      setTicketError(String(err).replace('Error: ', ''))
+    } finally {
+      setTicketSending(false)
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try { if (sessionStorage.getItem('sk-intro')) return } catch { return }
+    setShowIntro(true)
+    const t1 = setTimeout(() => setIntroOut(true), 1900)
+    const t2 = setTimeout(() => { setShowIntro(false); try { sessionStorage.setItem('sk-intro', '1') } catch {} }, 2700)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+
   const revealStyle = (id: string, delay = 0): React.CSSProperties => ({
     opacity: revealed.has(id) ? 1 : 0,
     transform: revealed.has(id) ? 'translateY(0)' : 'translateY(28px)',
@@ -352,6 +397,7 @@ useEffect(() => {
     <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem' }}>
       {chatOpen && (
         <div className="sk-chat-window" style={{ width: isMobile ? 'calc(100vw - 2rem)' : '340px', height: '480px', background: C.cardBgAlt, border: `1px solid ${C.borderStrong}`, borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: `0 8px 40px ${C.primaryBgMed}` }}>
+          {/* Header */}
           <div style={{ padding: '0.9rem 1rem', background: C.primaryBg, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: C.chatBtnGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', color: '#fff', fontWeight: 900 }}>S</div>
             <div style={{ flex: 1 }}>
@@ -362,27 +408,79 @@ useEffect(() => {
             </div>
             <button onClick={() => setChatOpen(false)} style={{ background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, padding: '0.2rem' }}>✕</button>
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: C.cardBgAlt }}>
-            {chatMessages.map((m, i) => (
-              <div key={i} className="sk-chat-msg" style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                <div style={{ maxWidth: '82%', padding: '0.6rem 0.85rem', borderRadius: m.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px', background: m.role === 'user' ? C.chatUserBg : C.chatAiBg, border: m.role === 'user' ? 'none' : `1px solid ${C.chatAiBorder}`, color: m.role === 'user' ? '#fff' : C.text, fontSize: '0.82rem', lineHeight: 1.6 }}>{m.content}</div>
-              </div>
+          {/* Tabs */}
+          <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: C.cardBgAlt, flexShrink: 0 }}>
+            {(['chat', 'ticket'] as const).map(tab => (
+              <button key={tab} onClick={() => setChatTab(tab)}
+                style={{ flex: 1, padding: '0.5rem', background: 'transparent', border: 'none', borderBottom: chatTab === tab ? `2px solid ${C.primary}` : '2px solid transparent', color: chatTab === tab ? C.primary : C.dim, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {tab === 'chat' ? '💬 Chat' : '🎫 Abrir Ticket'}
+              </button>
             ))}
-            {chatLoading && (
-              <div className="sk-chat-msg" style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <div style={{ padding: '0.6rem 1rem', borderRadius: '12px 12px 12px 4px', background: C.chatAiBg, border: `1px solid ${C.chatAiBorder}`, display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  {[1,2,3].map(n => <span key={n} className={`sk-dot-${n}`} style={{ width: '7px', height: '7px', borderRadius: '50%', background: C.dim, display: 'inline-block' }} />)}
-                </div>
+          </div>
+          {/* Chat tab */}
+          {chatTab === 'chat' && (
+            <>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: C.cardBgAlt }}>
+                {chatMessages.map((m, i) => (
+                  <div key={i} className="sk-chat-msg" style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                    <div style={{ maxWidth: '82%', padding: '0.6rem 0.85rem', borderRadius: m.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px', background: m.role === 'user' ? C.chatUserBg : C.chatAiBg, border: m.role === 'user' ? 'none' : `1px solid ${C.chatAiBorder}`, color: m.role === 'user' ? '#fff' : C.text, fontSize: '0.82rem', lineHeight: 1.6 }}>{m.content}</div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="sk-chat-msg" style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                    <div style={{ padding: '0.6rem 1rem', borderRadius: '12px 12px 12px 4px', background: C.chatAiBg, border: `1px solid ${C.chatAiBorder}`, display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      {[1,2,3].map(n => <span key={n} className={`sk-dot-${n}`} style={{ width: '7px', height: '7px', borderRadius: '50%', background: C.dim, display: 'inline-block' }} />)}
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
               </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-          <div style={{ padding: '0.75rem', borderTop: `1px solid ${C.border}`, display: 'flex', gap: '0.5rem', background: C.cardBgAlt }}>
-            <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }} placeholder="Pergunte qualquer coisa..." disabled={chatLoading}
-              style={{ flex: 1, padding: '0.55rem 0.8rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.82rem', outline: 'none', opacity: chatLoading ? 0.6 : 1, minHeight: '44px' }} />
-            <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()} className="sk-send-btn"
-              style={{ padding: '0.55rem 0.9rem', background: C.primary, border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.88rem', cursor: chatLoading ? 'not-allowed' : 'pointer', opacity: !chatInput.trim() ? 0.45 : 1, minHeight: '44px', minWidth: '44px' }}>→</button>
-          </div>
+              <div style={{ padding: '0.75rem', borderTop: `1px solid ${C.border}`, display: 'flex', gap: '0.5rem', background: C.cardBgAlt }}>
+                <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }} placeholder="Pergunte qualquer coisa..." disabled={chatLoading}
+                  style={{ flex: 1, padding: '0.55rem 0.8rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.82rem', outline: 'none', opacity: chatLoading ? 0.6 : 1, minHeight: '44px' }} />
+                <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()} className="sk-send-btn"
+                  style={{ padding: '0.55rem 0.9rem', background: C.primary, border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.88rem', cursor: chatLoading ? 'not-allowed' : 'pointer', opacity: !chatInput.trim() ? 0.45 : 1, minHeight: '44px', minWidth: '44px' }}>→</button>
+              </div>
+            </>
+          )}
+          {/* Ticket tab */}
+          {chatTab === 'ticket' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', background: C.cardBgAlt, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {ticketDone ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.75rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2.5rem' }}>✅</div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 700, color: C.accent }}>Ticket enviado!</div>
+                  <div style={{ fontSize: '0.78rem', color: C.muted }}>O time admin vai analisar em breve.</div>
+                  <button onClick={() => { setTicketDone(false) }} style={{ marginTop: '0.5rem', padding: '0.4rem 1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>Novo ticket</button>
+                </div>
+              ) : (
+                <form onSubmit={sendTicket} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: C.muted, lineHeight: 1.5 }}>Envie um ticket para o admin. Inclua seu e-mail se quiser uma resposta.</div>
+                  {[
+                    { label: 'Assunto *', key: 'subject' as const, placeholder: 'Ex: Bug no overlay, sugestão...', required: true },
+                    { label: 'E-mail para resposta', key: 'reply_email' as const, placeholder: 'seu@email.com', required: false },
+                    { label: 'Seu nome / nick', key: 'username' as const, placeholder: '@usuario', required: false },
+                  ].map(f => (
+                    <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                      <label style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase' }}>{f.label}</label>
+                      <input value={(ticketForm as Record<string, string>)[f.key] ?? ''} onChange={e => setTicketForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} required={f.required}
+                        style={{ padding: '0.5rem 0.7rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none' }} />
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase' }}>Mensagem *</label>
+                    <textarea value={ticketForm.message} onChange={e => setTicketForm(p => ({ ...p, message: e.target.value }))} placeholder="Descreva o problema ou sugestão em detalhes..." required rows={4}
+                      style={{ padding: '0.5rem 0.7rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
+                  </div>
+                  {ticketError && <div style={{ fontSize: '0.75rem', color: '#ff4444', padding: '0.4rem 0.6rem', background: 'rgba(255,68,68,0.1)', borderRadius: '6px' }}>{ticketError}</div>}
+                  <button type="submit" disabled={ticketSending || !ticketForm.subject.trim() || !ticketForm.message.trim()}
+                    style={{ padding: '0.6rem', background: C.primary, border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.85rem', fontWeight: 700, cursor: ticketSending ? 'not-allowed' : 'pointer', opacity: !ticketForm.subject.trim() || !ticketForm.message.trim() ? 0.45 : 1 }}>
+                    {ticketSending ? 'Enviando...' : 'Enviar ticket →'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
         </div>
       )}
       <button onClick={() => setChatOpen(v => !v)} className="sk-chat-toggle"
@@ -601,6 +699,27 @@ useEffect(() => {
     <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text, display: 'flex', flexDirection: 'column' }}>
       <style>{makeCSS(C)}</style>
       {themeOverlay}
+
+      {/* Intro animation */}
+      {showIntro && (
+        <div className={`sk-intro-overlay${introOut ? ' out' : ''}`}>
+          <div className="sk-intro-scanline" />
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(57,255,20,0.03) 2px, rgba(57,255,20,0.03) 4px)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+            <div className="sk-intro-logo sk-intro-glitch" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 'clamp(2rem, 8vw, 4.5rem)', fontWeight: 900, letterSpacing: '-2px', color: '#fff', textShadow: '0 0 30px #39ff14, 0 0 60px #39ff1466', lineHeight: 1 }}>
+                Sheik<span style={{ color: '#39ff14' }}>STREAM</span>
+              </div>
+              <div style={{ marginTop: '0.8rem', fontSize: 'clamp(0.75rem, 2vw, 0.92rem)', color: 'rgba(57,255,20,0.6)', letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 600 }}>
+                Hub para streamers brasileiros
+              </div>
+            </div>
+          </div>
+          <div style={{ position: 'absolute', bottom: '2rem', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '6px' }}>
+            {[0,1,2].map(i => <div key={i} className={`sk-dot-${i+1}`} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#39ff14' }} />)}
+          </div>
+        </div>
+      )}
 
       {/* Nav */}
       <nav className="sk-nav" style={{ display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, zIndex: 100, background: C.navBg, borderBottom: `1px solid ${C.border}` }}>

@@ -156,7 +156,7 @@ export default function PerfilPage() {
       })
       .catch(() => {})
     fetchRole()
-    const iv = setInterval(fetchRole, 30000)
+    const iv = setInterval(fetchRole, 5000)
     return () => clearInterval(iv)
   }, [])
 

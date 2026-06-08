@@ -113,21 +113,27 @@ function Chip({ type }: { type: Badge }) {
 type BannerCfg = {
   active: boolean; icon: string; text_main: string; text_sub: string; text_note: string
   action_label: string; action_url: string; color: string
+  text_main_color: string; text_sub_color: string; text_note_color: string
+  glow: boolean
   amount_current: number; amount_goal: number; supporter_count: number
   position: 'top' | 'bottom'
 }
 
 function BannerBar({ banner, S, isDark, onDismiss }: { banner: BannerCfg; S: typeof DARK_S; isDark: boolean; onDismiss: () => void }) {
   const isTop = banner.position === 'top' || !banner.position
+  const mainColor = banner.text_main_color || banner.color
+  const subColor = banner.text_sub_color || S.muted
+  const noteColor = banner.text_note_color || S.dim
+  const glowStyle = banner.glow ? { textShadow: `0 0 8px ${mainColor}cc, 0 0 20px ${mainColor}66` } : {}
   return (
     <div style={{ background: isDark ? `${banner.color}18` : `${banner.color}12`, [isTop ? 'borderBottom' : 'borderTop']: `2px solid ${banner.color}55`, padding: '0.65rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
       <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{banner.icon || '☕'}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: banner.color }}>{banner.text_main}</span>
-          {banner.text_sub && <span style={{ fontSize: '0.76rem', color: S.muted }}>{banner.text_sub}</span>}
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: mainColor, ...glowStyle }}>{banner.text_main}</span>
+          {banner.text_sub && <span style={{ fontSize: '0.76rem', color: subColor }}>{banner.text_sub}</span>}
         </div>
-        {banner.text_note && <div style={{ fontSize: '0.68rem', color: S.dim, marginTop: '0.1rem' }}>{banner.text_note}</div>}
+        {banner.text_note && <div style={{ fontSize: '0.68rem', color: noteColor, marginTop: '0.1rem' }}>{banner.text_note}</div>}
         {banner.amount_goal > 0 && (
           <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{ flex: 1, maxWidth: 200, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius: 99, height: 4, overflow: 'hidden' }}>
@@ -335,15 +341,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     main [style*="#0d0e16"]{background:rgba(0,0,0,0.04)!important;}
     main [style*="#0b0d1a"]{background:rgba(0,0,0,0.04)!important;}
     main [style*="#0f1018"]{background:${S.card}!important;}
+    main [style*="#0f1120"]{background:${S.card}!important;}
     main [style*="#1a1b24"]{background:${S.card}!important;}
     main [style*="#0d0f18"]{background:${S.card}!important;color:${S.text}!important;}
+    main [style*="#0d0f1e"]{background:${S.card}!important;}
     main [style*="#111420"]{background:rgba(0,0,0,0.04)!important;}
+    main [style*="#0f1028"]{background:${S.card}!important;}
+    main [style*="#131623"]{background:${S.card}!important;}
+    main [style*="#080a14"]{background:${S.bg}!important;}
+    main [style*="#0e0f17"]{background:rgba(0,0,0,0.04)!important;}
     main [style*="color:#e8e6f8"],main [style*="color: #e8e6f8"]{color:${S.text}!important;}
     main [style*="color: rgb(232, 230, 248)"]{color:${S.text}!important;}
-    main [style*="rgba(232,230,248"]{color:${S.muted}!important;}
-    main [style*="rgba(232, 230, 248"]{color:${S.muted}!important;}
+    main [style*="rgba(232,230,248, 0.55)"],main [style*="rgba(232,230,248,0.55)"]{color:${S.muted}!important;}
+    main [style*="rgba(232,230,248, 0.3)"],main [style*="rgba(232,230,248,0.3)"]{color:${S.dim}!important;}
+    main [style*="rgba(232,230,248, 0.28)"],main [style*="rgba(232,230,248,0.28)"]{color:${S.dim}!important;}
+    main [style*="rgba(232,230,248, 0.12)"],main [style*="rgba(232,230,248,0.12)"]{color:${S.vdim}!important;}
+    main [style*="rgba(232, 230, 248, 0.55)"]{color:${S.muted}!important;}
+    main [style*="rgba(232, 230, 248, 0.3)"]{color:${S.dim}!important;}
+    main [style*="rgba(232, 230, 248, 0.28)"]{color:${S.dim}!important;}
+    main [style*="rgba(232, 230, 248, 0.12)"]{color:${S.vdim}!important;}
+    main [style*="rgba(232,230,248"]:not([style*="background"]){color:${S.muted}!important;}
+    main [style*="rgba(232, 230, 248"]:not([style*="background"]){color:${S.muted}!important;}
     main [style*="color:#0f0e24"],main [style*="color: #0f0e24"]{color:${S.text}!important;}
     main [style*="color: rgb(15, 14, 36)"]{color:${S.text}!important;}
+    main [style*="border-color: rgba(255,255,255"]{border-color:rgba(0,0,0,0.12)!important;}
+    main [style*="border: 1px solid rgba(255,255,255"]{border-color:rgba(0,0,0,0.12)!important;}
     main input,main select,main textarea{background:rgba(0,0,0,0.05)!important;color:${S.text}!important;border-color:rgba(0,0,0,0.15)!important;}
     ` : ''}
   `

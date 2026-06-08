@@ -33,6 +33,7 @@ type User = {
   email?: string
   status: 'pending' | 'approved' | 'rejected' | 'banned'
   created_at: string
+  image_url?: string
 }
 
 type Log = {
@@ -146,7 +147,7 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets'>('users')
   const [userSearch, setUserSearch] = useState('')
   type LoginLog = { id: string; ip: string; user_agent: string; success: boolean; created_at: string }
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([])
@@ -163,14 +164,20 @@ export default function AdminPage() {
   const [pwSaving, setPwSaving] = useState(false)
   const [logs, setLogs] = useState<Log[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
-  const [logTab, setLogTab] = useState<'admin' | 'auth' | 'dashboard' | 'feature' | 'errors' | 'system' | 'logins'>('admin')
+  const [logTab, setLogTab] = useState<'admin' | 'auth' | 'dashboard' | 'feature' | 'errors' | 'system' | 'logins' | 'changelog'>('admin')
+  type SupportTicket = { id: string; subject: string; message: string; reply_email: string | null; username: string | null; status: string; created_at: string; updated_at: string; admin_reply: string | null }
+  const [tickets, setTickets] = useState<SupportTicket[]>([])
+  const [ticketsLoading, setTicketsLoading] = useState(false)
+  const [expandedTicket, setExpandedTicket] = useState<string | null>(null)
+  const [adminReply, setAdminReply] = useState<Record<string, string>>({})
+  const [ticketUpdating, setTicketUpdating] = useState<string | null>(null)
   const [activity, setActivity] = useState<ActivityLog[]>([])
   const [activityLoading, setActivityLoading] = useState(false)
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([])
   const [errorLogsLoading, setErrorLogsLoading] = useState(false)
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([])
   const [systemLogsLoading, setSystemLogsLoading] = useState(false)
-  const [bannerCfg, setBannerCfg] = useState({ active: false, icon: '☕', text_main: 'Apoie o desenvolvimento da plataforma!', text_sub: 'Sua doação vai direto para o desenvolvedor e ajuda a manter tudo gratuito.', text_note: 'Não conta em sorteios ou metas do seu canal.', action_label: 'Apoiar dev', action_url: '', color: '#f59e0b', amount_current: 10, amount_goal: 5000, supporter_count: 1, position: 'bottom' as 'top' | 'bottom' })
+  const [bannerCfg, setBannerCfg] = useState({ active: false, icon: '☕', text_main: 'Apoie o desenvolvimento da plataforma!', text_sub: 'Sua doação vai direto para o desenvolvedor e ajuda a manter tudo gratuito.', text_note: 'Não conta em sorteios ou metas do seu canal.', action_label: 'Apoiar dev', action_url: '', color: '#f59e0b', text_main_color: '', text_sub_color: '', text_note_color: '', glow: false, amount_current: 10, amount_goal: 5000, supporter_count: 1, position: 'bottom' as 'top' | 'bottom' })
   const [bannerSaving, setBannerSaving] = useState(false)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerSaved, setBannerSaved] = useState(false)
@@ -332,6 +339,26 @@ export default function AdminPage() {
     if (!confirm('Limpar todos os logs do sistema?')) return
     await fetch('/api/admin/system-logs', { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
     setSystemLogs([])
+  }
+
+  const fetchTickets = useCallback(async (pw: string) => {
+    setTicketsLoading(true)
+    try {
+      const res = await fetch('/api/admin/tickets', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setTickets(await res.json())
+    } catch { /* ignore */ } finally {
+      setTicketsLoading(false)
+    }
+  }, [])
+
+  async function updateTicket(id: string, updates: { status?: string; admin_reply?: string }) {
+    setTicketUpdating(id)
+    try {
+      await fetch('/api/admin/tickets', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify({ id, ...updates }) })
+      setTickets(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))
+    } finally {
+      setTicketUpdating(null)
+    }
   }
 
   const fetchBanner = useCallback(async (pw: string) => {
@@ -599,12 +626,13 @@ export default function AdminPage() {
           <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem' }}>
             {([
               { v: 'users',     label: '👥 Usuários' },
+              { v: 'tickets',   label: '🎫 Tickets' },
               { v: 'logs',      label: '📋 Logs' },
               { v: 'banner',    label: '🎗 Banner' },
               { v: 'passwords', label: '🔑 Senhas Admin' },
               { v: 'roles',     label: '🏷 Funções' },
             ] as const).map(({ v, label }) => (
-              <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } }}
+              <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
                 className={`sk-tab${view === v ? ' active' : ''}`}
                 style={{ color: view === v ? C.primary : C.muted }}>
                 {label}
@@ -635,6 +663,7 @@ export default function AdminPage() {
                   { key: 'feature',   label: '⚡ Funcionalidades' },
                   { key: 'errors',    label: '⚠ Erros' },
                   { key: 'system',    label: '⚙ Sistema' },
+                  { key: 'changelog', label: '📝 Changelog' },
                 ] as const).map(t => (
                   <button key={t.key}
                     onClick={() => {
@@ -643,7 +672,7 @@ export default function AdminPage() {
                       else if (t.key === 'admin') fetchLogs(storedPw)
                       else if (t.key === 'errors') fetchErrorLogs(storedPw)
                       else if (t.key === 'system') fetchSystemLogs(storedPw)
-                      else fetchActivity(storedPw, t.key)
+                      else if (t.key !== 'changelog') fetchActivity(storedPw, t.key)
                     }}
                     className={`sk-tab${logTab === t.key ? ' active' : ''}`}
                     style={{ color: logTab === t.key ? (t.key === 'errors' ? C.danger : C.primary) : C.muted }}>
@@ -656,7 +685,7 @@ export default function AdminPage() {
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
                   <span style={{ fontWeight: 700, fontSize: '0.9rem', color: C.text }}>
-                    {{ logins: '🔐 Logins no painel admin', admin: '🛡 Ações do admin', auth: '🔑 Autenticação', dashboard: '📊 Navegação no dashboard', feature: '⚡ Uso de funcionalidades', errors: '⚠ Logs de erro', system: '⚙ Logs do sistema' }[logTab]}
+                    {({ logins: '🔐 Logins no painel admin', admin: '🛡 Ações do admin', auth: '🔑 Autenticação', dashboard: '📊 Navegação no dashboard', feature: '⚡ Uso de funcionalidades', errors: '⚠ Logs de erro', system: '⚙ Logs do sistema', changelog: '📝 Changelog do sistema' } as Record<string, string>)[logTab]}
                   </span>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   {logTab === 'errors' && (
@@ -670,8 +699,8 @@ export default function AdminPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => { if (logTab === 'logins') fetchLoginLogs(storedPw); else if (logTab === 'admin') fetchLogs(storedPw); else if (logTab === 'errors') fetchErrorLogs(storedPw); else if (logTab === 'system') fetchSystemLogs(storedPw); else fetchActivity(storedPw, logTab) }}
-                    disabled={logTab === 'logins' ? loginLogsLoading : logTab === 'admin' ? logsLoading : logTab === 'errors' ? errorLogsLoading : logTab === 'system' ? systemLogsLoading : activityLoading}
+                    onClick={() => { if (logTab === 'logins') fetchLoginLogs(storedPw); else if (logTab === 'admin') fetchLogs(storedPw); else if (logTab === 'errors') fetchErrorLogs(storedPw); else if (logTab === 'system') fetchSystemLogs(storedPw); else if (logTab !== 'changelog') fetchActivity(storedPw, logTab) }}
+                    disabled={logTab === 'changelog' || (logTab === 'logins' ? loginLogsLoading : logTab === 'admin' ? logsLoading : logTab === 'errors' ? errorLogsLoading : logTab === 'system' ? systemLogsLoading : activityLoading)}
                     style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -842,7 +871,47 @@ export default function AdminPage() {
                 )}
 
                 {/* Auth / Dashboard / Feature tabs */}
-                {logTab !== 'logins' && logTab !== 'admin' && logTab !== 'errors' && logTab !== 'system' && (
+                {logTab === 'changelog' && (() => {
+                  const CHANGELOG = [
+                    { date: '2026-06-07', title: 'Sistema de Tickets', desc: 'Formulário de ticket no chat da landing page, API pública POST /api/tickets, API admin GET/PATCH /api/admin/tickets, view completa de tickets no painel admin com status e resposta.' },
+                    { date: '2026-06-07', title: 'Animação de entrada na landing page', desc: 'Overlay verde com logo SheikSTREAM e efeito de scanline ao abrir o site pela primeira vez. Executado uma vez por sessão via sessionStorage.' },
+                    { date: '2026-06-07', title: 'Opções de cor/efeito no Banner', desc: 'Campos de cor independente para texto principal, secundário e nota. Toggle de efeito Glow (text-shadow). Preview atualizado em tempo real.' },
+                    { date: '2026-06-07', title: 'Avatar do canal na seção Funções', desc: 'Admin/Funções agora exibe a foto de perfil real do usuário (da coluna image_url do waitlist) em vez de iniciais.' },
+                    { date: '2026-06-07', title: 'IA mais direta e concisa', desc: 'System prompt do assistente atualizado: máximo 2 frases, proibido saudações e enrolação. Reduz verbosidade das respostas.' },
+                    { date: '2026-06-07', title: 'Polling de função no perfil (5s)', desc: 'Reduzido de 30s para 5s o intervalo de atualização da função do usuário na página de perfil.' },
+                    { date: '2026-06-07', title: 'RULE_TAGS dinâmicas no overlay de subathon', desc: 'As tags "+2m TWITCH SUB", "+1m LIVEPIX", "+30s BITS" agora usam os valores reais do BD (seconds_per_sub, seconds_per_livepix, seconds_per_bits100).' },
+                    { date: '2026-06-06', title: 'Changelog do admin', desc: 'Esta tela — histórico de alterações do sistema com data, título e descrição.' },
+                    { date: '2026-06-06', title: 'Opções de cor no Banner (base)', desc: 'Campo text_main_color, text_sub_color, text_note_color e toggle glow adicionados à API dev-banner.' },
+                    { date: '2026-06-06', title: 'Logs de Login Admin', desc: 'Tabela admin_login_logs com IP, user-agent e resultado. API GET /api/admin/login-logs. Tab "Logins Admin" no painel de Logs.' },
+                    { date: '2026-06-06', title: 'Navegação categorizada com busca', desc: 'Sidebar do dashboard reorganizada em grupos: AO VIVO, SORTEIO, FINANCEIRO, OVERLAYS, CONTA. Campo de busca em tempo real para filtrar itens.' },
+                    { date: '2026-06-06', title: 'Auto-refresh do dashboard (60s)', desc: 'Stats do dashboard e canal Twitch atualizam automaticamente a cada 60 segundos sem interação do usuário.' },
+                    { date: '2026-06-06', title: 'Fix broadcaster ID Twitch', desc: 'Quando twitch_channel_id é null, auto-busca via Helix /users e salva no banco. Corrige seguidores mostrando "—" permanentemente.' },
+                    { date: '2026-06-05', title: 'Overlay auto-update (config do BD)', desc: 'Configuração do overlay salva no banco, overlay busca a cada 10s. Remove necessidade de recarregar URL ao mudar configurações.' },
+                    { date: '2026-06-05', title: 'Stats do dashboard real', desc: 'Métricas do dashboard conectadas a dados reais do banco (subscribers, arrecadação, etc).' },
+                    { date: '2026-06-05', title: 'Senhas admin temporárias e permanentes', desc: 'Sistema de senhas admin com validade configurável, toggle ativo/inativo e geração de senha aleatória.' },
+                    { date: '2026-06-04', title: 'Roles/Funções de usuário', desc: 'Tabela user_roles, API /api/admin/roles e /api/me/role, atribuição de funções (admin, moderador, vip, streamer, parceiro, editor) pelo painel admin.' },
+                    { date: '2026-06-04', title: 'Fix coluna invitee_email', desc: 'Corrigida coluna invitee_username → invitee_email no sistema de convites.' },
+                    { date: '2026-06-03', title: 'Sync de subs Twitch (Helix API)', desc: 'Botão de sincronização busca subs reais via API Helix. Insere novos subs no banco sem duplicatas.' },
+                    { date: '2026-06-03', title: 'Posição do banner (topo/rodapé)', desc: 'Campo position no banner config. Banner pode ser fixado no topo ou no rodapé do dashboard.' },
+                    { date: '2026-06-03', title: 'CSS white mode improvements', desc: 'Melhorias de contraste no modo claro com !important overrides para textos e backgrounds.' },
+                  ]
+                  return (
+                    <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {CHANGELOG.map((entry, i) => (
+                        <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', padding: '0.9rem 1rem', background: C.cardBgAlt, borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <div style={{ flexShrink: 0, minWidth: '86px' }}>
+                            <div style={{ fontSize: '0.68rem', color: C.dim, fontWeight: 600 }}>{entry.date}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, marginBottom: '0.2rem' }}>{entry.title}</div>
+                            <div style={{ fontSize: '0.78rem', color: C.muted, lineHeight: 1.55 }}>{entry.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+                {logTab !== 'logins' && logTab !== 'admin' && logTab !== 'errors' && logTab !== 'system' && logTab !== 'changelog' && (
                   activityLoading ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
                   ) : activity.length === 0 ? (
@@ -930,8 +999,11 @@ export default function AdminPage() {
                 { label: 'Ícone (emoji)', key: 'icon' as const, placeholder: '☕' },
                 { label: 'Cor do tema (hex)', key: 'color' as const, placeholder: '#f59e0b', type: 'color' },
                 { label: 'Texto principal', key: 'text_main' as const, placeholder: 'Apoie o desenvolvimento...' },
+                { label: 'Cor do texto principal (vazio = cor do tema)', key: 'text_main_color' as const, placeholder: '', type: 'color' },
                 { label: 'Texto secundário', key: 'text_sub' as const, placeholder: 'Sua doação vai direto...' },
-                { label: 'Nota (pequena, itálico)', key: 'text_note' as const, placeholder: 'Não conta em sorteios...' },
+                { label: 'Cor do texto secundário (vazio = padrão)', key: 'text_sub_color' as const, placeholder: '', type: 'color' },
+                { label: 'Nota (pequena)', key: 'text_note' as const, placeholder: 'Não conta em sorteios...' },
+                { label: 'Cor da nota (vazio = padrão)', key: 'text_note_color' as const, placeholder: '', type: 'color' },
                 { label: 'Label do botão', key: 'action_label' as const, placeholder: 'Apoiar dev' },
                 { label: 'URL do botão (link externo)', key: 'action_url' as const, placeholder: 'https://...' },
               ].map(({ label, key, placeholder, type }) => (
@@ -960,6 +1032,15 @@ export default function AdminPage() {
                     style={{ padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.85rem', outline: 'none' }} />
                 </div>
               ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', justifyContent: 'center' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 600, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Efeito Glow no texto</label>
+                <div onClick={() => setBannerCfg(p => ({ ...p, glow: !p.glow }))} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', padding: '0.5rem 0.75rem', background: bannerCfg.glow ? C.primaryBg : C.vvdim, border: `1px solid ${bannerCfg.glow ? C.borderStrong : C.border}`, borderRadius: '7px' }}>
+                  <div style={{ width: 36, height: 20, background: bannerCfg.glow ? C.primary : C.vdim, borderRadius: 10, position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
+                    <div style={{ position: 'absolute', top: 2, left: bannerCfg.glow ? 17 : 2, width: 16, height: 16, background: '#fff', borderRadius: '50%', transition: 'left 0.2s' }} />
+                  </div>
+                  <span style={{ fontSize: '0.8rem', color: bannerCfg.glow ? C.primary : C.muted, fontWeight: 600 }}>{bannerCfg.glow ? 'Ativado' : 'Desativado'}</span>
+                </div>
+              </div>
             </div>
 
             {/* Preview */}
@@ -969,10 +1050,10 @@ export default function AdminPage() {
                 <span style={{ fontSize: '1.2rem' }}>{bannerCfg.icon}</span>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: bannerCfg.color }}>{bannerCfg.text_main}</span>
-                    <span style={{ fontSize: '0.76rem', color: C.muted }}>{bannerCfg.text_sub}</span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: bannerCfg.text_main_color || bannerCfg.color, ...(bannerCfg.glow ? { textShadow: `0 0 8px ${bannerCfg.text_main_color || bannerCfg.color}cc` } : {}) }}>{bannerCfg.text_main}</span>
+                    <span style={{ fontSize: '0.76rem', color: bannerCfg.text_sub_color || C.muted }}>{bannerCfg.text_sub}</span>
                   </div>
-                  {bannerCfg.text_note && <div style={{ fontSize: '0.68rem', color: C.dim }}>{bannerCfg.text_note}</div>}
+                  {bannerCfg.text_note && <div style={{ fontSize: '0.68rem', color: bannerCfg.text_note_color || C.dim }}>{bannerCfg.text_note}</div>}
                   {bannerCfg.amount_goal > 0 && (
                     <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <div style={{ width: 120, background: 'rgba(255,255,255,0.08)', borderRadius: 99, height: 4, overflow: 'hidden' }}>
@@ -1211,6 +1292,77 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+          {view === 'tickets' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ padding: '1.2rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: C.text }}>Tickets de suporte</h3>
+                    <div style={{ fontSize: '0.78rem', color: C.muted, marginTop: '0.2rem' }}>Enviados via formulário na landing page</div>
+                  </div>
+                  <button onClick={() => fetchTickets(storedPw)} disabled={ticketsLoading} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>
+                    {ticketsLoading ? 'Carregando...' : '↻ Atualizar'}
+                  </button>
+                </div>
+                {ticketsLoading ? (
+                  <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
+                ) : tickets.length === 0 ? (
+                  <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum ticket ainda.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {tickets.map(t => {
+                      const isExpanded = expandedTicket === t.id
+                      const statusColors: Record<string, { bg: string; color: string; border: string }> = {
+                        open:        { bg: C.accentBg,            color: C.accent,   border: C.accentBorder },
+                        in_progress: { bg: 'rgba(251,191,36,0.1)', color: '#fbbf24',  border: 'rgba(251,191,36,0.3)' },
+                        resolved:    { bg: C.primaryBg,           color: C.primary,  border: C.borderStrong },
+                        closed:      { bg: C.vvdim,               color: C.dim,      border: C.border },
+                      }
+                      const sc = statusColors[t.status] ?? statusColors.open
+                      return (
+                        <div key={t.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <div className="sk-user-row" onClick={() => setExpandedTicket(isExpanded ? null : t.id)} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem 1.5rem', cursor: 'pointer', background: 'transparent' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.subject}</div>
+                              <div style={{ fontSize: '0.72rem', color: C.dim, marginTop: '0.1rem', display: 'flex', gap: '0.75rem' }}>
+                                <span>{t.username || '—'}</span>
+                                {t.reply_email && <span style={{ color: C.muted }}>{t.reply_email}</span>}
+                                <span>{new Date(t.created_at).toLocaleString('pt-BR')}</span>
+                              </div>
+                            </div>
+                            <span style={{ ...sc, padding: '0.18rem 0.65rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>{t.status}</span>
+                            <span style={{ color: C.dim, fontSize: '0.85rem' }}>{isExpanded ? '▲' : '▼'}</span>
+                          </div>
+                          {isExpanded && (
+                            <div style={{ padding: '0 1.5rem 1.2rem', borderTop: `1px solid ${C.vdim}`, background: C.cardBgAlt }}>
+                              <div style={{ fontSize: '0.82rem', color: C.text, lineHeight: 1.7, padding: '1rem 0', whiteSpace: 'pre-wrap' }}>{t.message}</div>
+                              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                                {(['open','in_progress','resolved','closed'] as const).map(s => (
+                                  <button key={s} disabled={t.status === s || ticketUpdating === t.id}
+                                    onClick={() => updateTicket(t.id, { status: s })}
+                                    style={{ padding: '0.28rem 0.75rem', background: t.status === s ? (statusColors[s]?.bg || C.primaryBg) : 'transparent', border: `1px solid ${statusColors[s]?.border || C.border}`, color: t.status === s ? (statusColors[s]?.color || C.primary) : C.dim, borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: t.status === s ? 'default' : 'pointer' }}>
+                                    {s}
+                                  </button>
+                                ))}
+                              </div>
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <input value={adminReply[t.id] ?? t.admin_reply ?? ''} onChange={e => setAdminReply(p => ({ ...p, [t.id]: e.target.value }))} placeholder="Resposta interna (visível para rastreio)..."
+                                  style={{ flex: 1, padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none' }} />
+                                <button disabled={ticketUpdating === t.id} onClick={() => updateTicket(t.id, { admin_reply: adminReply[t.id] ?? '' })}
+                                  style={{ padding: '0.5rem 0.9rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                                  Salvar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           {view === 'roles' && (() => {
             const ROLES = ['admin', 'moderador', 'vip', 'streamer', 'parceiro', 'editor']
             const ROLE_COLORS: Record<string, string> = { admin: '#ff4444', moderador: '#9147ff', vip: '#fbbf24', streamer: '#39ff14', parceiro: '#3b82f6', editor: '#f97316' }
@@ -1234,9 +1386,13 @@ export default function AdminPage() {
                         return (
                           <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 1rem', background: C.cardBgAlt, borderRadius: '10px', border: `1px solid ${C.border}`, flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 140 }}>
-                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: PLATFORM_COLORS[u.platform] || C.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-                                {uname.slice(0, 2).toUpperCase()}
-                              </div>
+                              {u.image_url ? (
+                                <img src={u.image_url} alt={uname} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${PLATFORM_COLORS[u.platform] || C.border}` }} />
+                              ) : (
+                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: PLATFORM_COLORS[u.platform] || C.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                                  {uname.slice(0, 2).toUpperCase()}
+                                </div>
+                              )}
                               <div>
                                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text }}>{uname}</div>
                                 <div style={{ fontSize: '0.68rem', color: C.muted }}>{u.platform}</div>
