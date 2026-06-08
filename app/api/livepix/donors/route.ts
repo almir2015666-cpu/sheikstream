@@ -14,10 +14,15 @@ export async function GET(req: NextRequest) {
   const days = Number(url.searchParams.get('days') || 30)
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const db = getSupabaseAdmin()
+  let bids = [user.id]
+  try {
+    const { data: lpCfg } = await db.from('livepix_config').select('channel_id').eq('user_id', user.id).maybeSingle()
+    if (lpCfg?.channel_id && lpCfg.channel_id !== user.id) bids.push(lpCfg.channel_id)
+  } catch { /* table may not exist */ }
   const { data, error } = await db
     .from('livepix_donors')
     .select('*')
-    .eq('broadcaster_id', user.id)
+    .in('broadcaster_id', bids)
     .gte('date', since)
     .order('created_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

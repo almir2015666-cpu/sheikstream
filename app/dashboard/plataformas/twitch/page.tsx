@@ -17,6 +17,7 @@ const lbl: React.CSSProperties = { fontSize: '0.65rem', fontWeight: 700, color: 
 type TierConfig = { tier1_name: string; tier1_value: number; tier2_name: string; tier2_value: number; tier3_name: string; tier3_value: number }
 type Sub = { id: string; broadcaster_id: string; username: string; tier: string; is_gift: boolean; gifted_by: string | null; sorteio_id: string | null; tickets: number; date: string; created_at: string }
 type Sorteio = { id: string; title: string; type: string; status: string }
+type TwitchVideo = { id: string; title: string; url: string; created_at: string; duration: string; view_count: number; thumbnail_url: string }
 
 const TIER_LABELS: Record<string, string> = { tier1: 'Tier 1', tier2: 'Tier 2', tier3: 'Tier 3', prime: 'Prime' }
 const PERIOD_OPTIONS = [7, 30, 90]
@@ -70,6 +71,9 @@ export default function TwitchSubsPage() {
   const [savingTiers, setSavingTiers] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [channelStats, setChannelStats] = useState<{ follower_count: number | null; view_count: number | null } | null>(null)
+  const [videos, setVideos] = useState<TwitchVideo[]>([])
+  const [videosLoading, setVideosLoading] = useState(false)
+  const [videosError, setVideosError] = useState('')
 
   async function syncSubs() {
     setSyncing(true)
@@ -114,6 +118,30 @@ export default function TwitchSubsPage() {
   }, [days, useCustom, customFrom, customTo])
 
   useEffect(() => { loadSubs() }, [loadSubs])
+
+  const fetchVideos = useCallback(async () => {
+    setVideosLoading(true)
+    setVideosError('')
+    try {
+      const from = useCustom ? customFrom : daysAgoStr(days)
+      const to = useCustom ? customTo : today()
+      const res = await fetch(`/api/twitch/videos?from=${from}&to=${to}`)
+      const data = await res.json()
+      if (!res.ok) {
+        setVideosError(data.error || 'Erro ao carregar transmissões')
+      } else {
+        setVideos(Array.isArray(data) ? data : [])
+      }
+    } catch {
+      setVideosError('Falha de conexão')
+    } finally {
+      setVideosLoading(false)
+    }
+  }, [days, useCustom, customFrom, customTo])
+
+  useEffect(() => {
+    if (activeTab === 'transmissoes') fetchVideos()
+  }, [activeTab, fetchVideos])
 
   const filtered = subs.filter(s => !search || s.username.toLowerCase().includes(search.toLowerCase()))
   const sorted = [...filtered].sort((a, b) => {
@@ -433,8 +461,41 @@ export default function TwitchSubsPage() {
         )}
 
         {activeTab === 'transmissoes' && (
-          <div style={{ padding: '3rem', textAlign: 'center', color: C.dim, fontSize: '0.85rem' }}>
-            Histórico de transmissões — em breve
+          <div style={{ padding: '0.85rem 1.2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+              <span style={{ fontSize: '0.78rem', color: C.dim }}>
+                {videosLoading ? 'Carregando...' : `${videos.length} transmissão${videos.length !== 1 ? 'ões' : ''} encontrada${videos.length !== 1 ? 's' : ''} no período`}
+              </span>
+              <button onClick={fetchVideos} disabled={videosLoading} style={{ background: 'none', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: 7, padding: '0.28rem 0.7rem', fontSize: '0.72rem', cursor: 'pointer' }}>↻ Atualizar</button>
+            </div>
+            {videosLoading ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: C.dim }}>Carregando transmissões...</div>
+            ) : videosError ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#ff6b6b', fontSize: '0.85rem' }}>{videosError}</div>
+            ) : videos.length === 0 ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: C.dim, fontSize: '0.85rem' }}>Nenhuma transmissão encontrada no período selecionado.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {videos.map(v => (
+                  <a key={v.id} href={v.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', gap: '0.9rem', alignItems: 'flex-start', textDecoration: 'none', padding: '0.75rem', borderRadius: 10, border: `1px solid ${C.cardB}`, background: 'rgba(255,255,255,0.02)' }}>
+                    <img
+                      src={v.thumbnail_url.replace('%{width}', '160').replace('%{height}', '90').replace('{width}', '160').replace('{height}', '90')}
+                      alt=""
+                      style={{ width: 112, height: 63, borderRadius: 7, objectFit: 'cover', flexShrink: 0, background: C.cardB }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.86rem', color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '0.35rem' }}>{v.title || '(sem título)'}</div>
+                      <div style={{ display: 'flex', gap: '0.9rem', flexWrap: 'wrap', fontSize: '0.71rem', color: C.dim }}>
+                        <span>📅 {fmtDate(v.created_at.slice(0, 10))}</span>
+                        <span>⏱ {v.duration}</span>
+                        <span>👁 {v.view_count.toLocaleString('pt-BR')} views</span>
+                      </div>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '0.2rem' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

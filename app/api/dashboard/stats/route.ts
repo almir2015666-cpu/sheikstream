@@ -16,8 +16,15 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
   const bid = user.id
 
+  // Webhook donations may be stored with livepix channel_id instead of twitch user_id
+  let livepixBids = [bid]
+  try {
+    const { data: lpCfg } = await db.from('livepix_config').select('channel_id').eq('user_id', bid).maybeSingle()
+    if (lpCfg?.channel_id && lpCfg.channel_id !== bid) livepixBids.push(lpCfg.channel_id)
+  } catch { /* table may not exist */ }
+
   const [livepixRes, twitchRes, ticketsRes] = await Promise.all([
-    db.from('livepix_donors').select('amount,username').eq('broadcaster_id', bid).gte('date', from).lte('date', to),
+    db.from('livepix_donors').select('amount,username').in('broadcaster_id', livepixBids).gte('date', from).lte('date', to),
     db.from('twitch_subs').select('id,tier,tickets').eq('broadcaster_id', bid).gte('date', from).lte('date', to),
     db.from('sorteio_tickets').select('id,donor_name').eq('broadcaster_id', bid),
   ])

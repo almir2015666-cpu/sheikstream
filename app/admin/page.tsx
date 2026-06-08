@@ -147,7 +147,7 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify'>('users')
   const [userSearch, setUserSearch] = useState('')
   const [navSearch, setNavSearch] = useState('')
   type LoginLog = { id: string; ip: string; user_agent: string; success: boolean; created_at: string }
@@ -186,6 +186,11 @@ export default function AdminPage() {
   type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean }
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
+  type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string }
+  const [notifyList, setNotifyList] = useState<AdminNotification[]>([])
+  const [notifyLoading, setNotifyLoading] = useState(false)
+  const [notifySaving, setNotifySaving] = useState(false)
+  const [notifyForm, setNotifyForm] = useState({ title: '', message: '', icon: '📢', color: '#9b30ff' })
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -366,6 +371,53 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteTicket(id: string) {
+    setTicketUpdating(id)
+    try {
+      await fetch(`/api/admin/tickets?id=${id}`, { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
+      setTickets(prev => prev.filter(t => t.id !== id))
+      if (expandedTicket === id) setExpandedTicket(null)
+    } finally {
+      setTicketUpdating(null)
+    }
+  }
+
+  const fetchNotifications = useCallback(async (pw: string) => {
+    setNotifyLoading(true)
+    try {
+      const res = await fetch('/api/admin/notifications', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setNotifyList(await res.json())
+    } catch { /* ignore */ } finally {
+      setNotifyLoading(false)
+    }
+  }, [])
+
+  async function sendNotification() {
+    if (!notifyForm.message.trim()) return
+    setNotifySaving(true)
+    try {
+      const res = await fetch('/api/admin/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+        body: JSON.stringify(notifyForm),
+      })
+      if (res.ok) {
+        const d = await res.json()
+        setNotifyList(prev => [d, ...prev])
+        setNotifyForm(p => ({ ...p, title: '', message: '' }))
+      }
+    } catch { /* ignore */ } finally {
+      setNotifySaving(false)
+    }
+  }
+
+  async function deleteNotification(id: string) {
+    try {
+      await fetch(`/api/admin/notifications?id=${id}`, { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
+      setNotifyList(prev => prev.filter(n => n.id !== id))
+    } catch { /* ignore */ }
+  }
+
   const fetchOnlineUsers = useCallback(async (pw: string) => {
     setOnlineLoading(true)
     try {
@@ -457,6 +509,7 @@ export default function AdminPage() {
       const data = await res.json()
       if (data.ok) {
         sessionStorage.setItem('sk-admin-pw', password)
+        try { localStorage.setItem('sk-admin-authed', '1') } catch {}
         setStoredPw(password)
         setAuthed(true)
         fetchUsers(password)
@@ -645,7 +698,7 @@ export default function AdminPage() {
         /* ── Admin dashboard ── */
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
           {/* View switcher: full when on main views, compact back-button otherwise */}
-          {(view === 'users' || view === 'banner') ? (
+          {(view === 'users' || view === 'banner' || view === 'notify') ? (
             <div style={{ marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center' }}>
                 <div style={{ position: 'relative', flex: 1, maxWidth: 280 }}>
@@ -660,13 +713,14 @@ export default function AdminPage() {
                   { v: 'online',  label: '🟢 Online Agora' },
                   { v: 'roles',   label: '🏷 Funções' },
                   { v: 'tickets', label: '🎫 Tickets' },
+                  { v: 'notify',  label: '📣 Avisos' },
                 ]},
                 { group: 'Sistema', items: [
                   { v: 'logs',      label: '📋 Logs' },
                   { v: 'banner',    label: '🎗 Banner' },
                   { v: 'passwords', label: '🔑 Senhas Admin' },
                 ]},
-              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online'; label: string }[] }[]).map(({ group, items }) => {
+              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify'; label: string }[] }[]).map(({ group, items }) => {
                 const visible = navSearch
                   ? items.filter(i => i.label.toLowerCase().includes(navSearch.toLowerCase()))
                   : items
@@ -676,7 +730,7 @@ export default function AdminPage() {
                     {!navSearch && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem', paddingLeft: '0.25rem' }}>{group}</div>}
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       {visible.map(({ v, label }) => (
-                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw) }}
+                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw); if (v === 'notify') fetchNotifications(storedPw) }}
                           className={`sk-tab${view === v ? ' active' : ''}`}
                           style={{ color: view === v ? C.primary : C.muted }}>
                           {label}
@@ -698,10 +752,10 @@ export default function AdminPage() {
                 {({ roles: '🏷 Funções', tickets: '🎫 Tickets', logs: '📋 Logs', passwords: '🔑 Senhas Admin', online: '🟢 Online Agora' } as Record<string, string>)[view]}
               </span>
               <div style={{ display: 'flex', gap: '0.35rem', marginLeft: 'auto' }}>
-                {(['online', 'roles', 'tickets', 'logs', 'passwords'] as const).map(v => (
-                  <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw) }}
+                {(['roles', 'tickets', 'logs', 'passwords'] as const).map(v => (
+                  <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
                     style={{ fontSize: '0.72rem', padding: '0.28rem 0.7rem', borderRadius: '6px', border: `1px solid ${view === v ? C.primary + '50' : C.border}`, background: view === v ? C.primaryBg : 'transparent', color: view === v ? C.primary : C.dim, cursor: 'pointer', fontWeight: view === v ? 700 : 400 }}>
-                    {({ online: 'Online', roles: 'Funções', tickets: 'Tickets', logs: 'Logs', passwords: 'Senhas' } as Record<string, string>)[v]}
+                    {({ roles: 'Funções', tickets: 'Tickets', logs: 'Logs', passwords: 'Senhas' } as Record<string, string>)[v]}
                   </button>
                 ))}
               </div>
@@ -1425,21 +1479,38 @@ export default function AdminPage() {
                           {isExpanded && (
                             <div style={{ padding: '0 1.5rem 1.2rem', borderTop: `1px solid ${C.vdim}`, background: C.cardBgAlt }}>
                               <div style={{ fontSize: '0.82rem', color: C.text, lineHeight: 1.7, padding: '1rem 0', whiteSpace: 'pre-wrap' }}>{t.message}</div>
-                              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                                {(['open','in_progress','resolved','closed'] as const).map(s => (
-                                  <button key={s} disabled={t.status === s || ticketUpdating === t.id}
-                                    onClick={() => updateTicket(t.id, { status: s })}
-                                    style={{ padding: '0.28rem 0.75rem', background: t.status === s ? (statusColors[s]?.bg || C.primaryBg) : 'transparent', border: `1px solid ${statusColors[s]?.border || C.border}`, color: t.status === s ? (statusColors[s]?.color || C.primary) : C.dim, borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: t.status === s ? 'default' : 'pointer' }}>
-                                    {s}
-                                  </button>
-                                ))}
+
+                              {/* Status + actions row */}
+                              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+                                {(['open','in_progress','resolved','closed','archived'] as const).map(s => {
+                                  const extra: Record<string, { bg: string; color: string; border: string }> = {
+                                    archived: { bg: 'rgba(148,163,184,0.12)', color: '#94a3b8', border: 'rgba(148,163,184,0.28)' },
+                                  }
+                                  const sc2 = extra[s] ?? statusColors[s] ?? statusColors.open
+                                  return (
+                                    <button key={s} disabled={t.status === s || ticketUpdating === t.id}
+                                      onClick={() => updateTicket(t.id, { status: s })}
+                                      style={{ padding: '0.28rem 0.75rem', background: t.status === s ? sc2.bg : 'transparent', border: `1px solid ${sc2.border}`, color: t.status === s ? sc2.color : C.dim, borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: t.status === s ? 'default' : 'pointer' }}>
+                                      {s === 'archived' ? '🗃 Arquivar' : s}
+                                    </button>
+                                  )
+                                })}
+                                <button disabled={ticketUpdating === t.id}
+                                  onClick={() => { if (confirm('Excluir este ticket permanentemente?')) deleteTicket(t.id) }}
+                                  style={{ marginLeft: 'auto', padding: '0.28rem 0.75rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                                  🗑 Excluir
+                                </button>
                               </div>
+
+                              {/* Reply row */}
+                              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Resposta ao usuário</div>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <input value={adminReply[t.id] ?? t.admin_reply ?? ''} onChange={e => setAdminReply(p => ({ ...p, [t.id]: e.target.value }))} placeholder="Resposta interna (visível para rastreio)..."
-                                  style={{ flex: 1, padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none' }} />
+                                <textarea value={adminReply[t.id] ?? t.admin_reply ?? ''} onChange={e => setAdminReply(p => ({ ...p, [t.id]: e.target.value }))} placeholder="Escreva a resposta para o usuário..."
+                                  rows={3}
+                                  style={{ flex: 1, padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
                                 <button disabled={ticketUpdating === t.id} onClick={() => updateTicket(t.id, { admin_reply: adminReply[t.id] ?? '' })}
-                                  style={{ padding: '0.5rem 0.9rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-                                  Salvar
+                                  style={{ padding: '0.5rem 0.9rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-end' }}>
+                                  Responder
                                 </button>
                               </div>
                             </div>
@@ -1535,6 +1606,99 @@ export default function AdminPage() {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {view === 'notify' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Compose notification */}
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>Enviar aviso aos usuários</h3>
+                <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>O aviso aparece no dashboard de todos os usuários ativos até ser removido.</p>
+
+                {/* Icon picker */}
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>Ícone</div>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    {['📢','⚠️','🔔','✅','❌','🚀','🎉','💡','🔧','📅','🌐','🎮','💬','🏆','⭐'].map(ico => (
+                      <button key={ico} onClick={() => setNotifyForm(p => ({ ...p, icon: ico }))}
+                        style={{ width: 38, height: 38, fontSize: '1.3rem', borderRadius: '8px', border: `2px solid ${notifyForm.icon === ico ? C.primary : C.border}`, background: notifyForm.icon === ico ? C.primaryBg : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {ico}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color picker */}
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>Cor</div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {['#9b30ff','#3b82f6','#22c55e','#f59e0b','#ef4444','#ec4899','#06b6d4','#f97316','#ffffff'].map(col => (
+                      <button key={col} onClick={() => setNotifyForm(p => ({ ...p, color: col }))}
+                        style={{ width: 28, height: 28, borderRadius: '50%', background: col, border: `3px solid ${notifyForm.color === col ? C.text : 'transparent'}`, cursor: 'pointer', outline: 'none', boxShadow: notifyForm.color === col ? `0 0 0 1px ${col}` : 'none' }} />
+                    ))}
+                    <input type="color" value={notifyForm.color} onChange={e => setNotifyForm(p => ({ ...p, color: e.target.value }))}
+                      style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', cursor: 'pointer', padding: 0, background: 'transparent' }} title="Cor personalizada" />
+                  </div>
+                </div>
+
+                {/* Title (optional) */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Título (opcional)</div>
+                  <input value={notifyForm.title} onChange={e => setNotifyForm(p => ({ ...p, title: e.target.value }))} placeholder="Ex: Atualização da plataforma"
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+
+                {/* Message */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Mensagem *</div>
+                  <textarea value={notifyForm.message} onChange={e => setNotifyForm(p => ({ ...p, message: e.target.value }))} placeholder="Escreva a mensagem para os usuários..." rows={3}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                </div>
+
+                {/* Preview */}
+                {(notifyForm.message || notifyForm.title) && (
+                  <div style={{ background: `${notifyForm.color}15`, border: `1px solid ${notifyForm.color}40`, borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                    <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{notifyForm.icon}</span>
+                    <div>
+                      {notifyForm.title && <div style={{ fontWeight: 700, fontSize: '0.84rem', color: notifyForm.color, marginBottom: '0.2rem' }}>{notifyForm.title}</div>}
+                      <div style={{ fontSize: '0.8rem', color: C.muted }}>{notifyForm.message}</div>
+                    </div>
+                  </div>
+                )}
+
+                <button onClick={sendNotification} disabled={notifySaving || !notifyForm.message.trim()}
+                  style={{ padding: '0.6rem 1.4rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: notifyForm.message.trim() ? 'pointer' : 'not-allowed', opacity: notifyForm.message.trim() ? 1 : 0.5 }}>
+                  {notifySaving ? 'Enviando...' : '📣 Enviar aviso'}
+                </button>
+              </div>
+
+              {/* Active notifications list */}
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ padding: '1.1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: C.text }}>Avisos ativos ({notifyList.length})</h3>
+                  <button onClick={() => fetchNotifications(storedPw)} disabled={notifyLoading} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.3rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}>↻ Atualizar</button>
+                </div>
+                {notifyLoading ? (
+                  <div style={{ padding: '3rem', textAlign: 'center', color: C.muted, fontSize: '0.85rem' }}>Carregando...</div>
+                ) : notifyList.length === 0 ? (
+                  <div style={{ padding: '3rem', textAlign: 'center', color: C.vdim, fontSize: '0.85rem' }}>Nenhum aviso ativo.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {notifyList.map(n => (
+                      <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', padding: '0.9rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
+                        <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{n.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {n.title && <div style={{ fontWeight: 700, fontSize: '0.82rem', color: n.color, marginBottom: '0.15rem' }}>{n.title}</div>}
+                          <div style={{ fontSize: '0.8rem', color: C.muted }}>{n.message}</div>
+                          <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.3rem' }}>{new Date(n.created_at).toLocaleString('pt-BR')}</div>
+                        </div>
+                        <button onClick={() => deleteNotification(n.id)} style={{ background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', padding: '0.28rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Remover</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

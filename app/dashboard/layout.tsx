@@ -44,7 +44,7 @@ const I = {
 }
 
 type Badge = 'NOVO' | 'ATUALIZADO'
-type Child = { id: string; label: string; href: string; badge?: 'NOVO' }
+type Child = { id: string; label: string; href: string; badge?: 'NOVO'; icon?: React.ReactNode }
 type Item  = { id: string; label: string; href: string; icon: React.ReactNode; badge?: Badge; children?: Child[] }
 type Group = { label: string; items: Item[] }
 
@@ -68,8 +68,8 @@ const NAV_GROUPS: Group[] = [
   { label: 'FINANCEIRO', items: [
     { id: 'plataformas', label: 'Plataformas', href: '/dashboard/plataformas', icon: I.plat, badge: 'NOVO',
       children: [
-        { id: 'p-twitch',  label: 'Twitch',  href: '/dashboard/plataformas/twitch' },
-        { id: 'p-livepix', label: 'Livepix', href: '/dashboard/plataformas/livepix' },
+        { id: 'p-twitch',  label: 'Twitch',  href: '/dashboard/plataformas/twitch',  icon: <svg width="13" height="13" viewBox="0 0 24 28" fill="currentColor"><path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/></svg> },
+        { id: 'p-livepix', label: 'Livepix', href: '/dashboard/plataformas/livepix', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg> },
       ]
     },
     { id: 'metas', label: 'Metas', href: '/dashboard/metas', icon: I.meta },
@@ -175,6 +175,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [seenBadges, setSeenBadges] = useState<Set<string>>(new Set())
   const [banner, setBanner] = useState<BannerCfg | null>(null)
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [navOrder, setNavOrder] = useState<string[]>([])
+  const [reorderMode, setReorderMode] = useState(false)
 
   const S = theme === 'dark' ? DARK_S : LIGHT_S
   const isDark = theme === 'dark'
@@ -187,6 +190,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     try {
       const t = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
       if (t) setTheme(t)
+    } catch { /* ignore */ }
+    try {
+      if (localStorage.getItem('sk-admin-authed') === '1') setIsAdmin(true)
+      const savedOrder = localStorage.getItem('sk-nav-order')
+      if (savedOrder) {
+        const arr = JSON.parse(savedOrder)
+        if (Array.isArray(arr) && arr.length > 0) setNavOrder(arr)
+      }
     } catch { /* ignore */ }
     const fetchBanner = () => fetch('/api/dev-banner').then(r => r.json()).then(d => setBanner(d?.active ? d : null)).catch(() => {})
     fetchBanner()
@@ -282,6 +293,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const iv = setInterval(ping, 60000)
     return () => clearInterval(iv)
   }, [user])
+
+  function moveItem(id: string, dir: 'up' | 'down') {
+    const base = navOrder.length > 0 ? navOrder : NAV_ALL.map(i => i.id)
+    const arr = [...base]
+    const idx = arr.indexOf(id)
+    if (idx === -1) return
+    const newIdx = dir === 'up' ? idx - 1 : idx + 1
+    if (newIdx < 0 || newIdx >= arr.length) return
+    ;[arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]]
+    setNavOrder(arr)
+    try { localStorage.setItem('sk-nav-order', JSON.stringify(arr)) } catch {}
+  }
+
+  const orderedItems = (() => {
+    if (navOrder.length === 0) return NAV_ALL
+    const orderMap = new Map(navOrder.map((id, i) => [id, i] as [string, number]))
+    return [...NAV_ALL].sort((a, b) => {
+      const ia = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999
+      const ib = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999
+      return ia - ib
+    })
+  })()
 
   if (status === 'loading') return <div style={{ background: DARK_S.bg, minHeight: '100vh' }} />
   if (!user) return null
@@ -443,55 +476,59 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             })
           })()
         ) : (
-          /* Flat nav — no group labels */
-          NAV_GROUPS.map(group => (
-            <div key={group.label || '__root'}>
-              {false && group.label && (
-                <div style={{ padding: '0.65rem 0.75rem 0.25rem', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', color: S.vdim, textTransform: 'uppercase' }}>
-                  {group.label}
-                </div>
-              )}
-              {group.items.map(item => {
-                const isAct = active(item)
-                const isExp = open.has(item.id)
-                const hasCh = !!item.children
-                return (
-                  <div key={item.id}>
-                    <Link
-                      href={hasCh ? '#' : item.href}
-                      onClick={hasCh ? (e) => { toggle(item.id, e); if (item.badge) dismissBadge(item.id) } : () => { setMobileOpen(false); if (item.badge) dismissBadge(item.id) }}
-                      className={isAct ? 'sk-nl-act' : 'sk-nl'}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.6rem 0.75rem', borderRadius: '9px', marginBottom: '2px', color: isAct ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.9rem', fontWeight: isAct ? 600 : 400, background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent', border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent', cursor: 'pointer', letterSpacing: '-0.1px' }}
-                    >
-                      <span style={{ color: isAct ? S.iconActive : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-                      {item.badge && !seenBadges.has(item.id) && <Chip type={item.badge} />}
-                      {hasCh && !isAct && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>{I.chev}</span>}
-                      {isAct && <span style={{ color: S.iconActive, flexShrink: 0, display: 'flex' }}>{I.arr}</span>}
-                    </Link>
-                    {hasCh && isExp && item.children?.map(ch => {
-                      const ca = pathname === ch.href
-                      return (
-                        <Link key={ch.id} href={ch.href}
-                          onClick={() => { setMobileOpen(false); if (ch.badge) dismissBadge(ch.id) }}
-                          className={ca ? 'sk-nl-act' : 'sk-nl'}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.48rem 0.75rem 0.48rem 2.8rem', borderRadius: '9px', marginBottom: '2px', color: ca ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.84rem', fontWeight: ca ? 600 : 400, background: ca ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.28),rgba(109,40,217,0.22)' : 'rgba(123,46,255,0.12),rgba(90,30,200,0.08)'})` : 'transparent', border: ca ? `1px solid ${isDark ? 'rgba(155,48,255,0.25)' : 'rgba(123,46,255,0.2)'}` : '1px solid transparent' }}>
-                          <span style={{ flex: 1 }}>{ch.label}</span>
-                          {ch.badge && !seenBadges.has(ch.id) && <Chip type={ch.badge} />}
-                          {ca && <span style={{ color: S.iconActive, display: 'flex' }}>{I.arr}</span>}
-                        </Link>
-                      )
-                    })}
+          /* Flat nav — orderable by admin */
+          orderedItems.map((item, idx) => {
+            const isAct = active(item)
+            const isExp = open.has(item.id)
+            const hasCh = !!item.children
+            return (
+              <div key={item.id} style={{ position: 'relative' }}>
+                <Link
+                  href={hasCh ? '#' : item.href}
+                  onClick={hasCh ? (e) => { toggle(item.id, e); if (item.badge) dismissBadge(item.id) } : () => { setMobileOpen(false); if (item.badge) dismissBadge(item.id) }}
+                  className={isAct ? 'sk-nl-act' : 'sk-nl'}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: `0.6rem ${reorderMode ? '2.6rem' : '0.75rem'} 0.6rem 0.75rem`, borderRadius: '9px', marginBottom: '2px', color: isAct ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.9rem', fontWeight: isAct ? 600 : 400, background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent', border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent', cursor: 'pointer', letterSpacing: '-0.1px' }}
+                >
+                  <span style={{ color: isAct ? S.iconActive : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                  {item.badge && !seenBadges.has(item.id) && <Chip type={item.badge} />}
+                  {hasCh && !isAct && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>{I.chev}</span>}
+                  {isAct && <span style={{ color: S.iconActive, flexShrink: 0, display: 'flex' }}>{I.arr}</span>}
+                </Link>
+                {reorderMode && (
+                  <div style={{ position: 'absolute', right: '0.35rem', top: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px' }}>
+                    <button onClick={() => moveItem(item.id, 'up')} disabled={idx === 0} style={{ background: 'none', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? S.vdim : S.primary, padding: '1px 4px', fontSize: '0.55rem', lineHeight: 1 }}>▲</button>
+                    <button onClick={() => moveItem(item.id, 'down')} disabled={idx === orderedItems.length - 1} style={{ background: 'none', border: 'none', cursor: idx === orderedItems.length - 1 ? 'default' : 'pointer', color: idx === orderedItems.length - 1 ? S.vdim : S.primary, padding: '1px 4px', fontSize: '0.55rem', lineHeight: 1 }}>▼</button>
                   </div>
-                )
-              })}
-            </div>
-          ))
+                )}
+                {hasCh && isExp && item.children?.map(ch => {
+                  const ca = pathname === ch.href
+                  return (
+                    <Link key={ch.id} href={ch.href}
+                      onClick={() => { setMobileOpen(false); if (ch.badge) dismissBadge(ch.id) }}
+                      className={ca ? 'sk-nl-act' : 'sk-nl'}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.48rem 0.75rem 0.48rem 2.8rem', borderRadius: '9px', marginBottom: '2px', color: ca ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.84rem', fontWeight: ca ? 600 : 400, background: ca ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.28),rgba(109,40,217,0.22)' : 'rgba(123,46,255,0.12),rgba(90,30,200,0.08)'})` : 'transparent', border: ca ? `1px solid ${isDark ? 'rgba(155,48,255,0.25)' : 'rgba(123,46,255,0.2)'}` : '1px solid transparent' }}>
+                      {ch.icon && <span style={{ display: 'flex', flexShrink: 0, color: ca ? S.iconActive : S.dim }}>{ch.icon}</span>}
+                      <span style={{ flex: 1 }}>{ch.label}</span>
+                      {ch.badge && !seenBadges.has(ch.id) && <Chip type={ch.badge} />}
+                      {ca && <span style={{ color: S.iconActive, display: 'flex' }}>{I.arr}</span>}
+                    </Link>
+                  )
+                })}
+              </div>
+            )
+          })
         )}
       </nav>
 
       {/* Admin link */}
-      <div style={{ padding: '0.3rem 0.5rem', flexShrink: 0 }}>
+      <div style={{ padding: '0.3rem 0.5rem', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+        {isAdmin && (
+          <button onClick={() => setReorderMode(r => !r)} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.4rem 0.75rem', borderRadius: '8px', background: reorderMode ? 'rgba(155,48,255,0.12)' : 'transparent', border: `1px solid ${reorderMode ? 'rgba(155,48,255,0.28)' : 'rgba(255,255,255,0.06)'}`, color: reorderMode ? S.primary : S.dim, cursor: 'pointer', fontSize: '0.75rem', fontWeight: reorderMode ? 700 : 500, width: '100%', textAlign: 'left' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            {reorderMode ? 'Salvar ordem ✓' : 'Reordenar menu'}
+          </button>
+        )}
         <Link href="/admin" onClick={() => setMobileOpen(false)}
           className="sk-nl"
           style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.45rem 0.75rem', borderRadius: '9px', background: 'rgba(255,68,68,0.07)', border: '1px solid rgba(255,68,68,0.18)', textDecoration: 'none', color: '#ff6b6b', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.1px' }}>

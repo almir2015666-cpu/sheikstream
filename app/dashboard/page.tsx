@@ -76,6 +76,9 @@ export default function DashboardPage() {
   const [channelErr, setChannelErr] = useState('')
   const [refreshTick, setRefreshTick] = useState(0)
   const [donors, setDonors] = useState<DonorRow[] | null>(null)
+  type AdminNotif = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string }
+  const [notifications, setNotifications] = useState<AdminNotif[]>([])
+  const [dismissedNotifs, setDismissedNotifs] = useState<Set<string>>(new Set())
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
 
   function periodDates() {
@@ -94,6 +97,17 @@ export default function DashboardPage() {
   useEffect(() => {
     const iv = setInterval(() => setRefreshTick(t => t + 1), 60000)
     return () => clearInterval(iv)
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/me/notifications')
+      .then(r => r.ok ? r.json() : [])
+      .then((d: AdminNotif[]) => { if (Array.isArray(d)) setNotifications(d) })
+      .catch(() => {})
+    try {
+      const seen = JSON.parse(localStorage.getItem('sk-dismissed-notifs') || '[]')
+      setDismissedNotifs(new Set(seen))
+    } catch {}
   }, [])
 
   useEffect(() => {
@@ -126,6 +140,22 @@ export default function DashboardPage() {
 
   return (
     <div style={{ background: '#08090d', minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+
+      {/* Admin notifications */}
+      {notifications.filter(n => !dismissedNotifs.has(n.id)).map(n => (
+        <div key={n.id} style={{ background: `${n.color}12`, borderBottom: `1px solid ${n.color}35`, padding: isMobile ? '0.6rem 1rem' : '0.6rem 2rem', display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '1rem', flexShrink: 0 }}>{n.icon}</span>
+          {n.title && <span style={{ fontSize: '0.82rem', fontWeight: 700, color: n.color }}>{n.title}</span>}
+          <span style={{ fontSize: '0.81rem', color: C.muted, flex: 1 }}>{n.message}</span>
+          <button onClick={() => {
+            setDismissedNotifs(prev => {
+              const next = new Set(prev); next.add(n.id)
+              try { localStorage.setItem('sk-dismissed-notifs', JSON.stringify([...next])) } catch {}
+              return next
+            })
+          }} style={{ background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '1rem', flexShrink: 0, padding: '0 0.25rem' }}>✕</button>
+        </div>
+      ))}
 
       {/* Banner de boas-vindas */}
       <div style={{ background: 'linear-gradient(90deg,rgba(59,130,246,0.12),rgba(99,102,241,0.06))', borderBottom: '1px solid rgba(59,130,246,0.15)', padding: isMobile ? '0.6rem 1rem' : '0.6rem 2rem', display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap' }}>
