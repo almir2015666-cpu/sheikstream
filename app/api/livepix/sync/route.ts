@@ -41,7 +41,7 @@ async function getLivepixChannelId(token: string): Promise<string | null> {
 
 async function fetchPaymentsPage(token: string, page: number): Promise<{ items: Record<string, unknown>[]; hasMore: boolean }> {
   const res = await fetch(
-    `https://api.livepix.gg/v1/payments?page=${page}&per_page=100&sort=created_at&direction=desc`,
+    `https://api.livepix.gg/v2/payments?page=${page}&per_page=100&sort=createdAt&direction=desc`,
     { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
   )
   if (!res.ok) {
@@ -56,6 +56,7 @@ async function fetchPaymentsPage(token: string, page: number): Promise<{ items: 
 }
 
 function normalizePayment(p: Record<string, unknown>) {
+  // v2 API: sender may be nested or missing
   const sender = p.sender as Record<string, unknown> | undefined
   const user   = p.user   as Record<string, unknown> | undefined
   const username = String(
@@ -63,15 +64,16 @@ function normalizePayment(p: Record<string, unknown>) {
     user?.name   ?? user?.username   ?? user?.display_name   ??
     p.sender_name ?? p.donor_name ?? p.username ?? p.name ?? 'Anônimo'
   )
-  // Livepix can return amount in reais (float) or cents (int)
-  // Heuristic: if value > 1000 it's likely cents
+  // v2 returns amount in cents as integer
   const amountRaw = Number(p.amount ?? p.value ?? 0)
   const amount = amountRaw > 1000 ? amountRaw / 100 : amountRaw
+  // v2 uses camelCase: createdAt
+  const created_at = String(p.createdAt ?? p.created_at ?? p.paid_at ?? new Date().toISOString())
   return {
     username,
     amount,
-    message:    p.message ? String(p.message) : null,
-    created_at: String(p.created_at ?? p.paid_at ?? new Date().toISOString()),
+    message: p.message ? String(p.message) : null,
+    created_at,
   }
 }
 
