@@ -272,6 +272,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }).catch(() => {})
   }, [pathname, user])
 
+  useEffect(() => {
+    if (!user) return
+    const ping = () => fetch('/api/activity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: 'dashboard', event: 'heartbeat', details: 'alive' }),
+    }).catch(() => {})
+    const iv = setInterval(ping, 60000)
+    return () => clearInterval(iv)
+  }, [user])
+
   if (status === 'loading') return <div style={{ background: DARK_S.bg, minHeight: '100vh' }} />
   if (!user) return null
 

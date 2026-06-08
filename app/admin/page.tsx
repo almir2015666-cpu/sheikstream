@@ -147,7 +147,7 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online'>('users')
   const [userSearch, setUserSearch] = useState('')
   const [navSearch, setNavSearch] = useState('')
   type LoginLog = { id: string; ip: string; user_agent: string; success: boolean; created_at: string }
@@ -183,6 +183,9 @@ export default function AdminPage() {
   const [bannerSaving, setBannerSaving] = useState(false)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerSaved, setBannerSaved] = useState(false)
+  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean }
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
+  const [onlineLoading, setOnlineLoading] = useState(false)
 
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
@@ -363,6 +366,16 @@ export default function AdminPage() {
     }
   }
 
+  const fetchOnlineUsers = useCallback(async (pw: string) => {
+    setOnlineLoading(true)
+    try {
+      const res = await fetch('/api/admin/online', { headers: { 'x-admin-password': pw } })
+      if (res.ok) setOnlineUsers(await res.json())
+    } catch { /* ignore */ } finally {
+      setOnlineLoading(false)
+    }
+  }, [])
+
   const fetchBanner = useCallback(async (pw: string) => {
     setBannerLoading(true)
     try {
@@ -423,6 +436,13 @@ export default function AdminPage() {
       })
       .finally(() => setAuthChecked(true))
   }, [])
+
+  useEffect(() => {
+    if (!authed || view !== 'online') return
+    fetchOnlineUsers(storedPw)
+    const iv = setInterval(() => fetchOnlineUsers(storedPw), 30000)
+    return () => clearInterval(iv)
+  }, [view, authed, storedPw, fetchOnlineUsers])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -637,6 +657,7 @@ export default function AdminPage() {
               {([
                 { group: 'Usuários', items: [
                   { v: 'users',   label: '👥 Usuários' },
+                  { v: 'online',  label: '🟢 Online Agora' },
                   { v: 'roles',   label: '🏷 Funções' },
                   { v: 'tickets', label: '🎫 Tickets' },
                 ]},
@@ -645,7 +666,7 @@ export default function AdminPage() {
                   { v: 'banner',    label: '🎗 Banner' },
                   { v: 'passwords', label: '🔑 Senhas Admin' },
                 ]},
-              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets'; label: string }[] }[]).map(({ group, items }) => {
+              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online'; label: string }[] }[]).map(({ group, items }) => {
                 const visible = navSearch
                   ? items.filter(i => i.label.toLowerCase().includes(navSearch.toLowerCase()))
                   : items
@@ -655,7 +676,7 @@ export default function AdminPage() {
                     {!navSearch && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem', paddingLeft: '0.25rem' }}>{group}</div>}
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       {visible.map(({ v, label }) => (
-                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
+                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw) }}
                           className={`sk-tab${view === v ? ' active' : ''}`}
                           style={{ color: view === v ? C.primary : C.muted }}>
                           {label}
@@ -674,13 +695,13 @@ export default function AdminPage() {
               </button>
               <span style={{ fontSize: '0.72rem', color: C.vdim }}>·</span>
               <span style={{ fontSize: '0.92rem', fontWeight: 700, color: C.text }}>
-                {({ roles: '🏷 Funções', tickets: '🎫 Tickets', logs: '📋 Logs', passwords: '🔑 Senhas Admin' } as Record<string, string>)[view]}
+                {({ roles: '🏷 Funções', tickets: '🎫 Tickets', logs: '📋 Logs', passwords: '🔑 Senhas Admin', online: '🟢 Online Agora' } as Record<string, string>)[view]}
               </span>
               <div style={{ display: 'flex', gap: '0.35rem', marginLeft: 'auto' }}>
-                {(['roles', 'tickets', 'logs', 'passwords'] as const).map(v => (
-                  <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
+                {(['online', 'roles', 'tickets', 'logs', 'passwords'] as const).map(v => (
+                  <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw) }}
                     style={{ fontSize: '0.72rem', padding: '0.28rem 0.7rem', borderRadius: '6px', border: `1px solid ${view === v ? C.primary + '50' : C.border}`, background: view === v ? C.primaryBg : 'transparent', color: view === v ? C.primary : C.dim, cursor: 'pointer', fontWeight: view === v ? 700 : 400 }}>
-                    {({ roles: 'Funções', tickets: 'Tickets', logs: 'Logs', passwords: 'Senhas' } as Record<string, string>)[v]}
+                    {({ online: 'Online', roles: 'Funções', tickets: 'Tickets', logs: 'Logs', passwords: 'Senhas' } as Record<string, string>)[v]}
                   </button>
                 ))}
               </div>
@@ -1431,6 +1452,92 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+          {view === 'online' && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, marginBottom: '0.2rem' }}>
+                    Usuários na plataforma
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: C.muted }}>
+                    Online = ativo nos últimos 15 min · Atualiza a cada 30s
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: C.muted }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                    {onlineUsers.filter(u => u.is_online).length} online
+                  </div>
+                  <button onClick={() => fetchOnlineUsers(storedPw)} disabled={onlineLoading}
+                    style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <svg className={onlineLoading ? 'sk-spin' : ''} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    Atualizar
+                  </button>
+                </div>
+              </div>
+              {onlineLoading && onlineUsers.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '120px', color: C.muted, fontSize: '0.85rem' }}>Carregando...</div>
+              ) : onlineUsers.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '120px', color: C.vdim, fontSize: '0.85rem' }}>Nenhum usuário aprovado encontrado</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {onlineUsers.map(u => {
+                    const isOn = u.is_online
+                    const lastSeen = u.last_seen_at ? new Date(u.last_seen_at) : null
+                    const minAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : null
+                    const timeLabel = isOn
+                      ? minAgo !== null && minAgo < 1 ? 'agora mesmo' : `há ${minAgo} min`
+                      : lastSeen
+                        ? minAgo! < 60 ? `há ${minAgo} min` : minAgo! < 1440 ? `há ${Math.floor(minAgo! / 60)}h` : `há ${Math.floor(minAgo! / 1440)}d`
+                        : 'nunca'
+                    const joinDate = new Date(u.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                    return (
+                      <div key={u.id} style={{ background: C.cardBg, border: `1px solid ${isOn ? 'rgba(34,197,94,0.3)' : C.border}`, borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', position: 'relative', overflow: 'hidden' }}>
+                        {isOn && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: '#22c55e', borderRadius: '3px 0 0 3px' }} />}
+                        {/* Avatar */}
+                        <div style={{ width: 42, height: 42, borderRadius: '50%', background: isOn ? 'rgba(34,197,94,0.12)' : C.primaryBg, border: `2px solid ${isOn ? 'rgba(34,197,94,0.35)' : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.05rem', color: isOn ? '#22c55e' : C.primary, flexShrink: 0 }}>
+                          {(u.username ?? '?')[0].toUpperCase()}
+                        </div>
+                        {/* Main info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.22rem' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: C.text }}>{u.username ?? '—'}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.28rem', fontSize: '0.66rem', fontWeight: 700, padding: '0.12rem 0.5rem', borderRadius: '999px', background: isOn ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${isOn ? 'rgba(34,197,94,0.28)' : 'rgba(255,255,255,0.08)'}`, color: isOn ? '#22c55e' : C.dim }}>
+                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: isOn ? '#22c55e' : C.dim, display: 'inline-block', ...(isOn ? { animation: 'sk-pulse 1.8s ease-in-out infinite' } : {}) }} />
+                              {isOn ? 'online' : 'offline'}
+                            </span>
+                            <span style={{ fontSize: '0.66rem', color: C.vdim }}>{timeLabel}</span>
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: C.muted, marginBottom: '0.45rem' }}>{u.email ?? '—'}</div>
+                          {/* Platform chips */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                            {u.twitch_connected && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(145,71,255,0.12)', border: '1px solid rgba(145,71,255,0.25)', color: '#9147ff' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 28" fill="#9147ff"><path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/></svg>
+                                Twitch
+                              </span>
+                            )}
+                            {u.livepix_connected && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(255,105,180,0.1)', border: '1px solid rgba(255,105,180,0.2)', color: '#ff69b4' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ff69b4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+                                Livepix
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Right info */}
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: '0.72rem', color: C.dim, marginBottom: '0.2rem' }}>Entrou em {joinDate}</div>
+                          <div style={{ fontSize: '0.7rem', color: C.vdim }}>{u.access_count > 0 ? `${u.access_count} acessos (7d)` : 'sem atividade'}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {view === 'roles' && (() => {
             const ROLES = ['admin', 'moderador', 'vip', 'streamer', 'parceiro', 'editor']
             const ROLE_COLORS: Record<string, string> = { admin: '#ff4444', moderador: '#9147ff', vip: '#fbbf24', streamer: '#39ff14', parceiro: '#3b82f6', editor: '#f97316' }
