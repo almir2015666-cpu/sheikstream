@@ -80,6 +80,7 @@ export default function TwitchSubsPage() {
   const [diagData, setDiagData] = useState<Record<string, unknown> | null>(null)
   const [diagLoading, setDiagLoading] = useState(false)
   const [resyncing, setResyncing] = useState(false)
+  const [resyncResult, setResyncResult] = useState<Record<string, string> | null>(null)
 
   async function runDiag() {
     setDiagLoading(true)
@@ -93,11 +94,13 @@ export default function TwitchSubsPage() {
 
   async function runResync() {
     setResyncing(true)
+    setResyncResult(null)
     try {
       const res = await fetch('/api/twitch/resync', { method: 'POST' })
       const data = await res.json()
-      notify(data.ok ? 'Resync concluído! EventSub re-registrado e comandos verificados.' : (data.error || 'Erro no resync'), data.ok ? 'success' : 'error')
-      runDiag()
+      if (data.subscriptions) setResyncResult(data.subscriptions as Record<string, string>)
+      notify(data.ok ? `Resync OK — ${data.deletedStuck ?? 0} inscrições removidas e recriadas` : (data.error || 'Erro no resync'), data.ok ? 'success' : 'error')
+      setTimeout(runDiag, 3000)
     } catch { notify('Falha de conexão no resync', 'error') }
     finally { setResyncing(false) }
   }
@@ -358,6 +361,21 @@ export default function TwitchSubsPage() {
               </button>
             </div>
           </div>
+          {resyncing && <div style={{ color: C.dim, fontSize: '0.82rem', marginBottom: '0.75rem' }}>⏳ Removendo inscrições com problemas e recriando... aguarde ~5s</div>}
+          {resyncResult && (
+            <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Resultado do último resync</div>
+              {Object.entries(resyncResult).map(([type, result]) => {
+                const ok = result === 'registered' || result === 'already_exists'
+                return (
+                  <div key={type} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', fontSize: '0.74rem', marginBottom: '0.2rem' }}>
+                    <span style={{ color: ok ? '#22c55e' : '#ef4444', fontWeight: 700, flexShrink: 0 }}>{ok ? '✓' : '✗'}</span>
+                    <span style={{ color: ok ? C.text : '#ef4444' }}>{type}: <span style={{ color: ok ? C.dim : '#ef4444' }}>{result}</span></span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
           {diagLoading && <div style={{ color: C.dim, fontSize: '0.82rem' }}>Verificando...</div>}
           {!diagLoading && diagData && (() => {
             const d = diagData as Record<string, unknown>

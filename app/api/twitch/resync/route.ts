@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { decodeSession, COOKIE_NAME } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
-import { registerEventSubSubscriptions, registerChatSubscription } from '@/app/lib/eventsub'
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get(COOKIE_NAME)?.value
@@ -16,71 +15,136 @@ const DEFAULT_EVENT_COMMANDS = [
   { trigger: 'event:twitch:bits',    resposta: 'Valeu pelos $valor bits, $user! $msg' },
 ]
 
+// Subscriptions registered with app token (client credentials)
+const APP_TOKEN_SUBS = [
+  { type: 'channel.subscribe',            version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
+  { type: 'channel.subscription.gift',    version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
+  { type: 'channel.subscription.message', version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
+  { type: 'channel.cheer',               version: '1', cond: (id: string) => ({ broadcaster_user_id: id }) },
+  { type: 'channel.raid',                version: '1', cond: (id: string) => ({ to_broadcaster_user_id: id }) },
+]
+
+// Subscriptions that require user token
+const USER_TOKEN_SUBS = [
+  { type: 'channel.chat.message', version: '1', condition: (id: string) => ({ broadcaster_user_id: id, user_id: id }) },
+  { type: 'channel.follow',       version: '2', condition: (id: string) => ({ broadcaster_user_id: id, moderator_user_id: id }) },
+]
+
+async function getAppToken(): Promise<string> {
+  const res = await fetch('https://id.twitch.tv/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: process.env.TWITCH_CLIENT_ID!,
+      client_secret: process.env.TWITCH_CLIENT_SECRET!,
+      grant_type: 'client_credentials',
+    }),
+  })
+  if (!res.ok) throw new Error('app token failed')
+  const data = await res.json()
+  return data.access_token
+}
+
+async function deleteSubscription(id: string, appToken: string): Promise<void> {
+  await fetch(`https://api.twitch.tv/helix/eventsub/subscriptions?id=${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${appToken}`, 'Client-Id': process.env.TWITCH_CLIENT_ID! },
+  })
+}
+
+async function registerSub(
+  type: string, version: string, condition: Record<string, string>,
+  token: string, appUrl: string, secret: string,
+): Promise<{ ok: boolean; status?: number; body?: string }> {
+  const res = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'Client-Id': process.env.TWITCH_CLIENT_ID! },
+    body: JSON.stringify({
+      type, version, condition,
+      transport: { method: 'webhook', callback: `${appUrl}/api/twitch/eventsub`, secret },
+    }),
+  })
+  if (res.ok || res.status === 409) return { ok: true, status: res.status }
+  const body = await res.text()
+  return { ok: false, status: res.status, body }
+}
+
 export async function POST(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = getSupabaseAdmin()
-  const results: Record<string, unknown> = {}
+  const appUrl = process.env.APP_URL ?? 'https://sheikstream.com.br'
+  const secret = process.env.TWITCH_WEBHOOK_SECRET ?? ''
+  const subResults: Record<string, string> = {}
 
-  // 1. Re-register EventSub subscriptions with app token
+  // 1. Get app token
+  let appToken: string
   try {
-    await registerEventSubSubscriptions(user.id)
-    results.eventsub = 're-registered'
+    appToken = await getAppToken()
   } catch (e) {
-    results.eventsub = `error: ${e}`
+    return NextResponse.json({ ok: false, error: `App token failed: ${e}` }, { status: 500 })
   }
 
-  // 2. Re-register chat + follow subscription with user token (if token exists)
-  const { data: tok } = await db
-    .from('user_tokens')
-    .select('twitch_token')
-    .eq('user_id', user.id)
-    .single()
+  // 2. List existing subscriptions and delete stuck ones (non-enabled)
+  let deletedCount = 0
+  try {
+    const listRes = await fetch(
+      `https://api.twitch.tv/helix/eventsub/subscriptions?user_id=${user.id}`,
+      { headers: { Authorization: `Bearer ${appToken}`, 'Client-Id': process.env.TWITCH_CLIENT_ID! } },
+    )
+    if (listRes.ok) {
+      const listData = await listRes.json()
+      const existing: Array<{ id: string; type: string; status: string }> = listData.data ?? []
+      for (const sub of existing) {
+        if (sub.status !== 'enabled') {
+          await deleteSubscription(sub.id, appToken)
+          deletedCount++
+        }
+      }
+    }
+  } catch { /* ignore — will still try to register */ }
+
+  // 3. Register app-token subscriptions
+  for (const sub of APP_TOKEN_SUBS) {
+    try {
+      const r = await registerSub(sub.type, sub.version, sub.cond(user.id), appToken, appUrl, secret)
+      subResults[sub.type] = r.ok ? (r.status === 409 ? 'already_exists' : 'registered') : `error_${r.status}: ${r.body ?? ''}`
+    } catch (e) {
+      subResults[sub.type] = `exception: ${e}`
+    }
+  }
+
+  // 4. Register user-token subscriptions
+  const { data: tok } = await db.from('user_tokens').select('twitch_token').eq('user_id', user.id).single()
 
   if (tok?.twitch_token) {
-    try {
-      await registerChatSubscription(user.id, tok.twitch_token)
-      results.chatSub = 're-registered'
-    } catch (e) {
-      results.chatSub = `error: ${e}`
+    for (const sub of USER_TOKEN_SUBS) {
+      try {
+        const r = await registerSub(sub.type, sub.version, sub.condition(user.id), tok.twitch_token, appUrl, secret)
+        subResults[sub.type] = r.ok ? (r.status === 409 ? 'already_exists' : 'registered') : `error_${r.status}: ${r.body ?? ''}`
+      } catch (e) {
+        subResults[sub.type] = `exception: ${e}`
+      }
     }
   } else {
-    results.chatSub = 'skipped: no token'
-  }
-
-  // 3. Seed missing event commands
-  const seeded: string[] = []
-  const skipped: string[] = []
-
-  for (const cmd of DEFAULT_EVENT_COMMANDS) {
-    const { data: existing } = await db
-      .from('comandos')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('trigger', cmd.trigger)
-      .maybeSingle()
-
-    if (!existing) {
-      const { error } = await db.from('comandos').insert({
-        user_id: user.id,
-        trigger: cmd.trigger,
-        resposta: cmd.resposta,
-        cooldown_s: 0,
-        habilitado: true,
-        permissao: 'todos',
-        platform: 'Twitch',
-        notif_overlay: false,
-      })
-      if (!error) seeded.push(cmd.trigger)
-      else skipped.push(`${cmd.trigger}: ${error.message}`)
-    } else {
-      skipped.push(`${cmd.trigger} (already exists)`)
+    for (const sub of USER_TOKEN_SUBS) {
+      subResults[sub.type] = 'skipped: no user token (reconecte a Twitch)'
     }
   }
 
-  results.commandsSeeded = seeded
-  results.commandsSkipped = skipped
+  // 5. Seed missing event commands
+  const seeded: string[] = []
+  for (const cmd of DEFAULT_EVENT_COMMANDS) {
+    const { data: existing } = await db.from('comandos').select('id').eq('user_id', user.id).eq('trigger', cmd.trigger).maybeSingle()
+    if (!existing) {
+      const { error } = await db.from('comandos').insert({
+        user_id: user.id, trigger: cmd.trigger, resposta: cmd.resposta,
+        cooldown_s: 0, habilitado: true, permissao: 'todos', platform: 'Twitch', notif_overlay: false,
+      })
+      if (!error) seeded.push(cmd.trigger)
+    }
+  }
 
-  return NextResponse.json({ ok: true, ...results })
+  return NextResponse.json({ ok: true, deletedStuck: deletedCount, subscriptions: subResults, commandsSeeded: seeded })
 }
