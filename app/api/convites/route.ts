@@ -11,12 +11,13 @@ function getUser(req: NextRequest) {
 async function getUserQuota(userId: string): Promise<number> {
   try {
     const db = getSupabaseAdmin()
-    const { data } = await db
+    const { data, error } = await db
       .from('user_tokens')
       .select('invite_quota')
       .eq('user_id', userId)
       .maybeSingle()
-    return data?.invite_quota ?? 0
+    if (error) return 0
+    return (data as Record<string, unknown> | null)?.invite_quota as number ?? 0
   } catch {
     return 0
   }
