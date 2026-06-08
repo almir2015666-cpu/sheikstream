@@ -5,8 +5,9 @@ import { getSupabaseAdmin } from '@/app/lib/supabase'
 // URL pattern: /api/livepix/webhook/[slug]
 // Livepix webhook payload varies by version — we handle both v1 and v2 shapes.
 
-export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
-  const slug = decodeURIComponent(params.slug)
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug: rawSlug } = await params
+  const slug = decodeURIComponent(rawSlug)
   if (!slug) return NextResponse.json({ error: 'missing slug' }, { status: 400 })
 
   let body: Record<string, unknown> = {}
