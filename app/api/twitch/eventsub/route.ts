@@ -26,6 +26,32 @@ export async function POST(req: NextRequest) {
   return new NextResponse(null, { status: 204 })
 }
 
+function resolveVars(text: string, chatter: string, channel: string, args: string[]): string {
+  return text
+    .replace(/\$\(user\)/gi, chatter)
+    .replace(/\$\(channel\)/gi, channel)
+    .replace(/\$\(touser\)/gi, args[0] ?? chatter)
+    .replace(/\$\(1\)/g, args[0] ?? '')
+    .replace(/\$\(2\)/g, args[1] ?? '')
+    .replace(/\$\(3\)/g, args[2] ?? '')
+    .trim()
+}
+
+async function sendChat(broadcasterId: string, message: string): Promise<void> {
+  const db = getSupabaseAdmin()
+  const { data: tok } = await db.from('user_tokens').select('twitch_token').eq('user_id', broadcasterId).single()
+  if (!tok?.twitch_token) return
+  await fetch('https://api.twitch.tv/helix/chat/messages', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tok.twitch_token}`,
+      'Client-Id': process.env.TWITCH_CLIENT_ID!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: broadcasterId, message }),
+  })
+}
+
 async function handleNotification(payload: { subscription: { type: string }; event: Record<string, unknown> }) {
   const eventType: string = payload.subscription.type
   const event = payload.event
@@ -33,6 +59,41 @@ async function handleNotification(payload: { subscription: { type: string }; eve
 
   const db = getSupabaseAdmin()
   await db.from('twitch_events').insert({ broadcaster_id: broadcasterId, event_type: eventType, event_data: event })
+
+  // ── Chat commands ─────────────────────────────────────────────────────────
+  if (eventType === 'channel.chat.message') {
+    const msgObj = event.message as { text?: string } | undefined
+    const rawText = (msgObj?.text ?? '').trim()
+    if (!rawText.startsWith('!')) return
+
+    const parts   = rawText.slice(1).split(/\s+/)
+    const trigger = parts[0].toLowerCase()
+    const args    = parts.slice(1)
+    const chatter = ((event.chatter_user_name ?? event.chatter_user_login) as string) ?? ''
+    const channel = ((event.broadcaster_user_login) as string) ?? ''
+    const now     = new Date()
+
+    const { data: cmds } = await db
+      .from('comandos')
+      .select('id, trigger, resposta, cooldown_s, last_used_at')
+      .eq('user_id', broadcasterId)
+      .eq('habilitado', true)
+
+    const cmd = (cmds ?? []).find(c => c.trigger.toLowerCase() === trigger)
+    if (!cmd) return
+
+    // Cooldown check
+    if (cmd.last_used_at) {
+      const elapsed = (now.getTime() - new Date(cmd.last_used_at).getTime()) / 1000
+      if (elapsed < (cmd.cooldown_s ?? 30)) return
+    }
+
+    await db.from('comandos').update({ last_used_at: now.toISOString() }).eq('id', cmd.id)
+
+    const response = resolveVars(cmd.resposta, chatter, channel, args)
+    await sendChat(broadcasterId, response)
+    return
+  }
 
   // ── Subs / Resubs ────────────────────────────────────────────────────────
   if (eventType === 'channel.subscribe' || eventType === 'channel.subscription.message') {

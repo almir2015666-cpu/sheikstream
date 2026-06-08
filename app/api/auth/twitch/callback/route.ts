@@ -3,7 +3,7 @@ import { encodeSession, COOKIE_NAME, SessionUser } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { logActivity } from '@/app/lib/log-activity'
 import { logSystem } from '@/app/lib/logger'
-import { registerEventSubSubscriptions } from '@/app/lib/eventsub'
+import { registerEventSubSubscriptions, registerChatSubscription } from '@/app/lib/eventsub'
 
 const BASE = 'https://sheikstream.com.br'
 const REDIRECT_URI = `${BASE}/api/auth/twitch/callback`
@@ -156,7 +156,15 @@ export async function GET(req: NextRequest) {
   await logActivity('auth', 'login', tw.display_name, 'Twitch')
   await logSystem('auth.login', `Login Twitch: ${tw.display_name}`, tw.id, { platform: 'Twitch', username: tw.display_name, is_popup: isPopup })
 
+  // Upsert usuario profile (needed for comandos FK)
+  getSupabaseAdmin().from('usuarios').upsert({
+    id: tw.id, nome: tw.display_name, email: tw.email ?? '', imagem: tw.profile_image_url ?? '',
+    atualizado_em: new Date().toISOString(),
+  }, { onConflict: 'id' }).then()
+
   // Register EventSub webhooks for this broadcaster (async, doesn't block login)
   registerEventSubSubscriptions(tw.id).catch(e => console.error('[callback] eventsub register error:', e))
+  // Register chat message subscription using broadcaster's user token
+  registerChatSubscription(tw.id, access_token).catch(e => console.error('[callback] chat sub error:', e))
   return res
 }

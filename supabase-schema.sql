@@ -144,8 +144,17 @@ create table if not exists public.comandos (
   resposta    text not null,
   cooldown_s  integer default 30,
   habilitado  boolean default true,
+  permissao   text default 'todos',
+  platform    text default 'Twitch',
+  last_used_at timestamptz,
   criado_em   timestamptz default now()
 );
+
+-- Run if table already exists:
+-- alter table public.comandos add column if not exists permissao text default 'todos';
+-- alter table public.comandos add column if not exists platform text default 'Twitch';
+-- alter table public.comandos add column if not exists last_used_at timestamptz;
+-- notify pgrst, 'reload schema';
 
 alter table public.comandos enable row level security;
 

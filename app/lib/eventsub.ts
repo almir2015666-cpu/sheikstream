@@ -61,6 +61,32 @@ export async function registerEventSubSubscriptions(broadcasterId: string): Prom
   }
 }
 
+export async function registerChatSubscription(broadcasterId: string, userToken: string): Promise<void> {
+  const appUrl = process.env.APP_URL ?? 'https://sheikstream.com.br'
+  const secret = process.env.TWITCH_WEBHOOK_SECRET ?? ''
+  try {
+    const res = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${userToken}`,
+        'Client-Id': process.env.TWITCH_CLIENT_ID!,
+      },
+      body: JSON.stringify({
+        type: 'channel.chat.message',
+        version: '1',
+        condition: { broadcaster_user_id: broadcasterId, user_id: broadcasterId },
+        transport: { method: 'webhook', callback: `${appUrl}/api/twitch/eventsub`, secret },
+      }),
+    })
+    if (!res.ok && res.status !== 409) {
+      console.error('[eventsub] failed to register channel.chat.message:', await res.text())
+    }
+  } catch (e) {
+    console.error('[eventsub] error registering channel.chat.message:', e)
+  }
+}
+
 export function verifySignature(secret: string, msgId: string, timestamp: string, body: string, signature: string): boolean {
   const hmac = createHmac('sha256', secret)
   hmac.update(msgId + timestamp + body)

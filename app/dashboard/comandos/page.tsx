@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const C = {
   page: '#08090d', card: '#0d0f18', border: 'rgba(255,255,255,0.07)',
@@ -29,7 +29,7 @@ function Toggle({ on, onChange, size = 'md' }: { on: boolean; onChange: (v: bool
   )
 }
 
-type Cmd = { id: string; trigger: string; resposta: string; cooldown: number; habilitado: boolean; isEvento: boolean; origem: string; platform: string }
+type Cmd = { id: string; trigger: string; resposta: string; cooldown: number; habilitado: boolean; isEvento: boolean; origem: string; platform: string; db?: boolean }
 
 type FormState = {
   trigger: string; resposta: string; cooldown: number; cooldownUser: number
@@ -87,14 +87,30 @@ const DEFAULTS: Cmd[] = [
 ]
 
 export default function ComandosPage() {
-  const [cmds, setCmds]         = useState<Cmd[]>(DEFAULTS)
-  const [creating, setCreating] = useState(false)
+  const [cmds, setCmds]           = useState<Cmd[]>(DEFAULTS)
+  const [creating, setCreating]   = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [botOn, setBotOn]       = useState(false)
-  const [search, setSearch]     = useState('')
-  const [form, setForm]         = useState<FormState>(emptyForm)
-  const [advOpen, setAdvOpen]   = useState(false)
+  const [botOn, setBotOn]         = useState(false)
+  const [search, setSearch]       = useState('')
+  const [form, setForm]           = useState<FormState>(emptyForm)
+  const [advOpen, setAdvOpen]     = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const [saveErr, setSaveErr]     = useState('')
   const taRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    fetch('/api/comandos')
+      .then(r => r.ok ? r.json() : [])
+      .then((rows: Array<{ id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string }>) => {
+        const dbCmds: Cmd[] = rows.map(r => ({
+          id: r.id, trigger: '!' + r.trigger, resposta: r.resposta,
+          cooldown: r.cooldown_s, habilitado: r.habilitado,
+          isEvento: false, origem: r.permissao ?? 'todos', platform: r.platform ?? 'Twitch', db: true,
+        }))
+        setCmds([...DEFAULTS, ...dbCmds])
+      })
+      .catch(() => {})
+  }, [])
 
   function insertVar(v: string) {
     const ta = taRef.current
@@ -116,16 +132,39 @@ export default function ComandosPage() {
     setCreating(true)
   }
 
-  function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!form.trigger || !form.resposta) return
+    setSaving(true); setSaveErr('')
     const platform = form.platforms[0] ?? 'Twitch'
-    if (editingId) {
-      setCmds(p => p.map(c => c.id === editingId ? { ...c, trigger: '!' + form.trigger, resposta: form.resposta, cooldown: form.cooldown, habilitado: form.ativo, origem: form.permissao === 'todos' ? 'Todos' : form.permissao, platform } : c))
-    } else {
-      setCmds(p => [...p, { id: String(Date.now()), trigger: '!' + form.trigger, resposta: form.resposta, cooldown: form.cooldown, habilitado: form.ativo, isEvento: false, origem: form.permissao === 'todos' ? 'Todos' : form.permissao, platform }])
+    const body = {
+      id:         editingId ?? undefined,
+      trigger:    form.trigger,
+      resposta:   form.resposta,
+      cooldown_s: form.cooldown,
+      habilitado: form.ativo,
+      permissao:  form.permissao,
+      platform,
     }
-    setForm(emptyForm); setCreating(false); setEditingId(null)
+    try {
+      const res = await fetch('/api/comandos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setSaveErr(d.error ?? 'Erro ao salvar'); setSaving(false); return
+      }
+      const saved = await res.json()
+      const dbCmd: Cmd = { id: saved.id, trigger: '!' + saved.trigger, resposta: saved.resposta, cooldown: saved.cooldown_s, habilitado: saved.habilitado, isEvento: false, origem: saved.permissao ?? 'todos', platform: saved.platform ?? 'Twitch', db: true }
+      if (editingId) {
+        setCmds(p => p.map(c => c.id === editingId ? dbCmd : c))
+      } else {
+        setCmds(p => [...p, dbCmd])
+      }
+      setForm(emptyForm); setCreating(false); setEditingId(null)
+    } catch {
+      setSaveErr('Erro de conexão')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const filtered    = cmds.filter(c => c.trigger.toLowerCase().includes(search.toLowerCase()) || c.resposta.toLowerCase().includes(search.toLowerCase()))
@@ -205,14 +244,20 @@ export default function ComandosPage() {
             </div>
             <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{cmd.resposta}</span>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
-              <Toggle on={cmd.habilitado} onChange={v => setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))} size="sm" />
+              <Toggle on={cmd.habilitado} onChange={async v => {
+                setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
+                if (cmd.db) await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: v }) })
+              }} size="sm" />
               {!cmd.isEvento && (
                 <button onClick={() => startEdit(cmd)} style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', padding: '0.15rem', display: 'flex', opacity: 0.7 }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
               )}
               {!cmd.isEvento && (
-                <button onClick={() => setCmds(p => p.filter(c => c.id !== cmd.id))} style={{ background: 'none', border: 'none', color: 'rgba(255,100,100,0.45)', cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
+                <button onClick={async () => {
+                  if (cmd.db) await fetch(`/api/comandos?id=${cmd.id}`, { method: 'DELETE' })
+                  setCmds(p => p.filter(c => c.id !== cmd.id))
+                }} style={{ background: 'none', border: 'none', color: 'rgba(255,100,100,0.45)', cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </button>
               )}
@@ -434,8 +479,11 @@ export default function ComandosPage() {
           </div>
 
           {/* Submit */}
-          <button type="submit" style={{ width: '100%', padding: '0.85rem', background: C.blue, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer' }}>
-            {editingId ? 'Salvar alterações' : 'Criar comando'}
+          {saveErr && (
+            <div style={{ padding: '0.6rem 0.8rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', fontSize: '0.8rem', color: '#ef4444' }}>{saveErr}</div>
+          )}
+          <button type="submit" disabled={saving} style={{ width: '100%', padding: '0.85rem', background: saving ? 'rgba(59,130,246,0.5)' : C.blue, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 700, cursor: saving ? 'default' : 'pointer' }}>
+            {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Criar comando'}
           </button>
         </form>
       </div>
