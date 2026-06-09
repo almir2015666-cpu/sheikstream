@@ -232,6 +232,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     @keyframes sk-out-zoom-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(0.05)}}
     @keyframes sk-out-zoom-in{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(2.2)}}
     @keyframes sk-out-flip-x{from{opacity:1;transform:rotateX(0deg)}to{opacity:0;transform:rotateX(90deg)}}
+    @keyframes sk-keep-awake{from{opacity:0.001}to{opacity:0.002}}
   `
 
   // Custom art: replace entire card with image
@@ -258,6 +259,8 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     <>
       <style>{ANIM_CSS}</style>
       <div style={outerStyle}>
+      {/* 1px invisible div — keeps GPU compositor active so exit transition fires reliably in OBS */}
+      <div style={{ position: 'absolute', width: 1, height: 1, opacity: 0.001, pointerEvents: 'none', animation: 'sk-keep-awake 1s linear infinite' }} />
       {/* inner div: entrance animation via wrapperStyle */}
       <div style={{ position: 'relative', display: 'inline-block', ...wrapperStyle }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
