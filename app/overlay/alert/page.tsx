@@ -114,7 +114,7 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
-  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [exitProgress, setExitProgress] = useState(0) // 0=visible, 1=gone
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
@@ -123,45 +123,28 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   const titleClr = cfg.titleColor || accent
   const subClr = cfg.subtitleColor || cfg.textColor
 
+  const animOut = cfg.animOut ?? 'fade'
+
   useEffect(() => {
-    const animOut = cfg.animOut ?? 'fade'
-    const exitDurMs = animOut !== 'none' ? ((11 - (cfg.animSpeed ?? 5)) * 0.06) * 1000 : 0
-    const exitDur = `${((11-(cfg.animSpeed??5))*0.15).toFixed(2)}s`
+    const exitDurMs = animOut !== 'none' ? ((11 - (cfg.animSpeed ?? 5)) * 0.10) * 1000 : 0
 
     const t1 = setTimeout(() => setVisible(true), 50)
     let t3: ReturnType<typeof setTimeout> | null = null
 
     const t2 = setTimeout(() => {
-      setIsExiting(true)
-      const el = wrapperRef.current
-      if (!el || animOut === 'none') {
+      if (animOut === 'none') {
         t3 = setTimeout(() => onDoneRef.current(), 200)
         return
       }
-
-      // Animação 100% JavaScript — sem dependência de CSS animation do browser
-      // Usa setInterval para garantir funcionamento no OBS/Chromium
-      const STEPS = 16
-      const STEP_MS = Math.round(exitDurMs / STEPS)
-      const exitTransforms: Record<string, (p: number) => string> = {
-        'slide-right': p => `translateX(${Math.round(110 * p)}%)`,
-        'slide-left':  p => `translateX(${Math.round(-110 * p)}%)`,
-        'slide-up':    p => `translateY(${Math.round(-80 * p)}px)`,
-        'slide-down':  p => `translateY(${Math.round(80 * p)}px)`,
-        'zoom-out':    p => `scale(${(1 - 0.95 * p).toFixed(3)})`,
-        'zoom-in':     p => `scale(${(1 + 1.2 * p).toFixed(3)})`,
-        'flip-x':      p => `rotateX(${Math.round(90 * p)}deg)`,
-      }
-      el.style.transition = 'none'
-      el.style.animation = 'none'
+      setIsExiting(true)
+      const STEPS = 20
+      const STEP_MS = Math.max(16, Math.round(exitDurMs / STEPS))
       let step = 0
       const iv = setInterval(() => {
         step++
         const p = Math.min(step / STEPS, 1)
-        const ease = 1 - (1 - p) * (1 - p) // ease-out quadratic
-        el.style.opacity = String((1 - ease).toFixed(3))
-        const tfn = exitTransforms[animOut]
-        if (tfn) el.style.transform = tfn(ease)
+        const ease = 1 - (1 - p) * (1 - p)
+        setExitProgress(ease)
         if (step >= STEPS) {
           clearInterval(iv)
           onDoneRef.current()
@@ -205,21 +188,30 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
 
   const isKeyframeAnim = SK_KEYFRAME_ANIMS.has(cfg.animIn)
   const entranceDur = `${((11-(cfg.animSpeed??5))*0.085).toFixed(2)}s`
-  const exitDur = `${((11-(cfg.animSpeed??5))*0.15).toFixed(2)}s`
-  const animOut = cfg.animOut ?? 'fade'
 
   const entranceAnim = visible && isKeyframeAnim
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  const exitAnim = isExiting && animOut !== 'none'
-    ? `sk-out-${animOut} ${exitDur}s ease forwards`
-    : undefined
+  // Exit animation driven by React state (exitProgress 0→1) — no CSS animation, no DOM conflicts
+  const exitTransforms: Record<string, (p: number) => string> = {
+    'slide-right': p => `translateX(${Math.round(110 * p)}%)`,
+    'slide-left':  p => `translateX(${Math.round(-110 * p)}%)`,
+    'slide-up':    p => `translateY(${Math.round(-80 * p)}px)`,
+    'slide-down':  p => `translateY(${Math.round(80 * p)}px)`,
+    'zoom-out':    p => `scale(${(1 - 0.95 * p).toFixed(3)})`,
+    'zoom-in':     p => `scale(${(1 + 1.2 * p).toFixed(3)})`,
+    'flip-x':      p => `rotateX(${Math.round(90 * p)}deg)`,
+  }
 
-  // Quando isExiting=true o React também usa exitAnim — assim re-renders do polling
-  // não resetam a animação de saída de volta para entranceAnim
+  const exitTfn = exitTransforms[animOut]
   const wrapperStyle: React.CSSProperties = isExiting
-    ? { animation: exitAnim }
+    ? {
+        opacity: parseFloat((1 - exitProgress).toFixed(3)),
+        ...(exitTfn ? { transform: exitTfn(exitProgress) } : {}),
+        transition: 'none',
+        animation: 'none',
+      }
     : {
         animation: entranceAnim,
         ...(!isKeyframeAnim
@@ -274,7 +266,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   return (
     <>
       <style>{ANIM_CSS}</style>
-      <div ref={wrapperRef} style={{ position: 'relative', display: 'inline-block', ...wrapperStyle }}>
+      <div style={{ position: 'relative', display: 'inline-block', ...wrapperStyle }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
       {cardEffect !== 'none' && (
         <div style={{
@@ -304,7 +296,9 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
             borderRadius: iconShape === 'circle' ? '50%' : 12,
             background: `${accent}22`, border: `1px solid ${accent}55`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, flexShrink: 0, overflow: 'hidden', ...iconAnimStyle,
+            fontSize: 24, flexShrink: 0, overflow: 'hidden',
+            fontFamily: "'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Android Emoji',sans-serif",
+            ...iconAnimStyle,
           }}>
             {(cfg.icon || meta.icon).startsWith('data:') || (cfg.icon || '').startsWith('http')
               ? <img src={cfg.icon || meta.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
