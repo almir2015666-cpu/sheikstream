@@ -123,6 +123,11 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
     ? `sk-card-${cardEffect} 2s ease-in-out 0.8s infinite`
     : undefined
 
+  // Wrapper div owns the box-shadow animation; card div owns the entrance transition — no property conflict
+  const wrapStyle: React.CSSProperties = visible && cardEffect !== 'none'
+    ? { animation: `sk-card-${cardEffect} 2s ease-in-out infinite`, borderRadius: cfg.borderRadius, width: cfg.width }
+    : { width: cfg.width }
+
   return (
     <>
       <style>{`
@@ -130,59 +135,59 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
         @keyframes sk-icon-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @keyframes sk-icon-bounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-10px)}}
         @keyframes sk-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-        @keyframes sk-card-glow{0%,100%{box-shadow:0 0 30px ${accent}33}50%{box-shadow:0 0 60px ${accent}99,0 0 20px ${accent}66}}
-        @keyframes sk-card-pulse{0%,100%{box-shadow:0 0 30px ${accent}33}50%{box-shadow:0 0 45px ${accent}66}}
-        @keyframes sk-alert-bar{from{width:100%}to{width:0%}}
+        @keyframes sk-card-glow{0%,100%{box-shadow:0 0 20px ${accent}33}50%{box-shadow:0 0 65px ${accent}cc,0 0 25px ${accent}88}}
+        @keyframes sk-card-pulse{0%,100%{box-shadow:0 0 20px ${accent}33}50%{box-shadow:0 0 40px ${accent}88}}
       `}</style>
-    <div style={{
-      width: cfg.width,
-      background: bg,
-      border: cfg.border ? `${cfg.borderThick}px solid ${accent}66` : 'none',
-      borderRadius: cfg.borderRadius,
-      padding: '14px 18px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 14,
-      fontFamily: `'${cfg.font}', -apple-system, system-ui, sans-serif`,
-      boxShadow: `0 0 30px ${accent}33`,
-      position: 'relative',
-      overflow: 'hidden',
-      ...(visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle),
-      transition: visible ? transition : 'none',
-      ...(cardAnimValue ? { animation: cardAnimValue } : {}),
-    }}>
-      {iconShape !== 'none' && (
+      <div style={wrapStyle}>
         <div style={{
-          width: 44, height: 44,
-          borderRadius: iconShape === 'circle' ? '50%' : 10,
-          background: `${accent}22`, border: `1px solid ${accent}55`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 20, flexShrink: 0, ...iconAnimStyle,
+          width: '100%',
+          background: bg,
+          border: cfg.border ? `${cfg.borderThick}px solid ${accent}66` : 'none',
+          borderRadius: cfg.borderRadius,
+          padding: '14px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          fontFamily: `'${cfg.font}', -apple-system, system-ui, sans-serif`,
+          boxShadow: cardEffect === 'none' ? `0 0 30px ${accent}33` : undefined,
+          position: 'relative',
+          overflow: 'hidden',
+          ...(visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle),
+          transition: visible ? transition : 'none',
         }}>
-          {meta.icon}
-        </div>
-      )}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: cfg.titleSize, fontWeight: 800, color: titleClr, lineHeight: 1.2 }}>
-          {titleLabel}
-        </div>
-        <div style={{ fontSize: cfg.supportSize + 1, color: subClr, opacity: 0.85, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {cfg.subtitleText ? cfg.subtitleText.replace('$user', ev.user).replace('$valor', String(ev.amount ?? '')) : (
-            <>
-              <strong>{ev.user}</strong>
-              {ev.amount ? ` · ${ev.amount}${ev.type === 'bits' ? ' bits' : ev.type === 'donation' ? ' R$' : '×'}` : ''}
-              {ev.extra ? ` · ${ev.extra}` : ''}
-            </>
+          {iconShape !== 'none' && (
+            <div style={{
+              width: 44, height: 44,
+              borderRadius: iconShape === 'circle' ? '50%' : 10,
+              background: `${accent}22`, border: `1px solid ${accent}55`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 20, flexShrink: 0, ...iconAnimStyle,
+            }}>
+              {meta.icon}
+            </div>
           )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: cfg.titleSize, fontWeight: 800, color: titleClr, lineHeight: 1.2 }}>
+              {titleLabel}
+            </div>
+            <div style={{ fontSize: cfg.supportSize + 1, color: subClr, opacity: 0.85, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {cfg.subtitleText ? cfg.subtitleText.replace('$user', ev.user).replace('$valor', String(ev.amount ?? '')) : (
+                <>
+                  <strong>{ev.user}</strong>
+                  {ev.amount ? ` · ${ev.amount}${ev.type === 'bits' ? ' bits' : ev.type === 'donation' ? ' R$' : '×'}` : ''}
+                  {ev.extra ? ` · ${ev.extra}` : ''}
+                </>
+              )}
+            </div>
+          </div>
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `${accent}22`, borderRadius: `0 0 ${cfg.borderRadius}px ${cfg.borderRadius}px`, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', background: accent,
+              animation: `sk-alert-bar ${cfg.duration}s linear forwards`,
+            }} />
+          </div>
         </div>
       </div>
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `${accent}22`, borderRadius: `0 0 ${cfg.borderRadius}px ${cfg.borderRadius}px`, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', background: accent,
-          animation: `sk-alert-bar ${cfg.duration}s linear forwards`,
-        }} />
-      </div>
-    </div>
     </>
   )
 }

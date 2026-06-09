@@ -228,9 +228,10 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
   const iconAnimStyle: React.CSSProperties = cfg.iconAnim === 'none' ? {} : {
     animation: `ovqe-icon-${cfg.iconAnim} ${cfg.iconAnim === 'spin' ? '2s linear' : '1.5s ease-in-out'} infinite`,
   }
-  const cardAnim = vis && cfg.cardEffect !== 'none'
-    ? `ovqe-card-${cfg.cardEffect} 2s ease-in-out 0.8s infinite`
-    : undefined
+  // cardEffect uses a WRAPPER div with no inline boxShadow — avoids React re-render/inline-style conflict
+  const wrapAnim: React.CSSProperties = vis && cfg.cardEffect !== 'none'
+    ? { animation: `ovqe-card-${cfg.cardEffect} 2s ease-in-out infinite`, borderRadius: cfg.borderRadius }
+    : {}
   return (
     <div style={{ width:'100%', fontFamily: cfg.font, position:'relative' }}>
       <style>{`
@@ -238,20 +239,22 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
         @keyframes ovqe-icon-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @keyframes ovqe-icon-bounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-9px)}}
         @keyframes ovqe-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
-        @keyframes ovqe-card-glow{0%,100%{box-shadow:0 0 20px ${acc}22}50%{box-shadow:0 0 45px ${acc}88,0 0 15px ${acc}55}}
-        @keyframes ovqe-card-pulse{0%,100%{box-shadow:0 0 20px ${acc}22}50%{box-shadow:0 0 30px ${acc}55}}
+        @keyframes ovqe-card-glow{0%,100%{box-shadow:0 0 12px ${acc}33}50%{box-shadow:0 0 55px ${acc}cc,0 0 22px ${acc}88}}
+        @keyframes ovqe-card-pulse{0%,100%{box-shadow:0 0 12px ${acc}33}50%{box-shadow:0 0 32px ${acc}88}}
       `}</style>
       {bg === 'transparent' && (
         <div style={{ position:'absolute',inset:0,borderRadius:cfg.borderRadius,background:checkers,opacity:0.35,pointerEvents:'none' }} />
       )}
+      {/* effect wrapper: owns box-shadow animation; inner card owns entrance transition — no property conflict */}
+      <div style={wrapAnim}>
       <div style={{
         background: bg, borderRadius: cfg.borderRadius, padding:'12px 16px',
         display:'flex', alignItems:'center', gap:12,
         border: cfg.border ? `${cfg.borderThick}px solid ${acc}` : `1px solid ${acc}44`,
-        boxShadow:`0 0 20px ${acc}22`, position:'relative', overflow:'hidden',
+        boxShadow: cfg.cardEffect === 'none' ? `0 0 20px ${acc}22` : undefined,
+        position:'relative', overflow:'hidden',
         ...(vis ? { transform:'none',opacity:1,filter:'none' } : ovHidden(cfg.animIn)),
         transition: vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none',
-        ...(cardAnim ? { animation: cardAnim } : {}),
       }}>
         {cfg.iconShape !== 'none' && (
           <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17,...iconAnimStyle }}>⭐</div>
@@ -264,6 +267,7 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
           <div style={{ width:vis?'0%':'100%',height:'100%',background:acc,transition:vis?`width ${cfg.duration}s linear`:'none' }} />
         </div>
       </div>
+      </div>{/* effect wrapper */}
     </div>
   )
 }
