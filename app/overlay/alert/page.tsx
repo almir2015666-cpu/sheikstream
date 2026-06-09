@@ -114,7 +114,6 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
-  const [exitProgress, setExitProgress] = useState(0) // 0=visible, 1=gone
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
@@ -124,39 +123,24 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   const subClr = cfg.subtitleColor || cfg.textColor
 
   const animOut = cfg.animOut ?? 'fade'
+  const exitDurS = ((11 - (cfg.animSpeed ?? 5)) * 0.15).toFixed(2)
+  const exitDurMs = parseFloat(exitDurS) * 1000
 
   useEffect(() => {
-    const exitDurMs = animOut !== 'none' ? ((11 - (cfg.animSpeed ?? 5)) * 0.10) * 1000 : 0
-
     const t1 = setTimeout(() => setVisible(true), 50)
-    let t3: ReturnType<typeof setTimeout> | null = null
+    let t2: ReturnType<typeof setTimeout>
+    let t3: ReturnType<typeof setTimeout>
 
-    const t2 = setTimeout(() => {
-      if (animOut === 'none') {
-        t3 = setTimeout(() => onDoneRef.current(), 200)
-        return
-      }
+    t2 = setTimeout(() => {
       setIsExiting(true)
-      const STEPS = 20
-      const STEP_MS = Math.max(16, Math.round(exitDurMs / STEPS))
-      let step = 0
-      const iv = setInterval(() => {
-        step++
-        const p = Math.min(step / STEPS, 1)
-        const ease = 1 - (1 - p) * (1 - p)
-        setExitProgress(ease)
-        if (step >= STEPS) {
-          clearInterval(iv)
-          onDoneRef.current()
-        }
-      }, STEP_MS)
-      t3 = iv as unknown as ReturnType<typeof setTimeout>
+      // Wait for CSS transition to complete, then remove the card
+      t3 = setTimeout(() => onDoneRef.current(), animOut !== 'none' ? exitDurMs + 50 : 50)
     }, cfg.duration * 1000)
 
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
-      if (t3 !== null) clearTimeout(t3)
+      clearTimeout(t3)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -193,24 +177,26 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  // Exit animation driven by React state (exitProgress 0→1) — no CSS animation, no DOM conflicts
-  const exitTransforms: Record<string, (p: number) => string> = {
-    'slide-right': p => `translateX(${Math.round(110 * p)}%)`,
-    'slide-left':  p => `translateX(${Math.round(-110 * p)}%)`,
-    'slide-up':    p => `translateY(${Math.round(-80 * p)}px)`,
-    'slide-down':  p => `translateY(${Math.round(80 * p)}px)`,
-    'zoom-out':    p => `scale(${(1 - 0.95 * p).toFixed(3)})`,
-    'zoom-in':     p => `scale(${(1 + 1.2 * p).toFixed(3)})`,
-    'flip-x':      p => `rotateX(${Math.round(90 * p)}deg)`,
+  // Exit targets — CSS transition, same engine as entrance (proven to work in OBS)
+  const exitTargets: Record<string, React.CSSProperties> = {
+    'fade':        { opacity: 0 },
+    'slide-right': { opacity: 0, transform: 'translateX(110%)' },
+    'slide-left':  { opacity: 0, transform: 'translateX(-110%)' },
+    'slide-up':    { opacity: 0, transform: 'translateY(-80px)' },
+    'slide-down':  { opacity: 0, transform: 'translateY(80px)' },
+    'zoom-out':    { opacity: 0, transform: 'scale(0.05)' },
+    'zoom-in':     { opacity: 0, transform: 'scale(2.2)' },
+    'flip-x':      { opacity: 0, transform: 'rotateX(90deg)' },
   }
+  const exitTarget = exitTargets[animOut] ?? { opacity: 0 }
+  const exitTransitionStr = `opacity ${exitDurS}s ease-out, transform ${exitDurS}s ease-out`
 
-  const exitTfn = exitTransforms[animOut]
+  // When isExiting: apply exit target with transition — browser animates from current visible state
   const wrapperStyle: React.CSSProperties = isExiting
     ? {
-        opacity: parseFloat((1 - exitProgress).toFixed(3)),
-        ...(exitTfn ? { transform: exitTfn(exitProgress) } : {}),
-        transition: 'none',
         animation: 'none',
+        transition: animOut !== 'none' ? exitTransitionStr : 'none',
+        ...exitTarget,
       }
     : {
         animation: entranceAnim,
