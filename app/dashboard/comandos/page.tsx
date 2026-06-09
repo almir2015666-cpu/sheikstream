@@ -148,6 +148,7 @@ type OvCfg = {
   iconShape: 'circle' | 'square' | 'none'
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
+  icon: string
   soundEnabled: boolean; soundDataUrl: string; soundVolume: number
 }
 const OV_DEF: OvCfg = {
@@ -157,6 +158,7 @@ const OV_DEF: OvCfg = {
   titleSize: 15, supportSize: 12, width: 480,
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
+  icon: '',
   soundEnabled: true, soundDataUrl: '', soundVolume: 70,
 }
 const OV_ANIMS = [
@@ -252,7 +254,8 @@ function OvPreview({ cfg, animKey, slug }: { cfg: OvCfg; animKey: number; slug: 
   const preview = SLUG_PREVIEW[slug] ?? SLUG_PREVIEW_DEFAULT
   const titleLabel = cfg.titleText || preview.title
   const subLabel = cfg.subtitleText || preview.sub
-  const iconEmoji = preview.icon
+  const iconEmoji = cfg.icon || preview.icon
+  const iconIsImage = iconEmoji.startsWith('data:') || iconEmoji.startsWith('http')
   useEffect(() => {
     setVis(false)
     const t = setTimeout(() => setVis(true), 80)
@@ -300,7 +303,11 @@ function OvPreview({ cfg, animKey, slug }: { cfg: OvCfg; animKey: number; slug: 
         transition: isShakeSwing ? 'none' : (vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none'),
       }}>
         {cfg.iconShape !== 'none' && (
-          <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17,...iconAnimStyle }}>{iconEmoji}</div>
+          <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17,overflow:'hidden',...iconAnimStyle }}>
+            {iconIsImage
+              ? <img src={iconEmoji} alt="" style={{ width:'100%',height:'100%',objectFit:'cover',borderRadius:'inherit' }} />
+              : iconEmoji}
+          </div>
         )}
         <div style={{ flex:1 }}>
           <div style={{ fontSize:cfg.titleSize,fontWeight:800,color:titleClr }}>{titleLabel}</div>
@@ -568,6 +575,53 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                   ))}
                 </div>
               </div>
+              {/* Icon emoji / image picker */}
+              {cfg.iconShape !== 'none' && (
+                <div>
+                  <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.28rem' }}>Emoji / Imagem do ícone</div>
+                  <div style={{ display:'flex',flexWrap:'wrap',gap:'0.2rem',marginBottom:'0.35rem' }}>
+                    {/* Default option */}
+                    <button type="button" onClick={() => up('icon','')}
+                      style={{ width:34,height:34,borderRadius:6,border:`2px solid ${!cfg.icon?PB:BD}`,background:!cfg.icon?PBg:'rgba(255,255,255,0.02)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.55rem',color:!cfg.icon?P:DIM,fontWeight:700 }}>
+                      padrão
+                    </button>
+                    {['⭐','🌟','💫','✨','❤️','🧡','💛','💚','💙','💜','🤍','🔥','⚡','💎','💰','💸','🎁','🏆','🎯','🎮','🕹️','👾','🎉','🎊','👑','🦁','🐉','🦊','🐺','🦋','🌊','💥','🚀','🎵','🎸','🥳','🔔','📢'].map(e => (
+                      <button type="button" key={e} onClick={() => up('icon', e)}
+                        style={{ width:34,height:34,borderRadius:6,border:`2px solid ${cfg.icon===e?PB:BD}`,background:cfg.icon===e?PBg:'rgba(255,255,255,0.02)',cursor:'pointer',fontSize:'1.1rem',display:'flex',alignItems:'center',justifyContent:'center',transition:'border-color 0.08s' }}>
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display:'flex',gap:'0.4rem',alignItems:'center' }}>
+                    {/* Custom emoji input */}
+                    <input
+                      value={cfg.icon && !cfg.icon.startsWith('data:') ? cfg.icon : ''}
+                      onChange={e => up('icon', e.target.value.slice(0,8))}
+                      placeholder="Emoji personalizado"
+                      style={{ ...inp, flex:1, fontSize:'1rem', padding:'0.32rem 0.5rem', textAlign:'center' }}
+                    />
+                    {/* Image/GIF upload */}
+                    <label style={{ flexShrink:0,padding:'0.35rem 0.65rem',background:cfg.icon?.startsWith('data:')?'rgba(34,197,94,0.1)':PBg,border:`1px solid ${cfg.icon?.startsWith('data:')?'rgba(34,197,94,0.3)':PB}`,borderRadius:6,color:cfg.icon?.startsWith('data:')?'#22c55e':P,cursor:'pointer',fontSize:'0.7rem',fontWeight:700,whiteSpace:'nowrap' }}>
+                      {cfg.icon?.startsWith('data:') ? '✓ Imagem' : '🖼 Imagem/GIF'}
+                      <input type="file" accept="image/*" style={{ display:'none' }} onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        if (file.size > 2 * 1024 * 1024) { notify('Imagem muito grande (máx 2 MB)', 'error'); return }
+                        const reader = new FileReader()
+                        reader.onload = () => up('icon', reader.result as string)
+                        reader.readAsDataURL(file)
+                      }} />
+                    </label>
+                    {cfg.icon && (
+                      <button type="button" onClick={() => up('icon','')}
+                        style={{ padding:'0.35rem 0.55rem',background:'rgba(255,255,255,0.03)',border:`1px solid ${BD}`,borderRadius:6,color:DIM,cursor:'pointer',fontSize:'0.7rem' }}>
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ fontSize:'0.6rem',color:DIM,marginTop:'0.18rem' }}>Imagens PNG/GIF (máx 2 MB). GIFs animados funcionam no overlay.</div>
+                </div>
+              )}
               {/* Icon animation */}
               {cfg.iconShape !== 'none' && (
                 <div>

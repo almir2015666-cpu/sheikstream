@@ -28,6 +28,7 @@ type Cfg = {
   iconShape: 'circle' | 'square' | 'none'
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
+  icon: string
   soundEnabled: boolean; soundDataUrl: string; soundVolume: number
 }
 
@@ -38,6 +39,7 @@ const DEF: Cfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, timerColor: '#9146FF',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
+  icon: '',
   soundEnabled: true, soundDataUrl: '', soundVolume: 70,
 }
 
@@ -189,9 +191,11 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
             borderRadius: iconShape === 'circle' ? '50%' : 10,
             background: `${accent}22`, border: `1px solid ${accent}55`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 20, flexShrink: 0, ...iconAnimStyle,
+            fontSize: 20, flexShrink: 0, overflow: 'hidden', ...iconAnimStyle,
           }}>
-            {meta.icon}
+            {(cfg.icon || meta.icon).startsWith('data:') || (cfg.icon || '').startsWith('http')
+              ? <img src={cfg.icon || meta.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
+              : (cfg.icon || meta.icon)}
           </div>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
