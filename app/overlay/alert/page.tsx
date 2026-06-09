@@ -111,7 +111,7 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
   return transitions[animIn] ?? `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`
 }
 
-function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
+function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting?: boolean }) {
   const [visible, setVisible] = useState(false)
   const meta = EVENT_META[ev.type] ?? EVENT_META.command
   const accent = cfg.timerColor !== '#9146FF' ? cfg.timerColor : (cfg.accentColor !== '#9146FF' ? cfg.accentColor : meta.color)
@@ -153,20 +153,26 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
   const exitDur = `${((11-(cfg.animSpeed??5))*0.06).toFixed(2)}s`
   const animOut = cfg.animOut ?? 'fade'
 
-  // Exit via CSS animation-delay — fires automatically after cfg.duration seconds,
-  // no JavaScript timing needed, works reliably in OBS/Chromium.
-  const exitAnimStr = visible && animOut !== 'none'
-    ? `sk-out-${animOut} ${exitDur}s ease ${cfg.duration}s forwards`
-    : undefined
-
+  // Entrance keyframe (applied immediately when visible=true, same mechanism that works in OBS)
   const entranceAnim = visible && isKeyframeAnim
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  // Combine entrance (keyframe) + exit into a single animation property
-  const animationStr = entranceAnim && exitAnimStr
-    ? `${entranceAnim}, ${exitAnimStr}`
-    : entranceAnim || exitAnimStr || undefined
+  // Exit: same mechanism as entrance — keyframe applied immediately when isExiting=true, no delay
+  const exitAnim = isExiting && animOut !== 'none'
+    ? `sk-out-${animOut} ${exitDur}s ease forwards`
+    : undefined
+
+  // Wrapper style: exit takes over completely when isExiting (mirrors entrance pattern)
+  const wrapperStyle: React.CSSProperties = isExiting
+    ? { animation: exitAnim }
+    : {
+        animation: entranceAnim,
+        ...(!isKeyframeAnim
+          ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
+          : (visible ? {} : { opacity: 0 })),
+        transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
+      }
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
@@ -205,11 +211,7 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
           maxHeight: 200,
           objectFit: 'contain',
           borderRadius: cfg.borderRadius,
-          animation: animationStr,
-          ...(!isKeyframeAnim
-            ? (visible ? { transform: 'none', opacity: 1 } : hiddenStyle)
-            : (visible ? {} : { opacity: 0 })),
-          transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
+          ...wrapperStyle,
         }}
       />
     </>
@@ -218,14 +220,7 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
   return (
     <>
       <style>{ANIM_CSS}</style>
-      <div style={{
-        position: 'relative', display: 'inline-block',
-        animation: animationStr,
-        ...(!isKeyframeAnim
-          ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
-          : (visible ? {} : { opacity: 0 })),
-        transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
-      }}>
+      <div style={{ position: 'relative', display: 'inline-block', ...wrapperStyle }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
       {cardEffect !== 'none' && (
         <div style={{
@@ -306,7 +301,9 @@ function AlertOverlayContent() {
 
   const [queue, setQueue] = useState<AlertEvent[]>([])
   const [current, setCurrent] = useState<AlertEvent | null>(null)
+  const [isExiting, setIsExiting] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seenIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -399,20 +396,24 @@ function AlertOverlayContent() {
     const evCfg = getCfg(next)
     const animOut = evCfg.animOut ?? 'fade'
     const exitDurMs = animOut !== 'none' ? ((11 - (evCfg.animSpeed ?? 5)) * 0.06) * 1000 : 0
-    // CSS animation-delay handles the visual exit; this timer just unmounts the card after exit completes
     timerRef.current = setTimeout(() => {
-      setCurrent(null)
-    }, evCfg.duration * 1000 + exitDurMs + 150)
+      setIsExiting(true)
+      exitTimerRef.current = setTimeout(() => {
+        setCurrent(null)
+        setIsExiting(false)
+      }, exitDurMs + 150)
+    }, evCfg.duration * 1000)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue, current])
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current)
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
   }, [])
 
   if (!current) return null
 
-  return <AlertCard key={current.id} ev={current} cfg={getCfg(current)} />
+  return <AlertCard key={current.id} ev={current} cfg={getCfg(current)} isExiting={isExiting} />
 }
 
 export default function AlertOverlayPage() {
