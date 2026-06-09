@@ -511,12 +511,20 @@ export default function AdminPage() {
     }
   }, [])
 
-  // Auto-refresh changelog every 5 minutes when on that tab
+  // Auto-refresh any log tab every 30s while the logs view is open
   useEffect(() => {
-    if (logTab !== 'changelog' || !storedPw) return
-    const iv = setInterval(() => fetchChangelog(storedPw), 5 * 60 * 1000)
+    if (view !== 'logs' || !storedPw) return
+    const refresh = () => {
+      if (logTab === 'logins') fetchLoginLogs(storedPw)
+      else if (logTab === 'admin') fetchLogs(storedPw)
+      else if (logTab === 'errors') fetchErrorLogs(storedPw)
+      else if (logTab === 'system') fetchSystemLogs(storedPw)
+      else if (logTab === 'changelog') fetchChangelog(storedPw)
+      else fetchActivity(storedPw, logTab)
+    }
+    const iv = setInterval(refresh, 30000)
     return () => clearInterval(iv)
-  }, [logTab, storedPw, fetchChangelog])
+  }, [logTab, storedPw, view, fetchLogs, fetchErrorLogs, fetchSystemLogs, fetchLoginLogs, fetchChangelog, fetchActivity])
 
   // Load nav order from localStorage when switching to navorder view
   useEffect(() => {
