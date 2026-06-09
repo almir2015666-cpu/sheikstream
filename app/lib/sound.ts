@@ -28,10 +28,39 @@ const FALLBACK: Note[] = [
   { f:784, t:0.16, d:0.30, v:0.30 },
 ]
 
+// Shared AudioContext — created once and reused so OBS never sees a fresh suspended context
+let _ctx: AudioContext | null = null
+
+function getCtx(): AudioContext | null {
+  if (typeof window === 'undefined') return null
+  const AC = window.AudioContext ?? ((window as unknown) as Record<string, unknown>).webkitAudioContext as typeof AudioContext | undefined
+  if (!AC) return null
+  if (!_ctx || _ctx.state === 'closed') _ctx = new AC()
+  return _ctx
+}
+
+// Convert base64 data URL to ArrayBuffer without fetch() (works in OBS)
+function dataUrlToBuffer(dataUrl: string): ArrayBuffer {
+  const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
+  const binary = atob(base64)
+  const buf = new ArrayBuffer(binary.length)
+  const view = new Uint8Array(buf)
+  for (let i = 0; i < binary.length; i++) view[i] = binary.charCodeAt(i)
+  return buf
+}
+
 async function decodeAndPlay(ctx: AudioContext, src: string | ArrayBuffer, vol: number) {
-  const buf = typeof src === 'string'
-    ? await (await fetch(src, { cache: 'no-store' })).arrayBuffer()
-    : src
+  let buf: ArrayBuffer
+  if (typeof src === 'string') {
+    if (src.startsWith('data:')) {
+      // base64 data URL — decode locally, no fetch needed (OBS-safe)
+      buf = dataUrlToBuffer(src)
+    } else {
+      buf = await (await fetch(src, { cache: 'no-store' })).arrayBuffer()
+    }
+  } else {
+    buf = src
+  }
   const decoded = await ctx.decodeAudioData(buf)
   const source = ctx.createBufferSource()
   const gain = ctx.createGain()
@@ -59,19 +88,20 @@ export async function playAlertSound(
   slug: string | null | undefined,
   cfg: Pick<SoundCfg, 'soundEnabled' | 'soundDataUrl' | 'soundUrl' | 'soundVolume'>,
 ) {
-  if (typeof window === 'undefined' || !cfg.soundEnabled) return
+  if (!cfg.soundEnabled) return
+  const ctx = getCtx()
+  if (!ctx) return
   const vol = Math.max(0, Math.min(1, cfg.soundVolume / 100))
-  const AC = window.AudioContext ?? ((window as unknown) as Record<string, unknown>).webkitAudioContext as typeof AudioContext
-  if (!AC) return
-  const ctx = new AC()
   try {
-    await ctx.resume()
-    // 1. Uploaded file (base64 data URL) — highest priority
+    // resume() unblocks OBS suspended context; safe to call even if already running
+    if (ctx.state !== 'running') await ctx.resume()
+
+    // 1. Uploaded file (base64 data URL) — decoded locally, no network call
     if (cfg.soundDataUrl) {
       await decodeAndPlay(ctx, cfg.soundDataUrl, vol)
       return
     }
-    // 2. External URL — fetch via Web Audio API, fallback to <audio>
+    // 2. External URL — fetch via Web Audio API, fallback to <audio> on CORS failure
     if (cfg.soundUrl) {
       try {
         await decodeAndPlay(ctx, cfg.soundUrl, vol)
@@ -80,7 +110,7 @@ export async function playAlertSound(
       }
       return
     }
-    // 3. Built-in default sound for this event type
+    // 3. Built-in synthesized sound for this event type
     playNotes(ctx, (slug && SLUG_SOUNDS[slug]) ? SLUG_SOUNDS[slug] : FALLBACK, vol)
   } catch {}
 }
