@@ -127,9 +127,13 @@ export async function playAlertSound(
     }
     // 2. External URL — proxied through our own server so OBS never hits CORS
     if (cfg.soundUrl) {
-      const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(cfg.soundUrl)}`
-      await decodeAndPlay(ctx, proxyUrl, vol)
-      return
+      try {
+        const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(cfg.soundUrl)}`
+        await decodeAndPlay(ctx, proxyUrl, vol)
+        return
+      } catch {
+        // URL failed — fall through to synthesized sound so OBS always hears something
+      }
     }
     // 3. Built-in synthesized sound for this event type
     playNotes(ctx, (slug && SLUG_SOUNDS[slug]) ? SLUG_SOUNDS[slug] : FALLBACK, vol)

@@ -3,6 +3,7 @@ import { COOKIE_NAME, decodeSession } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 const ALLOWED_SIZES = ['1024x1024', '1792x1024', '1024x1792'] as const
 type Size = typeof ALLOWED_SIZES[number]
@@ -29,7 +30,6 @@ export async function POST(req: NextRequest) {
   const { data: roleRow } = await db.from('user_roles').select('role').in('user_id', ids).maybeSingle()
   const userRole = roleRow?.role ?? null
 
-  // Config — fall back to defaults if table doesn't exist yet
   const cfgRes = await db.from('ai_image_config').select('*').maybeSingle()
   const cfg = cfgRes.data ?? DEFAULT_CFG
 
@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
 
   const userId = wlRow?.id ?? session.id
 
-  // Cooldown + daily limit — only if table exists
   if (cfgRes.data) {
     try {
       const since = new Date(Date.now() - cfg.cooldown_seconds * 1000).toISOString()
@@ -68,37 +67,20 @@ export async function POST(req: NextRequest) {
   const prompt: string = (body.prompt ?? '').trim().slice(0, 1000)
   if (!prompt) return NextResponse.json({ error: 'Prompt obrigatório' }, { status: 400 })
   const size: Size = ALLOWED_SIZES.includes(body.size) ? body.size : '1792x1024'
-  const quality: 'standard' | 'hd' = body.quality === 'hd' ? 'hd' : 'standard'
 
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY não configurada no servidor' }, { status: 500 })
+  const [w, h] = size.split('x').map(Number)
 
-  let imageUrl = ''
-  let revisedPrompt = ''
-  const modelUsed = 'dall-e-3'
+  // Pollinations.ai — free image generation, no API key required
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&nologo=true&model=flux&seed=${Math.floor(Math.random() * 999999)}`
+
+  // Trigger generation server-side so the image is ready when the client loads it
   try {
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size, quality }),
-    })
-    const json = await res.json()
-
-    if (!res.ok) {
-      const raw = json?.error?.message ?? ''
-      const noAccess = raw.includes('does not exist') || json?.error?.code === 'model_not_found'
-      const msg = noAccess
-        ? 'Sua chave da OpenAI não tem acesso à geração de imagens. Acesse platform.openai.com → Settings → Billing e ative um plano pago. Se estiver usando uma chave de projeto (sk-proj-...), verifique as permissões do projeto.'
-        : raw || 'Erro na API da OpenAI'
-      return NextResponse.json({ error: msg }, { status: res.status })
-    }
-    imageUrl = json.data?.[0]?.url ?? ''
-    revisedPrompt = json.data?.[0]?.revised_prompt ?? prompt
+    const check = await fetch(imageUrl, { method: 'GET', signal: AbortSignal.timeout(55000) })
+    if (!check.ok) return NextResponse.json({ error: 'Erro ao gerar imagem. Tente novamente.' }, { status: 502 })
   } catch {
-    return NextResponse.json({ error: 'Falha ao contactar a OpenAI' }, { status: 502 })
+    return NextResponse.json({ error: 'Tempo limite ao gerar imagem. Tente novamente.' }, { status: 504 })
   }
 
-  // Log — silently ignore if table doesn't exist yet
   try {
     await db.from('ai_image_generations').insert({
       user_id: userId,
@@ -106,11 +88,11 @@ export async function POST(req: NextRequest) {
       user_role: userRole,
       prompt,
       image_url: imageUrl,
-      revised_prompt: revisedPrompt,
+      revised_prompt: prompt,
       image_format: size,
       status: 'done',
     })
   } catch {}
 
-  return NextResponse.json({ imageUrl, revisedPrompt, modelUsed })
+  return NextResponse.json({ imageUrl, revisedPrompt: prompt, modelUsed: 'pollinations-flux' })
 }

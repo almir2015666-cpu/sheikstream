@@ -50,7 +50,6 @@ export default function IAImagensPage() {
 
   const [prompt, setPrompt] = useState('')
   const [format, setFormat] = useState<Format>(FORMATS[0])
-  const [quality, setQuality] = useState<'standard' | 'hd'>('standard')
 
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState<{ imageUrl: string; revisedPrompt: string; modelUsed?: string } | null>(null)
@@ -95,7 +94,7 @@ export default function IAImagensPage() {
       const res = await fetch('/api/ia-imagens/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, size: format.size, quality }),
+        body: JSON.stringify({ prompt, size: format.size }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -181,25 +180,9 @@ export default function IAImagensPage() {
             </div>
           </div>
 
-          {/* Quality */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '1rem' }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.55rem' }}>Qualidade</div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {(['standard', 'hd'] as const).map(q => (
-                <button key={q} onClick={() => setQuality(q)} style={{
-                  flex: 1, padding: '0.5rem', borderRadius: 8,
-                  background: quality === q ? C.primaryBg : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${quality === q ? C.primaryBd : C.border}`,
-                  color: quality === q ? C.primary : C.muted, fontWeight: 700,
-                  fontSize: '0.8rem', cursor: 'pointer',
-                }}>
-                  {q === 'standard' ? '⚡ Padrão' : '✨ HD'}
-                  <div style={{ fontSize: '0.65rem', fontWeight: 400, marginTop: '0.15rem', color: C.dim }}>
-                    {q === 'standard' ? 'Rápido' : 'Mais detalhado'}
-                  </div>
-                </button>
-              ))}
-            </div>
+          {/* Model info */}
+          <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, padding: '0.75rem 1rem', fontSize: '0.72rem', color: C.dim }}>
+            Gerado por <strong style={{ color: '#a5b4fc' }}>Pollinations AI (Flux)</strong> — gratuito, sem limite de chave de API.
           </div>
 
           {/* Usage info */}
@@ -331,7 +314,7 @@ export default function IAImagensPage() {
                   </button>
                 </div>
                 <div style={{ fontSize: '0.65rem', color: C.dim, marginTop: '0.45rem' }}>
-                  ⚠ O link expira em ~1 hora. Baixe agora antes que expire.
+                  Imagem gerada por Pollinations AI. Clique em Baixar para salvar permanentemente.
                 </div>
               </div>
             </div>
