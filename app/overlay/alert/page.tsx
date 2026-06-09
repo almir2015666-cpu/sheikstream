@@ -113,7 +113,10 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 
 function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
+  // isExiting=true: enable transition (keep values), exitStarted=true: apply exit target (fires transition)
+  // This mirrors entrance: frame1=hidden+transition:none, frame2=visible+transition (50ms gap)
   const [isExiting, setIsExiting] = useState(false)
+  const [exitStarted, setExitStarted] = useState(false)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
@@ -130,17 +133,26 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     const t1 = setTimeout(() => setVisible(true), 50)
     let t2: ReturnType<typeof setTimeout>
     let t3: ReturnType<typeof setTimeout>
+    let t4: ReturnType<typeof setTimeout>
 
     t2 = setTimeout(() => {
+      if (animOut === 'none') {
+        t3 = setTimeout(() => onDoneRef.current(), 50)
+        return
+      }
+      // Step 1: arm the transition (keep element visible, browser paints this frame)
       setIsExiting(true)
-      // Wait for CSS transition to complete, then remove the card
-      t3 = setTimeout(() => onDoneRef.current(), animOut !== 'none' ? exitDurMs + 50 : 50)
+      // Step 2: after browser paints step 1, apply exit target → CSS transition fires
+      t3 = setTimeout(() => setExitStarted(true), 50)
+      // Step 3: remove card after transition completes
+      t4 = setTimeout(() => onDoneRef.current(), 50 + exitDurMs + 50)
     }, cfg.duration * 1000)
 
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
       clearTimeout(t3)
+      clearTimeout(t4)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -177,7 +189,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  // Exit targets — CSS transition, same engine as entrance (proven to work in OBS)
+  // Exit targets
   const exitTargets: Record<string, React.CSSProperties> = {
     'fade':        { opacity: 0 },
     'slide-right': { opacity: 0, transform: 'translateX(110%)' },
@@ -191,20 +203,22 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   const exitTarget = exitTargets[animOut] ?? { opacity: 0 }
   const exitTransitionStr = `opacity ${exitDurS}s ease-out, transform ${exitDurS}s ease-out`
 
-  // When isExiting: apply exit target with transition — browser animates from current visible state
-  const wrapperStyle: React.CSSProperties = isExiting
-    ? {
-        animation: 'none',
-        transition: animOut !== 'none' ? exitTransitionStr : 'none',
-        ...exitTarget,
-      }
-    : {
-        animation: entranceAnim,
-        ...(!isKeyframeAnim
-          ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
-          : (visible ? {} : { opacity: 0 })),
-        transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
-      }
+  // Three-phase exit (mirrors entrance 50ms two-step pattern):
+  // frame 0 (normal):       entrance styles, opacity:1
+  // frame 1 (isExiting):    transition armed, still opacity:1/transform:none — browser paints this
+  // frame 2 (exitStarted):  exit target applied — CSS transition fires from frame1 to frame2
+  const wrapperStyle: React.CSSProperties =
+    isExiting && exitStarted
+      ? { animation: 'none', transition: exitTransitionStr, ...exitTarget }
+      : isExiting
+      ? { animation: 'none', transition: exitTransitionStr, opacity: 1, transform: 'none', filter: 'none' }
+      : {
+          animation: entranceAnim,
+          ...(!isKeyframeAnim
+            ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
+            : (visible ? {} : { opacity: 0 })),
+          transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
+        }
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
