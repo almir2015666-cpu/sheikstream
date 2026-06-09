@@ -113,6 +113,8 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 
 function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting?: boolean }) {
   const [visible, setVisible] = useState(false)
+  // Two-frame exit: frame1 sets transition property, frame2 applies exit values → transition fires
+  const [exitGo, setExitGo] = useState(false)
   const meta = EVENT_META[ev.type] ?? EVENT_META.command
   const accent = cfg.timerColor !== '#9146FF' ? cfg.timerColor : (cfg.accentColor !== '#9146FF' ? cfg.accentColor : meta.color)
   const titleClr = cfg.titleColor || accent
@@ -122,6 +124,12 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
     const t = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    if (!isExiting) { setExitGo(false); return }
+    const raf = requestAnimationFrame(() => setExitGo(true))
+    return () => cancelAnimationFrame(raf)
+  }, [isExiting])
 
   useEffect(() => {
     if (!visible) return
@@ -154,7 +162,7 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
   const entranceAnim = visible && isKeyframeAnim ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards` : undefined
   const animOut = cfg.animOut ?? 'fade'
 
-  // Exit via CSS transitions (more reliable than keyframe animations in OBS/Chromium)
+  // Exit via CSS transitions (two-frame: frame1=transition ready, frame2=values change → animates)
   const EXIT_TRANSFORM: Record<string, string> = {
     'slide-right': 'translateX(110%)',
     'slide-left': 'translateX(-110%)',
@@ -164,12 +172,14 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
     'zoom-in': 'scale(2.2)',
     'flip-x': 'rotateX(90deg)',
   }
-  const exitTrans: React.CSSProperties = (isExiting && animOut !== 'none') ? {
+  const exitStyles: React.CSSProperties = !isExiting ? {} : {
     animation: 'none',
-    opacity: 0,
-    ...(EXIT_TRANSFORM[animOut] ? { transform: EXIT_TRANSFORM[animOut] } : {}),
-    transition: `opacity ${exitDur}s ease${EXIT_TRANSFORM[animOut] ? `, transform ${exitDur}s ease` : ''}`,
-  } : {}
+    opacity: exitGo ? 0 : 1,
+    transform: (exitGo && EXIT_TRANSFORM[animOut]) ? EXIT_TRANSFORM[animOut] : 'none',
+    transition: animOut !== 'none'
+      ? `opacity ${exitDur}s ease${EXIT_TRANSFORM[animOut] ? `, transform ${exitDur}s ease` : ''}`
+      : 'none',
+  }
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
@@ -215,7 +225,7 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
               : (visible ? {} : { opacity: 0 })),
             transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
           } : {}),
-          ...exitTrans,
+          ...exitStyles,
         }}
       />
     </>
@@ -233,7 +243,7 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
             : (visible ? {} : { opacity: 0 })),
           transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
         } : {}),
-        ...exitTrans,
+        ...exitStyles,
       }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
       {cardEffect !== 'none' && (
