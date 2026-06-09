@@ -101,25 +101,10 @@ export async function playAlertSound(
       await decodeAndPlay(ctx, cfg.soundDataUrl, vol)
       return
     }
-    // 2. External URL — route <audio> through AudioContext (OBS captures it)
-    // Avoids fetch/CORS entirely; crossOrigin='anonymous' enables AudioContext routing
+    // 2. External URL — proxied through our own server so OBS never hits CORS
     if (cfg.soundUrl) {
-      const el = new Audio()
-      el.crossOrigin = 'anonymous'
-      el.src = cfg.soundUrl
-      try {
-        const src = ctx.createMediaElementSource(el)
-        const gain = ctx.createGain()
-        gain.gain.value = vol
-        src.connect(gain)
-        gain.connect(ctx.destination)
-        await el.play()
-      } catch {
-        // crossOrigin blocked (no CORS headers) — play directly via system audio
-        const fallback = new Audio(cfg.soundUrl)
-        fallback.volume = vol
-        fallback.play().catch(() => {})
-      }
+      const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(cfg.soundUrl)}`
+      await decodeAndPlay(ctx, proxyUrl, vol)
       return
     }
     // 3. Built-in synthesized sound for this event type
