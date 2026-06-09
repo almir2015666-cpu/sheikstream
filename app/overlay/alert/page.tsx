@@ -111,10 +111,8 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
   return transitions[animIn] ?? `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`
 }
 
-function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting?: boolean }) {
+function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
   const [visible, setVisible] = useState(false)
-  // Two-frame exit: frame1 sets transition property, frame2 applies exit values → transition fires
-  const [exitGo, setExitGo] = useState(false)
   const meta = EVENT_META[ev.type] ?? EVENT_META.command
   const accent = cfg.timerColor !== '#9146FF' ? cfg.timerColor : (cfg.accentColor !== '#9146FF' ? cfg.accentColor : meta.color)
   const titleClr = cfg.titleColor || accent
@@ -124,12 +122,6 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
     const t = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(t)
   }, [])
-
-  useEffect(() => {
-    if (!isExiting) { setExitGo(false); return }
-    const raf = requestAnimationFrame(() => setExitGo(true))
-    return () => cancelAnimationFrame(raf)
-  }, [isExiting])
 
   useEffect(() => {
     if (!visible) return
@@ -159,27 +151,22 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
   const isKeyframeAnim = SK_KEYFRAME_ANIMS.has(cfg.animIn)
   const entranceDur = `${((11-(cfg.animSpeed??5))*0.085).toFixed(2)}s`
   const exitDur = `${((11-(cfg.animSpeed??5))*0.06).toFixed(2)}s`
-  const entranceAnim = visible && isKeyframeAnim ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards` : undefined
   const animOut = cfg.animOut ?? 'fade'
 
-  // Exit via CSS transitions (two-frame: frame1=transition ready, frame2=values change → animates)
-  const EXIT_TRANSFORM: Record<string, string> = {
-    'slide-right': 'translateX(110%)',
-    'slide-left': 'translateX(-110%)',
-    'slide-up': 'translateY(-80px)',
-    'slide-down': 'translateY(80px)',
-    'zoom-out': 'scale(0.05)',
-    'zoom-in': 'scale(2.2)',
-    'flip-x': 'rotateX(90deg)',
-  }
-  const exitStyles: React.CSSProperties = !isExiting ? {} : {
-    animation: 'none',
-    opacity: exitGo ? 0 : 1,
-    transform: (exitGo && EXIT_TRANSFORM[animOut]) ? EXIT_TRANSFORM[animOut] : 'none',
-    transition: animOut !== 'none'
-      ? `opacity ${exitDur}s ease${EXIT_TRANSFORM[animOut] ? `, transform ${exitDur}s ease` : ''}`
-      : 'none',
-  }
+  // Exit via CSS animation-delay — fires automatically after cfg.duration seconds,
+  // no JavaScript timing needed, works reliably in OBS/Chromium.
+  const exitAnimStr = visible && animOut !== 'none'
+    ? `sk-out-${animOut} ${exitDur}s ease ${cfg.duration}s forwards`
+    : undefined
+
+  const entranceAnim = visible && isKeyframeAnim
+    ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
+    : undefined
+
+  // Combine entrance (keyframe) + exit into a single animation property
+  const animationStr = entranceAnim && exitAnimStr
+    ? `${entranceAnim}, ${exitAnimStr}`
+    : entranceAnim || exitAnimStr || undefined
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
@@ -218,14 +205,11 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
           maxHeight: 200,
           objectFit: 'contain',
           borderRadius: cfg.borderRadius,
-          ...(!isExiting ? {
-            animation: entranceAnim,
-            ...(!isKeyframeAnim
-              ? (visible ? { transform: 'none', opacity: 1 } : hiddenStyle)
-              : (visible ? {} : { opacity: 0 })),
-            transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
-          } : {}),
-          ...exitStyles,
+          animation: animationStr,
+          ...(!isKeyframeAnim
+            ? (visible ? { transform: 'none', opacity: 1 } : hiddenStyle)
+            : (visible ? {} : { opacity: 0 })),
+          transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
         }}
       />
     </>
@@ -236,14 +220,11 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
       <style>{ANIM_CSS}</style>
       <div style={{
         position: 'relative', display: 'inline-block',
-        ...(!isExiting ? {
-          animation: entranceAnim,
-          ...(!isKeyframeAnim
-            ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
-            : (visible ? {} : { opacity: 0 })),
-          transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
-        } : {}),
-        ...exitStyles,
+        animation: animationStr,
+        ...(!isKeyframeAnim
+          ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
+          : (visible ? {} : { opacity: 0 })),
+        transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
       }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
       {cardEffect !== 'none' && (
@@ -325,9 +306,7 @@ function AlertOverlayContent() {
 
   const [queue, setQueue] = useState<AlertEvent[]>([])
   const [current, setCurrent] = useState<AlertEvent | null>(null)
-  const [isExiting, setIsExiting] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seenIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -417,28 +396,23 @@ function AlertOverlayContent() {
     const [next, ...rest] = queue
     setCurrent(next)
     setQueue(rest)
-    setIsExiting(false)
     const evCfg = getCfg(next)
     const animOut = evCfg.animOut ?? 'fade'
     const exitDurMs = animOut !== 'none' ? ((11 - (evCfg.animSpeed ?? 5)) * 0.06) * 1000 : 0
+    // CSS animation-delay handles the visual exit; this timer just unmounts the card after exit completes
     timerRef.current = setTimeout(() => {
-      setIsExiting(true)
-      exitTimerRef.current = setTimeout(() => {
-        setCurrent(null)
-        setIsExiting(false)
-      }, exitDurMs + 80)
-    }, evCfg.duration * 1000)
+      setCurrent(null)
+    }, evCfg.duration * 1000 + exitDurMs + 150)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue, current])
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
   }, [])
 
   if (!current) return null
 
-  return <AlertCard key={current.id} ev={current} cfg={getCfg(current)} isExiting={isExiting} />
+  return <AlertCard key={current.id} ev={current} cfg={getCfg(current)} />
 }
 
 export default function AlertOverlayPage() {
