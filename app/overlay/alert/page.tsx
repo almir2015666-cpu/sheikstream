@@ -237,22 +237,28 @@ function AlertOverlayContent() {
     let stopped = false
     let iv: ReturnType<typeof setInterval> | null = null
 
-    // Use client-side load time as the "after" anchor.
-    // This eliminates the watermark race: events inserted before the overlay loaded
-    // are ignored; any event inserted AFTER this moment will show up in the next poll.
-    // 3-second buffer handles: clock skew between browser and DB server + cold-start
-    // delay where the user might click "Testar" while JS is still loading.
-    const loadTime = new Date(Date.now() - 3000).toISOString()
-    let lastSeenTs = loadTime
+    // lastSeenTs advances as events are seen (used for ?after= filtering with created_at)
+    let lastSeenTs = ''
+    // watermarked: true after the first poll primes seenIds so old events are never shown
+    let watermarked = false
 
     const poll = () => {
       if (stopped) return
-      const url = `${baseUrl}&after=${encodeURIComponent(lastSeenTs)}`
+      const url = lastSeenTs ? `${baseUrl}&after=${encodeURIComponent(lastSeenTs)}` : baseUrl
       fetch(url, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
         .then((data: AlertEvent[] | null) => {
-          if (!data || data.length === 0 || stopped) return
+          if (!data || stopped) return
           setQueue(prev => {
+            if (!watermarked) {
+              // First response: silently prime seenIds (watermark) — don't show anything yet
+              watermarked = true
+              data.forEach(e => {
+                seenIds.current.add(e.id)
+                if (e.createdAt && e.createdAt > lastSeenTs) lastSeenTs = e.createdAt
+              })
+              return prev
+            }
             const newEvents = data.filter(e => !seenIds.current.has(e.id))
             newEvents.forEach(e => {
               seenIds.current.add(e.id)
@@ -261,7 +267,7 @@ function AlertOverlayContent() {
             return newEvents.length > 0 ? [...prev, ...newEvents] : prev
           })
         })
-        .catch(() => {})
+        .catch(() => { if (!watermarked) watermarked = true })
     }
 
     isInitialized.current = true
