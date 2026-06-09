@@ -152,6 +152,8 @@ export default function AdminPage() {
   type AiGen = { id: string; user_name: string; user_role: string; prompt: string; status: string; created_at: string }
   const [aiCfg, setAiCfg] = useState<AiImgCfg>({ enabled: true, cooldown_seconds: 300, max_per_day: 10, allowed_roles: ['admin', 'moderador', 'vip'] })
   const [aiRecent, setAiRecent] = useState<AiGen[]>([])
+  const [aiImgExpanded, setAiImgExpanded] = useState<Record<string, string | null>>({})
+  const [aiImgLoading, setAiImgLoading] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiSaving, setAiSaving] = useState(false)
   const [aiSaved, setAiSaved] = useState(false)
@@ -161,7 +163,25 @@ export default function AdminPage() {
     const d = await res.json()
     if (d.config) setAiCfg(d.config)
     setAiRecent(d.recent ?? [])
+    setAiImgExpanded({})
     setAiLoading(false)
+  }
+
+  const toggleAiImg = async (id: string) => {
+    if (aiImgExpanded[id] !== undefined) {
+      setAiImgExpanded(p => { const n = { ...p }; delete n[id]; return n })
+      return
+    }
+    setAiImgLoading(id)
+    try {
+      const res = await fetch(`/api/admin/ia-imagens/image?id=${id}`, { headers: { 'x-admin-password': storedPw } })
+      const d = await res.json()
+      setAiImgExpanded(p => ({ ...p, [id]: d.image_url ?? null }))
+    } catch {
+      setAiImgExpanded(p => ({ ...p, [id]: null }))
+    } finally {
+      setAiImgLoading(null)
+    }
   }
   const saveAiCfg = async () => {
     setAiSaving(true)
@@ -1773,33 +1793,33 @@ export default function AdminPage() {
                             <span style={{ fontSize: '0.66rem', color: C.vdim }}>{timeLabel}</span>
                           </div>
                           <div style={{ fontSize: '0.74rem', color: C.muted, marginBottom: '0.45rem' }}>{u.email ?? '—'}</div>
-                          {/* Platform chips — only show platforms explicitly connected in Conexões */}
+                          {/* Platform chips — only show for online users (offline = no active connection) */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                            {u.twitch_connected && (
+                            {isOn && u.twitch_connected && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(145,71,255,0.12)', border: '1px solid rgba(145,71,255,0.25)', color: '#9147ff' }}>
                                 <svg width="10" height="10" viewBox="0 0 24 28" fill="#9147ff"><path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/></svg>
                                 Twitch
                               </span>
                             )}
-                            {u.livepix_connected && (
+                            {isOn && u.livepix_connected && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(255,105,180,0.1)', border: '1px solid rgba(255,105,180,0.2)', color: '#ff69b4' }}>
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ff69b4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
                                 Livepix
                               </span>
                             )}
-                            {u.spotify_connected && (
+                            {isOn && u.spotify_connected && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(30,215,96,0.1)', border: '1px solid rgba(30,215,96,0.2)', color: '#1ed760' }}>
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="#1ed760"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
                                 Spotify
                               </span>
                             )}
-                            {u.youtube_connected && (
+                            {isOn && u.youtube_connected && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(255,0,0,0.08)', border: '1px solid rgba(255,0,0,0.2)', color: '#ff4444' }}>
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="#ff4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
                                 YouTube
                               </span>
                             )}
-                            {!u.twitch_connected && !u.livepix_connected && !u.spotify_connected && !u.youtube_connected && (
+                            {(!isOn || (!u.twitch_connected && !u.livepix_connected && !u.spotify_connected && !u.youtube_connected)) && (
                               <span style={{ fontSize: '0.63rem', color: C.vdim }}>nenhuma plataforma conectada</span>
                             )}
                           </div>
@@ -2292,17 +2312,32 @@ export default function AdminPage() {
                     {aiRecent.length === 0 ? (
                       <div style={{ color: C.dim, fontSize: '0.84rem' }}>Nenhuma imagem gerada ainda.</div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 360, overflowY: 'auto' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 520, overflowY: 'auto' }}>
                         {aiRecent.map(g => (
-                          <div key={g.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.85rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.text }}>@{g.user_name}</span>
-                                {g.user_role && <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: C.primaryBg, color: C.primary, borderRadius: 999, border: `1px solid ${C.borderStrong}` }}>{g.user_role}</span>}
-                                <span style={{ fontSize: '0.68rem', color: C.dim, marginLeft: 'auto' }}>{new Date(g.created_at).toLocaleString('pt-BR')}</span>
+                          <div key={g.id} style={{ background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px', overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.85rem' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.text }}>@{g.user_name}</span>
+                                  {g.user_role && <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: C.primaryBg, color: C.primary, borderRadius: 999, border: `1px solid ${C.borderStrong}` }}>{g.user_role}</span>}
+                                  <span style={{ fontSize: '0.68rem', color: C.dim, marginLeft: 'auto' }}>{new Date(g.created_at).toLocaleString('pt-BR')}</span>
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.prompt}</div>
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.prompt}</div>
+                              <button onClick={() => toggleAiImg(g.id)} disabled={aiImgLoading === g.id}
+                                style={{ flexShrink: 0, padding: '0.3rem 0.65rem', borderRadius: 6, border: `1px solid ${aiImgExpanded[g.id] !== undefined ? C.dangerBorder : C.border}`, background: 'transparent', color: aiImgExpanded[g.id] !== undefined ? C.danger : C.muted, fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                {aiImgLoading === g.id ? '...' : aiImgExpanded[g.id] !== undefined ? '✕ Fechar' : '🖼 Ver'}
+                              </button>
                             </div>
+                            {aiImgExpanded[g.id] !== undefined && (
+                              <div style={{ padding: '0 0.85rem 0.85rem' }}>
+                                {aiImgExpanded[g.id] ? (
+                                  <img src={aiImgExpanded[g.id]!} alt={g.prompt} style={{ width: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 8, border: `1px solid ${C.border}`, background: '#000' }} />
+                                ) : (
+                                  <div style={{ padding: '0.75rem', textAlign: 'center', color: C.dim, fontSize: '0.78rem' }}>Imagem não disponível</div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
