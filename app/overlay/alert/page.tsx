@@ -23,7 +23,7 @@ type Cfg = {
   bgColor: string; bgOpacity: number; textColor: string; accentColor: string
   borderRadius: number; border: boolean; borderColor: string; borderThick: number
   font: string; titleSize: number; supportSize: number; width: number
-  animIn: string; animSpeed: number; duration: number; timerColor: string
+  animIn: string; animOut: string; animSpeed: number; duration: number; timerColor: string
   titleText: string; subtitleText: string; titleColor: string; subtitleColor: string
   iconShape: 'circle' | 'square' | 'none'
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
@@ -36,8 +36,8 @@ type Cfg = {
 const DEF: Cfg = {
   bgColor: '#0b0c17', bgOpacity: 0.92, textColor: '#ffffff', accentColor: '#9146FF',
   borderRadius: 14, border: true, borderColor: '#9146FF', borderThick: 1,
-  font: 'Inter', titleSize: 15, supportSize: 12, width: 480,
-  animIn: 'slide-right', animSpeed: 5, duration: 6, timerColor: '#9146FF',
+  font: 'Inter', titleSize: 20, supportSize: 16, width: 480,
+  animIn: 'slide-right', animOut: 'fade', animSpeed: 5, duration: 6, timerColor: '#9146FF',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
   icon: '', customArt: '',
@@ -63,7 +63,10 @@ function hexToRgb(hex: string): string {
   return `${r},${g},${b}`
 }
 
+const SK_KEYFRAME_ANIMS = new Set(['shake','swing','rubberband','heartbeat','roll-in','tada','wobble','flash'])
+
 function getAnimStyle(animIn: string): React.CSSProperties {
+  if (SK_KEYFRAME_ANIMS.has(animIn)) return { opacity: 0 }
   const transforms: Record<string, string> = {
     'slide-right': 'translateX(-120%)',
     'slide-left':  'translateX(120%)',
@@ -77,10 +80,10 @@ function getAnimStyle(animIn: string): React.CSSProperties {
     'flip-y':      'rotateY(90deg)',
     'rotate-in':   'rotate(-180deg) scale(0.5)',
     'elastic':     'translateX(-120%)',
-    'shake':       'translateX(-120%)',
     'blur-in':     'none',
     'drop-in':     'translateY(-120px)',
-    'swing':       'rotate(-30deg)',
+    'skew':        'skewX(30deg) translateX(-60%)',
+    'jack-in':     'scale(0.05) rotate(-200deg)',
   }
   return {
     transform: transforms[animIn] ?? 'translateX(-120%)',
@@ -95,19 +98,20 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
   const transitions: Record<string, string> = {
     'bounce-in':  `transform ${d}s cubic-bezier(.22,.68,0,1.8), opacity ${d6}s ease`,
     'elastic':    `transform ${d}s cubic-bezier(.22,.68,0,2), opacity ${d6}s ease`,
-    'shake':      `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`,
-    'zoom-out':   `transform ${d}s cubic-bezier(.22,.68,0,1), opacity ${d6}s ease`,
-    'flip-x':     `transform ${d}s ease, opacity ${d6}s ease`,
-    'flip-y':     `transform ${d}s ease, opacity ${d6}s ease`,
+    'zoom-out':   `transform ${d}s cubic-bezier(.22,.68,0,1.1), opacity ${d6}s ease`,
+    'zoom-in':    `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`,
+    'flip-x':     `transform ${d}s cubic-bezier(.25,.46,.45,.94), opacity ${d6}s ease`,
+    'flip-y':     `transform ${d}s cubic-bezier(.25,.46,.45,.94), opacity ${d6}s ease`,
     'rotate-in':  `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`,
     'drop-in':    `transform ${d}s cubic-bezier(.22,.68,0,1.3), opacity ${d6}s ease`,
-    'swing':      `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`,
     'blur-in':    `filter ${d}s ease, opacity ${d}s ease`,
+    'skew':       `transform ${d}s cubic-bezier(.22,.68,0,1.1), opacity ${d6}s ease`,
+    'jack-in':    `transform ${d}s cubic-bezier(.22,.68,0,1.6), opacity ${d6}s ease`,
   }
   return transitions[animIn] ?? `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`
 }
 
-function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
+function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting?: boolean }) {
   const [visible, setVisible] = useState(false)
   const meta = EVENT_META[ev.type] ?? EVENT_META.command
   const accent = cfg.timerColor !== '#9146FF' ? cfg.timerColor : (cfg.accentColor !== '#9146FF' ? cfg.accentColor : meta.color)
@@ -144,24 +148,42 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
     animation: `sk-icon-${iconAnim} ${iconAnim === 'spin' ? '2s linear' : '1.5s ease-in-out'} infinite`,
   }
 
-  // Multiple CSS animations on same element: entrance (shake/swing) + card effect (box-shadow).
-  // animation and transition coexist because they animate different CSS properties.
-  const isShakeSwing = cfg.animIn === 'shake' || cfg.animIn === 'swing'
-  const entranceDur = `${((11-(cfg.animSpeed??5))*0.065).toFixed(2)}s`
-  const animParts: string[] = []
-  if (visible && isShakeSwing) animParts.push(`sk-e-${cfg.animIn} ${entranceDur} ease forwards`)
-  if (visible && cardEffect !== 'none') {
-    animParts.push(`sk-card-${cardEffect} 2s ease-in-out ${isShakeSwing ? entranceDur : '0s'} infinite backwards`)
-  }
-  const animStr = animParts.length > 0 ? animParts.join(', ') : undefined
+  const isKeyframeAnim = SK_KEYFRAME_ANIMS.has(cfg.animIn)
+  const entranceDur = `${((11-(cfg.animSpeed??5))*0.085).toFixed(2)}s`
+  const exitDur = `${((11-(cfg.animSpeed??5))*0.06).toFixed(2)}s`
+  const entranceAnim = visible && isKeyframeAnim ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards` : undefined
+  const animOut = cfg.animOut ?? 'fade'
+  const exitAnim = isExiting && animOut !== 'none' ? `sk-out-${animOut} ${exitDur} ease forwards` : undefined
+
+  const ANIM_CSS = `
+    @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+    @keyframes sk-icon-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    @keyframes sk-icon-bounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-10px)}}
+    @keyframes sk-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+    @keyframes sk-card-glow{0%,100%{box-shadow:0 0 22px ${accent}66}50%{box-shadow:0 0 70px ${accent}dd,0 0 30px ${accent}99}}
+    @keyframes sk-card-pulse{0%,100%{box-shadow:0 0 18px ${accent}55}50%{box-shadow:0 0 48px ${accent}99}}
+    @keyframes sk-e-shake{0%{transform:translateX(-90px);opacity:0}25%{opacity:1}38%{transform:translateX(18px)}54%{transform:translateX(-11px)}68%{transform:translateX(6px)}82%{transform:translateX(-2px)}100%{transform:translateX(0)}}
+    @keyframes sk-e-swing{0%{transform:rotate(-25deg);opacity:0}20%{opacity:1}42%{transform:rotate(12deg)}62%{transform:rotate(-7deg)}76%{transform:rotate(4deg)}88%{transform:rotate(-1deg)}100%{transform:rotate(0deg)}}
+    @keyframes sk-e-rubberband{0%{opacity:0;transform:scale(0.1)}35%{opacity:1;transform:scale(1.28,.72)}50%{transform:scale(.78,1.22)}65%{transform:scale(1.12,.88)}80%{transform:scale(.96,1.04)}100%{transform:scale(1)}}
+    @keyframes sk-e-heartbeat{0%{opacity:0;transform:scale(.6)}14%{opacity:1;transform:scale(1.1)}28%{transform:scale(.96)}42%{transform:scale(1.14)}70%{transform:scale(.98)}100%{opacity:1;transform:scale(1)}}
+    @keyframes sk-e-roll-in{0%{opacity:0;transform:translateX(-120%) rotate(-360deg)}100%{opacity:1;transform:translateX(0) rotate(0deg)}}
+    @keyframes sk-e-tada{0%{opacity:0;transform:scale(.8)}10%{opacity:1;transform:scale(.8) rotate(-3deg)}20%,40%,60%{transform:scale(1.08) rotate(3deg)}30%,50%{transform:scale(1.08) rotate(-3deg)}70%{transform:scale(1.04)}100%{opacity:1;transform:scale(1) rotate(0deg)}}
+    @keyframes sk-e-wobble{0%{opacity:0;transform:translateX(-28px)}15%{opacity:1;transform:translateX(18px) rotate(2deg)}30%{transform:translateX(-12px) rotate(-2deg)}45%{transform:translateX(8px) rotate(1deg)}60%{transform:translateX(-4px) rotate(-.5deg)}75%{transform:translateX(2px)}100%{opacity:1;transform:translateX(0)}}
+    @keyframes sk-e-flash{0%,50%{opacity:0}25%,75%{opacity:1}100%{opacity:1}}
+    @keyframes sk-out-fade{to{opacity:0}}
+    @keyframes sk-out-slide-right{to{transform:translateX(110%);opacity:0}}
+    @keyframes sk-out-slide-left{to{transform:translateX(-110%);opacity:0}}
+    @keyframes sk-out-slide-up{to{transform:translateY(-80px);opacity:0}}
+    @keyframes sk-out-slide-down{to{transform:translateY(80px);opacity:0}}
+    @keyframes sk-out-zoom-out{to{transform:scale(0.05);opacity:0}}
+    @keyframes sk-out-zoom-in{to{transform:scale(2.2);opacity:0}}
+    @keyframes sk-out-flip-x{to{transform:rotateX(90deg);opacity:0}}
+  `
 
   // Custom art: replace entire card with image
   if (cfg.customArt) return (
     <>
-      <style>{`
-        @keyframes sk-e-shake{0%{transform:translateX(-90px);opacity:0}25%{opacity:1}38%{transform:translateX(18px)}54%{transform:translateX(-11px)}68%{transform:translateX(6px)}82%{transform:translateX(-2px)}100%{transform:translateX(0)}}
-        @keyframes sk-e-swing{0%{transform:rotate(-25deg);opacity:0}20%{opacity:1}42%{transform:rotate(12deg)}62%{transform:rotate(-7deg)}76%{transform:rotate(4deg)}88%{transform:rotate(-1deg)}100%{transform:rotate(0deg)}}
-      `}</style>
+      <style>{ANIM_CSS}</style>
       <img
         src={cfg.customArt}
         alt=""
@@ -170,11 +192,11 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
           maxHeight: 200,
           objectFit: 'contain',
           borderRadius: cfg.borderRadius,
-          animation: animStr,
-          ...(isShakeSwing
+          animation: exitAnim ?? entranceAnim,
+          ...(isKeyframeAnim && !isExiting
             ? (visible ? {} : { opacity: 0 })
-            : (visible ? { transform: 'none', opacity: 1 } : hiddenStyle)),
-          transition: isShakeSwing ? 'none' : (visible ? transition : 'none'),
+            : (!isExiting ? (visible ? { transform: 'none', opacity: 1 } : hiddenStyle) : {})),
+          transition: (isKeyframeAnim || isExiting) ? 'none' : (visible ? transition : 'none'),
         }}
       />
     </>
@@ -182,42 +204,45 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
 
   return (
     <>
-      <style>{`
-        @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
-        @keyframes sk-icon-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        @keyframes sk-icon-bounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-10px)}}
-        @keyframes sk-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-        @keyframes sk-card-glow{0%,100%{box-shadow:0 0 20px ${accent}55}50%{box-shadow:0 0 65px ${accent}cc,0 0 25px ${accent}88}}
-        @keyframes sk-card-pulse{0%,100%{box-shadow:0 0 20px ${accent}44}50%{box-shadow:0 0 40px ${accent}88}}
-        @keyframes sk-e-shake{0%{transform:translateX(-90px);opacity:0}25%{opacity:1}38%{transform:translateX(18px)}54%{transform:translateX(-11px)}68%{transform:translateX(6px)}82%{transform:translateX(-2px)}100%{transform:translateX(0)}}
-        @keyframes sk-e-swing{0%{transform:rotate(-25deg);opacity:0}20%{opacity:1}42%{transform:rotate(12deg)}62%{transform:rotate(-7deg)}76%{transform:rotate(4deg)}88%{transform:rotate(-1deg)}100%{transform:rotate(0deg)}}
-      `}</style>
+      <style>{ANIM_CSS}</style>
+      <div style={{
+        position: 'relative', display: 'inline-block',
+        animation: exitAnim ?? entranceAnim,
+        ...(!isKeyframeAnim && !isExiting
+          ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
+          : (!isExiting ? (visible ? {} : { opacity: 0 }) : {})),
+        transition: (isKeyframeAnim || isExiting) ? 'none' : (visible ? transition : 'none'),
+      }}>
+      {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
+      {cardEffect !== 'none' && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          borderRadius: cfg.borderRadius,
+          pointerEvents: 'none',
+          animation: `sk-card-${cardEffect} 2s ease-in-out 0s infinite`,
+        }} />
+      )}
       <div style={{
         width: cfg.width,
         background: bg,
         border: cfg.border ? `${cfg.borderThick}px solid ${accent}66` : 'none',
         borderRadius: cfg.borderRadius,
-        padding: '14px 18px',
+        padding: '18px 24px',
         display: 'flex',
         alignItems: 'center',
-        gap: 14,
+        gap: 18,
         fontFamily: `'${cfg.font}', -apple-system, system-ui, sans-serif`,
         boxShadow: cardEffect === 'none' ? `0 0 30px ${accent}33` : undefined,
         position: 'relative',
         overflow: 'hidden',
-        animation: animStr,
-        ...(isShakeSwing
-          ? (visible ? {} : { opacity: 0 })
-          : (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)),
-        transition: isShakeSwing ? 'none' : (visible ? transition : 'none'),
       }}>
         {iconShape !== 'none' && (
           <div style={{
-            width: 44, height: 44,
-            borderRadius: iconShape === 'circle' ? '50%' : 10,
+            width: 52, height: 52,
+            borderRadius: iconShape === 'circle' ? '50%' : 12,
             background: `${accent}22`, border: `1px solid ${accent}55`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 20, flexShrink: 0, overflow: 'hidden', ...iconAnimStyle,
+            fontSize: 24, flexShrink: 0, overflow: 'hidden', ...iconAnimStyle,
           }}>
             {(cfg.icon || meta.icon).startsWith('data:') || (cfg.icon || '').startsWith('http')
               ? <img src={cfg.icon || meta.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
@@ -228,8 +253,13 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
           <div style={{ fontSize: cfg.titleSize, fontWeight: 800, color: titleClr, lineHeight: 1.2 }}>
             {titleLabel}
           </div>
-          <div style={{ fontSize: cfg.supportSize + 1, color: subClr, opacity: 0.85, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {cfg.subtitleText ? cfg.subtitleText.replace('$user', ev.user).replace('$valor', String(ev.amount ?? '')) : (
+          <div style={{ fontSize: cfg.supportSize, color: subClr, opacity: 0.88, marginTop: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {cfg.subtitleText ? cfg.subtitleText
+              .replace(/\$user/g, ev.user || 'Anônimo')
+              .replace(/\$valor/g, String(ev.amount ?? ''))
+              .replace(/\$months/g, ev.extra ? ev.extra.replace(' meses','') : '')
+              .replace(/\$count/g, String(ev.amount ?? ''))
+              .replace(/\$msg/g, ev.extra ?? '') : (
               <>
                 <strong>{ev.user}</strong>
                 {ev.amount ? ` · ${ev.amount}${ev.type === 'bits' ? ' bits' : ev.type === 'donation' ? ' R$' : '×'}` : ''}
@@ -238,7 +268,7 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
             )}
           </div>
         </div>
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `${accent}22`, borderRadius: `0 0 ${cfg.borderRadius}px ${cfg.borderRadius}px`, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: `${accent}22`, borderRadius: `0 0 ${cfg.borderRadius}px ${cfg.borderRadius}px`, overflow: 'hidden' }}>
           <div style={{
             width: visible ? '0%' : '100%',
             height: '100%',
@@ -246,6 +276,7 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
             transition: visible ? `width ${cfg.duration}s linear` : 'none',
           }} />
         </div>
+      </div>
       </div>
     </>
   )
@@ -262,7 +293,9 @@ function AlertOverlayContent() {
 
   const [queue, setQueue] = useState<AlertEvent[]>([])
   const [current, setCurrent] = useState<AlertEvent | null>(null)
+  const [isExiting, setIsExiting] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seenIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -352,16 +385,28 @@ function AlertOverlayContent() {
     const [next, ...rest] = queue
     setCurrent(next)
     setQueue(rest)
+    setIsExiting(false)
     const evCfg = getCfg(next)
-    timerRef.current = setTimeout(() => setCurrent(null), (evCfg.duration + 0.5) * 1000)
+    const animOut = evCfg.animOut ?? 'fade'
+    const exitDurMs = animOut !== 'none' ? ((11 - (evCfg.animSpeed ?? 5)) * 0.06) * 1000 : 0
+    timerRef.current = setTimeout(() => {
+      setIsExiting(true)
+      exitTimerRef.current = setTimeout(() => {
+        setCurrent(null)
+        setIsExiting(false)
+      }, exitDurMs + 80)
+    }, evCfg.duration * 1000)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue, current])
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+  }, [])
 
   if (!current) return null
 
-  return <AlertCard key={current.id} ev={current} cfg={getCfg(current)} />
+  return <AlertCard key={current.id} ev={current} cfg={getCfg(current)} isExiting={isExiting} />
 }
 
 export default function AlertOverlayPage() {

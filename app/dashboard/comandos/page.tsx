@@ -140,7 +140,7 @@ const TRIGGER_TO_SLUG: Record<string, string> = {
   'event:youtube:giftmember': 'youtube-giftmember',
 }
 type OvCfg = {
-  animIn: string; animSpeed: number; duration: number; font: string
+  animIn: string; animOut: string; animSpeed: number; duration: number; font: string
   timerColor: string; textColor: string; bgColor: string; bgOpacity: number
   borderRadius: number; border: boolean; borderColor: string; borderThick: number
   titleSize: number; supportSize: number; width: number
@@ -153,38 +153,53 @@ type OvCfg = {
   soundEnabled: boolean; soundDataUrl: string; soundVolume: number
 }
 const OV_DEF: OvCfg = {
-  animIn: 'slide-right', animSpeed: 5, duration: 6, font: 'Inter',
+  animIn: 'slide-right', animOut: 'fade', animSpeed: 5, duration: 6, font: 'Inter',
   timerColor: '#9146FF', textColor: '#ffffff', bgColor: '#0b0c17', bgOpacity: 0.92,
   borderRadius: 14, border: true, borderColor: '#9146FF', borderThick: 1,
-  titleSize: 15, supportSize: 12, width: 480,
+  titleSize: 20, supportSize: 16, width: 480,
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
   icon: '', customArt: '',
   soundEnabled: true, soundDataUrl: '', soundVolume: 70,
 }
 const OV_ANIMS = [
-  { id: 'slide-right', label: 'Slide →', dur: '0.45s' }, { id: 'slide-left', label: 'Slide ←', dur: '0.45s' },
-  { id: 'slide-up',    label: 'Slide ↑', dur: '0.45s' }, { id: 'slide-down', label: 'Slide ↓', dur: '0.45s' },
-  { id: 'fade',        label: 'Fade',    dur: '0.45s' }, { id: 'zoom-in',    label: 'Zoom In', dur: '0.4s'  },
-  { id: 'zoom-out',    label: 'Zoom Out',dur: '0.4s'  }, { id: 'bounce-in',  label: 'Bounce',  dur: '0.55s' },
-  { id: 'flip-x',      label: 'Flip X',  dur: '0.5s'  }, { id: 'flip-y',     label: 'Flip Y',  dur: '0.5s'  },
-  { id: 'rotate-in',   label: 'Girar',   dur: '0.5s'  }, { id: 'elastic',    label: 'Elástico',dur: '0.65s' },
-  { id: 'shake',       label: 'Tremer',  dur: '0.5s'  }, { id: 'blur-in',    label: 'Blur',    dur: '0.4s'  },
-  { id: 'drop-in',     label: 'Cair',    dur: '0.5s'  }, { id: 'swing',      label: 'Balançar',dur: '0.6s'  },
+  { id: 'slide-right', label: 'Slide →',   dur: '0.45s' }, { id: 'slide-left',  label: 'Slide ←',  dur: '0.45s' },
+  { id: 'slide-up',    label: 'Slide ↑',   dur: '0.45s' }, { id: 'slide-down',  label: 'Slide ↓',  dur: '0.45s' },
+  { id: 'fade',        label: 'Fade',       dur: '0.45s' }, { id: 'zoom-in',     label: 'Zoom In',  dur: '0.4s'  },
+  { id: 'zoom-out',    label: 'Zoom Out',   dur: '0.4s'  }, { id: 'bounce-in',   label: 'Bounce',   dur: '0.55s' },
+  { id: 'flip-x',      label: 'Flip X',    dur: '0.5s'  }, { id: 'flip-y',      label: 'Flip Y',   dur: '0.5s'  },
+  { id: 'rotate-in',   label: 'Girar',     dur: '0.5s'  }, { id: 'elastic',     label: 'Elástico', dur: '0.65s' },
+  { id: 'shake',       label: 'Tremer',    dur: '0.5s'  }, { id: 'blur-in',     label: 'Blur',     dur: '0.4s'  },
+  { id: 'drop-in',     label: 'Cair',      dur: '0.5s'  }, { id: 'swing',       label: 'Balançar', dur: '0.6s'  },
+  { id: 'rubberband',  label: 'Elástica²', dur: '0.7s'  }, { id: 'heartbeat',   label: 'Coração',  dur: '0.6s'  },
+  { id: 'roll-in',     label: 'Rolar →',   dur: '0.6s'  }, { id: 'tada',        label: 'Tada!',    dur: '0.6s'  },
+  { id: 'wobble',      label: 'Trepidar',  dur: '0.65s' }, { id: 'flash',       label: 'Flash',    dur: '0.5s'  },
+  { id: 'skew',        label: 'Torcer',    dur: '0.5s'  }, { id: 'jack-in',     label: 'Pop!',     dur: '0.55s' },
+]
+const OV_EXIT_ANIMS = [
+  { id: 'fade',         label: 'Fade' },
+  { id: 'slide-right',  label: 'Slide →' },
+  { id: 'slide-left',   label: 'Slide ←' },
+  { id: 'slide-up',     label: 'Sobe ↑' },
+  { id: 'slide-down',   label: 'Desce ↓' },
+  { id: 'zoom-out',     label: 'Encolher' },
+  { id: 'zoom-in',      label: 'Crescer' },
+  { id: 'flip-x',       label: 'Flip X' },
+  { id: 'none',         label: 'Instantâneo' },
 ]
 const OV_FONTS = ['Inter','Open Sans','Roboto','Montserrat','Poppins','Rajdhani']
 
 const OV_PRESETS: { id: string; label: string; color: string; cfg: Partial<OvCfg> }[] = [
   { id: 'classico', label: 'Clássico', color: '#9146FF',
-    cfg: { bgColor:'#0b0c17',bgOpacity:0.92,timerColor:'#9146FF',titleColor:'#9146FF',subtitleColor:'#ffffff',textColor:'#ffffff',borderColor:'#9146FF',border:true,borderThick:1,borderRadius:14,font:'Inter',iconShape:'circle',iconAnim:'none',cardEffect:'none',titleSize:15,supportSize:12 } },
+    cfg: { bgColor:'#0b0c17',bgOpacity:0.92,timerColor:'#9146FF',titleColor:'#9146FF',subtitleColor:'#ffffff',textColor:'#ffffff',borderColor:'#9146FF',border:true,borderThick:1,borderRadius:14,font:'Inter',iconShape:'circle',iconAnim:'none',cardEffect:'none',titleSize:20,supportSize:16 } },
   { id: 'neon', label: '⚡ Neon', color: '#22d3ee',
-    cfg: { bgColor:'#020c12',bgOpacity:0.96,timerColor:'#22d3ee',titleColor:'#22d3ee',subtitleColor:'#a0e7ff',textColor:'#a0e7ff',borderColor:'#22d3ee',border:true,borderThick:2,borderRadius:4,font:'Rajdhani',iconShape:'square',iconAnim:'pulse',cardEffect:'glow',titleSize:17,supportSize:13 } },
+    cfg: { bgColor:'#020c12',bgOpacity:0.96,timerColor:'#22d3ee',titleColor:'#22d3ee',subtitleColor:'#a0e7ff',textColor:'#a0e7ff',borderColor:'#22d3ee',border:true,borderThick:2,borderRadius:4,font:'Rajdhani',iconShape:'square',iconAnim:'pulse',cardEffect:'glow',titleSize:22,supportSize:17 } },
   { id: 'minimal', label: 'Minimal', color: '#e8e6f8',
-    cfg: { bgColor:'#0b0c17',bgOpacity:0.55,timerColor:'#ffffff',titleColor:'#ffffff',subtitleColor:'rgba(232,230,248,0.55)',textColor:'#ffffff',borderColor:'#ffffff',border:false,borderThick:1,borderRadius:8,font:'Inter',iconShape:'none',iconAnim:'none',cardEffect:'none',titleSize:14,supportSize:11 } },
+    cfg: { bgColor:'#0b0c17',bgOpacity:0.55,timerColor:'#ffffff',titleColor:'#ffffff',subtitleColor:'rgba(232,230,248,0.55)',textColor:'#ffffff',borderColor:'#ffffff',border:false,borderThick:1,borderRadius:8,font:'Inter',iconShape:'none',iconAnim:'none',cardEffect:'none',titleSize:18,supportSize:14 } },
   { id: 'gaming', label: '🔥 Gaming', color: '#f97316',
-    cfg: { bgColor:'#100800',bgOpacity:0.94,timerColor:'#f97316',titleColor:'#f97316',subtitleColor:'#fcd34d',textColor:'#fcd34d',borderColor:'#f97316',border:true,borderThick:2,borderRadius:6,font:'Montserrat',iconShape:'square',iconAnim:'bounce',cardEffect:'pulse',titleSize:16,supportSize:12 } },
+    cfg: { bgColor:'#100800',bgOpacity:0.94,timerColor:'#f97316',titleColor:'#f97316',subtitleColor:'#fcd34d',textColor:'#fcd34d',borderColor:'#f97316',border:true,borderThick:2,borderRadius:6,font:'Montserrat',iconShape:'square',iconAnim:'bounce',cardEffect:'pulse',titleSize:22,supportSize:17 } },
   { id: 'matrix', label: '💚 Matrix', color: '#22c55e',
-    cfg: { bgColor:'#010d01',bgOpacity:0.97,timerColor:'#22c55e',titleColor:'#22c55e',subtitleColor:'#86efac',textColor:'#86efac',borderColor:'#22c55e',border:true,borderThick:1,borderRadius:2,font:'Roboto',iconShape:'circle',iconAnim:'spin',cardEffect:'glow',titleSize:15,supportSize:12 } },
+    cfg: { bgColor:'#010d01',bgOpacity:0.97,timerColor:'#22c55e',titleColor:'#22c55e',subtitleColor:'#86efac',textColor:'#86efac',borderColor:'#22c55e',border:true,borderThick:1,borderRadius:2,font:'Roboto',iconShape:'circle',iconAnim:'spin',cardEffect:'glow',titleSize:20,supportSize:16 } },
 ]
 
 // Per-event default text + accent color — applied when no saved config exists
@@ -203,13 +218,18 @@ const SLUG_PRESETS: Partial<Record<string, Partial<OvCfg>>> = {
   'youtube-giftmember': { titleText: 'Gift de Membros!',     subtitleText: '$user presenteou membros!',        timerColor: '#ff4040', titleColor: '#ff4040', borderColor: '#ff4040' },
 }
 
+const KEYFRAME_ANIMS_SET = new Set(['shake','swing','rubberband','heartbeat','roll-in','tada','wobble','flash'])
+
 function ovHidden(animIn: string): React.CSSProperties {
+  if (KEYFRAME_ANIMS_SET.has(animIn)) return { opacity: 0 }
   const t: Record<string,string> = {
     'slide-right':'translateX(-120%)','slide-left':'translateX(120%)','slide-up':'translateY(50px)',
     'slide-down':'translateY(-50px)','zoom-in':'scale(0.4)','zoom-out':'scale(1.5)',
     'bounce-in':'translateY(-60px)','flip-x':'rotateX(90deg)','flip-y':'rotateY(90deg)',
-    'rotate-in':'rotate(-180deg) scale(0.5)','elastic':'translateX(-120%)','shake':'translateX(-80%)',
-    'drop-in':'translateY(-100px)','swing':'rotate(-25deg)',
+    'rotate-in':'rotate(-180deg) scale(0.5)','elastic':'translateX(-120%)',
+    'drop-in':'translateY(-100px)',
+    'skew':'skewX(30deg) translateX(-60%)',
+    'jack-in':'scale(0.05) rotate(-200deg)',
   }
   return { transform: t[animIn] ?? 'translateX(-120%)', opacity: 0, filter: animIn==='blur-in'?'blur(16px)':'none' }
 }
@@ -220,12 +240,14 @@ function ovTrans(animIn: string, animSpeed = 5): string {
     'bounce-in': `transform ${d}s cubic-bezier(.22,.68,0,1.8),opacity ${d6}s`,
     'elastic':   `transform ${d}s cubic-bezier(.22,.68,0,2),opacity ${d6}s`,
     'zoom-in':   `transform ${d}s cubic-bezier(.22,.68,0,1.2),opacity ${d6}s`,
-    'zoom-out':  `transform ${d}s ease,opacity ${d6}s`,
-    'flip-x':    `transform ${d}s ease,opacity ${d6}s`,
-    'flip-y':    `transform ${d}s ease,opacity ${d6}s`,
+    'zoom-out':  `transform ${d}s cubic-bezier(.22,.68,0,1.1),opacity ${d6}s`,
+    'flip-x':    `transform ${d}s cubic-bezier(.25,.46,.45,.94),opacity ${d6}s`,
+    'flip-y':    `transform ${d}s cubic-bezier(.25,.46,.45,.94),opacity ${d6}s`,
     'rotate-in': `transform ${d}s cubic-bezier(.22,.68,0,1.2),opacity ${d6}s`,
     'drop-in':   `transform ${d}s cubic-bezier(.22,.68,0,1.3),opacity ${d6}s`,
     'blur-in':   `filter ${d}s ease,opacity ${d}s`,
+    'skew':      `transform ${d}s cubic-bezier(.22,.68,0,1.1),opacity ${d6}s`,
+    'jack-in':   `transform ${d}s cubic-bezier(.22,.68,0,1.6),opacity ${d6}s`,
   }
   return m[animIn] ?? `transform ${d}s cubic-bezier(.22,.68,0,1.2),opacity ${d6}s`
 }
@@ -247,14 +269,28 @@ const SLUG_PREVIEW: Record<string, { icon: string; title: string; sub: string }>
 const SLUG_PREVIEW_DEFAULT = { icon: '🔔', title: 'Novo alerta!', sub: 'viewer123 ativou o alerta!' }
 
 function OvPreview({ cfg, animKey, slug }: { cfg: OvCfg; animKey: number; slug: string }) {
-  const [vis, setVis] = useState(false)
+  const [phase, setPhase] = useState<'hidden'|'enter'|'show'|'exit'>('hidden')
+  useEffect(() => {
+    setPhase('hidden')
+    const t1 = setTimeout(() => setPhase('enter'), 80)
+    const t2 = setTimeout(() => setPhase('show'), 900)
+    const t3 = setTimeout(() => setPhase('exit'), 2200)
+    const t4 = setTimeout(() => setPhase('hidden'), 2900)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
+  }, [animKey, cfg.animIn, cfg.animOut, cfg.animSpeed])
+  const vis = phase === 'enter' || phase === 'show'
+  const isExiting = phase === 'exit'
   const bg = cfg.bgColor === 'transparent' || cfg.bgOpacity === 0 ? 'transparent' : cfg.bgColor
   const acc = cfg.timerColor
   const titleClr = cfg.titleColor || acc
   const subClr = cfg.subtitleColor || cfg.textColor
   const preview = SLUG_PREVIEW[slug] ?? SLUG_PREVIEW_DEFAULT
   const titleLabel = cfg.titleText || preview.title
-  const subLabel = cfg.subtitleText || preview.sub
+  const rawSub = cfg.subtitleText || preview.sub
+  const subLabel = rawSub
+    .replace(/\$user/g, 'viewer123').replace(/\$valor/g, '5,00').replace(/\$tickets/g, '10')
+    .replace(/\$months/g, '3').replace(/\$tier/g, 'Tier 1').replace(/\$count/g, '5')
+    .replace(/\$msg/g, '...').replace(/\$gifter/g, 'viewer123').replace(/\$platform/g, 'Twitch')
   const iconEmoji = cfg.icon || preview.icon
   const iconIsImage = iconEmoji.startsWith('data:') || iconEmoji.startsWith('http')
   if (cfg.customArt) return (
@@ -262,25 +298,15 @@ function OvPreview({ cfg, animKey, slug }: { cfg: OvCfg; animKey: number; slug: 
       <img src={cfg.customArt} alt="Arte completa" style={{ width:'100%',maxHeight:120,objectFit:'contain',borderRadius:cfg.borderRadius,border:cfg.border?`${cfg.borderThick}px solid ${cfg.timerColor}`:'none' }} />
     </div>
   )
-  useEffect(() => {
-    setVis(false)
-    const t = setTimeout(() => setVis(true), 80)
-    return () => clearTimeout(t)
-  }, [animKey, cfg.animIn, cfg.animSpeed])
   const checkers = 'repeating-conic-gradient(#333 0% 25%,#1a1a1a 0% 50%) 0 0/12px 12px'
   const iconAnimStyle: React.CSSProperties = cfg.iconAnim === 'none' ? {} : {
     animation: `ovqe-icon-${cfg.iconAnim} ${cfg.iconAnim === 'spin' ? '2s linear' : '1.5s ease-in-out'} infinite`,
   }
-  // Multiple CSS animations on same element: entrance (shake/swing) + card effect (box-shadow).
-  // animation and transition coexist because they animate different CSS properties.
-  const isShakeSwing = cfg.animIn === 'shake' || cfg.animIn === 'swing'
-  const entranceDur = `${((11-cfg.animSpeed)*0.065).toFixed(2)}s`
-  const animParts: string[] = []
-  if (vis && isShakeSwing) animParts.push(`ovqe-e-${cfg.animIn} ${entranceDur} ease forwards`)
-  if (vis && cfg.cardEffect !== 'none') {
-    animParts.push(`ovqe-card-${cfg.cardEffect} 2s ease-in-out ${isShakeSwing ? entranceDur : '0s'} infinite backwards`)
-  }
-  const animStr = animParts.length > 0 ? animParts.join(', ') : undefined
+  const isKeyframeAnim = KEYFRAME_ANIMS_SET.has(cfg.animIn)
+  const entranceDur = `${((11-cfg.animSpeed)*0.085).toFixed(2)}s`
+  const exitDur = `${((11-cfg.animSpeed)*0.06).toFixed(2)}s`
+  const entranceAnim = (phase === 'enter') && isKeyframeAnim ? `ovqe-e-${cfg.animIn} ${entranceDur} ease forwards` : undefined
+  const exitAnim = isExiting && (cfg.animOut ?? 'fade') !== 'none' ? `ovqe-out-${cfg.animOut ?? 'fade'} ${exitDur} ease forwards` : undefined
   return (
     <div style={{ width:'100%', fontFamily: cfg.font, position:'relative' }}>
       <style>{`
@@ -288,36 +314,54 @@ function OvPreview({ cfg, animKey, slug }: { cfg: OvCfg; animKey: number; slug: 
         @keyframes ovqe-icon-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @keyframes ovqe-icon-bounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-9px)}}
         @keyframes ovqe-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
-        @keyframes ovqe-card-glow{0%,100%{box-shadow:0 0 14px ${acc}55}50%{box-shadow:0 0 55px ${acc}cc,0 0 22px ${acc}88}}
-        @keyframes ovqe-card-pulse{0%,100%{box-shadow:0 0 10px ${acc}44}50%{box-shadow:0 0 32px ${acc}88}}
+        @keyframes ovqe-card-glow{0%,100%{box-shadow:0 0 18px ${acc}66}50%{box-shadow:0 0 65px ${acc}dd,0 0 28px ${acc}99}}
+        @keyframes ovqe-card-pulse{0%,100%{box-shadow:0 0 12px ${acc}55}50%{box-shadow:0 0 42px ${acc}99}}
         @keyframes ovqe-e-shake{0%{transform:translateX(-70px);opacity:0}25%{opacity:1}38%{transform:translateX(14px)}54%{transform:translateX(-9px)}68%{transform:translateX(5px)}80%{transform:translateX(-2px)}100%{transform:translateX(0)}}
         @keyframes ovqe-e-swing{0%{transform:rotate(-22deg);opacity:0}20%{opacity:1}42%{transform:rotate(11deg)}62%{transform:rotate(-6deg)}76%{transform:rotate(3deg)}88%{transform:rotate(-1deg)}100%{transform:rotate(0deg)}}
+        @keyframes ovqe-e-rubberband{0%{opacity:0;transform:scale(0.1)}35%{opacity:1;transform:scale(1.28,.72)}50%{transform:scale(.78,1.22)}65%{transform:scale(1.12,.88)}80%{transform:scale(.96,1.04)}100%{transform:scale(1)}}
+        @keyframes ovqe-e-heartbeat{0%{opacity:0;transform:scale(.6)}14%{opacity:1;transform:scale(1.1)}28%{transform:scale(.96)}42%{transform:scale(1.14)}70%{transform:scale(.98)}100%{opacity:1;transform:scale(1)}}
+        @keyframes ovqe-e-roll-in{0%{opacity:0;transform:translateX(-120%) rotate(-360deg)}100%{opacity:1;transform:translateX(0) rotate(0deg)}}
+        @keyframes ovqe-e-tada{0%{opacity:0;transform:scale(.8)}10%{opacity:1;transform:scale(.8) rotate(-3deg)}20%,40%,60%{transform:scale(1.08) rotate(3deg)}30%,50%{transform:scale(1.08) rotate(-3deg)}70%{transform:scale(1.04)}100%{opacity:1;transform:scale(1) rotate(0deg)}}
+        @keyframes ovqe-e-wobble{0%{opacity:0;transform:translateX(-28px)}15%{opacity:1;transform:translateX(18px) rotate(2deg)}30%{transform:translateX(-12px) rotate(-2deg)}45%{transform:translateX(8px) rotate(1deg)}60%{transform:translateX(-4px) rotate(-.5deg)}75%{transform:translateX(2px)}100%{opacity:1;transform:translateX(0)}}
+        @keyframes ovqe-e-flash{0%,50%{opacity:0}25%,75%{opacity:1}100%{opacity:1}}
+        @keyframes ovqe-out-fade{to{opacity:0}}
+        @keyframes ovqe-out-slide-right{to{transform:translateX(110%);opacity:0}}
+        @keyframes ovqe-out-slide-left{to{transform:translateX(-110%);opacity:0}}
+        @keyframes ovqe-out-slide-up{to{transform:translateY(-70px);opacity:0}}
+        @keyframes ovqe-out-slide-down{to{transform:translateY(70px);opacity:0}}
+        @keyframes ovqe-out-zoom-out{to{transform:scale(0.05);opacity:0}}
+        @keyframes ovqe-out-zoom-in{to{transform:scale(2);opacity:0}}
+        @keyframes ovqe-out-flip-x{to{transform:rotateX(90deg);opacity:0}}
       `}</style>
       {bg === 'transparent' && (
         <div style={{ position:'absolute',inset:0,borderRadius:cfg.borderRadius,background:checkers,opacity:0.35,pointerEvents:'none' }} />
       )}
+      {/* Card effect rendered in separate div to avoid interfering with entrance animation */}
+      {cfg.cardEffect !== 'none' && (
+        <div style={{ position:'absolute',inset:0,borderRadius:cfg.borderRadius,pointerEvents:'none',animation:`ovqe-card-${cfg.cardEffect} 2s ease-in-out 0s infinite` }} />
+      )}
       <div style={{
-        background: bg, borderRadius: cfg.borderRadius, padding:'12px 16px',
-        display:'flex', alignItems:'center', gap:12,
+        background: bg, borderRadius: cfg.borderRadius, padding:'14px 18px',
+        display:'flex', alignItems:'center', gap:14,
         border: cfg.border ? `${cfg.borderThick}px solid ${acc}` : `1px solid ${acc}44`,
         boxShadow: cfg.cardEffect === 'none' ? `0 0 20px ${acc}22` : undefined,
         position:'relative', overflow:'hidden',
-        animation: animStr,
-        ...(!isShakeSwing
+        animation: exitAnim ?? entranceAnim,
+        ...(!isKeyframeAnim && !isExiting
           ? (vis ? { transform:'none',opacity:1,filter:'none' } : ovHidden(cfg.animIn))
-          : (vis ? {} : { opacity: 0 })),
-        transition: isShakeSwing ? 'none' : (vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none'),
+          : (!isExiting ? (vis ? {} : { opacity: 0 }) : {})),
+        transition: (isKeyframeAnim || isExiting) ? 'none' : (vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none'),
       }}>
         {cfg.iconShape !== 'none' && (
-          <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17,overflow:'hidden',...iconAnimStyle }}>
+          <div style={{ width:46,height:46,borderRadius:cfg.iconShape==='circle'?'50%':10,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:22,overflow:'hidden',...iconAnimStyle }}>
             {iconIsImage
               ? <img src={iconEmoji} alt="" style={{ width:'100%',height:'100%',objectFit:'cover',borderRadius:'inherit' }} />
               : iconEmoji}
           </div>
         )}
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:cfg.titleSize,fontWeight:800,color:titleClr }}>{titleLabel}</div>
-          <div style={{ fontSize:cfg.supportSize,color:subClr,opacity:0.75,marginTop:3 }}>{subLabel}</div>
+          <div style={{ fontSize:cfg.titleSize,fontWeight:800,color:titleClr,lineHeight:1.2 }}>{titleLabel}</div>
+          <div style={{ fontSize:cfg.supportSize,color:subClr,opacity:0.8,marginTop:6 }}>{subLabel}</div>
         </div>
         <div style={{ position:'absolute',bottom:0,left:0,right:0,height:3,background:`${acc}22` }}>
           <div style={{ width:vis?'0%':'100%',height:'100%',background:acc,transition:vis?`width ${cfg.duration}s linear`:'none' }} />
@@ -367,18 +411,30 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
   const [copied, setCopied] = useState(false)
   const [iconUploading, setIconUploading] = useState(false)
   const [artUploading, setArtUploading] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [autoSaving, setAutoSaving] = useState(false)
+  const lastSavedRef = useRef<string>('')
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   async function uploadAsset(file: File, assetType: 'icon' | 'art'): Promise<string | null> {
-    const reader = new FileReader()
-    const b64 = await new Promise<string>(res => { reader.onload = () => res(reader.result as string); reader.readAsDataURL(file) })
-    const r = await fetch('/api/overlay-asset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: b64, mimeType: file.type, assetType }),
-    })
-    if (!r.ok) { const d = await r.json(); notify(d.error ?? 'Erro ao enviar imagem', 'error'); return null }
-    const d = await r.json()
-    return d.url ?? null
+    try {
+      const reader = new FileReader()
+      const b64 = await new Promise<string>(res => { reader.onload = () => res(reader.result as string); reader.readAsDataURL(file) })
+      const r = await fetch('/api/overlay-asset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: b64, mimeType: file.type, assetType }),
+      })
+      if (!r.ok) {
+        let msg = 'Erro ao enviar imagem'
+        try { const d = await r.json(); msg = d.error ?? msg } catch {}
+        notify(msg, 'error'); return null
+      }
+      const d = await r.json()
+      return d.url ?? null
+    } catch {
+      notify('Erro ao enviar imagem', 'error'); return null
+    }
   }
 
   async function deleteAsset(url: string) {
@@ -387,15 +443,40 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
   }
 
   useEffect(() => {
+    setLoaded(false)
     fetch('/api/me').then(r => r.json()).then(d => {
-      if (!d?.id) return
+      if (!d?.id) { setLoaded(true); return }
       setUid(d.id)
       fetch(`/api/overlay-config/${cfgKey}?uid=${d.id}`)
         .then(r => r.ok ? r.json() : null)
-        .then(c => setCfg(c?.style ? { ...slugDefault, ...c.style } : slugDefault))
+        .then(c => {
+          const resolved = c?.style ? { ...slugDefault, ...c.style } : slugDefault
+          setCfg(resolved)
+          lastSavedRef.current = JSON.stringify(resolved)
+        })
         .catch(() => {})
-    }).catch(() => {})
+        .finally(() => setLoaded(true))
+    }).catch(() => setLoaded(true))
   }, [cfgKey, slugDefault])
+
+  useEffect(() => {
+    if (!loaded || !uid) return
+    const json = JSON.stringify(cfg)
+    if (json === lastSavedRef.current) return
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    setAutoSaving(true)
+    autoSaveTimer.current = setTimeout(async () => {
+      try {
+        await fetch(`/api/overlay-config/${cfgKey}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ style: cfg }),
+        })
+        lastSavedRef.current = JSON.stringify(cfg)
+      } catch {}
+      setAutoSaving(false)
+    }, 1500)
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [cfg, loaded, uid, cfgKey])
 
   useEffect(() => {
     if (tab !== 'efeitos') return
@@ -409,12 +490,15 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
   function up<K extends keyof OvCfg>(k: K, v: OvCfg[K]) { setCfg(p => ({ ...p, [k]: v })) }
 
   async function saveCfg() {
+    if (autoSaveTimer.current) { clearTimeout(autoSaveTimer.current); autoSaveTimer.current = null }
     try {
       const r = await fetch(`/api/overlay-config/${cfgKey}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ style: cfg }),
       })
       if (!r.ok) { notify('Erro ao salvar overlay', 'error'); return }
+      lastSavedRef.current = JSON.stringify(cfg)
+      setAutoSaving(false)
     } catch { notify('Erro ao salvar overlay', 'error'); return }
     setSavedOk(true); notify('Overlay salvo!', 'success')
     setTimeout(() => setSavedOk(false), 2500)
@@ -492,18 +576,32 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
           {tab === 'efeitos' && (
             <div>
               <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'0.4rem' }}>Animação de entrada</div>
-              <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'0.25rem',marginBottom:'0.65rem' }}>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'0.22rem',marginBottom:'0.65rem' }}>
                 {OV_ANIMS.map(a => (
-                  <button type="button" key={a.id} onClick={() => up('animIn',a.id)} style={{
-                    display:'flex',flexDirection:'column',alignItems:'center',gap:'0.12rem',
-                    padding:'0.35rem 0.1rem',
+                  <button type="button" key={a.id} onClick={() => { up('animIn',a.id); setAnimKey(k=>k+1) }} style={{
+                    display:'flex',flexDirection:'column',alignItems:'center',gap:'0.1rem',
+                    padding:'0.3rem 0.08rem',
                     background:cfg.animIn===a.id?PBg:'rgba(255,255,255,0.02)',
                     border:`1px solid ${cfg.animIn===a.id?PB:BD}`,
                     borderRadius:5,color:cfg.animIn===a.id?P:DIM,
-                    cursor:'pointer',fontSize:'0.76rem',fontWeight:cfg.animIn===a.id?700:400,
+                    cursor:'pointer',fontSize:'0.72rem',fontWeight:cfg.animIn===a.id?700:400,
                   }}>
                     <span style={{ lineHeight:1.2,textAlign:'center' }}>{a.label}</span>
-                    <span style={{ fontSize:'0.62rem',opacity:0.5 }}>{a.dur}</span>
+                    <span style={{ fontSize:'0.6rem',opacity:0.5 }}>{a.dur}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'0.4rem' }}>Animação de saída</div>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'0.22rem',marginBottom:'0.65rem' }}>
+                {OV_EXIT_ANIMS.map(a => (
+                  <button type="button" key={a.id} onClick={() => { up('animOut',a.id); setAnimKey(k=>k+1) }} style={{
+                    padding:'0.3rem 0.08rem',
+                    background:(cfg.animOut??'fade')===a.id?PBg:'rgba(255,255,255,0.02)',
+                    border:`1px solid ${(cfg.animOut??'fade')===a.id?PB:BD}`,
+                    borderRadius:5,color:(cfg.animOut??'fade')===a.id?P:DIM,
+                    cursor:'pointer',fontSize:'0.72rem',fontWeight:(cfg.animOut??'fade')===a.id?700:400,
+                  }}>
+                    {a.label}
                   </button>
                 ))}
               </div>
@@ -844,8 +942,11 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
           border:`1px solid ${savedOk?'rgba(34,197,94,0.3)':PB}`,
           borderRadius:7,color:savedOk?GR:P,fontSize:'0.78rem',fontWeight:700,cursor:'pointer',
         }}>
-          {savedOk ? '✓ Overlay salvo!' : '💾 Salvar overlay'}
+          {savedOk ? '✓ Salvo!' : '💾 Salvar agora'}
         </button>
+      </div>
+      <div style={{ fontSize:'0.62rem',color:DIM,marginTop:'0.35rem',lineHeight:1.4,textAlign:'center' }}>
+        {autoSaving ? '⏳ Salvando automaticamente...' : '✓ Salvo — OBS atualiza em até 15s'}
       </div>
     </div>
   )

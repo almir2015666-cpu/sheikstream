@@ -2332,7 +2332,15 @@ export default function AdminPage() {
                             {aiImgExpanded[g.id] !== undefined && (
                               <div style={{ padding: '0 0.85rem 0.85rem' }}>
                                 {aiImgExpanded[g.id] ? (
-                                  <img src={aiImgExpanded[g.id]!} alt={g.prompt} style={{ width: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 8, border: `1px solid ${C.border}`, background: '#000' }} />
+                                  <>
+                                    <img src={aiImgExpanded[g.id]!} alt={g.prompt} style={{ width: '100%', height: 'auto', borderRadius: 8, border: `1px solid ${C.border}`, display: 'block' }} />
+                                    <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                                      <a href={aiImgExpanded[g.id]!} download={`sheikstream-ia-${g.id}.png`} target="_blank" rel="noreferrer"
+                                        style={{ flex: 1, textAlign: 'center', padding: '0.4rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: 7, color: C.primary, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'none' }}>
+                                        ⬇ Baixar imagem
+                                      </a>
+                                    </div>
+                                  </>
                                 ) : (
                                   <div style={{ padding: '0.75rem', textAlign: 'center', color: C.dim, fontSize: '0.78rem' }}>Imagem não disponível</div>
                                 )}
