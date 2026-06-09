@@ -227,14 +227,32 @@ function ovTrans(animIn: string, animSpeed = 5): string {
   return m[animIn] ?? `transform ${d}s cubic-bezier(.22,.68,0,1.2),opacity ${d6}s`
 }
 
-function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
+const SLUG_PREVIEW: Record<string, { icon: string; title: string; sub: string }> = {
+  'twitch-sub':         { icon: '⭐', title: 'Novo inscrito!',    sub: 'viewer123 se inscreveu!' },
+  'twitch-giftsub':     { icon: '🎁', title: 'Gift Sub!',         sub: 'viewer123 presenteou 5 inscritos!' },
+  'twitch-resub':       { icon: '🔁', title: 'Reinscrição!',      sub: 'viewer123 inscrito há 3 meses!' },
+  'twitch-follow':      { icon: '❤️',  title: 'Novo seguidor!',   sub: 'viewer123 começou a seguir!' },
+  'twitch-bits':        { icon: '💎', title: 'Bits recebidos!',   sub: 'viewer123 enviou 100 bits!' },
+  'livepix':            { icon: '💸', title: 'Doação recebida!',  sub: 'viewer123 doou R$10,00!' },
+  'paypal':             { icon: '💸', title: 'Doação PayPal!',    sub: 'viewer123 doou R$10,00!' },
+  'kick-sub':           { icon: '⭐', title: 'Novo inscrito!',    sub: 'viewer123 se inscreveu no Kick!' },
+  'kick-follow':        { icon: '❤️',  title: 'Novo seguidor!',   sub: 'viewer123 seguiu no Kick!' },
+  'kick-giftsub':       { icon: '🎁', title: 'Gift Sub Kick!',    sub: 'viewer123 presenteou no Kick!' },
+  'youtube-member':     { icon: '▶️', title: 'Novo membro!',      sub: 'viewer123 virou membro!' },
+  'youtube-giftmember': { icon: '🎁', title: 'Gift de Membros!',  sub: 'viewer123 presenteou membros!' },
+}
+const SLUG_PREVIEW_DEFAULT = { icon: '🔔', title: 'Novo alerta!', sub: 'viewer123 ativou o alerta!' }
+
+function OvPreview({ cfg, animKey, slug }: { cfg: OvCfg; animKey: number; slug: string }) {
   const [vis, setVis] = useState(false)
   const bg = cfg.bgColor === 'transparent' || cfg.bgOpacity === 0 ? 'transparent' : cfg.bgColor
   const acc = cfg.timerColor
   const titleClr = cfg.titleColor || acc
   const subClr = cfg.subtitleColor || cfg.textColor
-  const titleLabel = cfg.titleText || 'Novo inscrito!'
-  const subLabel = cfg.subtitleText || 'viewer123 se inscreveu'
+  const preview = SLUG_PREVIEW[slug] ?? SLUG_PREVIEW_DEFAULT
+  const titleLabel = cfg.titleText || preview.title
+  const subLabel = cfg.subtitleText || preview.sub
+  const iconEmoji = preview.icon
   useEffect(() => {
     setVis(false)
     const t = setTimeout(() => setVis(true), 80)
@@ -282,7 +300,7 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
         transition: isShakeSwing ? 'none' : (vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none'),
       }}>
         {cfg.iconShape !== 'none' && (
-          <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17,...iconAnimStyle }}>⭐</div>
+          <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17,...iconAnimStyle }}>{iconEmoji}</div>
         )}
         <div style={{ flex:1 }}>
           <div style={{ fontSize:cfg.titleSize,fontWeight:800,color:titleClr }}>{titleLabel}</div>
@@ -686,7 +704,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
         <div style={{ display:'flex',flexDirection:'column',gap:'0.5rem' }}>
           <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.07em' }}>Prévia ao vivo</div>
           <div style={{ flex:1,background:'#08090d',border:`1px solid ${BD}`,borderRadius:7,padding:'0.85rem',display:'flex',alignItems:'center',justifyContent:'center',minHeight:80 }}>
-            <OvPreview cfg={cfg} animKey={animKey} />
+            <OvPreview cfg={cfg} animKey={animKey} slug={slug} />
           </div>
           <div style={{ fontSize:'0.65rem',color:'rgba(251,146,60,0.75)',background:'rgba(251,146,60,0.06)',border:'1px solid rgba(251,146,60,0.18)',borderRadius:5,padding:'0.38rem 0.55rem',lineHeight:1.4 }}>
             Ative &quot;Permitir transparência&quot; no Browser Source do OBS.
