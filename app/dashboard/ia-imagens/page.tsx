@@ -88,6 +88,26 @@ export default function IAImagensPage() {
 
   useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current) }, [])
 
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (!file) continue
+          const reader = new FileReader()
+          reader.onload = () => setRefImage(reader.result as string)
+          reader.readAsDataURL(file)
+          e.preventDefault()
+          break
+        }
+      }
+    }
+    document.addEventListener('paste', onPaste)
+    return () => document.removeEventListener('paste', onPaste)
+  }, [])
+
   async function generate() {
     if (!prompt.trim() || generating || cooldown > 0) return
     setGenerating(true)
@@ -278,8 +298,9 @@ export default function IAImagensPage() {
                   <div style={{ fontSize: '0.62rem', color: C.dim, marginTop: '0.3rem' }}>A IA vai usar este print como referência visual</div>
                 </div>
               ) : (
-                <button onClick={() => refInputRef.current?.click()} style={{ width: '100%', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', border: `1px dashed ${C.border}`, borderRadius: 7, color: C.dim, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                  📸 Enviar print de referência
+                <button onClick={() => refInputRef.current?.click()} style={{ width: '100%', padding: '0.6rem 0.5rem', background: 'rgba(255,255,255,0.03)', border: `1px dashed ${C.border}`, borderRadius: 7, color: C.dim, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
+                  <span>📸 Selecionar imagem</span>
+                  <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>ou cole com Ctrl+V</span>
                 </button>
               )}
               <input ref={refInputRef} type="file" accept="image/*" onChange={e => {
