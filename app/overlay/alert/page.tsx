@@ -128,21 +128,34 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     const exitDur = `${((11-(cfg.animSpeed??5))*0.06).toFixed(2)}s`
 
     const t1 = setTimeout(() => setVisible(true), 50)
+    let t3: ReturnType<typeof setTimeout> | null = null
 
     const t2 = setTimeout(() => {
       const el = wrapperRef.current
       if (el && animOut !== 'none') {
-        // Force reflow trick: clear → reflow → set new animation
-        // This guarantees the browser starts a fresh animation regardless of prior state
         el.style.transition = 'none'
         el.style.animation = 'none'
-        void el.offsetWidth  // synchronous layout — forces browser to commit the 'none' state
+        void el.offsetWidth  // força reflow para o browser comitar 'none'
         el.style.animation = `sk-out-${animOut} ${exitDur}s ease forwards`
+
+        // Usa animationend para sincronizar unmount com fim real da animacao
+        // t3 é nested aqui — nunca pode disparar no mesmo tick que t2
+        const onEnd = () => onDoneRef.current()
+        el.addEventListener('animationend', onEnd, { once: true })
+        t3 = setTimeout(() => {
+          el.removeEventListener('animationend', onEnd)
+          onDoneRef.current()
+        }, exitDurMs + 1500) // fallback longo caso animationend nao dispare
+      } else {
+        t3 = setTimeout(() => onDoneRef.current(), 200)
       }
     }, cfg.duration * 1000)
 
-    const t3 = setTimeout(() => onDoneRef.current(), cfg.duration * 1000 + exitDurMs + 150)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      if (t3 !== null) clearTimeout(t3)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
