@@ -18,8 +18,10 @@ type StyleCfg = {
   barColor: string; barBg: string; barThickness: number
   border: boolean; borderColor: string; borderThick: number; borderRadius: number
   textEffect: string; textEffectSpeed: number; textInterval: number; textPosition: string
-  animIn: string; duration: number
+  animIn: string; animSpeed: number; duration: number
   entryAnim: string; barAnim: string
+  iconShape: 'circle' | 'square' | 'none'
+  titleText: string; subtitleText: string; titleColor: string; subtitleColor: string
 }
 type VisCfg = Record<string, boolean>
 type FontesCfg = Record<string, boolean>
@@ -32,8 +34,10 @@ const DEF: StyleCfg = {
   barColor: '#9146FF', barBg: '#222222', barThickness: 8,
   border: false, borderColor: '#9146FF', borderThick: 1, borderRadius: 16,
   textEffect: 'typewriter', textEffectSpeed: 60, textInterval: 5, textPosition: 'bottom',
-  animIn: 'slide-right', duration: 6,
+  animIn: 'slide-right', animSpeed: 5, duration: 6,
   entryAnim: 'fade', barAnim: 'ease',
+  iconShape: 'circle',
+  titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
 }
 
 const TEXT_EFFECTS = [
@@ -247,6 +251,8 @@ function AlertPreview({ s, animKey }: { s: StyleCfg; animKey?: number }) {
   const [visible, setVisible] = useState(false)
   const bg = s.bgOpacity === 0 ? 'transparent' : s.bgColor
   const accent = s.timerColor
+  const titleClr = s.titleColor || accent
+  const subClr = s.subtitleColor || s.textColor
 
   useEffect(() => {
     setVisible(false)
@@ -265,10 +271,12 @@ function AlertPreview({ s, animKey }: { s: StyleCfg; animKey?: number }) {
         boxShadow: `0 0 24px ${accent}22`, position: 'relative', overflow: 'hidden',
         ...animStyle, transition,
       }}>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${accent}22`, border: `1px solid ${accent}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18 }}>⭐</div>
+        {s.iconShape !== 'none' && (
+          <div style={{ width: 40, height: 40, borderRadius: s.iconShape === 'circle' ? '50%' : 8, background: `${accent}22`, border: `1px solid ${accent}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18 }}>⭐</div>
+        )}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: s.titleSize + 1, fontWeight: 800, color: accent }}>Novo inscrito!</div>
-          <div style={{ fontSize: s.supportSize + 1, color: s.textColor, opacity: 0.7, marginTop: 2 }}>viewer123 se inscreveu!</div>
+          <div style={{ fontSize: s.titleSize + 1, fontWeight: 800, color: titleClr }}>{s.titleText || 'Novo inscrito!'}</div>
+          <div style={{ fontSize: s.supportSize + 1, color: subClr, opacity: 0.7, marginTop: 2 }}>{s.subtitleText || 'viewer123 se inscreveu!'}</div>
         </div>
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `${accent}22` }}>
           <div style={{ width: visible ? '0%' : '100%', height: '100%', background: accent, transition: visible ? `width ${s.duration ?? 6}s linear` : 'none' }} />
@@ -526,7 +534,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
           </p>
           <div style={{ padding: '0.65rem 0.85rem', background: C.orangeBg, border: `1px solid ${C.orangeB}`, borderRadius: 8 }}>
             <p style={{ margin: 0, fontSize: '0.76rem', color: C.orange, lineHeight: 1.5 }}>
-              Para configurar alertas individuais por evento, acesse o painel de <strong>Comandos</strong> e edite cada evento diretamente nele.
+              Ative <strong>&quot;Permitir transparência&quot;</strong> nas configurações do Browser Source no OBS. Use as abas <strong>Efeitos</strong> e <strong>Estilo</strong> para personalizar.
             </p>
           </div>
         </Card>
@@ -686,14 +694,12 @@ export default function OverlayEditorPage({ params }: Ctx) {
         <>
           <Card>
             <Label sub="Como o alerta aparece na tela">Animação de entrada</Label>
-            <EffectGrid effects={ALERT_ANIMS} value={style.animIn} onChange={v => upS('animIn', v)} />
+            <EffectGrid effects={ALERT_ANIMS} value={style.animIn} onChange={v => { upS('animIn', v); setPreviewAnimKey(k => k + 1) }} />
           </Card>
           <Card>
-            <Label>Tempo de exibição</Label>
+            <Label>Velocidade e duração</Label>
+            <RangeInput label="Velocidade do efeito" value={style.animSpeed} min={1} max={10} unit={style.animSpeed < 4 ? ' (lento)' : style.animSpeed < 7 ? ' (normal)' : ' (rápido)'} onChange={v => upS('animSpeed', v)} />
             <RangeInput label="Duração do alerta" value={style.duration} min={2} max={20} unit="s" onChange={v => upS('duration', v)} />
-            <div style={{ padding: '0.55rem 0.7rem', background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.cardB}`, borderRadius: 8, fontSize: '0.72rem', color: C.dim }}>
-              A barra de progresso na base do alerta vai do 100% ao 0% durante este tempo.
-            </div>
           </Card>
         </>
       )
@@ -783,6 +789,32 @@ export default function OverlayEditorPage({ params }: Ctx) {
           <RangeInput label="Largura" value={style.width} min={100} max={1920} unit="px" onChange={v => upS('width', v)} />
           {isBarType && <RangeInput label="Espessura da barra" value={style.barThickness} min={2} max={24} unit="px" onChange={v => upS('barThickness', v)} />}
         </Card>
+
+        {type === 'alert' && (
+          <Card>
+            <Label sub="Ícone à esquerda do alerta">Balão / ícone</Label>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              {([['circle', '○ Círculo'], ['square', '□ Quadrado'], ['none', '✕ Nenhum']] as const).map(([v, lbl]) => (
+                <button key={v} onClick={() => upS('iconShape', v)} style={{ flex: 1, padding: '0.4rem 0.25rem', background: style.iconShape === v ? C.primaryBg : 'rgba(255,255,255,0.03)', border: `1px solid ${style.iconShape === v ? C.primaryB : C.cardB}`, borderRadius: 7, color: style.iconShape === v ? C.primary : C.dim, cursor: 'pointer', fontSize: '0.78rem', fontWeight: style.iconShape === v ? 700 : 400 }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+            <Label sub="Personalize os textos exibidos no alerta">Texto personalizado</Label>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Título (deixe vazio para usar o padrão do evento)</div>
+              <input value={style.titleText} onChange={e => upS('titleText', e.target.value)} placeholder="Ex: Novo inscrito!" style={{ width: '100%', background: C.inner, border: `1px solid ${C.cardB}`, borderRadius: 7, padding: '0.45rem 0.7rem', color: C.text, fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Subtítulo (use $user, $valor, $msg)</div>
+              <input value={style.subtitleText} onChange={e => upS('subtitleText', e.target.value)} placeholder="Ex: $user se inscreveu!" style={{ width: '100%', background: C.inner, border: `1px solid ${C.cardB}`, borderRadius: 7, padding: '0.45rem 0.7rem', color: C.text, fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <ColorIn label="Cor do título" value={style.titleColor} onChange={v => upS('titleColor', v)} />
+              <ColorIn label="Cor do subtítulo" value={style.subtitleColor} onChange={v => upS('subtitleColor', v)} />
+            </div>
+          </Card>
+        )}
 
         <Card>
           <Label>Borda</Label>

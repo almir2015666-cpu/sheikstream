@@ -20,20 +20,20 @@ const SLUG_TO_TYPES: Record<string, string[]> = {
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const uid = req.nextUrl.searchParams.get('uid')
-  if (!uid) return NextResponse.json([], { status: 400 })
-
   const eventSlug = req.nextUrl.searchParams.get('event')
 
+  // uid param kept for backwards compat but no longer required —
+  // overlay is global: returns events for the main broadcaster stored in env
+  const uid = req.nextUrl.searchParams.get('uid') ?? process.env.BROADCASTER_ID ?? null
+
   const db = getSupabaseAdmin()
-  // No created_at filter — table doesn't have that column.
-  // The overlay page handles deduplication via seenIds (priming on first load).
   let query = db
     .from('twitch_events')
     .select('id, event_type, event_data')
-    .eq('broadcaster_id', uid)
-    .order('id', { ascending: true })
+    .order('id', { ascending: false })
     .limit(20)
+
+  if (uid) query = query.eq('broadcaster_id', uid)
 
   if (eventSlug && SLUG_TO_TYPES[eventSlug]) {
     query = query.in('event_type', SLUG_TO_TYPES[eventSlug])
