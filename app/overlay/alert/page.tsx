@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useRef, Suspense } from 'react'
+import { flushSync } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { playAlertSound } from '@/app/lib/sound'
 
@@ -138,12 +139,13 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
         t3 = setTimeout(() => onDoneRef.current(), 50)
         return
       }
-      // Exact same two-step pattern as entrance — proven to work:
-      // Step 1: set transition on outer div (values unchanged, no visible jump)
-      // Step 2 (100ms later, guaranteed separate paint): apply exit values → CSS transition fires
-      setIsExiting(true)
-      t3 = setTimeout(() => setExitStarted(true), 100)
-      t4 = setTimeout(() => onDoneRef.current(), 100 + exitDurMs + 100)
+      // flushSync forces React 18 to commit setIsExiting to the DOM IMMEDIATELY
+      // (before this setTimeout returns), preventing it from being batched with
+      // setExitStarted — without this, React defers both updates and commits them
+      // together in one render, skipping the intermediate frame the CSS transition needs.
+      flushSync(() => setIsExiting(true))
+      t3 = setTimeout(() => setExitStarted(true), 50)
+      t4 = setTimeout(() => onDoneRef.current(), 50 + exitDurMs + 100)
     }, cfg.duration * 1000)
 
     return () => {
