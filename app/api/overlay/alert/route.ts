@@ -16,12 +16,16 @@ const SLUG_TO_TYPES: Record<string, string[]> = {
   'youtube-giftmember': ['youtube.giftmember'],
 }
 
+// Prevent edge/CDN caching — overlay must always get fresh events
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   const uid = req.nextUrl.searchParams.get('uid')
   if (!uid) return NextResponse.json([], { status: 400 })
 
   const eventSlug = req.nextUrl.searchParams.get('event')
-  const since = new Date(Date.now() - 10000).toISOString()
+  // 30s window — accounts for server clock drift and polling intervals
+  const since = new Date(Date.now() - 30000).toISOString()
 
   const db = getSupabaseAdmin()
   let query = db
@@ -51,7 +55,9 @@ export async function GET(req: NextRequest) {
     }
   })
 
-  return NextResponse.json(alerts)
+  return NextResponse.json(alerts, {
+    headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+  })
 }
 
 function mapEventType(eventType: string): string {

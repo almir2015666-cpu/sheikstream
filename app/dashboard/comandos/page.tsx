@@ -310,6 +310,7 @@ function OverlayQuickEdit({ trigger }: { trigger: string }) {
   async function testOverlay() {
     if (testing) return
     setTesting(true)
+    setAnimKey(k => k + 1) // replay dashboard preview immediately
     try {
       const r = await fetch('/api/overlay/alert/test', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -321,8 +322,9 @@ function OverlayQuickEdit({ trigger }: { trigger: string }) {
         setTesting(false); return
       }
       setTestOk(true)
-      setTimeout(() => setTestOk(false), 4000)
-    } catch { notify('Erro ao testar overlay', 'error') }
+      notify('Evento enviado! Verifique o OBS em até 2s.', 'success')
+      setTimeout(() => setTestOk(false), 5000)
+    } catch { notify('Erro de conexão ao testar overlay', 'error') }
     setTesting(false)
   }
 
