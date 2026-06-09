@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { notify } from '@/app/lib/notify'
-import { playAlertSound, testSoundUrl } from '@/app/lib/sound'
+import { playAlertSound } from '@/app/lib/sound'
 import Link from 'next/link'
 
 const C = {
@@ -148,7 +148,7 @@ type OvCfg = {
   iconShape: 'circle' | 'square' | 'none'
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
-  soundEnabled: boolean; soundDataUrl: string; soundUrl: string; soundVolume: number
+  soundEnabled: boolean; soundDataUrl: string; soundVolume: number
 }
 const OV_DEF: OvCfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, font: 'Inter',
@@ -157,7 +157,7 @@ const OV_DEF: OvCfg = {
   titleSize: 15, supportSize: 12, width: 480,
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
-  soundEnabled: true, soundDataUrl: '', soundUrl: '', soundVolume: 70,
+  soundEnabled: true, soundDataUrl: '', soundVolume: 70,
 }
 const OV_ANIMS = [
   { id: 'slide-right', label: 'Slide →', dur: '0.45s' }, { id: 'slide-left', label: 'Slide ←', dur: '0.45s' },
@@ -503,34 +503,21 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                             if (!file) return
                             if (file.size > 3 * 1024 * 1024) { notify('Arquivo muito grande (máx 3 MB)', 'error'); return }
                             const reader = new FileReader()
-                            reader.onload = () => { up('soundDataUrl', reader.result as string); up('soundUrl', '') }
+                            reader.onload = () => { up('soundDataUrl', reader.result as string) }
                             reader.readAsDataURL(file)
                           }} />
                         </label>
                         {cfg.soundDataUrl && (
                           <button type="button" onClick={() => up('soundDataUrl','')} style={{ padding:'0.38rem 0.55rem',background:'rgba(255,255,255,0.04)',border:`1px solid ${BD}`,borderRadius:6,color:DIM,cursor:'pointer',fontSize:'0.7rem' }}>✕ Remover</button>
                         )}
-                        <button type="button" onClick={async () => {
-                          if (!cfg.soundDataUrl && cfg.soundUrl) {
-                            const err = await testSoundUrl(cfg.soundUrl)
-                            if (err) { notify(err, 'error'); return }
-                          }
-                          playAlertSound(slug || null, { soundEnabled:true, soundDataUrl:cfg.soundDataUrl, soundUrl:cfg.soundUrl, soundVolume:cfg.soundVolume })
+                        <button type="button" onClick={() => {
+                          playAlertSound(slug || null, { soundEnabled:true, soundDataUrl:cfg.soundDataUrl, soundVolume:cfg.soundVolume })
                         }} style={{ flexShrink:0,padding:'0.38rem 0.7rem',background:PBg,border:`1px solid ${PB}`,borderRadius:6,color:P,cursor:'pointer',fontSize:'0.7rem',fontWeight:700 }}>
                           🔊 Testar
                         </button>
                       </div>
                       <div style={{ fontSize:'0.6rem',color:DIM,marginTop:'0.18rem' }}>Máx 3 MB. Fica armazenado junto com o overlay.</div>
                     </div>
-                    {/* URL fallback (only show when no file uploaded) */}
-                    {!cfg.soundDataUrl && (
-                      <div>
-                        <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.15rem' }}>Ou cole uma URL de áudio</div>
-                        <input value={cfg.soundUrl} onChange={e => up('soundUrl',e.target.value)}
-                          placeholder="Link direto para .mp3 / .wav — ex: cdn.site.com/som.mp3"
-                          style={{ ...inp, fontSize:'0.72rem', padding:'0.38rem 0.6rem' }} />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

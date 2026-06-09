@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { playAlertSound, prefetchSoundUrl } from '@/app/lib/sound'
+import { playAlertSound } from '@/app/lib/sound'
 
 type AlertEvent = {
   id: string
@@ -28,7 +28,7 @@ type Cfg = {
   iconShape: 'circle' | 'square' | 'none'
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
-  soundEnabled: boolean; soundDataUrl: string; soundUrl: string; soundVolume: number
+  soundEnabled: boolean; soundDataUrl: string; soundVolume: number
 }
 
 const DEF: Cfg = {
@@ -38,7 +38,7 @@ const DEF: Cfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, timerColor: '#9146FF',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
-  soundEnabled: true, soundDataUrl: '', soundUrl: '', soundVolume: 70,
+  soundEnabled: true, soundDataUrl: '', soundVolume: 70,
 }
 
 const EVENT_META: Record<string, { icon: string; label: string; color: string }> = {
@@ -121,7 +121,6 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
     playAlertSound(ev.slug, {
       soundEnabled: cfg.soundEnabled !== false,
       soundDataUrl: cfg.soundDataUrl ?? '',
-      soundUrl: cfg.soundUrl ?? '',
       soundVolume: cfg.soundVolume ?? 70,
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,8 +262,6 @@ function AlertOverlayContent() {
         slugsToLoad.forEach((s, i) => { map[s] = eventCfgs[i] ?? generic ?? DEF })
         cfgMapRef.current = map
         forceUpdate(n => n + 1)
-        // Pre-fetch all sound URLs so OBS has them cached before the first alert
-        Object.values(map).forEach(c => { if (c?.soundUrl) prefetchSoundUrl(c.soundUrl) })
       })
     }
 

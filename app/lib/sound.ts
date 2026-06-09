@@ -3,7 +3,6 @@ type Note = { f: number; t: number; d: number; v: number; w?: OscillatorType }
 export type SoundCfg = {
   soundEnabled: boolean
   soundDataUrl: string
-  soundUrl: string
   soundVolume: number
 }
 
@@ -57,43 +56,9 @@ function playNotes(ctx: AudioContext, notes: Note[], vol: number) {
   })
 }
 
-// Pre-decoded audio buffer cache — keyed by soundUrl
-const _bufCache = new Map<string, AudioBuffer>()
-
-// Call this when the overlay loads a config with a soundUrl.
-// Fetches via proxy and decodes into AudioContext so play-time is instant and works in OBS.
-export async function prefetchSoundUrl(soundUrl: string): Promise<void> {
-  if (!soundUrl || _bufCache.has(soundUrl)) return
-  const ctx = getCtx()
-  if (!ctx) return
-  try {
-    if (ctx.state !== 'running') await ctx.resume()
-    const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(soundUrl)}`
-    const res = await fetch(proxyUrl, { cache: 'no-store' })
-    if (!res.ok) return
-    const arr = await res.arrayBuffer()
-    const decoded = await ctx.decodeAudioData(arr)
-    _bufCache.set(soundUrl, decoded)
-  } catch {}
-}
-
-export async function testSoundUrl(url: string): Promise<string | null> {
-  const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(url)}`
-  try {
-    const res = await fetch(proxyUrl, { cache: 'no-store' })
-    if (!res.ok) {
-      try { const j = await res.json(); return j?.error ?? `Erro ${res.status}` } catch {}
-      return `Erro ${res.status}`
-    }
-    return null
-  } catch (e) {
-    return e instanceof Error ? e.message : 'Falha de rede'
-  }
-}
-
 export async function playAlertSound(
   slug: string | null | undefined,
-  cfg: Pick<SoundCfg, 'soundEnabled' | 'soundDataUrl' | 'soundUrl' | 'soundVolume'>,
+  cfg: Pick<SoundCfg, 'soundEnabled' | 'soundDataUrl' | 'soundVolume'> & { soundUrl?: string },
 ) {
   if (!cfg.soundEnabled) return
   const ctx = getCtx()
@@ -102,7 +67,6 @@ export async function playAlertSound(
   try {
     if (ctx.state !== 'running') await ctx.resume()
 
-    // 1. Uploaded file — decoded locally, no network call
     if (cfg.soundDataUrl) {
       const buf = dataUrlToBuffer(cfg.soundDataUrl)
       const decoded = await ctx.decodeAudioData(buf)
@@ -115,39 +79,6 @@ export async function playAlertSound(
       return
     }
 
-    // 2. External URL — use pre-cached AudioBuffer if available (reliable in OBS)
-    if (cfg.soundUrl) {
-      const cached = _bufCache.get(cfg.soundUrl)
-      if (cached) {
-        const src = ctx.createBufferSource()
-        const gain = ctx.createGain()
-        gain.gain.value = vol
-        src.buffer = cached
-        src.connect(gain); gain.connect(ctx.destination)
-        src.start(0)
-        return
-      }
-      // Not cached yet — try fetching now (works in browser, may fail in OBS)
-      try {
-        const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(cfg.soundUrl)}`
-        const res = await fetch(proxyUrl, { cache: 'no-store' })
-        if (res.ok) {
-          const arr = await res.arrayBuffer()
-          const decoded = await ctx.decodeAudioData(arr.slice(0))
-          _bufCache.set(cfg.soundUrl, decoded)
-          const src = ctx.createBufferSource()
-          const gain = ctx.createGain()
-          gain.gain.value = vol
-          src.buffer = decoded
-          src.connect(gain); gain.connect(ctx.destination)
-          src.start(0)
-          return
-        }
-      } catch {}
-      // fall through to synthesized
-    }
-
-    // 3. Built-in synthesized sound
     playNotes(ctx, (slug && SLUG_SOUNDS[slug]) ? SLUG_SOUNDS[slug] : FALLBACK, vol)
   } catch {}
 }
