@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     if (uid) fb.eq('broadcaster_id', uid)
     if (eventSlug && SLUG_TO_TYPES[eventSlug]) fb.in('event_type', SLUG_TO_TYPES[eventSlug])
     const res = await fb
-    events = res.data
+    events = (res.data ?? []).map(e => ({ ...e, created_at: null }))
   }
 
   const alerts = (events ?? []).map(e => {
