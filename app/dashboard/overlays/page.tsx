@@ -141,7 +141,7 @@ export default function OverlaysPage() {
         <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: C.dim }}>
           Cada evento tem sua própria URL e configuração visual independente. Use URLs diferentes no OBS para controle total.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
           {EVENT_OVERLAYS.map(ev => (
             <EventAlertCard key={ev.slug} ev={ev} uid={uid} />
           ))}
