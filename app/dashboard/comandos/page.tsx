@@ -129,6 +129,7 @@ export default function ComandosPage() {
   const [saveOk, setSaveOk]       = useState(false)
   const [userId, setUserId]       = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [overlayModal, setOverlayModal] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   type DbRow = { id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string; notif_overlay: boolean }
@@ -275,6 +276,31 @@ export default function ComandosPage() {
   if (!creating) return (
     <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
+      {/* Overlay modal */}
+      {overlayModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', background: 'rgba(8,9,13,0.75)' }} onClick={() => setOverlayModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#0d0f18', border: '1px solid rgba(155,48,255,0.35)', borderRadius: 16, padding: '2rem 2.25rem', maxWidth: 420, width: '90%', textAlign: 'center', boxShadow: '0 0 60px rgba(155,48,255,0.15)' }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(155,48,255,0.12)', border: '1px solid rgba(155,48,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.1rem' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9b30ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: C.text, marginBottom: '0.55rem' }}>Overlay criado!</div>
+            <div style={{ fontSize: '0.84rem', color: C.dim, lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              O overlay deste evento está disponível na seção <strong style={{ color: C.text }}>Overlays</strong>.<br/>
+              Configure o visual e copie a URL para adicionar como <strong style={{ color: C.text }}>Browser Source</strong> no OBS.
+            </div>
+            <div style={{ display: 'flex', gap: '0.65rem', justifyContent: 'center' }}>
+              <button onClick={() => setOverlayModal(false)} style={{ padding: '0.55rem 1.1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: C.dim, fontSize: '0.84rem', cursor: 'pointer', fontWeight: 600 }}>
+                Fechar
+              </button>
+              <Link href="/dashboard/overlays" onClick={() => setOverlayModal(false)} style={{ padding: '0.55rem 1.25rem', background: 'rgba(155,48,255,0.15)', border: '1px solid rgba(155,48,255,0.4)', borderRadius: 8, color: '#9b30ff', fontSize: '0.84rem', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                Ir para Overlays
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -340,8 +366,7 @@ export default function ComandosPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
               <Toggle on={cmd.habilitado} onChange={async v => {
                 if (v) {
-                  // Activating: open the configuration form
-                  notify('Overlay criado! Configure e pegue a URL em Overlays para adicionar ao OBS.', 'success')
+                  setOverlayModal(true)
                   setEditingId(cmd.id)
                   const trigger = cmd.isEvento ? cmd.trigger : cmd.trigger.replace(/^!/, '')
                   setForm({
@@ -395,6 +420,31 @@ export default function ComandosPage() {
   /* ──────────────────────── CREATE / EDIT VIEW ──────────────────────── */
   return (
     <div style={{ background: C.page, minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+
+      {/* Overlay modal — aparece quando um comando é ativado */}
+      {overlayModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', background: 'rgba(8,9,13,0.75)' }} onClick={() => setOverlayModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#0d0f18', border: '1px solid rgba(155,48,255,0.35)', borderRadius: 16, padding: '2rem 2.25rem', maxWidth: 420, width: '90%', textAlign: 'center', boxShadow: '0 0 60px rgba(155,48,255,0.15)' }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(155,48,255,0.12)', border: '1px solid rgba(155,48,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.1rem' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9b30ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: C.text, marginBottom: '0.55rem' }}>Overlay criado!</div>
+            <div style={{ fontSize: '0.84rem', color: C.dim, lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              O overlay deste evento está disponível na seção <strong style={{ color: C.text }}>Overlays</strong>.<br/>
+              Configure o visual e copie a URL para adicionar como <strong style={{ color: C.text }}>Browser Source</strong> no OBS.
+            </div>
+            <div style={{ display: 'flex', gap: '0.65rem', justifyContent: 'center' }}>
+              <button onClick={() => setOverlayModal(false)} style={{ padding: '0.55rem 1.1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: C.dim, fontSize: '0.84rem', cursor: 'pointer', fontWeight: 600 }}>
+                Fechar
+              </button>
+              <Link href="/dashboard/overlays" onClick={() => setOverlayModal(false)} style={{ padding: '0.55rem 1.25rem', background: 'rgba(155,48,255,0.15)', border: '1px solid rgba(155,48,255,0.4)', borderRadius: 8, color: '#9b30ff', fontSize: '0.84rem', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                Ir para Overlays
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top bar */}
       <div style={{ padding: '0.9rem 2rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
