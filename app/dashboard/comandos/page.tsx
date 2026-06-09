@@ -576,7 +576,8 @@ export default function ComandosPage() {
 
   /* ──────────────────────── LIST VIEW ──────────────────────── */
   if (!creating) return (
-    <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+    <div style={{ background: C.page, minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '1.5rem 2rem' }}>
 
       {/* Overlay modal */}
       {overlayModal && (
@@ -605,25 +606,22 @@ export default function ComandosPage() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: C.text }}>Comandos</h2>
-          <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: C.dim }}>Gerencie eventos automáticos e comandos personalizados do bot</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Comandos do bot</h2>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '0.4rem 0.75rem' }}>
-            <span style={{ fontSize: '0.78rem', color: C.dim }}>Bot</span>
-            <Toggle on={botOn} onChange={setBotOn} size="sm" />
-            <span style={{ fontSize: '0.73rem', color: botOn ? C.green : C.dim, fontWeight: 600 }}>{botOn ? 'Ativo' : 'Off'}</span>
-          </div>
-          <button onClick={() => { setForm(emptyForm); setEditingId(null); setCreating(true) }} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.1rem', background: 'rgba(155,48,255,0.15)', border: '1px solid rgba(155,48,255,0.4)', color: C.primary, borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Novo comando
+          <span style={{ fontSize: '0.82rem', color: C.dim }}>Bot</span>
+          <Toggle on={botOn} onChange={setBotOn} size="sm" />
+          <span style={{ fontSize: '0.78rem', color: botOn ? C.green : C.dim, minWidth: 52 }}>{botOn ? '📶 Ativo' : 'Desativado'}</span>
+          <button onClick={() => { setForm(emptyForm); setEditingId(null); setCreating(true) }} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', background: C.blue, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>
+            + Novo comando
           </button>
         </div>
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
         {[{ label: 'Total', value: cmds.length, color: C.text }, { label: 'Ativos', value: ativos, color: C.cyan }, { label: 'Inativos', value: inativos, color: C.dim }].map(s => (
           <div key={s.label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '0.9rem 1.2rem' }}>
             <div style={{ fontSize: '0.72rem', color: C.dim, marginBottom: '0.3rem' }}>{s.label}</div>
@@ -632,40 +630,50 @@ export default function ComandosPage() {
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{ position: 'relative', marginBottom: '1.25rem' }}>
-        <svg style={{ position:'absolute',left:'0.9rem',top:'50%',transform:'translateY(-50%)',pointerEvents:'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome, gatilho ou resposta..." style={{ ...inp, paddingLeft: '2.5rem' }} />
-      </div>
+      {/* Table card */}
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
 
-      {/* Eventos automáticos */}
-      {filtered.filter(c => c.isEvento).length > 0 && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.primary, display: 'inline-block', flexShrink: 0 }} />
-            <span style={{ fontSize: '0.67rem', fontWeight: 800, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Eventos automáticos</span>
+        {/* Table header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem 1.25rem', borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Comandos</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            {filtered.filter(c => c.isEvento).map(cmd => {
+          <div style={{ position: 'relative' }}>
+            <svg style={{ position:'absolute',left:'0.6rem',top:'50%',transform:'translateY(-50%)',pointerEvents:'none' }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar comando..." style={{ ...inp, width: '210px', padding: '0.38rem 0.75rem 0.38rem 2rem', fontSize: '0.8rem' }} />
+          </div>
+        </div>
+
+        {/* Column headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.45rem 1.25rem', borderBottom: `1px solid rgba(255,255,255,0.04)`, fontSize: '0.66rem', fontWeight: 700, color: C.dim, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+          <span>Comando / Evento</span><span>Resposta</span><span style={{ textAlign: 'right' }}>Ações</span>
+        </div>
+
+        {/* Eventos automáticos section */}
+        {filtered.filter(c => c.isEvento).length > 0 && (
+          <>
+            <div style={{ padding: '0.5rem 1.25rem 0.3rem', display: 'flex', alignItems: 'center', gap: '0.45rem', borderTop: `1px solid rgba(255,255,255,0.03)` }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.primary, display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Eventos automáticos</span>
+            </div>
+            {filtered.filter(c => c.isEvento).map((cmd, i, arr) => {
               const platColor = PLAT_COLOR[cmd.platform] ?? C.primary
-              const icon = EVT_ICON[cmd.trigger] ?? '⚡'
               return (
-                <div key={cmd.id} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: C.card, border: `1px solid ${cmd.habilitado ? platColor + '22' : C.border}`, borderRadius: '10px', padding: '0.7rem 1rem', transition: 'border-color 0.2s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = C.card }}
+                <div key={cmd.id}
+                  style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid rgba(255,255,255,0.04)`, alignItems: 'center', transition: 'background 0.1s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.015)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                 >
-                  {/* Icon */}
-                  <div style={{ width: 38, height: 38, borderRadius: '9px', background: `${platColor}18`, border: `1px solid ${platColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>{icon}</div>
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text }}>{cmd.label}</span>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: platColor }}>{cmd.label}</span>
                       <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '0.05rem 0.4rem', background: `${platColor}18`, border: `1px solid ${platColor}35`, color: platColor, borderRadius: '4px', letterSpacing: '0.03em' }}>{cmd.platform}</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.73rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cmd.resposta || <em style={{ opacity: 0.5 }}>Sem resposta configurada</em>}</p>
+                    <div style={{ fontSize: '0.71rem', color: C.dim }}>Automatico · {cmd.platform}</div>
                   </div>
-                  {/* Actions */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{cmd.resposta}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
                     <Toggle on={cmd.habilitado} onChange={async v => {
                       setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
                       if (v) {
@@ -682,65 +690,62 @@ export default function ComandosPage() {
                         }
                       }
                     }} size="sm" />
-                    <button onClick={() => startEdit(cmd)} title="Editar" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: '7px', color: C.dim, cursor: 'pointer' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <button onClick={() => startEdit(cmd)} style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', padding: '0.15rem', display: 'flex', opacity: 0.7 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                   </div>
                 </div>
               )
             })}
-          </div>
-        </div>
-      )}
+          </>
+        )}
 
-      {/* Meus comandos */}
-      {filtered.filter(c => !c.isEvento).length > 0 && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.blue, display: 'inline-block', flexShrink: 0 }} />
-            <span style={{ fontSize: '0.67rem', fontWeight: 800, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Meus comandos</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        {/* Meus comandos section */}
+        {filtered.filter(c => !c.isEvento).length > 0 && (
+          <>
+            <div style={{ padding: '0.5rem 1.25rem 0.3rem', display: 'flex', alignItems: 'center', gap: '0.45rem', borderTop: `1px solid rgba(255,255,255,0.03)` }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.blue, display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Meus comandos</span>
+            </div>
             {filtered.filter(c => !c.isEvento).map(cmd => {
               const platColor = PLAT_COLOR[cmd.platform] ?? C.blue
               return (
-                <div key={cmd.id} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: C.card, border: `1px solid ${cmd.habilitado ? C.blue + '25' : C.border}`, borderRadius: '10px', padding: '0.7rem 1rem', transition: 'border-color 0.2s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = C.card }}
+                <div key={cmd.id}
+                  style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid rgba(255,255,255,0.04)`, alignItems: 'center', transition: 'background 0.1s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.015)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                 >
-                  <div style={{ width: 38, height: 38, borderRadius: '9px', background: `${platColor}18`, border: `1px solid ${platColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={platColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, fontFamily: 'monospace' }}>{cmd.trigger}</span>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.blue, fontFamily: 'monospace' }}>{cmd.trigger}</span>
                       <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '0.05rem 0.4rem', background: `${platColor}18`, border: `1px solid ${platColor}35`, color: platColor, borderRadius: '4px', letterSpacing: '0.03em' }}>{cmd.platform}</span>
-                      <span style={{ fontSize: '0.58rem', color: C.dim }}>{cmd.cooldown}s cd</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.73rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cmd.resposta || <em style={{ opacity: 0.5 }}>Sem resposta</em>}</p>
+                    <div style={{ fontSize: '0.71rem', color: C.dim }}>{cmd.origem} · {cmd.cooldown}s cooldown</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{cmd.resposta}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
                     <Toggle on={cmd.habilitado} onChange={async v => {
                       setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
                       if (cmd.db) { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: v }) }) }
                     }} size="sm" />
-                    <button onClick={() => startEdit(cmd)} title="Editar" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: '7px', color: C.dim, cursor: 'pointer' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <button onClick={() => startEdit(cmd)} style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', padding: '0.15rem', display: 'flex', opacity: 0.7 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
-                    <button onClick={async () => { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'DELETE' }); setCmds(p => p.filter(c => c.id !== cmd.id)) }} title="Excluir" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '7px', color: 'rgba(239,68,68,0.6)', cursor: 'pointer' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    <button onClick={async () => { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'DELETE' }); setCmds(p => p.filter(c => c.id !== cmd.id)) }} style={{ background: 'none', border: 'none', color: 'rgba(255,100,100,0.45)', cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                     </button>
                   </div>
                 </div>
               )
             })}
-          </div>
-        </div>
-      )}
+          </>
+        )}
 
-      {filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '3rem', color: C.dim, fontSize: '0.84rem' }}>Nenhum resultado para &quot;{search}&quot;</div>
-      )}
+        {filtered.length === 0 && (
+          <div style={{ padding: '3rem', textAlign: 'center', fontSize: '0.84rem', color: C.dim }}>Nenhum comando encontrado</div>
+        )}
+      </div>
+      </div>
     </div>
   )
 
