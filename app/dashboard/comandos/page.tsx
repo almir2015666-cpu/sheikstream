@@ -476,17 +476,26 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
           {tab === 'texto' && (
             <div style={{ display:'flex',flexDirection:'column',gap:'0.5rem' }}>
               <div>
-                <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.22rem' }}>Título</div>
+                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.22rem' }}>
+                  <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Título</span>
+                  {cfg.titleText && <button type="button" onClick={() => up('titleText','')} style={{ fontSize:'0.6rem',color:DIM,background:'none',border:'none',cursor:'pointer',padding:0 }}>↺ limpar</button>}
+                </div>
                 <input value={cfg.titleText} onChange={e => up('titleText', e.target.value)} placeholder="Ex: Novo inscrito!" style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }} />
               </div>
               <div>
-                <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.22rem' }}>Subtítulo</div>
+                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.22rem' }}>
+                  <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Subtítulo</span>
+                  {cfg.subtitleText && <button type="button" onClick={() => up('subtitleText','')} style={{ fontSize:'0.6rem',color:DIM,background:'none',border:'none',cursor:'pointer',padding:0 }}>↺ limpar</button>}
+                </div>
                 <input value={cfg.subtitleText} onChange={e => up('subtitleText', e.target.value)} placeholder="Ex: $user se inscreveu!" style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }} />
               </div>
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.45rem' }}>
                 <ColorPicker label="Cor do título"    value={cfg.titleColor}    onChange={v => up('titleColor',v)} />
                 <ColorPicker label="Cor do subtítulo" value={cfg.subtitleColor} onChange={v => up('subtitleColor',v)} />
               </div>
+              <button type="button" onClick={() => setCfg(p => ({ ...p, titleText: OV_DEF.titleText, subtitleText: OV_DEF.subtitleText, titleColor: OV_DEF.titleColor, subtitleColor: OV_DEF.subtitleColor }))} style={{ padding:'0.35rem',background:'rgba(255,255,255,0.03)',border:`1px solid ${BD}`,borderRadius:6,color:DIM,fontSize:'0.7rem',cursor:'pointer' }}>
+                ↺ Restaurar padrão
+              </button>
               <div style={{ fontSize:'0.66rem',color:DIM,background:'rgba(155,48,255,0.06)',border:'1px solid rgba(155,48,255,0.15)',borderRadius:6,padding:'0.4rem 0.6rem',lineHeight:1.5 }}>
                 Deixe em branco para usar o texto padrão do evento. Use <span style={{ color:MUT,fontFamily:'monospace' }}>$user</span>, <span style={{ color:MUT,fontFamily:'monospace' }}>$valor</span> etc.
               </div>
