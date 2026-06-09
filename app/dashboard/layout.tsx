@@ -75,8 +75,9 @@ const NAV_GROUPS: Group[] = [
     { id: 'metas', label: 'Metas', href: '/dashboard/metas', icon: I.meta },
   ]},
   { label: 'OVERLAYS', items: [
-    { id: 'overlays', label: 'Overlays', href: '/dashboard/overlays', icon: I.over },
-    { id: 'banners',  label: 'Banners',  href: '/dashboard/banners',  icon: I.ban, badge: 'NOVO' },
+    { id: 'overlays',    label: 'Overlays',    href: '/dashboard/overlays',    icon: I.over },
+    { id: 'banners',     label: 'Banners',     href: '/dashboard/banners',     icon: I.ban, badge: 'NOVO' as Badge },
+    { id: 'ia-imagens',  label: 'IA de Imagens', href: '/dashboard/ia-imagens', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12"/><path d="M12 8v4l3 3"/><circle cx="5" cy="5" r="2"/></svg>, badge: 'NOVO' as Badge },
   ]},
   { label: 'CONTA', items: [
     { id: 'conexoes', label: 'Conexões',  href: '/dashboard/conexoes', icon: I.link, badge: 'ATUALIZADO' },
@@ -102,6 +103,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/conexoes': 'Conexões',
   '/dashboard/perfil': 'Meu Perfil',
   '/dashboard/convites': 'Convites',
+  '/dashboard/ia-imagens': 'IA de Imagens',
 }
 
 function Chip({ type }: { type: Badge }) {

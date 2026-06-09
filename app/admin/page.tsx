@@ -147,7 +147,27 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens'>('users')
+  type AiImgCfg = { enabled: boolean; cooldown_seconds: number; max_per_day: number; allowed_roles: string[] }
+  type AiGen = { id: string; user_name: string; user_role: string; prompt: string; status: string; created_at: string }
+  const [aiCfg, setAiCfg] = useState<AiImgCfg>({ enabled: true, cooldown_seconds: 300, max_per_day: 10, allowed_roles: ['admin', 'moderador', 'vip'] })
+  const [aiRecent, setAiRecent] = useState<AiGen[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiSaving, setAiSaving] = useState(false)
+  const [aiSaved, setAiSaved] = useState(false)
+  const fetchAiCfg = async (pw: string) => {
+    setAiLoading(true)
+    const res = await fetch('/api/admin/ia-imagens/config', { headers: { 'x-admin-password': pw } })
+    const d = await res.json()
+    if (d.config) setAiCfg(d.config)
+    setAiRecent(d.recent ?? [])
+    setAiLoading(false)
+  }
+  const saveAiCfg = async () => {
+    setAiSaving(true)
+    await fetch('/api/admin/ia-imagens/config', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify(aiCfg) })
+    setAiSaving(false); setAiSaved(true); setTimeout(() => setAiSaved(false), 2500)
+  }
   const [userSearch, setUserSearch] = useState('')
   const [navSearch, setNavSearch] = useState('')
   type LoginLog = { id: string; ip: string; user_agent: string; success: boolean; created_at: string }
@@ -842,8 +862,9 @@ export default function AdminPage() {
                   { v: 'banner',    label: '🎗 Banner' },
                   { v: 'passwords', label: '🔑 Senhas Admin' },
                   { v: 'navorder',  label: '⠿ Ordem do Menu' },
+                  { v: 'iaimagens', label: '🎨 IA Imagens' },
                 ]},
-              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites'; label: string }[] }[]).map(({ group, items }) => {
+              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens'; label: string }[] }[]).map(({ group, items }) => {
                 const visible = navSearch
                   ? items.filter(i => i.label.toLowerCase().includes(navSearch.toLowerCase()))
                   : items
@@ -853,7 +874,7 @@ export default function AdminPage() {
                     {!navSearch && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem', paddingLeft: '0.25rem' }}>{group}</div>}
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       {visible.map(({ v, label }) => (
-                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw); if (v === 'notify') { fetchNotifications(storedPw); if (users.length === 0) fetchUsers(storedPw) } if (v === 'invites') fetchAdminInvites(storedPw) }}
+                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw); if (v === 'notify') { fetchNotifications(storedPw); if (users.length === 0) fetchUsers(storedPw) } if (v === 'invites') fetchAdminInvites(storedPw); if (v === 'iaimagens') fetchAiCfg(storedPw) }}
                           className={`sk-tab${view === v ? ' active' : ''}`}
                           style={{ color: view === v ? C.primary : C.muted }}>
                           {label}
@@ -2197,6 +2218,98 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {view === 'iaimagens' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {aiLoading ? <div style={{ color: C.muted, fontSize: '0.85rem' }}>Carregando...</div> : (
+                <>
+                  {/* Config card */}
+                  <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                    <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>🎨 IA de Imagens — Configuração</h3>
+                    <p style={{ margin: '0 0 1.25rem', fontSize: '0.78rem', color: C.muted }}>Configure quem pode usar a geração de imagens com DALL-E 3 e o delay entre usos.</p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {/* Enable toggle */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text }}>Funcionalidade ativa</div>
+                          <div style={{ fontSize: '0.72rem', color: C.muted, marginTop: '0.1rem' }}>Desativar bloqueia para todos os grupos</div>
+                        </div>
+                        <button onClick={() => setAiCfg(p => ({ ...p, enabled: !p.enabled }))} style={{ width: 44, height: 24, borderRadius: 12, background: aiCfg.enabled ? C.accent : C.vvdim, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <span style={{ position: 'absolute', top: 3, left: aiCfg.enabled ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+                        </button>
+                      </div>
+
+                      {/* Cooldown */}
+                      <div style={{ padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.65rem' }}>Delay entre gerações (por usuário)</div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          {[[60,'1 min'],[300,'5 min'],[600,'10 min'],[1800,'30 min'],[3600,'1h']].map(([s, lbl]) => (
+                            <button key={s} onClick={() => setAiCfg(p => ({ ...p, cooldown_seconds: Number(s) }))} style={{ padding: '0.4rem 0.9rem', borderRadius: 8, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', background: aiCfg.cooldown_seconds === s ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.cooldown_seconds === s ? C.borderStrong : C.border}`, color: aiCfg.cooldown_seconds === s ? C.primary : C.muted }}>{lbl}</button>
+                          ))}
+                          <input type="number" min={0} value={aiCfg.cooldown_seconds} onChange={e => setAiCfg(p => ({ ...p, cooldown_seconds: Number(e.target.value) }))} style={{ width: 90, padding: '0.4rem 0.6rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 8, color: C.text, fontSize: '0.82rem', outline: 'none' }} placeholder="seg" />
+                        </div>
+                      </div>
+
+                      {/* Max per day */}
+                      <div style={{ padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.65rem' }}>Máximo de imagens por dia (por usuário)</div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                          {[3,5,10,20,50].map(n => (
+                            <button key={n} onClick={() => setAiCfg(p => ({ ...p, max_per_day: n }))} style={{ padding: '0.4rem 0.85rem', borderRadius: 8, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', background: aiCfg.max_per_day === n ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.max_per_day === n ? C.borderStrong : C.border}`, color: aiCfg.max_per_day === n ? C.primary : C.muted }}>{n}</button>
+                          ))}
+                          <input type="number" min={1} value={aiCfg.max_per_day} onChange={e => setAiCfg(p => ({ ...p, max_per_day: Number(e.target.value) }))} style={{ width: 75, padding: '0.4rem 0.6rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 8, color: C.text, fontSize: '0.82rem', outline: 'none' }} />
+                        </div>
+                      </div>
+
+                      {/* Allowed roles */}
+                      <div style={{ padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.65rem' }}>Grupos com acesso</div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          {['todos','admin','moderador','vip','streamer'].map(role => {
+                            const active = aiCfg.allowed_roles.includes(role)
+                            return (
+                              <button key={role} onClick={() => setAiCfg(p => ({ ...p, allowed_roles: active ? p.allowed_roles.filter(r => r !== role) : [...p.allowed_roles, role] }))} style={{ padding: '0.42rem 0.9rem', borderRadius: 8, fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', background: active ? C.primaryBg : C.vvdim, border: `1px solid ${active ? C.borderStrong : C.border}`, color: active ? C.primary : C.muted }}>
+                                {role === 'todos' ? '🌐 Todos' : role}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: C.dim, marginTop: '0.5rem' }}>Se &quot;Todos&quot; estiver ativo, qualquer usuário aprovado pode usar.</div>
+                      </div>
+
+                      <button onClick={saveAiCfg} disabled={aiSaving} style={{ padding: '0.65rem', borderRadius: 10, fontWeight: 800, fontSize: '0.9rem', background: aiSaved ? C.accentBg : C.primaryBg, border: `1px solid ${aiSaved ? C.accentBorder : C.borderStrong}`, color: aiSaved ? C.accent : C.primary, cursor: 'pointer' }}>
+                        {aiSaving ? 'Salvando...' : aiSaved ? '✓ Salvo!' : '💾 Salvar configuração'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Recent generations */}
+                  <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                    <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>🖼 Gerações recentes ({aiRecent.length})</h3>
+                    {aiRecent.length === 0 ? (
+                      <div style={{ color: C.dim, fontSize: '0.84rem' }}>Nenhuma imagem gerada ainda.</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 360, overflowY: 'auto' }}>
+                        {aiRecent.map(g => (
+                          <div key={g.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.85rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.text }}>@{g.user_name}</span>
+                                {g.user_role && <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.45rem', background: C.primaryBg, color: C.primary, borderRadius: 999, border: `1px solid ${C.borderStrong}` }}>{g.user_role}</span>}
+                                <span style={{ fontSize: '0.68rem', color: C.dim, marginLeft: 'auto' }}>{new Date(g.created_at).toLocaleString('pt-BR')}</span>
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.prompt}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
