@@ -260,7 +260,7 @@ function ColorPicker({ label, value, onChange }: { label: string; value: string;
   )
 }
 
-function OverlayQuickEdit({ trigger }: { trigger: string }) {
+function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: string }) {
   const [uid, setUid] = useState('')
   const [cfg, setCfg] = useState<OvCfg>(OV_DEF)
   const [tab, setTab] = useState<'efeitos'|'estilo'|'texto'>('efeitos')
@@ -310,21 +310,28 @@ function OverlayQuickEdit({ trigger }: { trigger: string }) {
   async function testOverlay() {
     if (testing) return
     setTesting(true)
-    setAnimKey(k => k + 1) // replay dashboard preview immediately
+    setAnimKey(k => k + 1)
     try {
-      const r = await fetch('/api/overlay/alert/test', {
+      const r = await fetch('/api/comandos/testar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventSlug: slug }),
+        body: JSON.stringify({ resposta, eventSlug: slug }),
       })
+      const data = await r.json().catch(() => ({}))
       if (!r.ok) {
-        const body = await r.json().catch(() => ({}))
-        notify(body?.error ?? 'Erro ao testar overlay', 'error')
+        notify(data?.error ?? 'Erro ao testar', 'error')
         setTesting(false); return
       }
-      setTestOk(true)
-      notify('Evento enviado! Verifique o OBS em até 2s.', 'success')
-      setTimeout(() => setTestOk(false), 5000)
-    } catch { notify('Erro de conexão ao testar overlay', 'error') }
+      const errs: string[] = data.errors ?? []
+      if (errs.includes('no_token')) {
+        notify('Token da Twitch não encontrado — reconecte em Plataformas', 'error')
+      } else if (errs.includes('token_expired')) {
+        notify('Token expirado — acesse Plataformas para reconectar', 'error')
+      } else {
+        setTestOk(true)
+        notify('Teste enviado! Verifique o chat e o OBS.', 'success')
+        setTimeout(() => setTestOk(false), 5000)
+      }
+    } catch { notify('Erro de conexão ao testar', 'error') }
     setTesting(false)
   }
 
@@ -505,7 +512,7 @@ function OverlayQuickEdit({ trigger }: { trigger: string }) {
           border:`1px solid ${testOk?'rgba(34,197,94,0.3)':BD}`,
           borderRadius:7,color:testOk?GR:MUT,fontSize:'0.78rem',fontWeight:700,cursor:testing?'default':'pointer',
         }}>
-          {testing ? 'Enviando...' : testOk ? '✓ Verifique o OBS!' : '🧪 Testar no OBS'}
+          {testing ? 'Enviando...' : testOk ? '✓ Enviado! Veja o chat e o OBS' : '🧪 Testar (chat + OBS)'}
         </button>
         <button type="button" onClick={saveCfg} style={{
           flex:1,padding:'0.5rem',
@@ -1079,7 +1086,7 @@ export default function ComandosPage() {
             <div style={{ fontSize: '0.74rem', color: C.dim, lineHeight: 1.5, marginBottom: form.notifOverlay ? '0.75rem' : 0 }}>
               Quando ativado, exibe um alerta visual em tempo real na transmissão quando este evento ocorrer.
             </div>
-            {form.notifOverlay && form.isEvento && <OverlayQuickEdit trigger={form.trigger} />}
+            {form.notifOverlay && form.isEvento && <OverlayQuickEdit trigger={form.trigger} resposta={form.resposta} />}
           </div>
 
           {/* 7 · Configurações avançadas */}
