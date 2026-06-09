@@ -268,16 +268,17 @@ const SLUG_PREVIEW: Record<string, { icon: string; title: string; sub: string }>
 }
 const SLUG_PREVIEW_DEFAULT = { icon: '🔔', title: 'Novo alerta!', sub: 'viewer123 ativou o alerta!' }
 
-function OvPreview({ cfg, animKey, slug }: { cfg: OvCfg; animKey: number; slug: string }) {
+function OvPreview({ cfg, animKey, slug, showAnim = true }: { cfg: OvCfg; animKey: number; slug: string; showAnim?: boolean }) {
   const [phase, setPhase] = useState<'hidden'|'enter'|'show'|'exit'>('hidden')
   useEffect(() => {
+    if (!showAnim) { setPhase('show'); return }
     setPhase('hidden')
     const t1 = setTimeout(() => setPhase('enter'), 80)
     const t2 = setTimeout(() => setPhase('show'), 900)
     const t3 = setTimeout(() => setPhase('exit'), 2200)
     const t4 = setTimeout(() => setPhase('hidden'), 2900)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
-  }, [animKey, cfg.animIn, cfg.animOut, cfg.animSpeed])
+  }, [animKey, cfg.animIn, cfg.animOut, cfg.animSpeed, showAnim])
   const vis = phase === 'enter' || phase === 'show'
   const isExiting = phase === 'exit'
   const bg = cfg.bgColor === 'transparent' || cfg.bgOpacity === 0 ? 'transparent' : cfg.bgColor
@@ -918,7 +919,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
         <div style={{ display:'flex',flexDirection:'column',gap:'0.5rem' }}>
           <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.07em' }}>Prévia ao vivo</div>
           <div style={{ flex:1,background:'#08090d',border:`1px solid ${BD}`,borderRadius:7,padding:'0.85rem',display:'flex',alignItems:'center',justifyContent:'center',minHeight:80 }}>
-            <OvPreview cfg={cfg} animKey={animKey} slug={slug} />
+            <OvPreview cfg={cfg} animKey={animKey} slug={slug} showAnim={tab === 'efeitos'} />
           </div>
           <div style={{ fontSize:'0.65rem',color:'rgba(251,146,60,0.75)',background:'rgba(251,146,60,0.06)',border:'1px solid rgba(251,146,60,0.18)',borderRadius:5,padding:'0.38rem 0.55rem',lineHeight:1.4 }}>
             Ative &quot;Permitir transparência&quot; no Browser Source do OBS.

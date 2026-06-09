@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
   if (!prompt) return NextResponse.json({ error: 'Prompt obrigatório' }, { status: 400 })
   const size: Size = ALLOWED_SIZES.includes(body.size) ? body.size : '1792x1024'
   const quality: 'standard' | 'hd' = body.quality === 'hd' ? 'hd' : 'standard'
+  const referenceImage: string | undefined = body.referenceImage
 
   // gpt-image-1 uses different size names and quality values
   const SIZE_MAP: Record<Size, string> = {
@@ -82,26 +83,54 @@ export async function POST(req: NextRequest) {
   let imageUrl = ''
   let revisedPrompt = prompt
   try {
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt,
-        n: 1,
-        size: SIZE_MAP[size],
-        quality: quality === 'hd' ? 'high' : 'medium',
-      }),
-    })
-    const json = await res.json()
-    if (!res.ok) {
-      const raw: string = json?.error?.message ?? json?.error?.code ?? 'Erro desconhecido'
-      return NextResponse.json({ error: `OpenAI: ${raw}` }, { status: res.status })
+    if (referenceImage) {
+      // Image edits mode: use reference image as visual context
+      const b64Data = referenceImage.includes(',') ? referenceImage.split(',')[1] : referenceImage
+      const mimeType = referenceImage.startsWith('data:') ? (referenceImage.split(';')[0].split(':')[1] ?? 'image/png') : 'image/png'
+      const imageBytes = Buffer.from(b64Data, 'base64')
+      const imageBlob = new Blob([imageBytes], { type: mimeType })
+      const fd = new FormData()
+      fd.append('model', 'gpt-image-1')
+      fd.append('prompt', prompt)
+      fd.append('n', '1')
+      fd.append('size', SIZE_MAP[size])
+      fd.append('quality', quality === 'hd' ? 'high' : 'medium')
+      fd.append('image[]', imageBlob, 'reference.png')
+      const res = await fetch('https://api.openai.com/v1/images/edits', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: fd,
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        const raw: string = json?.error?.message ?? json?.error?.code ?? 'Erro desconhecido'
+        return NextResponse.json({ error: `OpenAI: ${raw}` }, { status: res.status })
+      }
+      const b64 = json.data?.[0]?.b64_json ?? ''
+      if (!b64) return NextResponse.json({ error: 'Nenhuma imagem retornada' }, { status: 502 })
+      imageUrl = `data:image/png;base64,${b64}`
+    } else {
+      const res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-image-1',
+          prompt,
+          n: 1,
+          size: SIZE_MAP[size],
+          quality: quality === 'hd' ? 'high' : 'medium',
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        const raw: string = json?.error?.message ?? json?.error?.code ?? 'Erro desconhecido'
+        return NextResponse.json({ error: `OpenAI: ${raw}` }, { status: res.status })
+      }
+      // gpt-image-1 returns base64, convert to data URL
+      const b64 = json.data?.[0]?.b64_json ?? ''
+      if (!b64) return NextResponse.json({ error: 'Nenhuma imagem retornada' }, { status: 502 })
+      imageUrl = `data:image/png;base64,${b64}`
     }
-    // gpt-image-1 returns base64, convert to data URL
-    const b64 = json.data?.[0]?.b64_json ?? ''
-    if (!b64) return NextResponse.json({ error: 'Nenhuma imagem retornada' }, { status: 502 })
-    imageUrl = `data:image/png;base64,${b64}`
   } catch {
     return NextResponse.json({ error: 'Falha ao contactar a OpenAI' }, { status: 502 })
   }

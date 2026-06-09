@@ -2312,7 +2312,7 @@ export default function AdminPage() {
                     {aiRecent.length === 0 ? (
                       <div style={{ color: C.dim, fontSize: '0.84rem' }}>Nenhuma imagem gerada ainda.</div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 520, overflowY: 'auto' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                         {aiRecent.map(g => (
                           <div key={g.id} style={{ background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px', overflow: 'hidden' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.85rem' }}>
@@ -2335,10 +2335,10 @@ export default function AdminPage() {
                                   <>
                                     <img src={aiImgExpanded[g.id]!} alt={g.prompt} style={{ width: '100%', height: 'auto', borderRadius: 8, border: `1px solid ${C.border}`, display: 'block' }} />
                                     <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
-                                      <a href={aiImgExpanded[g.id]!} download={`sheikstream-ia-${g.id}.png`} target="_blank" rel="noreferrer"
-                                        style={{ flex: 1, textAlign: 'center', padding: '0.4rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: 7, color: C.primary, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'none' }}>
+                                      <button onClick={() => { const a = document.createElement('a'); a.href = aiImgExpanded[g.id]!; a.download = `sheikstream-ia-${g.id}.png`; a.click() }}
+                                        style={{ flex: 1, textAlign: 'center', padding: '0.4rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: 7, color: C.primary, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>
                                         ⬇ Baixar imagem
-                                      </a>
+                                      </button>
                                     </div>
                                   </>
                                 ) : (

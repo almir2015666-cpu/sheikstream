@@ -57,6 +57,8 @@ export default function IAImagensPage() {
   const [error, setError] = useState('')
   const [cooldown, setCooldown] = useState(0)
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [refImage, setRefImage] = useState<string | null>(null)
+  const refInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/ia-imagens/config')
@@ -92,10 +94,12 @@ export default function IAImagensPage() {
     setError('')
     setResult(null)
     try {
+      const body: Record<string, unknown> = { prompt, size: format.size, quality }
+      if (refImage) body.referenceImage = refImage
       const res = await fetch('/api/ia-imagens/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, size: format.size, quality }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -258,6 +262,34 @@ export default function IAImagensPage() {
                 ))}
               </div>
             </div>
+
+            {/* Reference image */}
+            <div style={{ marginTop: '0.75rem', borderTop: `1px solid ${C.border}`, paddingTop: '0.75rem' }}>
+              <div style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.4rem' }}>
+                Print de referência (opcional)
+              </div>
+              {refImage ? (
+                <div style={{ position: 'relative' }}>
+                  <img src={refImage} alt="Referência" style={{ width: '100%', maxHeight: 110, objectFit: 'cover', borderRadius: 7, border: `1px solid ${C.border}`, display: 'block' }} />
+                  <button onClick={() => { setRefImage(null); if (refInputRef.current) refInputRef.current.value = '' }}
+                    style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.75)', border: 'none', borderRadius: 4, color: '#fff', fontSize: '0.7rem', padding: '0.15rem 0.45rem', cursor: 'pointer' }}>
+                    ✕
+                  </button>
+                  <div style={{ fontSize: '0.62rem', color: C.dim, marginTop: '0.3rem' }}>A IA vai usar este print como referência visual</div>
+                </div>
+              ) : (
+                <button onClick={() => refInputRef.current?.click()} style={{ width: '100%', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', border: `1px dashed ${C.border}`, borderRadius: 7, color: C.dim, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                  📸 Enviar print de referência
+                </button>
+              )}
+              <input ref={refInputRef} type="file" accept="image/*" onChange={e => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = () => setRefImage(reader.result as string)
+                reader.readAsDataURL(file)
+              }} style={{ display: 'none' }} />
+            </div>
           </div>
 
           {/* Generate button */}
@@ -307,8 +339,7 @@ export default function IAImagensPage() {
           {result && (
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
               <img src={result.imageUrl} alt="Imagem gerada"
-                style={{ width: '100%', display: 'block', maxHeight: 360, objectFit: 'cover', minHeight: 120, background: 'rgba(255,255,255,0.04)' }}
-                onLoad={e => (e.currentTarget.style.minHeight = '0')}
+                style={{ width: '100%', height: 'auto', display: 'block' }}
               />
               <div style={{ padding: '0.85rem' }}>
                 {result.modelUsed === 'dall-e-2' && (
