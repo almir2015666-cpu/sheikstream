@@ -53,7 +53,7 @@ export default function IAImagensPage() {
   const [quality, setQuality] = useState<'standard' | 'hd'>('standard')
 
   const [generating, setGenerating] = useState(false)
-  const [result, setResult] = useState<{ imageUrl: string; revisedPrompt: string } | null>(null)
+  const [result, setResult] = useState<{ imageUrl: string; revisedPrompt: string; modelUsed?: string } | null>(null)
   const [error, setError] = useState('')
   const [cooldown, setCooldown] = useState(0)
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -102,7 +102,7 @@ export default function IAImagensPage() {
         setError(data.error ?? 'Erro ao gerar imagem')
         if (data.waitSeconds) startCooldown(data.waitSeconds)
       } else {
-        setResult({ imageUrl: data.imageUrl, revisedPrompt: data.revisedPrompt })
+        setResult({ imageUrl: data.imageUrl, revisedPrompt: data.revisedPrompt, modelUsed: data.modelUsed })
         const cd = cfg?.config?.cooldown_seconds ?? 0
         if (cd > 0) startCooldown(cd)
         setCfg(prev => prev ? { ...prev, usedToday: prev.usedToday + 1 } : prev)
@@ -312,6 +312,11 @@ export default function IAImagensPage() {
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
               <img src={result.imageUrl} alt="Imagem gerada" style={{ width: '100%', display: 'block', maxHeight: 360, objectFit: 'cover' }} />
               <div style={{ padding: '0.85rem' }}>
+                {result.modelUsed === 'dall-e-2' && (
+                  <div style={{ fontSize: '0.68rem', color: '#f59e0b', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 6, padding: '0.4rem 0.6rem', marginBottom: '0.5rem' }}>
+                    Gerado com DALL-E 2 (1024×1024) — sua chave da OpenAI não tem acesso ao DALL-E 3. Ative o billing em platform.openai.com para usar o DALL-E 3.
+                  </div>
+                )}
                 {result.revisedPrompt && result.revisedPrompt !== prompt && (
                   <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.6rem', lineHeight: 1.5 }}>
                     <span style={{ fontWeight: 700 }}>Prompt revisado pela IA:</span> {result.revisedPrompt.slice(0, 200)}{result.revisedPrompt.length > 200 ? '…' : ''}

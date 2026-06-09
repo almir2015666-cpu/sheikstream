@@ -75,13 +75,27 @@ export async function POST(req: NextRequest) {
 
   let imageUrl = ''
   let revisedPrompt = ''
+  let modelUsed = 'dall-e-3'
   try {
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
+    // Try DALL-E 3 first; fall back to DALL-E 2 if model not available on this plan
+    let res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size, quality }),
     })
-    const json = await res.json()
+    let json = await res.json()
+
+    if (!res.ok && (json?.error?.code === 'model_not_found' || json?.error?.message?.includes('does not exist'))) {
+      // DALL-E 3 unavailable — retry with DALL-E 2 (only supports 1024x1024)
+      modelUsed = 'dall-e-2'
+      res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: 'dall-e-2', prompt, n: 1, size: '1024x1024' }),
+      })
+      json = await res.json()
+    }
+
     if (!res.ok) {
       const msg = json?.error?.message ?? 'Erro na API da OpenAI'
       return NextResponse.json({ error: msg }, { status: res.status })
@@ -106,5 +120,5 @@ export async function POST(req: NextRequest) {
     })
   } catch {}
 
-  return NextResponse.json({ imageUrl, revisedPrompt })
+  return NextResponse.json({ imageUrl, revisedPrompt, modelUsed })
 }
