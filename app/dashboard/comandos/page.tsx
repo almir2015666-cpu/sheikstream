@@ -168,6 +168,19 @@ const OV_ANIMS = [
 ]
 const OV_FONTS = ['Inter','Open Sans','Roboto','Montserrat','Poppins','Rajdhani']
 
+const OV_PRESETS: { id: string; label: string; color: string; cfg: Partial<OvCfg> }[] = [
+  { id: 'classico', label: 'Clássico', color: '#9146FF',
+    cfg: { bgColor:'#0b0c17',bgOpacity:0.92,timerColor:'#9146FF',titleColor:'#9146FF',subtitleColor:'#ffffff',textColor:'#ffffff',borderColor:'#9146FF',border:true,borderThick:1,borderRadius:14,font:'Inter',iconShape:'circle',iconAnim:'none',cardEffect:'none',titleSize:15,supportSize:12 } },
+  { id: 'neon', label: '⚡ Neon', color: '#22d3ee',
+    cfg: { bgColor:'#020c12',bgOpacity:0.96,timerColor:'#22d3ee',titleColor:'#22d3ee',subtitleColor:'#a0e7ff',textColor:'#a0e7ff',borderColor:'#22d3ee',border:true,borderThick:2,borderRadius:4,font:'Rajdhani',iconShape:'square',iconAnim:'pulse',cardEffect:'glow',titleSize:17,supportSize:13 } },
+  { id: 'minimal', label: 'Minimal', color: '#e8e6f8',
+    cfg: { bgColor:'#0b0c17',bgOpacity:0.55,timerColor:'#ffffff',titleColor:'#ffffff',subtitleColor:'rgba(232,230,248,0.55)',textColor:'#ffffff',borderColor:'#ffffff',border:false,borderThick:1,borderRadius:8,font:'Inter',iconShape:'none',iconAnim:'none',cardEffect:'none',titleSize:14,supportSize:11 } },
+  { id: 'gaming', label: '🔥 Gaming', color: '#f97316',
+    cfg: { bgColor:'#100800',bgOpacity:0.94,timerColor:'#f97316',titleColor:'#f97316',subtitleColor:'#fcd34d',textColor:'#fcd34d',borderColor:'#f97316',border:true,borderThick:2,borderRadius:6,font:'Montserrat',iconShape:'square',iconAnim:'bounce',cardEffect:'pulse',titleSize:16,supportSize:12 } },
+  { id: 'matrix', label: '💚 Matrix', color: '#22c55e',
+    cfg: { bgColor:'#010d01',bgOpacity:0.97,timerColor:'#22c55e',titleColor:'#22c55e',subtitleColor:'#86efac',textColor:'#86efac',borderColor:'#22c55e',border:true,borderThick:1,borderRadius:2,font:'Roboto',iconShape:'circle',iconAnim:'spin',cardEffect:'glow',titleSize:15,supportSize:12 } },
+]
+
 // Per-event default text + accent color — applied when no saved config exists
 const SLUG_PRESETS: Partial<Record<string, Partial<OvCfg>>> = {
   'twitch-sub':         { titleText: 'Novo inscrito!',       subtitleText: '$user se inscreveu!',              timerColor: '#9146FF', titleColor: '#9146FF', borderColor: '#9146FF' },
@@ -228,10 +241,16 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
   const iconAnimStyle: React.CSSProperties = cfg.iconAnim === 'none' ? {} : {
     animation: `ovqe-icon-${cfg.iconAnim} ${cfg.iconAnim === 'spin' ? '2s linear' : '1.5s ease-in-out'} infinite`,
   }
-  // cardEffect uses a WRAPPER div with no inline boxShadow — avoids React re-render/inline-style conflict
-  const wrapAnim: React.CSSProperties = vis && cfg.cardEffect !== 'none'
-    ? { animation: `ovqe-card-${cfg.cardEffect} 2s ease-in-out infinite`, borderRadius: cfg.borderRadius }
-    : {}
+  // Multiple CSS animations on same element: entrance (shake/swing) + card effect (box-shadow).
+  // animation and transition coexist because they animate different CSS properties.
+  const isShakeSwing = cfg.animIn === 'shake' || cfg.animIn === 'swing'
+  const entranceDur = `${((11-cfg.animSpeed)*0.065).toFixed(2)}s`
+  const animParts: string[] = []
+  if (vis && isShakeSwing) animParts.push(`ovqe-e-${cfg.animIn} ${entranceDur} ease forwards`)
+  if (vis && cfg.cardEffect !== 'none') {
+    animParts.push(`ovqe-card-${cfg.cardEffect} 2s ease-in-out ${isShakeSwing ? entranceDur : '0s'} infinite backwards`)
+  }
+  const animStr = animParts.length > 0 ? animParts.join(', ') : undefined
   return (
     <div style={{ width:'100%', fontFamily: cfg.font, position:'relative' }}>
       <style>{`
@@ -239,28 +258,25 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
         @keyframes ovqe-icon-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @keyframes ovqe-icon-bounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-9px)}}
         @keyframes ovqe-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
-        @keyframes ovqe-card-glow{0%,100%{box-shadow:0 0 12px ${acc}33}50%{box-shadow:0 0 55px ${acc}cc,0 0 22px ${acc}88}}
-        @keyframes ovqe-card-pulse{0%,100%{box-shadow:0 0 12px ${acc}33}50%{box-shadow:0 0 32px ${acc}88}}
+        @keyframes ovqe-card-glow{0%,100%{box-shadow:0 0 14px ${acc}55}50%{box-shadow:0 0 55px ${acc}cc,0 0 22px ${acc}88}}
+        @keyframes ovqe-card-pulse{0%,100%{box-shadow:0 0 10px ${acc}44}50%{box-shadow:0 0 32px ${acc}88}}
         @keyframes ovqe-e-shake{0%{transform:translateX(-70px);opacity:0}25%{opacity:1}38%{transform:translateX(14px)}54%{transform:translateX(-9px)}68%{transform:translateX(5px)}80%{transform:translateX(-2px)}100%{transform:translateX(0)}}
         @keyframes ovqe-e-swing{0%{transform:rotate(-22deg);opacity:0}20%{opacity:1}42%{transform:rotate(11deg)}62%{transform:rotate(-6deg)}76%{transform:rotate(3deg)}88%{transform:rotate(-1deg)}100%{transform:rotate(0deg)}}
       `}</style>
       {bg === 'transparent' && (
         <div style={{ position:'absolute',inset:0,borderRadius:cfg.borderRadius,background:checkers,opacity:0.35,pointerEvents:'none' }} />
       )}
-      {/* effect wrapper: owns box-shadow animation; inner card owns entrance — no property conflict */}
-      <div style={wrapAnim}>
       <div style={{
         background: bg, borderRadius: cfg.borderRadius, padding:'12px 16px',
         display:'flex', alignItems:'center', gap:12,
         border: cfg.border ? `${cfg.borderThick}px solid ${acc}` : `1px solid ${acc}44`,
         boxShadow: cfg.cardEffect === 'none' ? `0 0 20px ${acc}22` : undefined,
         position:'relative', overflow:'hidden',
-        ...((cfg.animIn === 'shake' || cfg.animIn === 'swing')
-          ? (vis
-              ? { animation: `ovqe-e-${cfg.animIn} ${((11-cfg.animSpeed)*0.065).toFixed(2)}s ease forwards` }
-              : { opacity: 0 })
-          : (vis ? { transform:'none',opacity:1,filter:'none' } : ovHidden(cfg.animIn))),
-        transition: (cfg.animIn === 'shake' || cfg.animIn === 'swing') ? 'none' : (vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none'),
+        animation: animStr,
+        ...(!isShakeSwing
+          ? (vis ? { transform:'none',opacity:1,filter:'none' } : ovHidden(cfg.animIn))
+          : (vis ? {} : { opacity: 0 })),
+        transition: isShakeSwing ? 'none' : (vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none'),
       }}>
         {cfg.iconShape !== 'none' && (
           <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17,...iconAnimStyle }}>⭐</div>
@@ -273,7 +289,6 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
           <div style={{ width:vis?'0%':'100%',height:'100%',background:acc,transition:vis?`width ${cfg.duration}s linear`:'none' }} />
         </div>
       </div>
-      </div>{/* effect wrapper */}
     </div>
   )
 }
@@ -463,6 +478,19 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
 
           {tab === 'estilo' && (
             <div style={{ display:'flex',flexDirection:'column',gap:'0.55rem' }}>
+              {/* Predefined presets */}
+              <div>
+                <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.28rem' }}>Estilo pré-definido</div>
+                <div style={{ display:'flex',gap:'0.3rem',overflowX:'auto',paddingBottom:'0.1rem' }}>
+                  {OV_PRESETS.map(pr => (
+                    <button type="button" key={pr.id}
+                      onClick={() => { setCfg(prev => ({ ...prev, ...pr.cfg })); setAnimKey(k => k + 1) }}
+                      style={{ flexShrink:0,padding:'0.32rem 0.65rem',background:`${pr.color}15`,border:`1px solid ${pr.color}40`,borderRadius:6,color:pr.color,cursor:'pointer',fontSize:'0.7rem',fontWeight:700,whiteSpace:'nowrap',transition:'border-color 0.12s' }}>
+                      {pr.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {/* Icon shape */}
               <div>
                 <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.28rem' }}>Ícone lateral</div>
