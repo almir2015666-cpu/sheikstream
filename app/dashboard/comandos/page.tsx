@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { notify } from '@/app/lib/notify'
 import Link from 'next/link'
 
@@ -115,6 +115,300 @@ const DEFAULTS: Cmd[] = [
   { id: 'evt-youtube-giftmember', label: 'Gift member YouTube', trigger: 'event:youtube:giftmember',  resposta: 'Obrigado $user por presentear $count membro(s) no YouTube!',                   cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Youtube' },
   { id: 'evt-twitch-bits',        label: 'Bits Twitch',         trigger: 'event:twitch:bits',         resposta: 'Valeu pelos $valor bits, $user! $msg',                                          cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
 ]
+
+// ─── Platform / event helpers ─────────────────────────────────────────────────
+const PLAT_COLOR: Record<string, string> = {
+  Twitch: '#9146FF', Kick: '#53FC18', Youtube: '#FF4040', PayPal: '#0070BA',
+}
+const EVT_ICON: Record<string, string> = {
+  'event:twitch:sub': '⭐', 'event:twitch:resub': '🔁', 'event:twitch:giftsub': '🎁',
+  'event:twitch:prime': '👑', 'event:twitch:follow': '❤️', 'event:twitch:bits': '💎',
+  'donation:livepix': '💸', 'donation:paypal': '💳',
+  'event:kick:sub': '⭐', 'event:kick:follow': '❤️', 'event:kick:giftsub': '🎁',
+  'event:youtube:member': '🏅', 'event:youtube:giftmember': '🎁',
+}
+
+// ─── Overlay quick-edit ────────────────────────────────────────────────────────
+const TRIGGER_TO_SLUG: Record<string, string> = {
+  'event:twitch:sub': 'twitch-sub', 'event:twitch:giftsub': 'twitch-giftsub',
+  'event:twitch:resub': 'twitch-resub', 'event:twitch:prime': 'twitch-sub',
+  'event:twitch:follow': 'twitch-follow', 'event:twitch:bits': 'twitch-bits',
+  'donation:livepix': 'livepix', 'donation:paypal': 'paypal',
+  'event:kick:follow': 'kick-follow', 'event:kick:giftsub': 'kick-giftsub',
+  'event:kick:sub': 'kick-sub', 'event:youtube:member': 'youtube-member',
+  'event:youtube:giftmember': 'youtube-giftmember',
+}
+type OvCfg = {
+  animIn: string; duration: number; font: string
+  timerColor: string; textColor: string; bgColor: string; bgOpacity: number
+  borderRadius: number; border: boolean; borderColor: string; borderThick: number
+  titleSize: number; supportSize: number; width: number
+}
+const OV_DEF: OvCfg = {
+  animIn: 'slide-right', duration: 6, font: 'Inter',
+  timerColor: '#9146FF', textColor: '#ffffff', bgColor: '#0b0c17', bgOpacity: 0.92,
+  borderRadius: 14, border: true, borderColor: '#9146FF', borderThick: 1,
+  titleSize: 15, supportSize: 12, width: 480,
+}
+const OV_ANIMS = [
+  { id: 'slide-right', label: 'Slide →', dur: '0.45s' }, { id: 'slide-left', label: 'Slide ←', dur: '0.45s' },
+  { id: 'slide-up',    label: 'Slide ↑', dur: '0.45s' }, { id: 'slide-down', label: 'Slide ↓', dur: '0.45s' },
+  { id: 'fade',        label: 'Fade',    dur: '0.45s' }, { id: 'zoom-in',    label: 'Zoom In', dur: '0.4s'  },
+  { id: 'zoom-out',    label: 'Zoom Out',dur: '0.4s'  }, { id: 'bounce-in',  label: 'Bounce',  dur: '0.55s' },
+  { id: 'flip-x',      label: 'Flip X',  dur: '0.5s'  }, { id: 'flip-y',     label: 'Flip Y',  dur: '0.5s'  },
+  { id: 'rotate-in',   label: 'Girar',   dur: '0.5s'  }, { id: 'elastic',    label: 'Elástico',dur: '0.65s' },
+  { id: 'shake',       label: 'Tremer',  dur: '0.5s'  }, { id: 'blur-in',    label: 'Blur',    dur: '0.4s'  },
+  { id: 'drop-in',     label: 'Cair',    dur: '0.5s'  }, { id: 'swing',      label: 'Balançar',dur: '0.6s'  },
+]
+const OV_FONTS = ['Inter','Open Sans','Roboto','Montserrat','Poppins','Rajdhani']
+
+function ovHidden(animIn: string): React.CSSProperties {
+  const t: Record<string,string> = {
+    'slide-right':'translateX(-120%)','slide-left':'translateX(120%)','slide-up':'translateY(50px)',
+    'slide-down':'translateY(-50px)','zoom-in':'scale(0.4)','zoom-out':'scale(1.5)',
+    'bounce-in':'translateY(-60px)','flip-x':'rotateX(90deg)','flip-y':'rotateY(90deg)',
+    'rotate-in':'rotate(-180deg) scale(0.5)','elastic':'translateX(-120%)','shake':'translateX(-80%)',
+    'drop-in':'translateY(-100px)','swing':'rotate(-25deg)',
+  }
+  return { transform: t[animIn] ?? 'translateX(-120%)', opacity: 0, filter: animIn==='blur-in'?'blur(16px)':'none' }
+}
+function ovTrans(animIn: string): string {
+  const m: Record<string,string> = {
+    'bounce-in':'transform 0.55s cubic-bezier(.22,.68,0,1.8),opacity 0.3s',
+    'elastic':'transform 0.65s cubic-bezier(.22,.68,0,2),opacity 0.3s',
+    'zoom-in':'transform 0.4s cubic-bezier(.22,.68,0,1.2),opacity 0.35s',
+    'zoom-out':'transform 0.4s ease,opacity 0.35s','flip-x':'transform 0.5s ease,opacity 0.35s',
+    'flip-y':'transform 0.5s ease,opacity 0.35s','rotate-in':'transform 0.5s cubic-bezier(.22,.68,0,1.2),opacity 0.35s',
+    'drop-in':'transform 0.5s cubic-bezier(.22,.68,0,1.3),opacity 0.3s','blur-in':'filter 0.4s ease,opacity 0.4s',
+  }
+  return m[animIn] ?? 'transform 0.45s cubic-bezier(.22,.68,0,1.2),opacity 0.35s'
+}
+
+function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
+  const [vis, setVis] = useState(false)
+  const bg = cfg.bgOpacity === 0 ? 'transparent' : cfg.bgColor
+  const acc = cfg.timerColor
+  useEffect(() => {
+    setVis(false)
+    const t = setTimeout(() => setVis(true), 80)
+    return () => clearTimeout(t)
+  }, [animKey, cfg.animIn])
+  return (
+    <div style={{ width:'100%', fontFamily: cfg.font }}>
+      <div style={{
+        background: bg, borderRadius: cfg.borderRadius, padding:'10px 14px',
+        display:'flex', alignItems:'center', gap:10,
+        border: cfg.border ? `${cfg.borderThick}px solid ${acc}` : `1px solid ${acc}44`,
+        boxShadow:`0 0 20px ${acc}22`, position:'relative', overflow:'hidden',
+        ...(vis ? { transform:'none',opacity:1,filter:'none' } : ovHidden(cfg.animIn)),
+        transition: vis ? ovTrans(cfg.animIn) : 'none',
+      }}>
+        <div style={{ width:34,height:34,borderRadius:'50%',background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:15 }}>⭐</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:cfg.titleSize,fontWeight:800,color:acc }}>Novo inscrito!</div>
+          <div style={{ fontSize:cfg.supportSize,color:cfg.textColor,opacity:0.7,marginTop:2 }}>viewer123 se inscreveu</div>
+        </div>
+        <div style={{ position:'absolute',bottom:0,left:0,right:0,height:3,background:`${acc}22` }}>
+          <div style={{ width:vis?'0%':'100%',height:'100%',background:acc,transition:vis?`width ${cfg.duration}s linear`:'none' }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OverlayQuickEdit({ trigger }: { trigger: string }) {
+  const [uid, setUid] = useState('')
+  const [cfg, setCfg] = useState<OvCfg>(OV_DEF)
+  const [tab, setTab] = useState<'efeitos'|'estilo'>('efeitos')
+  const [animKey, setAnimKey] = useState(0)
+  const [savedOk, setSavedOk] = useState(false)
+  const [testOk, setTestOk] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const slug = TRIGGER_TO_SLUG[trigger] ?? ''
+  const cfgKey = slug ? `alert-${slug}` : 'alert'
+
+  useEffect(() => {
+    fetch('/api/me').then(r => r.json()).then(d => {
+      if (!d?.id) return
+      setUid(d.id)
+      fetch(`/api/overlay-config/${cfgKey}?uid=${d.id}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(c => { if (c?.style) setCfg(p => ({ ...OV_DEF, ...c.style })) })
+        .catch(() => {})
+    }).catch(() => {})
+  }, [cfgKey])
+
+  useEffect(() => {
+    if (tab !== 'efeitos') return
+    setAnimKey(k => k + 1)
+    const iv = setInterval(() => setAnimKey(k => k + 1), 3500)
+    return () => clearInterval(iv)
+  }, [tab, cfg.animIn])
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const overlayUrl = uid ? `${origin}/overlay/alert?uid=${uid}${slug ? `&event=${slug}` : ''}` : '...'
+  function up<K extends keyof OvCfg>(k: K, v: OvCfg[K]) { setCfg(p => ({ ...p, [k]: v })) }
+
+  async function saveCfg() {
+    if (!uid) return
+    await fetch(`/api/overlay-config/${cfgKey}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ style: cfg }),
+    }).catch(() => {})
+    setSavedOk(true); notify('Overlay salvo!', 'success')
+    setTimeout(() => setSavedOk(false), 2500)
+  }
+
+  async function testOverlay() {
+    if (testing || !uid) return
+    setTesting(true)
+    await fetch('/api/overlay/alert/test', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventSlug: slug }),
+    }).catch(() => {})
+    setTestOk(true); setTesting(false)
+    setTimeout(() => setTestOk(false), 4000)
+  }
+
+  function copyUrl() {
+    navigator.clipboard.writeText(overlayUrl).catch(() => {})
+    setCopied(true); notify('URL copiada!', 'success')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const P = '#9b30ff', PBg = 'rgba(155,48,255,0.1)', PB = 'rgba(155,48,255,0.25)'
+  const BD = 'rgba(255,255,255,0.07)', DIM = 'rgba(232,230,248,0.28)', MUT = 'rgba(232,230,248,0.55)'
+  const GR = '#22c55e', TXT = '#e8e6f8'
+
+  return (
+    <div style={{ marginTop: '1rem' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;800&family=Poppins:wght@400;700&family=Rajdhani:wght@600;700&display=swap');`}</style>
+
+      {/* URL bar */}
+      <div style={{ display:'flex',alignItems:'center',gap:'0.5rem',background:'#08090d',border:`1px solid ${PB}`,borderRadius:8,padding:'0.45rem 0.7rem',marginBottom:'0.85rem' }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span style={{ flex:1,fontSize:'0.7rem',color:MUT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace' }}>{overlayUrl}</span>
+        <button onClick={copyUrl} style={{ flexShrink:0,padding:'0.22rem 0.6rem',background:copied?'rgba(34,197,94,0.1)':PBg,border:`1px solid ${copied?'rgba(34,197,94,0.3)':PB}`,borderRadius:5,color:copied?GR:P,fontSize:'0.7rem',fontWeight:700,cursor:'pointer' }}>
+          {copied ? '✓ Copiado' : 'Copiar'}
+        </button>
+      </div>
+
+      {/* Grid: config | preview */}
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem' }}>
+
+        {/* Config */}
+        <div>
+          <div style={{ display:'flex',gap:'0.2rem',background:'#08090d',border:`1px solid ${BD}`,borderRadius:7,padding:'0.18rem',marginBottom:'0.6rem' }}>
+            {(['efeitos','estilo'] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)} style={{ flex:1,padding:'0.3rem',background:tab===t?C.card:'transparent',border:`1px solid ${tab===t?BD:'transparent'}`,borderRadius:5,color:tab===t?TXT:DIM,cursor:'pointer',fontSize:'0.7rem',fontWeight:tab===t?700:400,transition:'all 0.12s' }}>
+                {t === 'efeitos' ? '✨ Efeitos' : '🎨 Estilo'}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'efeitos' && (
+            <div>
+              <div style={{ fontSize:'0.6rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'0.4rem' }}>Animação de entrada</div>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'0.22rem',marginBottom:'0.6rem' }}>
+                {OV_ANIMS.map(a => (
+                  <button key={a.id} onClick={() => up('animIn',a.id)} style={{
+                    display:'flex',flexDirection:'column',alignItems:'center',gap:'0.1rem',
+                    padding:'0.3rem 0.1rem',
+                    background:cfg.animIn===a.id?PBg:'rgba(255,255,255,0.02)',
+                    border:`1px solid ${cfg.animIn===a.id?PB:BD}`,
+                    borderRadius:5,color:cfg.animIn===a.id?P:DIM,
+                    cursor:'pointer',fontSize:'0.58rem',fontWeight:cfg.animIn===a.id?700:400,
+                  }}>
+                    <span style={{ lineHeight:1.2,textAlign:'center' }}>{a.label}</span>
+                    <span style={{ fontSize:'0.5rem',opacity:0.5 }}>{a.dur}</span>
+                  </button>
+                ))}
+              </div>
+              <div>
+                <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.2rem' }}>
+                  <span style={{ fontSize:'0.6rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Duração</span>
+                  <span style={{ fontSize:'0.6rem',color:MUT,fontWeight:700 }}>{cfg.duration}s</span>
+                </div>
+                <input type="range" min={2} max={20} value={cfg.duration} onChange={e => up('duration',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
+              </div>
+            </div>
+          )}
+
+          {tab === 'estilo' && (
+            <div style={{ display:'flex',flexDirection:'column',gap:'0.5rem' }}>
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.45rem' }}>
+                {([['Cor principal','timerColor'],['Texto','textColor'],['Fundo','bgColor'],['Borda','borderColor']] as [string,keyof OvCfg][]).map(([lbl,k]) => (
+                  <div key={k as string}>
+                    <div style={{ fontSize:'0.58rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.18rem' }}>{lbl}</div>
+                    <div style={{ display:'flex',alignItems:'center',gap:'0.35rem',background:'#08090d',border:`1px solid ${BD}`,borderRadius:5,padding:'0.28rem 0.5rem' }}>
+                      <input type="color" value={cfg[k] as string} onChange={e => up(k,e.target.value)} style={{ width:16,height:16,border:'none',background:'none',padding:0,cursor:'pointer',borderRadius:2 }} />
+                      <span style={{ fontSize:'0.63rem',color:TXT,fontFamily:'monospace' }}>{(cfg[k] as string).toUpperCase()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.18rem' }}>
+                  <span style={{ fontSize:'0.58rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Opacidade fundo</span>
+                  <span style={{ fontSize:'0.58rem',color:MUT,fontWeight:700 }}>{Math.round(cfg.bgOpacity*100)}%</span>
+                </div>
+                <input type="range" min={0} max={100} value={Math.round(cfg.bgOpacity*100)} onChange={e => up('bgOpacity',Number(e.target.value)/100)} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
+              </div>
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.45rem' }}>
+                <div>
+                  <div style={{ fontSize:'0.58rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.18rem' }}>Fonte</div>
+                  <select value={cfg.font} onChange={e => up('font',e.target.value)} style={{ width:'100%',background:'#08090d',border:`1px solid ${BD}`,borderRadius:5,padding:'0.28rem 0.45rem',color:TXT,fontSize:'0.72rem',outline:'none' }}>
+                    {OV_FONTS.map(f => <option key={f}>{f}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.18rem' }}>
+                    <span style={{ fontSize:'0.58rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Raio</span>
+                    <span style={{ fontSize:'0.58rem',color:MUT }}>{cfg.borderRadius}px</span>
+                  </div>
+                  <input type="range" min={0} max={30} value={cfg.borderRadius} onChange={e => up('borderRadius',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer',marginTop:'0.25rem' }} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Preview */}
+        <div style={{ display:'flex',flexDirection:'column',gap:'0.5rem' }}>
+          <div style={{ fontSize:'0.6rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.07em' }}>Prévia ao vivo</div>
+          <div style={{ flex:1,background:'#08090d',border:`1px solid ${BD}`,borderRadius:7,padding:'0.75rem',display:'flex',alignItems:'center',justifyContent:'center',minHeight:70 }}>
+            <OvPreview cfg={cfg} animKey={animKey} />
+          </div>
+          <div style={{ fontSize:'0.63rem',color:'rgba(251,146,60,0.75)',background:'rgba(251,146,60,0.06)',border:'1px solid rgba(251,146,60,0.18)',borderRadius:5,padding:'0.38rem 0.55rem',lineHeight:1.4 }}>
+            Ative &quot;Permitir transparência&quot; no Browser Source do OBS.
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ display:'flex',gap:'0.55rem',marginTop:'0.85rem' }}>
+        <button type="button" onClick={testOverlay} disabled={testing||!uid} style={{
+          flex:1,padding:'0.5rem',
+          background:testOk?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',
+          border:`1px solid ${testOk?'rgba(34,197,94,0.3)':BD}`,
+          borderRadius:7,color:testOk?GR:MUT,fontSize:'0.78rem',fontWeight:700,cursor:testing||!uid?'default':'pointer',
+        }}>
+          {testing ? 'Enviando...' : testOk ? '✓ Verifique o OBS!' : '🧪 Testar no OBS'}
+        </button>
+        <button type="button" onClick={saveCfg} disabled={!uid} style={{
+          flex:1,padding:'0.5rem',
+          background:savedOk?'rgba(34,197,94,0.1)':PBg,
+          border:`1px solid ${savedOk?'rgba(34,197,94,0.3)':PB}`,
+          borderRadius:7,color:savedOk?GR:P,fontSize:'0.78rem',fontWeight:700,cursor:!uid?'default':'pointer',
+        }}>
+          {savedOk ? '✓ Overlay salvo!' : '💾 Salvar overlay'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function ComandosPage() {
   const [cmds, setCmds]           = useState<Cmd[]>(DEFAULTS)
@@ -310,21 +604,20 @@ export default function ComandosPage() {
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: C.dim }}>{'>'}_</span>
-          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Comandos do bot</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: C.text }}>Comandos</h2>
+          <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: C.dim }}>Gerencie eventos automáticos e comandos personalizados do bot</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.82rem', color: C.dim }}>Bot</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '0.4rem 0.75rem' }}>
+            <span style={{ fontSize: '0.78rem', color: C.dim }}>Bot</span>
             <Toggle on={botOn} onChange={setBotOn} size="sm" />
-            <span style={{ fontSize: '0.78rem', color: botOn ? C.green : C.dim, minWidth: '60px' }}>
-              {botOn ? 'Ativo' : 'Desativado'}
-            </span>
+            <span style={{ fontSize: '0.73rem', color: botOn ? C.green : C.dim, fontWeight: 600 }}>{botOn ? 'Ativo' : 'Off'}</span>
           </div>
-          <button onClick={() => { setForm(emptyForm); setEditingId(null); setCreating(true) }} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', background: C.blue, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>
-            + Novo comando
+          <button onClick={() => { setForm(emptyForm); setEditingId(null); setCreating(true) }} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.1rem', background: 'rgba(155,48,255,0.15)', border: '1px solid rgba(155,48,255,0.4)', color: C.primary, borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo comando
           </button>
         </div>
       </div>
@@ -339,94 +632,115 @@ export default function ComandosPage() {
         ))}
       </div>
 
-      {/* Commands table */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem 1.25rem', borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Comandos</span>
-          </div>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar comando..." style={{ ...inp, width: '200px', padding: '0.38rem 0.75rem', fontSize: '0.8rem' }} />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 90px', padding: '0.5rem 1.25rem', borderBottom: `1px solid rgba(255,255,255,0.04)`, fontSize: '0.67rem', fontWeight: 700, color: C.dim, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          <span>Comando/Evento</span><span>Resposta</span><span style={{ textAlign: 'right' }}>Ações</span>
-        </div>
-
-        {filtered.map((cmd, i) => (
-          <div key={cmd.id}
-            style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 90px', padding: '0.7rem 1.25rem', borderBottom: i < filtered.length - 1 ? `1px solid rgba(255,255,255,0.04)` : 'none', alignItems: 'center', transition: 'background 0.1s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.015)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.15rem' }}>
-                <code style={{ fontSize: '0.84rem', color: C.cyan, fontFamily: 'monospace', fontWeight: 700 }}>
-                  {cmd.isEvento ? cmd.label : cmd.trigger}
-                </code>
-                {cmd.isEvento && (
-                  <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '0.06rem 0.35rem', border: `1px solid ${C.cyan}40`, color: C.cyan, borderRadius: '4px', letterSpacing: '0.03em' }}>evento</span>
-                )}
-              </div>
-              <div style={{ fontSize: '0.71rem', color: C.dim }}>{cmd.isEvento ? 'Automatico' : cmd.origem} · {cmd.platform}</div>
-            </div>
-            <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{cmd.resposta}</span>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
-              <Toggle on={cmd.habilitado} onChange={async v => {
-                // Optimistic update
-                setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
-
-                if (v) {
-                  // Activating: persist to DB + show modal
-                  if (cmd.db) {
-                    await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: true }) })
-                  } else {
-                    const res = await fetch('/api/comandos', {
-                      method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ trigger: cmd.trigger, resposta: cmd.resposta, cooldown_s: cmd.cooldown, habilitado: true, permissao: 'todos', platform: cmd.platform }),
-                    })
-                    if (res.ok) {
-                      const saved = await res.json()
-                      setCmds(p => p.map(c => c.id === cmd.id ? { ...c, id: saved.id, db: true } : c))
-                    }
-                  }
-                  setOverlayModal(true)
-                } else {
-                  // Deactivating: persist to DB
-                  if (cmd.db) {
-                    await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: false }) })
-                  } else if (cmd.isEvento) {
-                    const res = await fetch('/api/comandos', {
-                      method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ trigger: cmd.trigger, resposta: cmd.resposta, cooldown_s: cmd.cooldown, habilitado: false, permissao: 'todos', platform: cmd.platform }),
-                    })
-                    if (res.ok) {
-                      const saved = await res.json()
-                      setCmds(p => p.map(c => c.id === cmd.id ? { ...c, id: saved.id, db: true } : c))
-                    }
-                  }
-                }
-              }} size="sm" />
-              {/* Edit button — all commands */}
-              <button onClick={() => startEdit(cmd)} style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', padding: '0.15rem', display: 'flex', opacity: 0.7 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
-              {/* Delete button — only non-event DB commands */}
-              {!cmd.isEvento && cmd.db && (
-                <button onClick={async () => {
-                  await fetch(`/api/comandos?id=${cmd.id}`, { method: 'DELETE' })
-                  setCmds(p => p.filter(c => c.id !== cmd.id))
-                }} style={{ background: 'none', border: 'none', color: 'rgba(255,100,100,0.45)', cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <div style={{ padding: '3rem', textAlign: 'center', fontSize: '0.84rem', color: C.dim }}>Nenhum comando encontrado</div>
-        )}
+      {/* Search */}
+      <div style={{ position: 'relative', marginBottom: '1.25rem' }}>
+        <svg style={{ position:'absolute',left:'0.9rem',top:'50%',transform:'translateY(-50%)',pointerEvents:'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome, gatilho ou resposta..." style={{ ...inp, paddingLeft: '2.5rem' }} />
       </div>
+
+      {/* Eventos automáticos */}
+      {filtered.filter(c => c.isEvento).length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.primary, display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.67rem', fontWeight: 800, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Eventos automáticos</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {filtered.filter(c => c.isEvento).map(cmd => {
+              const platColor = PLAT_COLOR[cmd.platform] ?? C.primary
+              const icon = EVT_ICON[cmd.trigger] ?? '⚡'
+              return (
+                <div key={cmd.id} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: C.card, border: `1px solid ${cmd.habilitado ? platColor + '22' : C.border}`, borderRadius: '10px', padding: '0.7rem 1rem', transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = C.card }}
+                >
+                  {/* Icon */}
+                  <div style={{ width: 38, height: 38, borderRadius: '9px', background: `${platColor}18`, border: `1px solid ${platColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>{icon}</div>
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text }}>{cmd.label}</span>
+                      <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '0.05rem 0.4rem', background: `${platColor}18`, border: `1px solid ${platColor}35`, color: platColor, borderRadius: '4px', letterSpacing: '0.03em' }}>{cmd.platform}</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.73rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cmd.resposta || <em style={{ opacity: 0.5 }}>Sem resposta configurada</em>}</p>
+                  </div>
+                  {/* Actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    <Toggle on={cmd.habilitado} onChange={async v => {
+                      setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
+                      if (v) {
+                        if (cmd.db) { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: true }) }) }
+                        else {
+                          const res = await fetch('/api/comandos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trigger: cmd.trigger, resposta: cmd.resposta, cooldown_s: cmd.cooldown, habilitado: true, permissao: 'todos', platform: cmd.platform }) })
+                          if (res.ok) { const s = await res.json(); setCmds(p => p.map(c => c.id === cmd.id ? { ...c, id: s.id, db: true } : c)) }
+                        }
+                      } else {
+                        if (cmd.db) { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: false }) }) }
+                        else {
+                          const res = await fetch('/api/comandos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trigger: cmd.trigger, resposta: cmd.resposta, cooldown_s: cmd.cooldown, habilitado: false, permissao: 'todos', platform: cmd.platform }) })
+                          if (res.ok) { const s = await res.json(); setCmds(p => p.map(c => c.id === cmd.id ? { ...c, id: s.id, db: true } : c)) }
+                        }
+                      }
+                    }} size="sm" />
+                    <button onClick={() => startEdit(cmd)} title="Editar" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: '7px', color: C.dim, cursor: 'pointer' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Meus comandos */}
+      {filtered.filter(c => !c.isEvento).length > 0 && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.blue, display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.67rem', fontWeight: 800, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Meus comandos</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {filtered.filter(c => !c.isEvento).map(cmd => {
+              const platColor = PLAT_COLOR[cmd.platform] ?? C.blue
+              return (
+                <div key={cmd.id} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: C.card, border: `1px solid ${cmd.habilitado ? C.blue + '25' : C.border}`, borderRadius: '10px', padding: '0.7rem 1rem', transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = C.card }}
+                >
+                  <div style={{ width: 38, height: 38, borderRadius: '9px', background: `${platColor}18`, border: `1px solid ${platColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={platColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, fontFamily: 'monospace' }}>{cmd.trigger}</span>
+                      <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '0.05rem 0.4rem', background: `${platColor}18`, border: `1px solid ${platColor}35`, color: platColor, borderRadius: '4px', letterSpacing: '0.03em' }}>{cmd.platform}</span>
+                      <span style={{ fontSize: '0.58rem', color: C.dim }}>{cmd.cooldown}s cd</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.73rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cmd.resposta || <em style={{ opacity: 0.5 }}>Sem resposta</em>}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    <Toggle on={cmd.habilitado} onChange={async v => {
+                      setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
+                      if (cmd.db) { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: v }) }) }
+                    }} size="sm" />
+                    <button onClick={() => startEdit(cmd)} title="Editar" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: '7px', color: C.dim, cursor: 'pointer' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button onClick={async () => { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'DELETE' }); setCmds(p => p.filter(c => c.id !== cmd.id)) }} title="Excluir" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '7px', color: 'rgba(239,68,68,0.6)', cursor: 'pointer' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '3rem', color: C.dim, fontSize: '0.84rem' }}>Nenhum resultado para &quot;{search}&quot;</div>
+      )}
     </div>
   )
 
@@ -469,12 +783,6 @@ export default function ComandosPage() {
         <span style={{ fontWeight: 800, fontSize: '0.95rem', flex: 1 }}>
           {form.isEvento ? `Configurando: ${form.eventoLabel}` : (editingId ? 'Editar comando' : 'Novo comando')}
         </span>
-        {form.isEvento && (
-          <Link href="/dashboard/overlays" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.85rem', background: 'rgba(155,48,255,0.1)', border: '1px solid rgba(155,48,255,0.3)', borderRadius: '7px', color: '#9b30ff', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-            Configurar overlay no OBS
-          </Link>
-        )}
       </div>
 
       <div style={{ padding: '1.5rem 2rem', maxWidth: '760px' }}>
@@ -513,7 +821,7 @@ export default function ComandosPage() {
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.2rem', borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.9rem' }}>
-                  <span style={{ fontFamily: 'monospace', color: C.dim, fontSize: '0.95rem' }}>{'>'}_</span> Evento automático
+                  Evento automático
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', color: form.ativo ? C.green : C.muted }}>
                   {form.ativo ? 'Ativo' : 'Inativo'} <Toggle on={form.ativo} onChange={v => setForm(p => ({ ...p, ativo: v }))} size="sm" />
@@ -533,7 +841,7 @@ export default function ComandosPage() {
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.2rem', borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.9rem' }}>
-                  <span style={{ fontFamily: 'monospace', color: C.dim, fontSize: '0.95rem' }}>{'>'}_</span> Comando
+                  Comando
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', color: C.muted }}>
                   Ativo <Toggle on={form.ativo} onChange={v => setForm(p => ({ ...p, ativo: v }))} size="sm" />
@@ -646,12 +954,7 @@ export default function ComandosPage() {
             <div style={{ fontSize: '0.74rem', color: C.dim, lineHeight: 1.5, marginBottom: form.notifOverlay ? '0.75rem' : 0 }}>
               Quando ativado, exibe um alerta visual em tempo real na transmissão quando este evento ocorrer.
             </div>
-            {form.notifOverlay && (
-              <div style={{ marginTop: '0.55rem', fontSize: '0.74rem', color: C.dim, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                Configure o visual e pegue a URL em <Link href="/dashboard/overlays" style={{ color: C.primary, textDecoration: 'none', fontWeight: 600 }}>Overlays → Alertas</Link>.
-              </div>
-            )}
+            {form.notifOverlay && form.isEvento && <OverlayQuickEdit trigger={form.trigger} />}
           </div>
 
           {/* 7 · Configurações avançadas */}
