@@ -53,10 +53,19 @@ async function decodeAndPlay(ctx: AudioContext, src: string | ArrayBuffer, vol: 
   let buf: ArrayBuffer
   if (typeof src === 'string') {
     if (src.startsWith('data:')) {
-      // base64 data URL — decode locally, no fetch needed (OBS-safe)
       buf = dataUrlToBuffer(src)
     } else {
-      buf = await (await fetch(src, { cache: 'no-store' })).arrayBuffer()
+      const res = await fetch(src, { cache: 'no-store' })
+      if (!res.ok) {
+        // Try to get a helpful error message from the proxy
+        let msg = `HTTP ${res.status}`
+        try {
+          const json = await res.clone().json()
+          if (json?.error) msg = json.error
+        } catch {}
+        throw new Error(msg)
+      }
+      buf = await res.arrayBuffer()
     }
   } else {
     buf = src
@@ -82,6 +91,21 @@ function playNotes(ctx: AudioContext, notes: Note[], vol: number) {
     o.start(ctx.currentTime + t)
     o.stop(ctx.currentTime + t + d + 0.05)
   })
+}
+
+// Returns null on success, error message string on failure
+export async function testSoundUrl(url: string): Promise<string | null> {
+  const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(url)}`
+  try {
+    const res = await fetch(proxyUrl, { cache: 'no-store' })
+    if (!res.ok) {
+      try { const j = await res.json(); return j?.error ?? `Erro ${res.status}` } catch {}
+      return `Erro ${res.status}`
+    }
+    return null
+  } catch (e) {
+    return e instanceof Error ? e.message : 'Falha de rede'
+  }
 }
 
 export async function playAlertSound(
