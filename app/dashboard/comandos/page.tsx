@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { notify } from '@/app/lib/notify'
-import { playAlertSound } from '@/app/lib/sound'
+import { playAlertSound, testSoundUrl } from '@/app/lib/sound'
 import Link from 'next/link'
 
 const C = {
@@ -510,7 +510,13 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                         {cfg.soundDataUrl && (
                           <button type="button" onClick={() => up('soundDataUrl','')} style={{ padding:'0.38rem 0.55rem',background:'rgba(255,255,255,0.04)',border:`1px solid ${BD}`,borderRadius:6,color:DIM,cursor:'pointer',fontSize:'0.7rem' }}>✕ Remover</button>
                         )}
-                        <button type="button" onClick={() => playAlertSound(slug || null, { soundEnabled:true, soundDataUrl:cfg.soundDataUrl, soundUrl:cfg.soundUrl, soundVolume:cfg.soundVolume })} style={{ flexShrink:0,padding:'0.38rem 0.7rem',background:PBg,border:`1px solid ${PB}`,borderRadius:6,color:P,cursor:'pointer',fontSize:'0.7rem',fontWeight:700 }}>
+                        <button type="button" onClick={async () => {
+                          if (!cfg.soundDataUrl && cfg.soundUrl) {
+                            const err = await testSoundUrl(cfg.soundUrl)
+                            if (err) { notify(err, 'error'); return }
+                          }
+                          playAlertSound(slug || null, { soundEnabled:true, soundDataUrl:cfg.soundDataUrl, soundUrl:cfg.soundUrl, soundVolume:cfg.soundVolume })
+                        }} style={{ flexShrink:0,padding:'0.38rem 0.7rem',background:PBg,border:`1px solid ${PB}`,borderRadius:6,color:P,cursor:'pointer',fontSize:'0.7rem',fontWeight:700 }}>
                           🔊 Testar
                         </button>
                       </div>
@@ -521,7 +527,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                       <div>
                         <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.15rem' }}>Ou cole uma URL de áudio</div>
                         <input value={cfg.soundUrl} onChange={e => up('soundUrl',e.target.value)}
-                          placeholder="https://... .mp3 · Deixe vazio para o som padrão"
+                          placeholder="Link direto para .mp3 / .wav — ex: cdn.site.com/som.mp3"
                           style={{ ...inp, fontSize:'0.72rem', padding:'0.38rem 0.6rem' }} />
                       </div>
                     )}

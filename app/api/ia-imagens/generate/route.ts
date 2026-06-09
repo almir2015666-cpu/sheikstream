@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size, quality, response_format: 'url' }),
+      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size, quality }),
     })
     const json = await res.json()
     if (!res.ok) {
