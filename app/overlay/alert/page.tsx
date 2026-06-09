@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { playAlertSound } from '@/app/lib/sound'
 
 type AlertEvent = {
   id: string
@@ -27,7 +28,7 @@ type Cfg = {
   iconShape: 'circle' | 'square' | 'none'
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
-  soundEnabled: boolean; soundUrl: string; soundVolume: number
+  soundEnabled: boolean; soundDataUrl: string; soundUrl: string; soundVolume: number
 }
 
 const DEF: Cfg = {
@@ -37,46 +38,7 @@ const DEF: Cfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, timerColor: '#9146FF',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
-  soundEnabled: true, soundUrl: '', soundVolume: 70,
-}
-
-async function playAlertSound(soundUrl: string, soundVolume: number) {
-  const vol = Math.max(0, Math.min(1, soundVolume / 100))
-  // AudioContext starts suspended in OBS Browser Source — must resume before playing
-  const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
-  try {
-    await ctx.resume()
-    if (soundUrl) {
-      try {
-        const res = await fetch(soundUrl, { cache: 'no-store' })
-        const buf = await res.arrayBuffer()
-        const decoded = await ctx.decodeAudioData(buf)
-        const src = ctx.createBufferSource()
-        const gain = ctx.createGain()
-        gain.gain.value = vol
-        src.buffer = decoded
-        src.connect(gain); gain.connect(ctx.destination)
-        src.start(0)
-        return
-      } catch {
-        // CORS or decode failure — fall back to Audio element
-        const a = new Audio(soundUrl); a.volume = vol; a.play().catch(() => {})
-        return
-      }
-    }
-    // Default: two-tone notification (880 Hz → 1108 Hz)
-    const tone = (f: number, t: number, d: number) => {
-      const o = ctx.createOscillator(), g = ctx.createGain()
-      o.connect(g); g.connect(ctx.destination); o.type = 'sine'
-      o.frequency.setValueAtTime(f, ctx.currentTime + t)
-      g.gain.setValueAtTime(0, ctx.currentTime + t)
-      g.gain.linearRampToValueAtTime(vol * 0.45, ctx.currentTime + t + 0.01)
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d)
-      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + d + 0.05)
-    }
-    tone(880, 0, 0.18)
-    tone(1108, 0.2, 0.28)
-  } catch {}
+  soundEnabled: true, soundDataUrl: '', soundUrl: '', soundVolume: 70,
 }
 
 const EVENT_META: Record<string, { icon: string; label: string; color: string }> = {
@@ -156,9 +118,12 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
 
   useEffect(() => {
     if (!visible) return
-    if (cfg.soundEnabled !== false) {
-      playAlertSound(cfg.soundUrl ?? '', cfg.soundVolume ?? 70)
-    }
+    playAlertSound(ev.slug, {
+      soundEnabled: cfg.soundEnabled !== false,
+      soundDataUrl: cfg.soundDataUrl ?? '',
+      soundUrl: cfg.soundUrl ?? '',
+      soundVolume: cfg.soundVolume ?? 70,
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible])
 

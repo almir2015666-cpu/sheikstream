@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { notify } from '@/app/lib/notify'
+import { playAlertSound } from '@/app/lib/sound'
 import Link from 'next/link'
 
 const C = {
@@ -147,7 +148,7 @@ type OvCfg = {
   iconShape: 'circle' | 'square' | 'none'
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
-  soundEnabled: boolean; soundUrl: string; soundVolume: number
+  soundEnabled: boolean; soundDataUrl: string; soundUrl: string; soundVolume: number
 }
 const OV_DEF: OvCfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, font: 'Inter',
@@ -156,7 +157,7 @@ const OV_DEF: OvCfg = {
   titleSize: 15, supportSize: 12, width: 480,
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
-  soundEnabled: true, soundUrl: '', soundVolume: 70,
+  soundEnabled: true, soundDataUrl: '', soundUrl: '', soundVolume: 70,
 }
 const OV_ANIMS = [
   { id: 'slide-right', label: 'Slide →', dur: '0.45s' }, { id: 'slide-left', label: 'Slide ←', dur: '0.45s' },
@@ -482,7 +483,8 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                   <Toggle on={cfg.soundEnabled} onChange={v => up('soundEnabled',v)} size="sm" />
                 </div>
                 {cfg.soundEnabled && (
-                  <div style={{ display:'flex',flexDirection:'column',gap:'0.4rem' }}>
+                  <div style={{ display:'flex',flexDirection:'column',gap:'0.45rem' }}>
+                    {/* Volume */}
                     <div>
                       <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.15rem' }}>
                         <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Volume</span>
@@ -490,37 +492,39 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                       </div>
                       <input type="range" min={0} max={100} value={cfg.soundVolume} onChange={e => up('soundVolume',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
                     </div>
+                    {/* File upload */}
                     <div>
-                      <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.15rem' }}>URL do som personalizado</div>
-                      <div style={{ display:'flex',gap:'0.3rem' }}>
-                        <input value={cfg.soundUrl} onChange={e => up('soundUrl',e.target.value)}
-                          placeholder="Deixe vazio para usar o som padrão"
-                          style={{ ...inp, fontSize:'0.72rem', padding:'0.38rem 0.6rem', flex:1 }} />
-                        <button type="button" onClick={() => {
-                          const vol = cfg.soundVolume / 100
-                          if (cfg.soundUrl) {
-                            const a = new Audio(cfg.soundUrl); a.volume = vol; a.play().catch(() => {})
-                          } else {
-                            try {
-                              const ctx = new AudioContext()
-                              const tone = (f: number, t: number, d: number) => {
-                                const o = ctx.createOscillator(), g = ctx.createGain()
-                                o.connect(g); g.connect(ctx.destination); o.type = 'sine'
-                                o.frequency.setValueAtTime(f, ctx.currentTime + t)
-                                g.gain.setValueAtTime(0, ctx.currentTime + t)
-                                g.gain.linearRampToValueAtTime(vol * 0.4, ctx.currentTime + t + 0.01)
-                                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d)
-                                o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + d + 0.01)
-                              }
-                              tone(880, 0, 0.15); tone(1108, 0.18, 0.25)
-                            } catch {}
-                          }
-                        }} style={{ flexShrink:0,padding:'0.38rem 0.7rem',background:PBg,border:`1px solid ${PB}`,borderRadius:6,color:P,cursor:'pointer',fontSize:'0.7rem',fontWeight:700 }}>
+                      <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.22rem' }}>Arquivo de som (MP3/WAV/OGG)</div>
+                      <div style={{ display:'flex',alignItems:'center',gap:'0.4rem' }}>
+                        <label style={{ flexShrink:0,padding:'0.38rem 0.7rem',background:cfg.soundDataUrl?'rgba(34,197,94,0.1)':PBg,border:`1px solid ${cfg.soundDataUrl?'rgba(34,197,94,0.3)':PB}`,borderRadius:6,color:cfg.soundDataUrl?'#22c55e':P,cursor:'pointer',fontSize:'0.7rem',fontWeight:700 }}>
+                          {cfg.soundDataUrl ? '✓ Arquivo carregado' : '📂 Escolher arquivo'}
+                          <input type="file" accept="audio/*" style={{ display:'none' }} onChange={e => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            if (file.size > 3 * 1024 * 1024) { notify('Arquivo muito grande (máx 3 MB)', 'error'); return }
+                            const reader = new FileReader()
+                            reader.onload = () => { up('soundDataUrl', reader.result as string); up('soundUrl', '') }
+                            reader.readAsDataURL(file)
+                          }} />
+                        </label>
+                        {cfg.soundDataUrl && (
+                          <button type="button" onClick={() => up('soundDataUrl','')} style={{ padding:'0.38rem 0.55rem',background:'rgba(255,255,255,0.04)',border:`1px solid ${BD}`,borderRadius:6,color:DIM,cursor:'pointer',fontSize:'0.7rem' }}>✕ Remover</button>
+                        )}
+                        <button type="button" onClick={() => playAlertSound(slug || null, { soundEnabled:true, soundDataUrl:cfg.soundDataUrl, soundUrl:cfg.soundUrl, soundVolume:cfg.soundVolume })} style={{ flexShrink:0,padding:'0.38rem 0.7rem',background:PBg,border:`1px solid ${PB}`,borderRadius:6,color:P,cursor:'pointer',fontSize:'0.7rem',fontWeight:700 }}>
                           🔊 Testar
                         </button>
                       </div>
-                      <div style={{ fontSize:'0.6rem',color:DIM,marginTop:'0.18rem' }}>URL de MP3/WAV público. Vazio = som padrão do Sheikstream.</div>
+                      <div style={{ fontSize:'0.6rem',color:DIM,marginTop:'0.18rem' }}>Máx 3 MB. Fica armazenado junto com o overlay.</div>
                     </div>
+                    {/* URL fallback (only show when no file uploaded) */}
+                    {!cfg.soundDataUrl && (
+                      <div>
+                        <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.15rem' }}>Ou cole uma URL de áudio</div>
+                        <input value={cfg.soundUrl} onChange={e => up('soundUrl',e.target.value)}
+                          placeholder="https://... .mp3 · Deixe vazio para o som padrão"
+                          style={{ ...inp, fontSize:'0.72rem', padding:'0.38rem 0.6rem' }} />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
