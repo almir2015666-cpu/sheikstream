@@ -125,11 +125,19 @@ export async function playAlertSound(
       await decodeAndPlay(ctx, cfg.soundDataUrl, vol)
       return
     }
-    // 2. External URL — proxied through our own server so OBS never hits CORS
+    // 2. External URL — use HTMLAudioElement (more compatible with OBS than decodeAudioData)
     if (cfg.soundUrl) {
       try {
         const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(cfg.soundUrl)}`
-        await decodeAndPlay(ctx, proxyUrl, vol)
+        await new Promise<void>((resolve, reject) => {
+          const audio = new Audio(proxyUrl)
+          audio.volume = vol
+          audio.oncanplaythrough = () => { audio.play().then(resolve).catch(reject) }
+          audio.onerror = () => reject(new Error('audio error'))
+          audio.load()
+          // Timeout after 8s so OBS doesn't hang waiting for a bad URL
+          setTimeout(() => reject(new Error('timeout')), 8000)
+        })
         return
       } catch {
         // URL failed — fall through to synthesized sound so OBS always hears something

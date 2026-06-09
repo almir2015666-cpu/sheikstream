@@ -293,7 +293,10 @@ export default function IAImagensPage() {
           {/* Result */}
           {result && (
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
-              <img src={result.imageUrl} alt="Imagem gerada" style={{ width: '100%', display: 'block', maxHeight: 360, objectFit: 'cover' }} />
+              <img src={result.imageUrl} alt="Imagem gerada"
+                style={{ width: '100%', display: 'block', maxHeight: 360, objectFit: 'cover', minHeight: 120, background: 'rgba(255,255,255,0.04)' }}
+                onLoad={e => (e.currentTarget.style.minHeight = '0')}
+              />
               <div style={{ padding: '0.85rem' }}>
                 {result.modelUsed === 'dall-e-2' && (
                   <div style={{ fontSize: '0.68rem', color: '#f59e0b', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 6, padding: '0.4rem 0.6rem', marginBottom: '0.5rem' }}>
@@ -323,8 +326,8 @@ export default function IAImagensPage() {
           {generating && (
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '2.5rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', animation: 'ia-spin 2s linear infinite', display: 'inline-block', marginBottom: '0.75rem' }}>🎨</div>
-              <div style={{ fontSize: '0.9rem', color: C.muted, fontWeight: 600 }}>Criando sua imagem com DALL-E 3...</div>
-              <div style={{ fontSize: '0.75rem', color: C.dim, marginTop: '0.35rem' }}>Pode levar até 20 segundos</div>
+              <div style={{ fontSize: '0.9rem', color: C.muted, fontWeight: 600 }}>Criando sua imagem com Pollinations AI...</div>
+              <div style={{ fontSize: '0.75rem', color: C.dim, marginTop: '0.35rem' }}>Pode levar 10–30 segundos</div>
             </div>
           )}
         </div>

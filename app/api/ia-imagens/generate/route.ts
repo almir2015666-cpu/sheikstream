@@ -69,17 +69,11 @@ export async function POST(req: NextRequest) {
   const size: Size = ALLOWED_SIZES.includes(body.size) ? body.size : '1792x1024'
 
   const [w, h] = size.split('x').map(Number)
+  const seed = Date.now() % 999999
 
   // Pollinations.ai — free image generation, no API key required
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&nologo=true&model=flux&seed=${Math.floor(Math.random() * 999999)}`
-
-  // Trigger generation server-side so the image is ready when the client loads it
-  try {
-    const check = await fetch(imageUrl, { method: 'GET', signal: AbortSignal.timeout(55000) })
-    if (!check.ok) return NextResponse.json({ error: 'Erro ao gerar imagem. Tente novamente.' }, { status: 502 })
-  } catch {
-    return NextResponse.json({ error: 'Tempo limite ao gerar imagem. Tente novamente.' }, { status: 504 })
-  }
+  // Return the URL directly; the client fetches/displays the image (generation happens on demand)
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&nologo=true&model=flux&seed=${seed}`
 
   try {
     await db.from('ai_image_generations').insert({

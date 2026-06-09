@@ -16,14 +16,17 @@ function extractAudioFromHtml(html: string, pageUrl: string): string | null {
   const base = new URL(pageUrl).origin
 
   // Patterns ordered by specificity: data-url, data-sound, <source>, <audio src>
+  const EXT = '(?:mp3|wav|ogg|m4a|aac|flac|opus)'
   const patterns = [
-    /data-url=["']([^"']+\.(?:mp3|wav|ogg|m4a|aac|flac|opus)(?:\?[^"']*)?)["']/i,
-    /data-sound=["']([^"']+\.(?:mp3|wav|ogg|m4a|aac|flac|opus)(?:\?[^"']*)?)["']/i,
-    /data-src=["']([^"']+\.(?:mp3|wav|ogg|m4a|aac|flac|opus)(?:\?[^"']*)?)["']/i,
-    /<source[^>]+src=["']([^"']+\.(?:mp3|wav|ogg|m4a|aac|flac|opus)(?:\?[^"']*)?)["']/i,
-    /<audio[^>]+src=["']([^"']+\.(?:mp3|wav|ogg|m4a|aac|flac|opus)(?:\?[^"']*)?)["']/i,
-    /["']([^"']*\/media\/sounds\/[^"']+\.(?:mp3|wav|ogg))["']/i,
-    /["'](https?:\/\/[^"']+\.(?:mp3|wav|ogg|m4a|aac|flac|opus)(?:\?[^"']*)?)["']/i,
+    new RegExp(`data-url=["']([^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
+    new RegExp(`data-sound=["']([^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
+    new RegExp(`data-src=["']([^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
+    new RegExp(`<source[^>]+src=["']([^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
+    new RegExp(`<audio[^>]+src=["']([^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
+    // onclick="play('/media/sounds/x.mp3')" — myinstants pattern
+    new RegExp(`play\\(['"]([^'"]+\\.${EXT}[^'"]*)['"]\\)`, 'i'),
+    new RegExp(`["']([^"']*/media/sounds/[^"']+\\.${EXT})["']`, 'i'),
+    new RegExp(`["'](https?://[^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
   ]
 
   for (const re of patterns) {
