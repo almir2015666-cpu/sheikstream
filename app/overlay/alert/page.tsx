@@ -111,16 +111,27 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
   return transitions[animIn] ?? `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`
 }
 
-function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting?: boolean }) {
+function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
+  const [isExiting, setIsExiting] = useState(false)
+  // Keep onDone stable so the effect closure always calls the latest version
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
+
   const meta = EVENT_META[ev.type] ?? EVENT_META.command
   const accent = cfg.timerColor !== '#9146FF' ? cfg.timerColor : (cfg.accentColor !== '#9146FF' ? cfg.accentColor : meta.color)
   const titleClr = cfg.titleColor || accent
   const subClr = cfg.subtitleColor || cfg.textColor
 
+  // All timing lives here — same pattern as setVisible(50ms) that already works in OBS
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 50)
-    return () => clearTimeout(t)
+    const animOut = cfg.animOut ?? 'fade'
+    const exitDurMs = animOut !== 'none' ? ((11 - (cfg.animSpeed ?? 5)) * 0.06) * 1000 : 0
+    const t1 = setTimeout(() => setVisible(true), 50)
+    const t2 = setTimeout(() => setIsExiting(true), cfg.duration * 1000)
+    const t3 = setTimeout(() => onDoneRef.current(), cfg.duration * 1000 + exitDurMs + 150)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -153,17 +164,15 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
   const exitDur = `${((11-(cfg.animSpeed??5))*0.06).toFixed(2)}s`
   const animOut = cfg.animOut ?? 'fade'
 
-  // Entrance keyframe (applied immediately when visible=true, same mechanism that works in OBS)
   const entranceAnim = visible && isKeyframeAnim
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  // Exit: same mechanism as entrance — keyframe applied immediately when isExiting=true, no delay
+  // Exit keyframe applied immediately when isExiting=true — identical mechanism to entrance
   const exitAnim = isExiting && animOut !== 'none'
     ? `sk-out-${animOut} ${exitDur}s ease forwards`
     : undefined
 
-  // Wrapper style: exit takes over completely when isExiting (mirrors entrance pattern)
   const wrapperStyle: React.CSSProperties = isExiting
     ? { animation: exitAnim }
     : {
@@ -301,9 +310,6 @@ function AlertOverlayContent() {
 
   const [queue, setQueue] = useState<AlertEvent[]>([])
   const [current, setCurrent] = useState<AlertEvent | null>(null)
-  const [isExiting, setIsExiting] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seenIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -393,27 +399,19 @@ function AlertOverlayContent() {
     const [next, ...rest] = queue
     setCurrent(next)
     setQueue(rest)
-    const evCfg = getCfg(next)
-    const animOut = evCfg.animOut ?? 'fade'
-    const exitDurMs = animOut !== 'none' ? ((11 - (evCfg.animSpeed ?? 5)) * 0.06) * 1000 : 0
-    timerRef.current = setTimeout(() => {
-      setIsExiting(true)
-      exitTimerRef.current = setTimeout(() => {
-        setCurrent(null)
-        setIsExiting(false)
-      }, exitDurMs + 150)
-    }, evCfg.duration * 1000)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue, current])
 
-  useEffect(() => () => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
-  }, [])
-
   if (!current) return null
 
-  return <AlertCard key={current.id} ev={current} cfg={getCfg(current)} isExiting={isExiting} />
+  return (
+    <AlertCard
+      key={current.id}
+      ev={current}
+      cfg={getCfg(current)}
+      onDone={() => setCurrent(null)}
+    />
+  )
 }
 
 export default function AlertOverlayPage() {
