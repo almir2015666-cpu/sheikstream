@@ -2,14 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAdminPassword } from '@/app/lib/adminAuth'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 
+// Uses overlay_configs with broadcaster_id='_global_' — no new table needed
+const GLOBAL_ID = '_global_'
+const NAV_TYPE  = 'nav_order'
+
 export async function GET() {
   try {
     const { data } = await getSupabaseAdmin()
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'nav_order')
+      .from('overlay_configs')
+      .select('config')
+      .eq('broadcaster_id', GLOBAL_ID)
+      .eq('type', NAV_TYPE)
       .single()
-    return NextResponse.json({ order: data?.value ?? null })
+    const order = data?.config?.order ?? null
+    return NextResponse.json({ order })
   } catch {
     return NextResponse.json({ order: null })
   }
@@ -22,8 +28,13 @@ export async function PUT(req: NextRequest) {
     const { order } = await req.json()
     if (!Array.isArray(order)) return NextResponse.json({ error: 'Invalid' }, { status: 400 })
     const { error } = await getSupabaseAdmin()
-      .from('app_settings')
-      .upsert({ key: 'nav_order', value: order, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      .from('overlay_configs')
+      .upsert({
+        broadcaster_id: GLOBAL_ID,
+        type: NAV_TYPE,
+        config: { order },
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'broadcaster_id,type' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
   } catch (e) {

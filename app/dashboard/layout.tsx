@@ -206,7 +206,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     try {
       if (localStorage.getItem('sk-admin-authed') === '1') setIsAdmin(true)
     } catch { /* ignore */ }
-    // Load nav order from DB (global for all users), fall back to localStorage
+    // Load nav order from DB — DB is source of truth, localStorage is ignored
     fetch('/api/admin/nav-order')
       .then(r => r.ok ? r.json() : null)
       .then(d => {
@@ -214,24 +214,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setNavOrder(d.order)
           try { localStorage.setItem('sk-nav-order', JSON.stringify(d.order)) } catch {}
         } else {
-          try {
-            const savedOrder = localStorage.getItem('sk-nav-order')
-            if (savedOrder) {
-              const arr = JSON.parse(savedOrder)
-              if (Array.isArray(arr) && arr.length > 0) setNavOrder(arr)
-            }
-          } catch { /* ignore */ }
+          // No global order saved yet — clear any stale local order
+          try { localStorage.removeItem('sk-nav-order') } catch {}
         }
       })
-      .catch(() => {
-        try {
-          const savedOrder = localStorage.getItem('sk-nav-order')
-          if (savedOrder) {
-            const arr = JSON.parse(savedOrder)
-            if (Array.isArray(arr) && arr.length > 0) setNavOrder(arr)
-          }
-        } catch { /* ignore */ }
-      })
+      .catch(() => {/* network error — keep default order */})
     const fetchBanner = () => fetch('/api/dev-banner').then(r => r.json()).then(d => setBanner(d?.active ? d : null)).catch(() => {})
     fetchBanner()
     const iv = setInterval(fetchBanner, 30000)
