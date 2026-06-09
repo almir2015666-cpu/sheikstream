@@ -153,7 +153,23 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
   const exitDur = `${((11-(cfg.animSpeed??5))*0.06).toFixed(2)}s`
   const entranceAnim = visible && isKeyframeAnim ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards` : undefined
   const animOut = cfg.animOut ?? 'fade'
-  const exitAnim = isExiting && animOut !== 'none' ? `sk-out-${animOut} ${exitDur} ease forwards` : undefined
+
+  // Exit via CSS transitions (more reliable than keyframe animations in OBS/Chromium)
+  const EXIT_TRANSFORM: Record<string, string> = {
+    'slide-right': 'translateX(110%)',
+    'slide-left': 'translateX(-110%)',
+    'slide-up': 'translateY(-80px)',
+    'slide-down': 'translateY(80px)',
+    'zoom-out': 'scale(0.05)',
+    'zoom-in': 'scale(2.2)',
+    'flip-x': 'rotateX(90deg)',
+  }
+  const exitTrans: React.CSSProperties = (isExiting && animOut !== 'none') ? {
+    animation: 'none',
+    opacity: 0,
+    ...(EXIT_TRANSFORM[animOut] ? { transform: EXIT_TRANSFORM[animOut] } : {}),
+    transition: `opacity ${exitDur}s ease${EXIT_TRANSFORM[animOut] ? `, transform ${exitDur}s ease` : ''}`,
+  } : {}
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
@@ -192,11 +208,14 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
           maxHeight: 200,
           objectFit: 'contain',
           borderRadius: cfg.borderRadius,
-          animation: exitAnim ?? entranceAnim,
-          ...(isKeyframeAnim && !isExiting
-            ? (visible ? {} : { opacity: 0 })
-            : (!isExiting ? (visible ? { transform: 'none', opacity: 1 } : hiddenStyle) : {})),
-          transition: (isKeyframeAnim || isExiting) ? 'none' : (visible ? transition : 'none'),
+          ...(!isExiting ? {
+            animation: entranceAnim,
+            ...(!isKeyframeAnim
+              ? (visible ? { transform: 'none', opacity: 1 } : hiddenStyle)
+              : (visible ? {} : { opacity: 0 })),
+            transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
+          } : {}),
+          ...exitTrans,
         }}
       />
     </>
@@ -207,11 +226,14 @@ function AlertCard({ ev, cfg, isExiting }: { ev: AlertEvent; cfg: Cfg; isExiting
       <style>{ANIM_CSS}</style>
       <div style={{
         position: 'relative', display: 'inline-block',
-        animation: exitAnim ?? entranceAnim,
-        ...(!isKeyframeAnim && !isExiting
-          ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
-          : (!isExiting ? (visible ? {} : { opacity: 0 }) : {})),
-        transition: (isKeyframeAnim || isExiting) ? 'none' : (visible ? transition : 'none'),
+        ...(!isExiting ? {
+          animation: entranceAnim,
+          ...(!isKeyframeAnim
+            ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
+            : (visible ? {} : { opacity: 0 })),
+          transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
+        } : {}),
+        ...exitTrans,
       }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
       {cardEffect !== 'none' && (
