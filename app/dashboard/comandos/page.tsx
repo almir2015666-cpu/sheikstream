@@ -322,13 +322,16 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
         setTesting(false); return
       }
       const errs: string[] = data.errors ?? []
+      const overlayErr = errs.find(e => e.startsWith('overlay_failed'))
       if (errs.includes('no_token')) {
-        notify('Token da Twitch não encontrado — reconecte em Plataformas', 'error')
+        notify('Token Twitch não encontrado — reconecte em Plataformas', 'error')
       } else if (errs.includes('token_expired')) {
         notify('Token expirado — acesse Plataformas para reconectar', 'error')
+      } else if (overlayErr) {
+        notify('Chat enviado! Overlay: ' + overlayErr.replace('overlay_failed: ', ''), 'error')
       } else {
         setTestOk(true)
-        notify('Teste enviado! Verifique o chat e o OBS.', 'success')
+        notify('Teste enviado! Chat + overlay disparados.', 'success')
         setTimeout(() => setTestOk(false), 5000)
       }
     } catch { notify('Erro de conexão ao testar', 'error') }
