@@ -925,9 +925,6 @@ export default function ComandosPage() {
           <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Comandos do bot</h2>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '0.82rem', color: C.dim }}>Bot</span>
-          <Toggle on={botOn} onChange={setBotOn} size="sm" />
-          <span style={{ fontSize: '0.78rem', color: botOn ? C.green : C.dim, minWidth: 52 }}>{botOn ? '📶 Ativo' : 'Desativado'}</span>
           <button onClick={() => { setForm(emptyForm); setEditingId(null); setCreating(true) }} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', background: C.blue, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>
             + Novo comando
           </button>

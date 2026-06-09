@@ -101,12 +101,24 @@ export async function playAlertSound(
       await decodeAndPlay(ctx, cfg.soundDataUrl, vol)
       return
     }
-    // 2. External URL — fetch via Web Audio API, fallback to <audio> on CORS failure
+    // 2. External URL — route <audio> through AudioContext (OBS captures it)
+    // Avoids fetch/CORS entirely; crossOrigin='anonymous' enables AudioContext routing
     if (cfg.soundUrl) {
+      const el = new Audio()
+      el.crossOrigin = 'anonymous'
+      el.src = cfg.soundUrl
       try {
-        await decodeAndPlay(ctx, cfg.soundUrl, vol)
+        const src = ctx.createMediaElementSource(el)
+        const gain = ctx.createGain()
+        gain.gain.value = vol
+        src.connect(gain)
+        gain.connect(ctx.destination)
+        await el.play()
       } catch {
-        const a = new Audio(cfg.soundUrl); a.volume = vol; a.play().catch(() => {})
+        // crossOrigin blocked (no CORS headers) — play directly via system audio
+        const fallback = new Audio(cfg.soundUrl)
+        fallback.volume = vol
+        fallback.play().catch(() => {})
       }
       return
     }
