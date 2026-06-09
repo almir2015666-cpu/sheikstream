@@ -53,33 +53,33 @@ const TEXT_EFFECTS = [
 ]
 
 const ALERT_ANIMS = [
-  { id: 'slide-right', label: 'Slide →',     icon: '→' },
-  { id: 'slide-left',  label: 'Slide ←',     icon: '←' },
-  { id: 'slide-up',    label: 'Slide ↑',     icon: '↑' },
-  { id: 'slide-down',  label: 'Slide ↓',     icon: '↓' },
-  { id: 'fade',        label: 'Fade',        icon: '◌' },
-  { id: 'zoom-in',     label: 'Zoom In',     icon: '⊕' },
-  { id: 'zoom-out',    label: 'Zoom Out',    icon: '⊖' },
-  { id: 'bounce-in',   label: 'Bounce',      icon: '⇑' },
-  { id: 'flip-x',      label: 'Flip X',      icon: '↕' },
-  { id: 'flip-y',      label: 'Flip Y',      icon: '↔' },
-  { id: 'rotate-in',   label: 'Girar',       icon: '↺' },
-  { id: 'elastic',     label: 'Elástico',    icon: '≈' },
-  { id: 'shake',       label: 'Tremer',      icon: '〜' },
-  { id: 'blur-in',     label: 'Blur',        icon: '◈' },
-  { id: 'drop-in',     label: 'Cair',        icon: '▽' },
-  { id: 'swing',       label: 'Balançar',    icon: '⬡' },
+  { id: 'slide-right', label: 'Slide →',     icon: '→',  dur: '0.45s' },
+  { id: 'slide-left',  label: 'Slide ←',     icon: '←',  dur: '0.45s' },
+  { id: 'slide-up',    label: 'Slide ↑',     icon: '↑',  dur: '0.45s' },
+  { id: 'slide-down',  label: 'Slide ↓',     icon: '↓',  dur: '0.45s' },
+  { id: 'fade',        label: 'Fade',        icon: '◌',  dur: '0.45s' },
+  { id: 'zoom-in',     label: 'Zoom In',     icon: '⊕',  dur: '0.4s'  },
+  { id: 'zoom-out',    label: 'Zoom Out',    icon: '⊖',  dur: '0.4s'  },
+  { id: 'bounce-in',   label: 'Bounce',      icon: '⇑',  dur: '0.55s' },
+  { id: 'flip-x',      label: 'Flip X',      icon: '↕',  dur: '0.5s'  },
+  { id: 'flip-y',      label: 'Flip Y',      icon: '↔',  dur: '0.5s'  },
+  { id: 'rotate-in',   label: 'Girar',       icon: '↺',  dur: '0.5s'  },
+  { id: 'elastic',     label: 'Elástico',    icon: '≈',  dur: '0.65s' },
+  { id: 'shake',       label: 'Tremer',      icon: '〜', dur: '0.5s'  },
+  { id: 'blur-in',     label: 'Blur',        icon: '◈',  dur: '0.4s'  },
+  { id: 'drop-in',     label: 'Cair',        icon: '▽',  dur: '0.5s'  },
+  { id: 'swing',       label: 'Balançar',    icon: '⬡',  dur: '0.6s'  },
 ]
 
 const ENTRY_ANIMS = [
-  { id: 'none',        label: 'Nenhum',      icon: '○' },
-  { id: 'fade',        label: 'Fade In',     icon: '◌' },
-  { id: 'slide-up',    label: 'Slide ↑',     icon: '↑' },
-  { id: 'slide-down',  label: 'Slide ↓',     icon: '↓' },
-  { id: 'zoom-in',     label: 'Zoom In',     icon: '⊕' },
-  { id: 'blur-in',     label: 'Blur In',     icon: '◈' },
-  { id: 'bounce-in',   label: 'Bounce',      icon: '⇑' },
-  { id: 'slide-right', label: 'Slide →',     icon: '→' },
+  { id: 'none',        label: 'Nenhum',      icon: '○',  dur: '—'     },
+  { id: 'fade',        label: 'Fade In',     icon: '◌',  dur: '0.45s' },
+  { id: 'slide-up',    label: 'Slide ↑',     icon: '↑',  dur: '0.45s' },
+  { id: 'slide-down',  label: 'Slide ↓',     icon: '↓',  dur: '0.45s' },
+  { id: 'zoom-in',     label: 'Zoom In',     icon: '⊕',  dur: '0.4s'  },
+  { id: 'blur-in',     label: 'Blur In',     icon: '◈',  dur: '0.4s'  },
+  { id: 'bounce-in',   label: 'Bounce',      icon: '⇑',  dur: '0.55s' },
+  { id: 'slide-right', label: 'Slide →',     icon: '→',  dur: '0.45s' },
 ]
 
 const BAR_ANIMS = [
@@ -191,21 +191,22 @@ function ColorIn({ label, value, onChange }: { label: string; value: string; onC
   )
 }
 
-function EffectGrid({ effects, value, onChange }: { effects: { id: string; label: string; icon: string }[]; value: string; onChange: (v: string) => void }) {
+function EffectGrid({ effects, value, onChange }: { effects: { id: string; label: string; icon: string; dur?: string }[]; value: string; onChange: (v: string) => void }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem' }}>
       {effects.map(e => (
         <button key={e.id} onClick={() => onChange(e.id)} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: '0.2rem', padding: '0.5rem 0.25rem',
+          gap: '0.15rem', padding: '0.5rem 0.25rem',
           background: value === e.id ? C.primaryBg : 'rgba(255,255,255,0.03)',
           border: `1px solid ${value === e.id ? C.primaryB : C.cardB}`,
           borderRadius: 8, color: value === e.id ? C.primary : C.dim,
           cursor: 'pointer', fontSize: '0.65rem', fontWeight: value === e.id ? 700 : 400,
-          minHeight: 52,
+          minHeight: e.dur ? 60 : 52,
         }}>
           <span style={{ fontSize: '1rem', lineHeight: 1 }}>{e.icon}</span>
           <span style={{ lineHeight: 1.2, textAlign: 'center' }}>{e.label}</span>
+          {e.dur && <span style={{ fontSize: '0.58rem', opacity: 0.55, lineHeight: 1, color: value === e.id ? C.primary : C.vdim, fontWeight: 400 }}>{e.dur}</span>}
         </button>
       ))}
     </div>
@@ -416,7 +417,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
     if (type === 'subathon') {
       fetch('/api/subathon').then(r => r.json()).then(d => setSubathonActive(!!d?.is_active)).catch(() => setSubathonActive(false))
     }
-    fetch('/api/me').then(r => r.json()).then(d => { if (d?.id) setUid(d.id) }).catch(() => {})
+    // Apply localStorage immediately for instant render
     try {
       const raw = localStorage.getItem(`overlay-cfg-${cfgKey}`)
       if (raw) {
@@ -428,6 +429,23 @@ export default function OverlayEditorPage({ params }: Ctx) {
         if (saved.activePreset) setActivePreset(saved.activePreset)
       }
     } catch {}
+    // Fetch uid then load from DB (source of truth — overrides localStorage)
+    fetch('/api/me').then(r => r.json()).then(d => {
+      if (!d?.id) return
+      setUid(d.id)
+      fetch(`/api/overlay-config/${cfgKey}?uid=${d.id}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(cfg => {
+          if (!cfg || Object.keys(cfg).length === 0) return
+          if (cfg.style) setStyle(s => ({ ...DEF, ...s, ...cfg.style }))
+          if (cfg.vis) setVis(v => ({ ...v, ...cfg.vis }))
+          if (cfg.fontes) setFontes(f => ({ ...f, ...cfg.fontes }))
+          if (cfg.bannerUrls) setBannerUrls(cfg.bannerUrls)
+          if (cfg.activePreset) setActivePreset(cfg.activePreset)
+          try { localStorage.setItem(`overlay-cfg-${cfgKey}`, JSON.stringify(cfg)) } catch {}
+        })
+        .catch(() => {})
+    }).catch(() => {})
   }, [type, cfgKey])
 
   function upS<K extends keyof StyleCfg>(key: K, val: StyleCfg[K]) {
@@ -499,35 +517,17 @@ export default function OverlayEditorPage({ params }: Ctx) {
       }
       return (
         <Card>
-          <Label sub="Escolha quais eventos geram alertas nesta URL">Eventos exibidos</Label>
-          {[
-            ['sub',      '⭐', 'Sub / Resub Twitch'],
-            ['giftsub',  '🎁', 'Gift Sub Twitch'],
-            ['follow',   '❤️',  'Follow Twitch'],
-            ['bits',     '💎', 'Bits Twitch'],
-            ['donation', '💸', 'Doação Livepix'],
-            ['member',   '🏅', 'Membro YouTube'],
-          ].map(([k, icon, l]) => (
-            <Tog key={k} on={!!vis[k]} onChange={v => setVis(vv => ({ ...vv, [k]: v }))} label={`${icon} ${l}`} />
-          ))}
-          <div style={{ marginTop: '1rem', padding: '0.65rem 0.85rem', background: C.orangeBg, border: `1px solid ${C.orangeB}`, borderRadius: 8 }}>
-            <p style={{ margin: '0 0 0.5rem', fontSize: '0.77rem', color: C.orange }}>
-              URLs individuais por evento (use no OBS para alertas separados):
+          <Label>Configuração do overlay</Label>
+          <p style={{ margin: '0 0 0.75rem', fontSize: '0.76rem', color: C.dim, lineHeight: 1.5 }}>
+            Cole a URL acima no OBS como <strong style={{ color: C.text }}>Browser Source</strong>. Ative <strong style={{ color: C.text }}>&quot;Permitir transparência&quot;</strong> nas configurações do Browser Source.
+          </p>
+          <p style={{ margin: '0 0 0.75rem', fontSize: '0.76rem', color: C.dim, lineHeight: 1.5 }}>
+            Tamanho recomendado: <strong style={{ color: C.text }}>1920 × 200px</strong> na parte inferior da cena.
+          </p>
+          <div style={{ padding: '0.65rem 0.85rem', background: C.orangeBg, border: `1px solid ${C.orangeB}`, borderRadius: 8 }}>
+            <p style={{ margin: 0, fontSize: '0.76rem', color: C.orange, lineHeight: 1.5 }}>
+              Para configurar alertas individuais por evento, acesse o painel de <strong>Comandos</strong> e edite cada evento diretamente nele.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              {[
-                { slug: 'twitch-sub',     label: '⭐ Sub Twitch' },
-                { slug: 'twitch-follow',  label: '❤️ Follow Twitch' },
-                { slug: 'twitch-bits',    label: '💎 Bits Twitch' },
-                { slug: 'twitch-giftsub', label: '🎁 Gift Sub Twitch' },
-                { slug: 'livepix',        label: '💸 Doação Livepix' },
-              ].map(ev => (
-                <div key={ev.slug} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Link href={`/dashboard/overlays/alert?event=${ev.slug}`} style={{ fontSize: '0.72rem', color: C.orange, textDecoration: 'underline' }}>{ev.label}</Link>
-                </div>
-              ))}
-              <Link href="/dashboard/overlays" style={{ fontSize: '0.7rem', color: 'rgba(251,146,60,0.6)', textDecoration: 'none', marginTop: '0.25rem' }}>Ver todos os eventos →</Link>
-            </div>
           </div>
         </Card>
       )

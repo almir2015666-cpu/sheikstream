@@ -2029,15 +2029,32 @@ export default function AdminPage() {
               setNavOrder(arr)
             }
 
-            const saveNav = () => {
+            const saveNav = async () => {
               const arr = ordered.map(i => i.id)
               try { localStorage.setItem('sk-nav-order', JSON.stringify(arr)) } catch {}
-              alert('Ordem salva! A sidebar do dashboard vai refletir a nova ordem.')
+              try {
+                const res = await fetch('/api/admin/nav-order', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+                  body: JSON.stringify({ order: arr }),
+                })
+                if (res.ok) alert('Ordem salva! Vai refletir para todos os usuários.')
+                else alert('Salvo localmente. Erro ao salvar no banco.')
+              } catch {
+                alert('Salvo localmente. Sem conexão com o banco.')
+              }
             }
 
-            const resetNav = () => {
+            const resetNav = async () => {
               setNavOrder(NAV_ITEMS_LIST.map(i => i.id))
               try { localStorage.removeItem('sk-nav-order') } catch {}
+              try {
+                await fetch('/api/admin/nav-order', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+                  body: JSON.stringify({ order: NAV_ITEMS_LIST.map(i => i.id) }),
+                })
+              } catch {}
             }
 
             return (

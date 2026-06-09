@@ -446,3 +446,17 @@ create policy "convites: acesso proprio" on public.convites
 
 create policy "terms_accepted: acesso proprio" on public.terms_accepted
   for all using (auth.uid()::text = user_id);
+
+-- ==========================================
+-- APP_SETTINGS (global key-value store)
+-- ==========================================
+create table if not exists public.app_settings (
+  key        text primary key,
+  value      jsonb,
+  updated_at timestamptz default now()
+);
+
+-- Allow anonymous reads (nav order must be public)
+alter table public.app_settings enable row level security;
+create policy "app_settings: leitura publica" on public.app_settings
+  for select using (true);

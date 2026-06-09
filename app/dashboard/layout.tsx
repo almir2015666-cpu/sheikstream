@@ -205,12 +205,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } catch { /* ignore */ }
     try {
       if (localStorage.getItem('sk-admin-authed') === '1') setIsAdmin(true)
-      const savedOrder = localStorage.getItem('sk-nav-order')
-      if (savedOrder) {
-        const arr = JSON.parse(savedOrder)
-        if (Array.isArray(arr) && arr.length > 0) setNavOrder(arr)
-      }
     } catch { /* ignore */ }
+    // Load nav order from DB (global for all users), fall back to localStorage
+    fetch('/api/admin/nav-order')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.order && Array.isArray(d.order) && d.order.length > 0) {
+          setNavOrder(d.order)
+          try { localStorage.setItem('sk-nav-order', JSON.stringify(d.order)) } catch {}
+        } else {
+          try {
+            const savedOrder = localStorage.getItem('sk-nav-order')
+            if (savedOrder) {
+              const arr = JSON.parse(savedOrder)
+              if (Array.isArray(arr) && arr.length > 0) setNavOrder(arr)
+            }
+          } catch { /* ignore */ }
+        }
+      })
+      .catch(() => {
+        try {
+          const savedOrder = localStorage.getItem('sk-nav-order')
+          if (savedOrder) {
+            const arr = JSON.parse(savedOrder)
+            if (Array.isArray(arr) && arr.length > 0) setNavOrder(arr)
+          }
+        } catch { /* ignore */ }
+      })
     const fetchBanner = () => fetch('/api/dev-banner').then(r => r.json()).then(d => setBanner(d?.active ? d : null)).catch(() => {})
     fetchBanner()
     const iv = setInterval(fetchBanner, 30000)
