@@ -132,11 +132,18 @@ export async function playAlertSound(
         await new Promise<void>((resolve, reject) => {
           const audio = new Audio(proxyUrl)
           audio.volume = vol
-          audio.oncanplaythrough = () => { audio.play().then(resolve).catch(reject) }
-          audio.onerror = () => reject(new Error('audio error'))
-          audio.load()
-          // Timeout after 8s so OBS doesn't hang waiting for a bad URL
-          setTimeout(() => reject(new Error('timeout')), 8000)
+          let settled = false
+          const done = (ok: boolean) => {
+            if (settled) return
+            settled = true
+            ok ? resolve() : reject(new Error('audio failed'))
+          }
+          // onerror fires when load fails (4xx, wrong content type, etc.)
+          audio.onerror = () => done(false)
+          // play() in OBS works without user gesture (CEF has autoplay allowed)
+          audio.play().then(() => done(true)).catch(() => done(false))
+          // Bail out after 10s if neither fires
+          setTimeout(() => done(false), 10000)
         })
         return
       } catch {

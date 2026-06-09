@@ -4,18 +4,33 @@ export const dynamic = 'force-dynamic'
 
 const AUDIO_EXTENSIONS = /\.(mp3|wav|ogg|m4a|aac|flac|opus|webm)(\?.*)?$/i
 const ALLOWED_CONTENT_TYPES = ['audio/', 'video/ogg', 'application/ogg', 'application/octet-stream']
-
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+const AUDIO_HEADERS = { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=300' }
 
 function err(msg: string, status: number) {
   return new NextResponse(JSON.stringify({ error: msg }), { status, headers: JSON_HEADERS })
 }
 
-// Try to extract a direct audio URL from an HTML page
+function audioResponse(buf: ArrayBuffer, ct: string) {
+  return new NextResponse(buf, { headers: { 'Content-Type': ct, ...AUDIO_HEADERS } })
+}
+
+// For known sites, guess the direct audio URL without fetching the page
+function guessDirectAudioUrl(url: string): string | null {
+  try {
+    const u = new URL(url)
+    // myinstants.com: /pt/instant/slug/ or /en/instant/slug/
+    if (u.hostname.includes('myinstants.com')) {
+      const m = /\/instant\/([^/?#]+)/i.exec(u.pathname)
+      if (m) return `https://www.myinstants.com/media/sounds/${m[1]}.mp3`
+    }
+  } catch {}
+  return null
+}
+
+// Try to extract a direct audio URL from an HTML page via regex
 function extractAudioFromHtml(html: string, pageUrl: string): string | null {
   const base = new URL(pageUrl).origin
-
-  // Patterns ordered by specificity: data-url, data-sound, <source>, <audio src>
   const EXT = '(?:mp3|wav|ogg|m4a|aac|flac|opus)'
   const patterns = [
     new RegExp(`data-url=["']([^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
@@ -23,25 +38,22 @@ function extractAudioFromHtml(html: string, pageUrl: string): string | null {
     new RegExp(`data-src=["']([^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
     new RegExp(`<source[^>]+src=["']([^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
     new RegExp(`<audio[^>]+src=["']([^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
-    // onclick="play('/media/sounds/x.mp3')" — myinstants pattern
     new RegExp(`play\\(['"]([^'"]+\\.${EXT}[^'"]*)['"]\\)`, 'i'),
     new RegExp(`["']([^"']*/media/sounds/[^"']+\\.${EXT})["']`, 'i'),
     new RegExp(`["'](https?://[^"']+\\.${EXT}(?:\\?[^"']*)?)["']`, 'i'),
   ]
-
   for (const re of patterns) {
     const m = re.exec(html)
-    if (m) {
-      const found = m[1]
-      if (found.startsWith('http')) return found
-      if (found.startsWith('//')) return 'https:' + found
-      if (found.startsWith('/')) return base + found
-    }
+    if (!m) continue
+    const found = m[1]
+    if (found.startsWith('http')) return found
+    if (found.startsWith('//')) return 'https:' + found
+    if (found.startsWith('/')) return base + found
   }
   return null
 }
 
-async function fetchAudio(audioUrl: string) {
+async function fetchAudio(audioUrl: string): Promise<{ buf: ArrayBuffer; ct: string } | null> {
   const res = await fetch(audioUrl, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SheikStream/1.0)' },
     redirect: 'follow',
@@ -62,6 +74,16 @@ export async function GET(req: NextRequest) {
 
   if (!url) return err('URL obrigatória', 400)
 
+  // For known sites (e.g. myinstants), try constructing a direct audio URL first
+  const guessed = guessDirectAudioUrl(url)
+  if (guessed) {
+    try {
+      const audio = await fetchAudio(guessed)
+      if (audio) return audioResponse(audio.buf, audio.ct)
+    } catch {}
+  }
+
+  // Fetch the original URL
   let res: Response
   try {
     res = await fetch(url, {
@@ -77,39 +99,23 @@ export async function GET(req: NextRequest) {
   const ct = res.headers.get('content-type') ?? ''
   const isAudio = ALLOWED_CONTENT_TYPES.some(t => ct.includes(t))
 
-  // Direct audio file — return it
   if (isAudio) {
-    const buf = await res.arrayBuffer()
-    return new NextResponse(buf, {
-      headers: {
-        'Content-Type': ct || 'audio/mpeg',
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=300',
-      },
-    })
+    return audioResponse(await res.arrayBuffer(), ct || 'audio/mpeg')
   }
 
-  // HTML page — try to extract embedded audio URL
+  // HTML page — try to extract audio URL from the markup
   if (ct.includes('text/html')) {
     const html = await res.text()
     const audioUrl = extractAudioFromHtml(html, url)
     if (audioUrl) {
       try {
         const audio = await fetchAudio(audioUrl)
-        if (audio) {
-          return new NextResponse(audio.buf, {
-            headers: {
-              'Content-Type': audio.ct,
-              'Access-Control-Allow-Origin': '*',
-              'Cache-Control': 'public, max-age=300',
-            },
-          })
-        }
+        if (audio) return audioResponse(audio.buf, audio.ct)
       } catch {}
     }
     return err(
-      'A URL aponta para uma página web e não foi possível encontrar o arquivo de áudio nela. ' +
-      'Tente clicar com o botão direito no botão de play do site e copiar o link direto do .mp3.',
+      'Não foi possível encontrar o arquivo de áudio nessa página. ' +
+      'Use o link direto do arquivo .mp3 (clique com botão direito no botão de play → copiar endereço do áudio).',
       415,
     )
   }
