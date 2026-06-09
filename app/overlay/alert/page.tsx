@@ -132,7 +132,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     const t1 = setTimeout(() => setVisible(true), 50)
     let t2: ReturnType<typeof setTimeout>
     let t3: ReturnType<typeof setTimeout>
-    let t4: ReturnType<typeof setTimeout>
+    let wanim: Animation | null = null
 
     t2 = setTimeout(() => {
       const el = outerRef.current
@@ -140,34 +140,30 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
         t3 = setTimeout(() => onDoneRef.current(), 50)
         return
       }
-      // Frame 1: arm the transition on outerRef — React never resets these because
-      // the outerRef div's style prop only contains display+position (static)
-      el.style.transition = `opacity ${exitDurS}s ease-out, transform ${exitDurS}s ease-out`
-      // Frame 2 (50ms later): change values → CSS transition fires
-      t3 = setTimeout(() => {
-        const targets: Record<string, [string, string]> = {
-          'fade':        ['0', ''],
-          'slide-right': ['0', 'translateX(110%)'],
-          'slide-left':  ['0', 'translateX(-110%)'],
-          'slide-up':    ['0', 'translateY(-80px)'],
-          'slide-down':  ['0', 'translateY(80px)'],
-          'zoom-out':    ['0', 'scale(0.05)'],
-          'zoom-in':     ['0', 'scale(2.2)'],
-          'flip-x':      ['0', 'rotateX(90deg)'],
-        }
-        const [op, tr] = targets[animOut] ?? ['0', '']
-        el.style.opacity = op
-        if (tr) el.style.transform = tr
-      }, 50)
-      // Frame 3: remove card after transition completes
-      t4 = setTimeout(() => onDoneRef.current(), 50 + exitDurMs + 50)
+      // Web Animations API: runs on compositor, bypasses React style reconciliation entirely.
+      // During active phase, animation values override inline styles — React cannot interfere.
+      const keyframes: Record<string, Keyframe[]> = {
+        'fade':        [{ opacity: 1 }, { opacity: 0 }],
+        'slide-right': [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(110%)' }],
+        'slide-left':  [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-110%)' }],
+        'slide-up':    [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-80px)' }],
+        'slide-down':  [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(80px)' }],
+        'zoom-out':    [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(0.05)' }],
+        'zoom-in':     [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(2.2)' }],
+        'flip-x':      [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'rotateX(90deg)' }],
+      }
+      wanim = el.animate(
+        keyframes[animOut] ?? [{ opacity: 1 }, { opacity: 0 }],
+        { duration: exitDurMs, easing: 'ease-out', fill: 'forwards' }
+      )
+      wanim.onfinish = () => onDoneRef.current()
     }, cfg.duration * 1000)
 
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
       clearTimeout(t3)
-      clearTimeout(t4)
+      if (wanim) wanim.cancel()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
