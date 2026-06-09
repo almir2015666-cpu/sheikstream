@@ -394,7 +394,7 @@ export default function TwitchSubsPage() {
             const tok = d.token as Record<string, unknown> | undefined
             const subs = (d.eventsubSubscriptions as Array<Record<string, string>> | undefined) ?? []
             const cmds = (d.eventCommands as Array<{ trigger: string; habilitado: boolean }> | undefined) ?? []
-            const EXPECTED = ['channel.follow', 'channel.subscribe', 'channel.subscription.gift', 'channel.subscription.message', 'channel.cheer', 'channel.chat.message']
+            const EXPECTED = ['channel.follow', 'channel.subscribe', 'channel.subscription.gift', 'channel.subscription.message', 'channel.cheer']
             const activeTypes = subs.filter(s => s.status === 'enabled').map(s => s.type)
             const eventsubError = d.eventsubError as string | undefined
             const cheersTableExists = Boolean(d.cheersTableExists)
