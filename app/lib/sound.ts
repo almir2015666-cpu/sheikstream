@@ -2,12 +2,11 @@ type Note = { f: number; t: number; d: number; v: number; w?: OscillatorType }
 
 export type SoundCfg = {
   soundEnabled: boolean
-  soundDataUrl: string  // base64 from uploaded file (preferred)
-  soundUrl: string      // external URL (fallback)
+  soundDataUrl: string
+  soundUrl: string
   soundVolume: number
 }
 
-// Distinct musical phrases per event type (sine by default, triangle for metallic bits)
 export const SLUG_SOUNDS: Record<string, Note[]> = {
   'twitch-follow':      [{ f:523, t:0,    d:0.12, v:0.28 }, { f:784, t:0.14, d:0.30, v:0.26 }],
   'twitch-sub':         [{ f:523, t:0,    d:0.09, v:0.35 }, { f:659, t:0.10, d:0.09, v:0.35 }, { f:784, t:0.20, d:0.42, v:0.40 }],
@@ -23,12 +22,8 @@ export const SLUG_SOUNDS: Record<string, Note[]> = {
   'youtube-giftmember': [{ f:523, t:0,    d:0.09, v:0.30 }, { f:784, t:0.10, d:0.09, v:0.33 }, { f:1047,t:0.20, d:0.38, v:0.38 }],
 }
 
-const FALLBACK: Note[] = [
-  { f:659, t:0, d:0.14, v:0.28 },
-  { f:784, t:0.16, d:0.30, v:0.30 },
-]
+const FALLBACK: Note[] = [{ f:659, t:0, d:0.14, v:0.28 }, { f:784, t:0.16, d:0.30, v:0.30 }]
 
-// Shared AudioContext — created once and reused so OBS never sees a fresh suspended context
 let _ctx: AudioContext | null = null
 
 function getCtx(): AudioContext | null {
@@ -39,7 +34,6 @@ function getCtx(): AudioContext | null {
   return _ctx
 }
 
-// Convert base64 data URL to ArrayBuffer without fetch() (works in OBS)
 function dataUrlToBuffer(dataUrl: string): ArrayBuffer {
   const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
   const binary = atob(base64)
@@ -47,36 +41,6 @@ function dataUrlToBuffer(dataUrl: string): ArrayBuffer {
   const view = new Uint8Array(buf)
   for (let i = 0; i < binary.length; i++) view[i] = binary.charCodeAt(i)
   return buf
-}
-
-async function decodeAndPlay(ctx: AudioContext, src: string | ArrayBuffer, vol: number) {
-  let buf: ArrayBuffer
-  if (typeof src === 'string') {
-    if (src.startsWith('data:')) {
-      buf = dataUrlToBuffer(src)
-    } else {
-      const res = await fetch(src, { cache: 'no-store' })
-      if (!res.ok) {
-        // Try to get a helpful error message from the proxy
-        let msg = `HTTP ${res.status}`
-        try {
-          const json = await res.clone().json()
-          if (json?.error) msg = json.error
-        } catch {}
-        throw new Error(msg)
-      }
-      buf = await res.arrayBuffer()
-    }
-  } else {
-    buf = src
-  }
-  const decoded = await ctx.decodeAudioData(buf)
-  const source = ctx.createBufferSource()
-  const gain = ctx.createGain()
-  gain.gain.value = vol
-  source.buffer = decoded
-  source.connect(gain); gain.connect(ctx.destination)
-  source.start(0)
 }
 
 function playNotes(ctx: AudioContext, notes: Note[], vol: number) {
@@ -93,7 +57,26 @@ function playNotes(ctx: AudioContext, notes: Note[], vol: number) {
   })
 }
 
-// Returns null on success, error message string on failure
+// Pre-decoded audio buffer cache — keyed by soundUrl
+const _bufCache = new Map<string, AudioBuffer>()
+
+// Call this when the overlay loads a config with a soundUrl.
+// Fetches via proxy and decodes into AudioContext so play-time is instant and works in OBS.
+export async function prefetchSoundUrl(soundUrl: string): Promise<void> {
+  if (!soundUrl || _bufCache.has(soundUrl)) return
+  const ctx = getCtx()
+  if (!ctx) return
+  try {
+    if (ctx.state !== 'running') await ctx.resume()
+    const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(soundUrl)}`
+    const res = await fetch(proxyUrl, { cache: 'no-store' })
+    if (!res.ok) return
+    const arr = await res.arrayBuffer()
+    const decoded = await ctx.decodeAudioData(arr)
+    _bufCache.set(soundUrl, decoded)
+  } catch {}
+}
+
 export async function testSoundUrl(url: string): Promise<string | null> {
   const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(url)}`
   try {
@@ -117,40 +100,54 @@ export async function playAlertSound(
   if (!ctx) return
   const vol = Math.max(0, Math.min(1, cfg.soundVolume / 100))
   try {
-    // resume() unblocks OBS suspended context; safe to call even if already running
     if (ctx.state !== 'running') await ctx.resume()
 
-    // 1. Uploaded file (base64 data URL) — decoded locally, no network call
+    // 1. Uploaded file — decoded locally, no network call
     if (cfg.soundDataUrl) {
-      await decodeAndPlay(ctx, cfg.soundDataUrl, vol)
+      const buf = dataUrlToBuffer(cfg.soundDataUrl)
+      const decoded = await ctx.decodeAudioData(buf)
+      const src = ctx.createBufferSource()
+      const gain = ctx.createGain()
+      gain.gain.value = vol
+      src.buffer = decoded
+      src.connect(gain); gain.connect(ctx.destination)
+      src.start(0)
       return
     }
-    // 2. External URL — use HTMLAudioElement (more compatible with OBS than decodeAudioData)
+
+    // 2. External URL — use pre-cached AudioBuffer if available (reliable in OBS)
     if (cfg.soundUrl) {
+      const cached = _bufCache.get(cfg.soundUrl)
+      if (cached) {
+        const src = ctx.createBufferSource()
+        const gain = ctx.createGain()
+        gain.gain.value = vol
+        src.buffer = cached
+        src.connect(gain); gain.connect(ctx.destination)
+        src.start(0)
+        return
+      }
+      // Not cached yet — try fetching now (works in browser, may fail in OBS)
       try {
         const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(cfg.soundUrl)}`
-        await new Promise<void>((resolve, reject) => {
-          const audio = new Audio(proxyUrl)
-          audio.volume = vol
-          let settled = false
-          const done = (ok: boolean) => {
-            if (settled) return
-            settled = true
-            ok ? resolve() : reject(new Error('audio failed'))
-          }
-          // onerror fires when load fails (4xx, wrong content type, etc.)
-          audio.onerror = () => done(false)
-          // play() in OBS works without user gesture (CEF has autoplay allowed)
-          audio.play().then(() => done(true)).catch(() => done(false))
-          // Bail out after 10s if neither fires
-          setTimeout(() => done(false), 10000)
-        })
-        return
-      } catch {
-        // URL failed — fall through to synthesized sound so OBS always hears something
-      }
+        const res = await fetch(proxyUrl, { cache: 'no-store' })
+        if (res.ok) {
+          const arr = await res.arrayBuffer()
+          const decoded = await ctx.decodeAudioData(arr.slice(0))
+          _bufCache.set(cfg.soundUrl, decoded)
+          const src = ctx.createBufferSource()
+          const gain = ctx.createGain()
+          gain.gain.value = vol
+          src.buffer = decoded
+          src.connect(gain); gain.connect(ctx.destination)
+          src.start(0)
+          return
+        }
+      } catch {}
+      // fall through to synthesized
     }
-    // 3. Built-in synthesized sound for this event type
+
+    // 3. Built-in synthesized sound
     playNotes(ctx, (slug && SLUG_SOUNDS[slug]) ? SLUG_SOUNDS[slug] : FALLBACK, vol)
   } catch {}
 }

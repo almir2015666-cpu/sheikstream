@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { playAlertSound } from '@/app/lib/sound'
+import { playAlertSound, prefetchSoundUrl } from '@/app/lib/sound'
 
 type AlertEvent = {
   id: string
@@ -263,6 +263,8 @@ function AlertOverlayContent() {
         slugsToLoad.forEach((s, i) => { map[s] = eventCfgs[i] ?? generic ?? DEF })
         cfgMapRef.current = map
         forceUpdate(n => n + 1)
+        // Pre-fetch all sound URLs so OBS has them cached before the first alert
+        Object.values(map).forEach(c => { if (c?.soundUrl) prefetchSoundUrl(c.soundUrl) })
       })
     }
 
