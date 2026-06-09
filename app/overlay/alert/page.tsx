@@ -125,14 +125,14 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   const subClr = cfg.subtitleColor || cfg.textColor
 
   const animOut = cfg.animOut ?? 'fade'
-  const exitDurS = ((11 - (cfg.animSpeed ?? 5)) * 0.15).toFixed(2)
+  const exitDurS = ((11 - (cfg.animSpeed ?? 5)) * 0.2).toFixed(2)
   const exitDurMs = parseFloat(exitDurS) * 1000
 
   useEffect(() => {
     const t1 = setTimeout(() => setVisible(true), 50)
     let t2: ReturnType<typeof setTimeout>
     let t3: ReturnType<typeof setTimeout>
-    let wanim: Animation | null = null
+    let animEndHandler: ((e: AnimationEvent) => void) | null = null
 
     t2 = setTimeout(() => {
       const el = outerRef.current
@@ -140,30 +140,37 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
         t3 = setTimeout(() => onDoneRef.current(), 50)
         return
       }
-      // Web Animations API: runs on compositor, bypasses React style reconciliation entirely.
-      // During active phase, animation values override inline styles — React cannot interfere.
-      const keyframes: Record<string, Keyframe[]> = {
-        'fade':        [{ opacity: 1 }, { opacity: 0 }],
-        'slide-right': [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(110%)' }],
-        'slide-left':  [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-110%)' }],
-        'slide-up':    [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-80px)' }],
-        'slide-down':  [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(80px)' }],
-        'zoom-out':    [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(0.05)' }],
-        'zoom-in':     [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(2.2)' }],
-        'flip-x':      [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'rotateX(90deg)' }],
+      // Use CSS @keyframes sk-out-* directly — same engine as entrance keyframe animations.
+      // Setting el.style.animation directly bypasses React (outerRef only has display+position in its React style prop).
+      const validAnims = new Set(['fade','slide-right','slide-left','slide-up','slide-down','zoom-out','zoom-in','flip-x'])
+      const kfName = validAnims.has(animOut) ? `sk-out-${animOut}` : 'sk-out-fade'
+      el.style.animation = `${kfName} ${exitDurS}s ease-out forwards`
+      animEndHandler = (e: AnimationEvent) => {
+        if (e.target !== el) return
+        el.removeEventListener('animationend', animEndHandler as EventListener)
+        animEndHandler = null
+        onDoneRef.current()
       }
-      wanim = el.animate(
-        keyframes[animOut] ?? [{ opacity: 1 }, { opacity: 0 }],
-        { duration: exitDurMs, easing: 'ease-out', fill: 'forwards' }
-      )
-      wanim.onfinish = () => onDoneRef.current()
+      el.addEventListener('animationend', animEndHandler as EventListener)
+      // Fallback: unmount even if animationend doesn't fire (e.g. old OBS CEF)
+      t3 = setTimeout(() => {
+        if (animEndHandler && outerRef.current) {
+          outerRef.current.removeEventListener('animationend', animEndHandler as EventListener)
+          animEndHandler = null
+        }
+        onDoneRef.current()
+      }, exitDurMs + 500)
     }, cfg.duration * 1000)
 
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
       clearTimeout(t3)
-      if (wanim) wanim.cancel()
+      const el = outerRef.current
+      if (el) {
+        if (animEndHandler) el.removeEventListener('animationend', animEndHandler as EventListener)
+        el.style.animation = ''
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

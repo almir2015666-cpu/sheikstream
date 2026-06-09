@@ -18,7 +18,7 @@ type StyleCfg = {
   barColor: string; barBg: string; barThickness: number
   border: boolean; borderColor: string; borderThick: number; borderRadius: number
   textEffect: string; textEffectSpeed: number; textInterval: number; textPosition: string
-  animIn: string; animSpeed: number; duration: number
+  animIn: string; animOut: string; animSpeed: number; duration: number
   entryAnim: string; barAnim: string
   iconShape: 'circle' | 'square' | 'none'
   titleText: string; subtitleText: string; titleColor: string; subtitleColor: string
@@ -34,7 +34,7 @@ const DEF: StyleCfg = {
   barColor: '#9146FF', barBg: '#222222', barThickness: 8,
   border: false, borderColor: '#9146FF', borderThick: 1, borderRadius: 16,
   textEffect: 'typewriter', textEffectSpeed: 60, textInterval: 5, textPosition: 'bottom',
-  animIn: 'slide-right', animSpeed: 5, duration: 6,
+  animIn: 'slide-right', animOut: 'fade', animSpeed: 5, duration: 6,
   entryAnim: 'fade', barAnim: 'ease',
   iconShape: 'circle',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
@@ -73,6 +73,18 @@ const ALERT_ANIMS = [
   { id: 'blur-in',     label: 'Blur',        icon: '◈',  dur: '0.4s'  },
   { id: 'drop-in',     label: 'Cair',        icon: '▽',  dur: '0.5s'  },
   { id: 'swing',       label: 'Balançar',    icon: '⬡',  dur: '0.6s'  },
+]
+
+const OV_EXIT_ANIMS = [
+  { id: 'fade',        label: 'Fade',        icon: '◌',  dur: '0.45s' },
+  { id: 'slide-right', label: 'Slide →',     icon: '→',  dur: '0.45s' },
+  { id: 'slide-left',  label: 'Slide ←',     icon: '←',  dur: '0.45s' },
+  { id: 'slide-up',    label: 'Sobe ↑',      icon: '↑',  dur: '0.45s' },
+  { id: 'slide-down',  label: 'Desce ↓',     icon: '↓',  dur: '0.45s' },
+  { id: 'zoom-out',    label: 'Zoom Out',    icon: '⊖',  dur: '0.4s'  },
+  { id: 'zoom-in',     label: 'Zoom In',     icon: '⊕',  dur: '0.4s'  },
+  { id: 'flip-x',      label: 'Flip X',      icon: '↕',  dur: '0.5s'  },
+  { id: 'none',        label: 'Nenhum',      icon: '○',  dur: '—'     },
 ]
 
 const ENTRY_ANIMS = [
@@ -695,6 +707,10 @@ export default function OverlayEditorPage({ params }: Ctx) {
           <Card>
             <Label sub="Como o alerta aparece na tela">Animação de entrada</Label>
             <EffectGrid effects={ALERT_ANIMS} value={style.animIn} onChange={v => { upS('animIn', v); setPreviewAnimKey(k => k + 1) }} />
+          </Card>
+          <Card>
+            <Label sub="Como o alerta desaparece da tela">Animação de saída</Label>
+            <EffectGrid effects={OV_EXIT_ANIMS} value={style.animOut} onChange={v => upS('animOut', v)} />
           </Card>
           <Card>
             <Label>Velocidade e duração</Label>
