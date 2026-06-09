@@ -149,6 +149,7 @@ type OvCfg = {
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
   icon: string
+  customArt: string
   soundEnabled: boolean; soundDataUrl: string; soundVolume: number
 }
 const OV_DEF: OvCfg = {
@@ -158,7 +159,7 @@ const OV_DEF: OvCfg = {
   titleSize: 15, supportSize: 12, width: 480,
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
-  icon: '',
+  icon: '', customArt: '',
   soundEnabled: true, soundDataUrl: '', soundVolume: 70,
 }
 const OV_ANIMS = [
@@ -256,6 +257,11 @@ function OvPreview({ cfg, animKey, slug }: { cfg: OvCfg; animKey: number; slug: 
   const subLabel = cfg.subtitleText || preview.sub
   const iconEmoji = cfg.icon || preview.icon
   const iconIsImage = iconEmoji.startsWith('data:') || iconEmoji.startsWith('http')
+  if (cfg.customArt) return (
+    <div style={{ width:'100%', fontFamily: cfg.font }}>
+      <img src={cfg.customArt} alt="Arte completa" style={{ width:'100%',maxHeight:120,objectFit:'contain',borderRadius:cfg.borderRadius,border:cfg.border?`${cfg.borderThick}px solid ${cfg.timerColor}`:'none' }} />
+    </div>
+  )
   useEffect(() => {
     setVis(false)
     const t = setTimeout(() => setVis(true), 80)
@@ -359,6 +365,26 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
   const [testOk, setTestOk] = useState(false)
   const [testing, setTesting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [iconUploading, setIconUploading] = useState(false)
+  const [artUploading, setArtUploading] = useState(false)
+
+  async function uploadAsset(file: File, assetType: 'icon' | 'art'): Promise<string | null> {
+    const reader = new FileReader()
+    const b64 = await new Promise<string>(res => { reader.onload = () => res(reader.result as string); reader.readAsDataURL(file) })
+    const r = await fetch('/api/overlay-asset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: b64, mimeType: file.type, assetType }),
+    })
+    if (!r.ok) { const d = await r.json(); notify(d.error ?? 'Erro ao enviar imagem', 'error'); return null }
+    const d = await r.json()
+    return d.url ?? null
+  }
+
+  async function deleteAsset(url: string) {
+    if (!url || url.startsWith('data:') || !url.includes('overlay-assets')) return
+    await fetch('/api/overlay-asset', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }).catch(() => {})
+  }
 
   useEffect(() => {
     fetch('/api/me').then(r => r.json()).then(d => {
@@ -593,33 +619,40 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                     ))}
                   </div>
                   <div style={{ display:'flex',gap:'0.4rem',alignItems:'center' }}>
-                    {/* Custom emoji input */}
-                    <input
-                      value={cfg.icon && !cfg.icon.startsWith('data:') ? cfg.icon : ''}
-                      onChange={e => up('icon', e.target.value.slice(0,8))}
-                      placeholder="Emoji personalizado"
-                      style={{ ...inp, flex:1, fontSize:'1rem', padding:'0.32rem 0.5rem', textAlign:'center' }}
-                    />
-                    {/* Image/GIF upload */}
-                    <label style={{ flexShrink:0,padding:'0.35rem 0.65rem',background:cfg.icon?.startsWith('data:')?'rgba(34,197,94,0.1)':PBg,border:`1px solid ${cfg.icon?.startsWith('data:')?'rgba(34,197,94,0.3)':PB}`,borderRadius:6,color:cfg.icon?.startsWith('data:')?'#22c55e':P,cursor:'pointer',fontSize:'0.7rem',fontWeight:700,whiteSpace:'nowrap' }}>
-                      {cfg.icon?.startsWith('data:') ? '✓ Imagem' : '🖼 Imagem/GIF'}
-                      <input type="file" accept="image/*" style={{ display:'none' }} onChange={e => {
-                        const file = e.target.files?.[0]
+                    {/* Custom emoji input — only when no image uploaded */}
+                    {!cfg.icon?.startsWith('http') && (
+                      <input
+                        value={cfg.icon && !cfg.icon.startsWith('http') ? cfg.icon : ''}
+                        onChange={e => up('icon', e.target.value.slice(0,8))}
+                        placeholder="Emoji"
+                        style={{ ...inp, width:80, fontSize:'1rem', padding:'0.32rem 0.5rem', textAlign:'center' }}
+                      />
+                    )}
+                    {cfg.icon?.startsWith('http') && (
+                      <img src={cfg.icon} alt="" style={{ width:34,height:34,borderRadius:6,objectFit:'cover',border:`1px solid ${P}` }} />
+                    )}
+                    {/* Image/GIF upload via Storage */}
+                    <label style={{ flexShrink:0,padding:'0.35rem 0.65rem',background:cfg.icon?.startsWith('http')?'rgba(34,197,94,0.1)':PBg,border:`1px solid ${cfg.icon?.startsWith('http')?'rgba(34,197,94,0.3)':PB}`,borderRadius:6,color:cfg.icon?.startsWith('http')?'#22c55e':P,cursor:iconUploading?'wait':'pointer',fontSize:'0.7rem',fontWeight:700,whiteSpace:'nowrap' }}>
+                      {iconUploading ? 'Enviando...' : cfg.icon?.startsWith('http') ? '✓ Imagem' : '🖼 Imagem/GIF'}
+                      <input type="file" accept="image/*" style={{ display:'none' }} disabled={iconUploading} onChange={async e => {
+                        const file = e.target.files?.[0]; e.target.value = ''
                         if (!file) return
-                        if (file.size > 2 * 1024 * 1024) { notify('Imagem muito grande (máx 2 MB)', 'error'); return }
-                        const reader = new FileReader()
-                        reader.onload = () => up('icon', reader.result as string)
-                        reader.readAsDataURL(file)
+                        if (file.size > 4 * 1024 * 1024) { notify('Imagem muito grande (máx 4 MB)', 'error'); return }
+                        setIconUploading(true)
+                        const oldUrl = cfg.icon
+                        const url = await uploadAsset(file, 'icon')
+                        if (url) { up('icon', url); if (oldUrl) deleteAsset(oldUrl) }
+                        setIconUploading(false)
                       }} />
                     </label>
                     {cfg.icon && (
-                      <button type="button" onClick={() => up('icon','')}
+                      <button type="button" onClick={() => { deleteAsset(cfg.icon); up('icon','') }}
                         style={{ padding:'0.35rem 0.55rem',background:'rgba(255,255,255,0.03)',border:`1px solid ${BD}`,borderRadius:6,color:DIM,cursor:'pointer',fontSize:'0.7rem' }}>
                         ✕
                       </button>
                     )}
                   </div>
-                  <div style={{ fontSize:'0.6rem',color:DIM,marginTop:'0.18rem' }}>Imagens PNG/GIF (máx 2 MB). GIFs animados funcionam no overlay.</div>
+                  <div style={{ fontSize:'0.6rem',color:DIM,marginTop:'0.18rem' }}>PNG/JPG/GIF até 4 MB. GIFs animados funcionam no OBS.</div>
                 </div>
               )}
               {/* Icon animation */}
@@ -644,6 +677,35 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                       {lbl}
                     </button>
                   ))}
+                </div>
+              </div>
+              {/* Custom art — replaces entire card */}
+              <div style={{ borderTop:`1px solid ${BD}`,paddingTop:'0.6rem' }}>
+                <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.18rem' }}>Arte completa (substitui o balão)</div>
+                <div style={{ fontSize:'0.6rem',color:DIM,marginBottom:'0.35rem' }}>Use uma imagem/GIF personalizada que substitui todo o visual do alerta no OBS.</div>
+                {cfg.customArt && (
+                  <img src={cfg.customArt} alt="Arte" style={{ width:'100%',maxHeight:80,objectFit:'contain',borderRadius:6,border:`1px solid ${P}`,marginBottom:'0.35rem',background:'#000' }} />
+                )}
+                <div style={{ display:'flex',gap:'0.4rem' }}>
+                  <label style={{ flex:1,padding:'0.38rem',background:cfg.customArt?'rgba(34,197,94,0.1)':PBg,border:`1px solid ${cfg.customArt?'rgba(34,197,94,0.3)':PB}`,borderRadius:6,color:cfg.customArt?'#22c55e':P,cursor:artUploading?'wait':'pointer',fontSize:'0.7rem',fontWeight:700,textAlign:'center' }}>
+                    {artUploading ? 'Enviando...' : cfg.customArt ? '✓ Arte carregada — trocar' : '🖼 Enviar arte (PNG/GIF)'}
+                    <input type="file" accept="image/*" style={{ display:'none' }} disabled={artUploading} onChange={async e => {
+                      const file = e.target.files?.[0]; e.target.value = ''
+                      if (!file) return
+                      if (file.size > 4 * 1024 * 1024) { notify('Imagem muito grande (máx 4 MB)', 'error'); return }
+                      setArtUploading(true)
+                      const oldUrl = cfg.customArt
+                      const url = await uploadAsset(file, 'art')
+                      if (url) { up('customArt', url); if (oldUrl) deleteAsset(oldUrl) }
+                      setArtUploading(false)
+                    }} />
+                  </label>
+                  {cfg.customArt && (
+                    <button type="button" onClick={() => { deleteAsset(cfg.customArt); up('customArt','') }}
+                      style={{ padding:'0.38rem 0.65rem',background:'rgba(255,255,255,0.03)',border:`1px solid ${BD}`,borderRadius:6,color:DIM,cursor:'pointer',fontSize:'0.7rem' }}>
+                      ✕ Remover
+                    </button>
+                  )}
                 </div>
               </div>
               {/* Colors */}

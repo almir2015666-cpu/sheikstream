@@ -29,6 +29,7 @@ type Cfg = {
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
   icon: string
+  customArt: string
   soundEnabled: boolean; soundDataUrl: string; soundVolume: number
 }
 
@@ -39,7 +40,7 @@ const DEF: Cfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, timerColor: '#9146FF',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
-  icon: '',
+  icon: '', customArt: '',
   soundEnabled: true, soundDataUrl: '', soundVolume: 70,
 }
 
@@ -153,6 +154,31 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
     animParts.push(`sk-card-${cardEffect} 2s ease-in-out ${isShakeSwing ? entranceDur : '0s'} infinite backwards`)
   }
   const animStr = animParts.length > 0 ? animParts.join(', ') : undefined
+
+  // Custom art: replace entire card with image
+  if (cfg.customArt) return (
+    <>
+      <style>{`
+        @keyframes sk-e-shake{0%{transform:translateX(-90px);opacity:0}25%{opacity:1}38%{transform:translateX(18px)}54%{transform:translateX(-11px)}68%{transform:translateX(6px)}82%{transform:translateX(-2px)}100%{transform:translateX(0)}}
+        @keyframes sk-e-swing{0%{transform:rotate(-25deg);opacity:0}20%{opacity:1}42%{transform:rotate(12deg)}62%{transform:rotate(-7deg)}76%{transform:rotate(4deg)}88%{transform:rotate(-1deg)}100%{transform:rotate(0deg)}}
+      `}</style>
+      <img
+        src={cfg.customArt}
+        alt=""
+        style={{
+          width: cfg.width,
+          maxHeight: 200,
+          objectFit: 'contain',
+          borderRadius: cfg.borderRadius,
+          animation: animStr,
+          ...(isShakeSwing
+            ? (visible ? {} : { opacity: 0 })
+            : (visible ? { transform: 'none', opacity: 1 } : hiddenStyle)),
+          transition: isShakeSwing ? 'none' : (visible ? transition : 'none'),
+        }}
+      />
+    </>
+  )
 
   return (
     <>
