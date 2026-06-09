@@ -290,7 +290,7 @@ function OverlayQuickEdit({ trigger }: { trigger: string }) {
       <div style={{ display:'flex',alignItems:'center',gap:'0.5rem',background:'#08090d',border:`1px solid ${PB}`,borderRadius:8,padding:'0.45rem 0.7rem',marginBottom:'0.85rem' }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         <span style={{ flex:1,fontSize:'0.7rem',color:MUT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace' }}>{overlayUrl}</span>
-        <button onClick={copyUrl} style={{ flexShrink:0,padding:'0.22rem 0.6rem',background:copied?'rgba(34,197,94,0.1)':PBg,border:`1px solid ${copied?'rgba(34,197,94,0.3)':PB}`,borderRadius:5,color:copied?GR:P,fontSize:'0.7rem',fontWeight:700,cursor:'pointer' }}>
+        <button type="button" onClick={copyUrl} style={{ flexShrink:0,padding:'0.22rem 0.6rem',background:copied?'rgba(34,197,94,0.1)':PBg,border:`1px solid ${copied?'rgba(34,197,94,0.3)':PB}`,borderRadius:5,color:copied?GR:P,fontSize:'0.7rem',fontWeight:700,cursor:'pointer' }}>
           {copied ? '✓ Copiado' : 'Copiar'}
         </button>
       </div>
@@ -302,7 +302,7 @@ function OverlayQuickEdit({ trigger }: { trigger: string }) {
         <div>
           <div style={{ display:'flex',gap:'0.2rem',background:'#08090d',border:`1px solid ${BD}`,borderRadius:7,padding:'0.18rem',marginBottom:'0.6rem' }}>
             {(['efeitos','estilo'] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{ flex:1,padding:'0.3rem',background:tab===t?C.card:'transparent',border:`1px solid ${tab===t?BD:'transparent'}`,borderRadius:5,color:tab===t?TXT:DIM,cursor:'pointer',fontSize:'0.7rem',fontWeight:tab===t?700:400,transition:'all 0.12s' }}>
+              <button type="button" key={t} onClick={() => setTab(t)} style={{ flex:1,padding:'0.3rem',background:tab===t?C.card:'transparent',border:`1px solid ${tab===t?BD:'transparent'}`,borderRadius:5,color:tab===t?TXT:DIM,cursor:'pointer',fontSize:'0.7rem',fontWeight:tab===t?700:400,transition:'all 0.12s' }}>
                 {t === 'efeitos' ? '✨ Efeitos' : '🎨 Estilo'}
               </button>
             ))}
@@ -313,7 +313,7 @@ function OverlayQuickEdit({ trigger }: { trigger: string }) {
               <div style={{ fontSize:'0.6rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'0.4rem' }}>Animação de entrada</div>
               <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'0.22rem',marginBottom:'0.6rem' }}>
                 {OV_ANIMS.map(a => (
-                  <button key={a.id} onClick={() => up('animIn',a.id)} style={{
+                  <button type="button" key={a.id} onClick={() => up('animIn',a.id)} style={{
                     display:'flex',flexDirection:'column',alignItems:'center',gap:'0.1rem',
                     padding:'0.3rem 0.1rem',
                     background:cfg.animIn===a.id?PBg:'rgba(255,255,255,0.02)',
@@ -785,7 +785,7 @@ export default function ComandosPage() {
         </span>
       </div>
 
-      <div style={{ padding: '1.5rem 2rem', maxWidth: '760px' }}>
+      <div style={{ padding: '1.5rem 2rem', maxWidth: '860px', margin: '0 auto' }}>
 
         {/* Global error banner */}
         {saveErr && (

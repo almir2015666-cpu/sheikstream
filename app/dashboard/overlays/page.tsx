@@ -18,8 +18,6 @@ function Icon({ type, color }: { type: string; color: string }) {
 }
 
 const CATALOG = [
-  { type: 'alert',         label: 'Alertas',         badge: 'NOVO', color: '#fb923c', live: true,
-    desc: 'Notificações visuais para subs, follows, bits e doações. Cada evento tem URL e visual próprios.' },
   { type: 'subathon',      label: 'Subathon',        badge: 'NOVO', color: '#60a5fa', live: true,
     desc: 'Cronômetro de live progressivo — cada contribuição adiciona tempo ao relógio.' },
   { type: 'meta-subs',     label: 'Meta de Subs',    badge: null,   color: '#34d399', live: true,
