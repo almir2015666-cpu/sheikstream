@@ -113,6 +113,7 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 
 function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
+  const [isExiting, setIsExiting] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
@@ -131,21 +132,23 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     let t3: ReturnType<typeof setTimeout> | null = null
 
     const t2 = setTimeout(() => {
+      // Seta estado React PRIMEIRO — qualquer re-render subsequente do polling
+      // vai usar exitAnim em vez de entranceAnim, evitando reset da animação
+      setIsExiting(true)
       const el = wrapperRef.current
       if (el && animOut !== 'none') {
+        // DOM direto + forced reflow garante início imediato da animação
         el.style.transition = 'none'
         el.style.animation = 'none'
-        void el.offsetWidth  // força reflow para o browser comitar 'none'
+        void el.offsetWidth
         el.style.animation = `sk-out-${animOut} ${exitDur}s ease forwards`
 
-        // Usa animationend para sincronizar unmount com fim real da animacao
-        // t3 é nested aqui — nunca pode disparar no mesmo tick que t2
         const onEnd = () => onDoneRef.current()
         el.addEventListener('animationend', onEnd, { once: true })
         t3 = setTimeout(() => {
           el.removeEventListener('animationend', onEnd)
           onDoneRef.current()
-        }, exitDurMs + 1500) // fallback longo caso animationend nao dispare
+        }, exitDurMs + 1500)
       } else {
         t3 = setTimeout(() => onDoneRef.current(), 200)
       }
@@ -193,14 +196,21 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  // Entrance style — exit is applied directly on the DOM via wrapperRef (see useEffect above)
-  const wrapperStyle: React.CSSProperties = {
-    animation: entranceAnim,
-    ...(!isKeyframeAnim
-      ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
-      : (visible ? {} : { opacity: 0 })),
-    transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
-  }
+  const exitAnim = isExiting && animOut !== 'none'
+    ? `sk-out-${animOut} ${exitDur}s ease forwards`
+    : undefined
+
+  // Quando isExiting=true o React também usa exitAnim — assim re-renders do polling
+  // não resetam a animação de saída de volta para entranceAnim
+  const wrapperStyle: React.CSSProperties = isExiting
+    ? { animation: exitAnim }
+    : {
+        animation: entranceAnim,
+        ...(!isKeyframeAnim
+          ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
+          : (visible ? {} : { opacity: 0 })),
+        transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
+      }
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
