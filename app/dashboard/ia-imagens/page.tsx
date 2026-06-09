@@ -182,7 +182,7 @@ export default function IAImagensPage() {
 
           {/* Model info */}
           <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, padding: '0.75rem 1rem', fontSize: '0.72rem', color: C.dim }}>
-            Gerado por <strong style={{ color: '#a5b4fc' }}>Pollinations AI (Flux)</strong> — gratuito, sem limite de chave de API.
+            Gerado por <strong style={{ color: '#a5b4fc' }}>Together AI · FLUX.1-schnell</strong> — gratuito. Precisa da variável <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.3rem', borderRadius: 4 }}>TOGETHER_API_KEY</code> no Vercel. Crie em <strong>api.together.ai</strong> (conta gratuita).
           </div>
 
           {/* Usage info */}
@@ -317,7 +317,7 @@ export default function IAImagensPage() {
                   </button>
                 </div>
                 <div style={{ fontSize: '0.65rem', color: C.dim, marginTop: '0.45rem' }}>
-                  Imagem gerada por Pollinations AI. Clique em Baixar para salvar permanentemente.
+                  ⚠ O link expira em ~1 hora. Clique em Baixar agora para salvar.
                 </div>
               </div>
             </div>
@@ -326,8 +326,8 @@ export default function IAImagensPage() {
           {generating && (
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '2.5rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', animation: 'ia-spin 2s linear infinite', display: 'inline-block', marginBottom: '0.75rem' }}>🎨</div>
-              <div style={{ fontSize: '0.9rem', color: C.muted, fontWeight: 600 }}>Criando sua imagem com Pollinations AI...</div>
-              <div style={{ fontSize: '0.75rem', color: C.dim, marginTop: '0.35rem' }}>Pode levar 10–30 segundos</div>
+              <div style={{ fontSize: '0.9rem', color: C.muted, fontWeight: 600 }}>Criando sua imagem com FLUX.1-schnell...</div>
+              <div style={{ fontSize: '0.75rem', color: C.dim, marginTop: '0.35rem' }}>Pode levar 10–20 segundos</div>
             </div>
           )}
         </div>

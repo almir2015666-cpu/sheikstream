@@ -67,13 +67,39 @@ export async function POST(req: NextRequest) {
   const prompt: string = (body.prompt ?? '').trim().slice(0, 1000)
   if (!prompt) return NextResponse.json({ error: 'Prompt obrigatório' }, { status: 400 })
   const size: Size = ALLOWED_SIZES.includes(body.size) ? body.size : '1792x1024'
-
   const [w, h] = size.split('x').map(Number)
-  const seed = Date.now() % 999999
 
-  // Pollinations.ai — free image generation, no API key required
-  // Return the URL directly; the client fetches/displays the image (generation happens on demand)
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&nologo=true&model=flux&seed=${seed}`
+  const apiKey = process.env.TOGETHER_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({
+      error: 'TOGETHER_API_KEY não configurada. Acesse api.together.ai, crie uma conta gratuita e adicione a chave no Vercel em Settings → Environment Variables.',
+    }, { status: 500 })
+  }
+
+  let imageUrl = ''
+  try {
+    const res = await fetch('https://api.together.xyz/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'black-forest-labs/FLUX.1-schnell-Free',
+        prompt,
+        width: w,
+        height: h,
+        steps: 4,
+        n: 1,
+      }),
+    })
+    const json = await res.json()
+    if (!res.ok) {
+      const msg = json?.error?.message ?? json?.error ?? 'Erro na API Together AI'
+      return NextResponse.json({ error: String(msg) }, { status: res.status })
+    }
+    imageUrl = json.data?.[0]?.url ?? ''
+    if (!imageUrl) return NextResponse.json({ error: 'Nenhuma imagem retornada pela API' }, { status: 502 })
+  } catch {
+    return NextResponse.json({ error: 'Falha ao contactar Together AI' }, { status: 502 })
+  }
 
   try {
     await db.from('ai_image_generations').insert({
@@ -88,5 +114,5 @@ export async function POST(req: NextRequest) {
     })
   } catch {}
 
-  return NextResponse.json({ imageUrl, revisedPrompt: prompt, modelUsed: 'pollinations-flux' })
+  return NextResponse.json({ imageUrl, revisedPrompt: prompt, modelUsed: 'flux-schnell' })
 }
