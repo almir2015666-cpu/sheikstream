@@ -1,21 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 
-// Returns recent events from the last 10 seconds for the given uid
+const SLUG_TO_TYPES: Record<string, string[]> = {
+  'twitch-sub':         ['channel.subscribe'],
+  'twitch-giftsub':     ['channel.subscription.gift'],
+  'twitch-resub':       ['channel.subscription.message'],
+  'twitch-follow':      ['channel.follow'],
+  'twitch-bits':        ['channel.cheer'],
+  'livepix':            ['livepix.donation'],
+  'paypal':             ['paypal.donation'],
+  'kick-sub':           ['kick.subscribe'],
+  'kick-follow':        ['kick.follow'],
+  'kick-giftsub':       ['kick.subscription.gift'],
+  'youtube-member':     ['youtube.member'],
+  'youtube-giftmember': ['youtube.giftmember'],
+}
+
 export async function GET(req: NextRequest) {
   const uid = req.nextUrl.searchParams.get('uid')
   if (!uid) return NextResponse.json([], { status: 400 })
 
+  const eventSlug = req.nextUrl.searchParams.get('event')
   const since = new Date(Date.now() - 10000).toISOString()
 
   const db = getSupabaseAdmin()
-  const { data: events } = await db
+  let query = db
     .from('twitch_events')
     .select('id, event_type, event_data, created_at')
     .eq('broadcaster_id', uid)
     .gte('created_at', since)
     .order('created_at', { ascending: true })
     .limit(10)
+
+  if (eventSlug && SLUG_TO_TYPES[eventSlug]) {
+    query = query.in('event_type', SLUG_TO_TYPES[eventSlug])
+  }
+
+  const { data: events } = await query
 
   const alerts = (events ?? []).map(e => {
     const d = e.event_data as Record<string, unknown> ?? {}
