@@ -17,6 +17,7 @@ type StyleCfg = {
   bgColor: string; bgOpacity: number; textColor: string; timerColor: string
   barColor: string; barBg: string; barThickness: number
   border: boolean; borderColor: string; borderThick: number; borderRadius: number
+  textEffect: string; textEffectSpeed: number; textInterval: number; textPosition: string
 }
 type VisCfg = Record<string, boolean>
 type FontesCfg = Record<string, boolean>
@@ -29,7 +30,24 @@ const DEF: StyleCfg = {
   bgColor: '#0b0c17', bgOpacity: 0.92, textColor: '#ffffff', timerColor: '#9146FF',
   barColor: '#9146FF', barBg: '#222222', barThickness: 8,
   border: false, borderColor: '#9146FF', borderThick: 1, borderRadius: 16,
+  textEffect: 'typewriter', textEffectSpeed: 60, textInterval: 5, textPosition: 'bottom',
 }
+
+const TEXT_EFFECTS = [
+  { id: 'typewriter', label: 'Typewriter', icon: '✍' },
+  { id: 'matrix',     label: 'Matrix',     icon: '⬛' },
+  { id: 'slide-right',label: 'Slide →',    icon: '→' },
+  { id: 'slide-left', label: 'Slide ←',    icon: '←' },
+  { id: 'fade-up',    label: 'Fade Up',    icon: '↑' },
+  { id: 'fade-down',  label: 'Fade Down',  icon: '↓' },
+  { id: 'bounce',     label: 'Bounce',     icon: '⇑' },
+  { id: 'glitch',     label: 'Glitch',     icon: '⚡' },
+  { id: 'neon-pulse', label: 'Neon Pulse', icon: '✦' },
+  { id: 'wave',       label: 'Wave',       icon: '〜' },
+  { id: 'zoom-in',    label: 'Zoom In',    icon: '⊕' },
+  { id: 'flip-x',     label: 'Flip 3D',   icon: '⟲' },
+  { id: 'scramble',   label: 'Scramble',   icon: '??' },
+]
 
 const PRESETS = [
   { id: 'twitch-classic', label: 'Twitch Classic',  desc: 'Roxo escuro com barra violeta',      bg: '#0e0b18', bgOp: 1,    bar: '#9146ff', barBg: '#1a1a1a', text: '#ffffff', border: false, borderC: '#9146ff', timer: '#9146FF' },
@@ -284,7 +302,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
     const visCfg = type === 'subathon'
       ? { showTitle: vis.title ?? true, showTags: vis.tags ?? true, showLastContrib: vis.lastContrib ?? true }
       : {}
-    try { return btoa(JSON.stringify({ ...style, ...visCfg })) } catch { return '' }
+    try { return btoa(JSON.stringify({ ...style, ...visCfg, textEffect: style.textEffect, textEffectSpeed: style.textEffectSpeed, textInterval: style.textInterval, textPosition: style.textPosition })) } catch { return '' }
   }
 
   function buildUrl() {
@@ -371,29 +389,71 @@ export default function OverlayEditorPage({ params }: Ctx) {
 
     if (type === 'subathon') {
       return (
-        <Card>
-          <Label>Subathon</Label>
-          {subathonActive === false && (
-            <div style={{ background: C.inner, border: `1px solid rgba(251,191,36,0.25)`, borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.75rem' }}>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#fbbf24' }}>
-                Nenhum subathon ativo — crie um em{' '}
-                <Link href="/dashboard/subathon" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Subathon</Link>.
-              </p>
+        <>
+          <Card>
+            <Label>Subathon</Label>
+            {subathonActive === false && (
+              <div style={{ background: C.inner, border: `1px solid rgba(251,191,36,0.25)`, borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.75rem' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#fbbf24' }}>
+                  Nenhum subathon ativo — crie um em{' '}
+                  <Link href="/dashboard/subathon" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Subathon</Link>.
+                </p>
+              </div>
+            )}
+            {subathonActive === true && (
+              <div style={{ background: 'rgba(57,255,20,0.06)', border: '1px solid rgba(57,255,20,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#39ff14', display: 'inline-block', flexShrink: 0 }} />
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#39ff14' }}>Subathon ativo — overlay sincronizado.</p>
+              </div>
+            )}
+            <Label>Elementos visíveis</Label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {[['title','Título'],['tags','Tags de regras'],['lastContrib','Última contribuição']].map(([k,l]) => (
+                <Chip key={k} active={!!vis[k]} onClick={() => setVis(v => ({ ...v, [k]: !v[k] }))}>{l}</Chip>
+              ))}
             </div>
-          )}
-          {subathonActive === true && (
-            <div style={{ background: 'rgba(57,255,20,0.06)', border: '1px solid rgba(57,255,20,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#39ff14', display: 'inline-block', flexShrink: 0 }} />
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#39ff14' }}>Subathon ativo — overlay sincronizado.</p>
+          </Card>
+
+          <Card>
+            <Label>Efeito de texto animado</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', marginBottom: '0.9rem' }}>
+              {TEXT_EFFECTS.map(e => (
+                <button key={e.id} onClick={() => upS('textEffect', e.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  padding: '0.4rem 0.65rem',
+                  background: style.textEffect === e.id ? C.primaryBg : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${style.textEffect === e.id ? C.primaryB : C.cardB}`,
+                  borderRadius: 7, color: style.textEffect === e.id ? C.primary : C.dim,
+                  cursor: 'pointer', fontSize: '0.78rem', fontWeight: style.textEffect === e.id ? 700 : 400,
+                  textAlign: 'left',
+                }}>
+                  <span style={{ fontSize: '0.85rem', flexShrink: 0 }}>{e.icon}</span>
+                  {e.label}
+                </button>
+              ))}
             </div>
-          )}
-          <Label>Elementos visíveis</Label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-            {[['title','Título'],['tags','Tags de regras'],['lastContrib','Última contribuição']].map(([k,l]) => (
-              <Chip key={k} active={!!vis[k]} onClick={() => setVis(v => ({ ...v, [k]: !v[k] }))}>{l}</Chip>
-            ))}
-          </div>
-        </Card>
+
+            <RangeInput label="Velocidade do efeito" value={style.textEffectSpeed} min={20} max={200} unit="ms" onChange={v => upS('textEffectSpeed', v)} />
+            <RangeInput label="Intervalo entre textos" value={style.textInterval} min={2} max={30} unit="s" onChange={v => upS('textInterval', v)} />
+
+            <div style={{ marginTop: '0.3rem' }}>
+              <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Posição do texto</div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {([['top','Acima do timer'],['bottom','Abaixo das tags']] as const).map(([pos, lbl]) => (
+                  <button key={pos} onClick={() => upS('textPosition', pos)} style={{
+                    flex: 1, padding: '0.45rem',
+                    background: style.textPosition === pos ? C.primaryBg : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${style.textPosition === pos ? C.primaryB : C.cardB}`,
+                    borderRadius: 7, color: style.textPosition === pos ? C.primary : C.dim,
+                    cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+                  }}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </>
       )
     }
 

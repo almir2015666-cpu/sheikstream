@@ -184,9 +184,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [suggSending, setSuggSending] = useState(false)
   const [suggSent, setSuggSent] = useState(false)
   // Admin notifications (global — all pages)
-  type AdminNotif = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string }
+  type AdminNotif = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; max_views: number | null }
   const [notifications, setNotifications] = useState<AdminNotif[]>([])
   const [dismissedNotifs, setDismissedNotifs] = useState<Set<string>>(new Set())
+  const [notifViewCounts, setNotifViewCounts] = useState<Record<string, number>>({})
   const [activeNotif, setActiveNotif] = useState<AdminNotif | null>(null)
   const notifLoadedRef = useRef<boolean>(false)
 
@@ -312,6 +313,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const seen = JSON.parse(sessionStorage.getItem('sk-dismissed-notifs') || '[]')
       setDismissedNotifs(new Set(seen))
     } catch {}
+    try {
+      const counts = JSON.parse(localStorage.getItem('sk-notif-views') || '{}')
+      setNotifViewCounts(counts)
+    } catch {}
     if (!notifLoadedRef.current) {
       notifLoadedRef.current = true
       fetch('/api/me/notifications')
@@ -325,13 +330,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (activeNotif) return
     if (pathname !== '/dashboard') return
-    const pending = notifications.filter(n => !dismissedNotifs.has(n.id))
+    const pending = notifications.filter(n => {
+      if (dismissedNotifs.has(n.id)) return false
+      // Check if user has seen it max_views times already
+      if (n.max_views && n.max_views > 0) {
+        const seen = notifViewCounts[n.id] ?? 0
+        if (seen >= n.max_views) return false
+      }
+      return true
+    })
     if (!pending.length) return
     setActiveNotif(pending[0])
-  }, [notifications, dismissedNotifs, activeNotif, pathname])
+  }, [notifications, dismissedNotifs, notifViewCounts, activeNotif, pathname])
 
   function dismissNotif(id: string) {
     setActiveNotif(null)
+    // Increment view count in localStorage
+    setNotifViewCounts(prev => {
+      const next = { ...prev, [id]: (prev[id] ?? 0) + 1 }
+      try { localStorage.setItem('sk-notif-views', JSON.stringify(next)) } catch {}
+      return next
+    })
+    // Mark dismissed for this session
     setDismissedNotifs(prev => {
       const next = new Set(prev); next.add(id)
       try { sessionStorage.setItem('sk-dismissed-notifs', JSON.stringify([...next])) } catch {}

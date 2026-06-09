@@ -247,6 +247,7 @@ create table if not exists public.admin_notifications (
   color            text default '#9b30ff',
   active           boolean default true,
   target_username  text,           -- NULL = para todos
+  max_views        integer,        -- NULL = ilimitado; N = desaparece após N aparições por usuário
   duration_seconds integer default 10,
   created_at       timestamptz default now()
 );

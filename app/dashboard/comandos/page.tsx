@@ -1,5 +1,7 @@
 'use client'
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { notify } from '@/app/lib/notify'
+import Link from 'next/link'
 
 const C = {
   page: '#08090d', card: '#0d0f18', border: 'rgba(255,255,255,0.07)',
@@ -97,20 +99,21 @@ const BASE_VARS   = ['$(user)', '$(channel)', '$(touser)', '$(1)', '$(count)', '
 const EVENT_VARS  = ['$user', '$valor', '$tickets', '$nums', '$msg', '$tier', '$months', '$count', '$gifter', '$platform']
 
 // Default automatic event commands (predefined, stored/overridden in DB)
+// All start as disabled — user must activate each one individually
 const DEFAULTS: Cmd[] = [
-  { id: 'evt-twitch-sub',         label: 'Sub Twitch',          trigger: 'event:twitch:sub',          resposta: 'Obrigado pelo sub, $user! Voce ganhou $tickets ticket(s).',                    cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
-  { id: 'evt-twitch-giftsub',     label: 'Gift sub Twitch',     trigger: 'event:twitch:giftsub',      resposta: 'Obrigado $user por presentear $count gift sub(s)!',                            cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
-  { id: 'evt-twitch-resub',       label: 'Resub Twitch',        trigger: 'event:twitch:resub',        resposta: 'Obrigado pelo resub, $user! $months mes(es) de apoio. $msg',                   cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
-  { id: 'evt-twitch-prime',       label: 'Prime Twitch',        trigger: 'event:twitch:prime',        resposta: 'Obrigado pelo Prime, $user! Esse Prime fortalece demais a live.',               cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
-  { id: 'evt-twitch-follow',      label: 'Follow Twitch',       trigger: 'event:twitch:follow',       resposta: 'Valeu pelo follow, $user! Seja bem-vindo(a).',                                  cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
-  { id: 'evt-livepix',            label: 'Doacao Livepix',      trigger: 'donation:livepix',          resposta: 'Obrigado $user pela doacao de $valor! Voce ganhou $tickets ticket(s). $msg',   cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
-  { id: 'evt-paypal',             label: 'Doacao PayPal',       trigger: 'donation:paypal',           resposta: 'PayPal: $user doou $valor e ganhou $tickets ticket(s)! $msg',                  cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
-  { id: 'evt-kick-follow',        label: 'Follow Kick',         trigger: 'event:kick:follow',         resposta: 'Valeu pelo follow na Kick, $user! Seja bem-vindo(a).',                          cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Kick' },
-  { id: 'evt-kick-giftsub',       label: 'Gift sub Kick',       trigger: 'event:kick:giftsub',        resposta: 'Obrigado $user por presentear $count sub(s) na Kick!',                          cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Kick' },
-  { id: 'evt-kick-sub',           label: 'Sub Kick',            trigger: 'event:kick:sub',            resposta: 'Obrigado pelo sub na Kick, $user! Voce ganhou $tickets ticket(s).',             cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Kick' },
-  { id: 'evt-youtube-member',     label: 'Membro YouTube',      trigger: 'event:youtube:member',      resposta: 'Obrigado por virar membro, $user! Voce ganhou $tickets ticket(s).',             cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Youtube' },
-  { id: 'evt-youtube-giftmember', label: 'Gift member YouTube', trigger: 'event:youtube:giftmember',  resposta: 'Obrigado $user por presentear $count membro(s) no YouTube!',                   cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Youtube' },
-  { id: 'evt-twitch-bits',       label: 'Bits Twitch',         trigger: 'event:twitch:bits',         resposta: 'Valeu pelos $valor bits, $user! $msg',                                          cooldown: 0, habilitado: true, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
+  { id: 'evt-twitch-sub',         label: 'Sub Twitch',          trigger: 'event:twitch:sub',          resposta: 'Obrigado pelo sub, $user! Voce ganhou $tickets ticket(s).',                    cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
+  { id: 'evt-twitch-giftsub',     label: 'Gift sub Twitch',     trigger: 'event:twitch:giftsub',      resposta: 'Obrigado $user por presentear $count gift sub(s)!',                            cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
+  { id: 'evt-twitch-resub',       label: 'Resub Twitch',        trigger: 'event:twitch:resub',        resposta: 'Obrigado pelo resub, $user! $months mes(es) de apoio. $msg',                   cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
+  { id: 'evt-twitch-prime',       label: 'Prime Twitch',        trigger: 'event:twitch:prime',        resposta: 'Obrigado pelo Prime, $user! Esse Prime fortalece demais a live.',               cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
+  { id: 'evt-twitch-follow',      label: 'Follow Twitch',       trigger: 'event:twitch:follow',       resposta: 'Valeu pelo follow, $user! Seja bem-vindo(a).',                                  cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
+  { id: 'evt-livepix',            label: 'Doacao Livepix',      trigger: 'donation:livepix',          resposta: 'Obrigado $user pela doacao de $valor! Voce ganhou $tickets ticket(s). $msg',   cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
+  { id: 'evt-paypal',             label: 'Doacao PayPal',       trigger: 'donation:paypal',           resposta: 'PayPal: $user doou $valor e ganhou $tickets ticket(s)! $msg',                  cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
+  { id: 'evt-kick-follow',        label: 'Follow Kick',         trigger: 'event:kick:follow',         resposta: 'Valeu pelo follow na Kick, $user! Seja bem-vindo(a).',                          cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Kick' },
+  { id: 'evt-kick-giftsub',       label: 'Gift sub Kick',       trigger: 'event:kick:giftsub',        resposta: 'Obrigado $user por presentear $count sub(s) na Kick!',                          cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Kick' },
+  { id: 'evt-kick-sub',           label: 'Sub Kick',            trigger: 'event:kick:sub',            resposta: 'Obrigado pelo sub na Kick, $user! Voce ganhou $tickets ticket(s).',             cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Kick' },
+  { id: 'evt-youtube-member',     label: 'Membro YouTube',      trigger: 'event:youtube:member',      resposta: 'Obrigado por virar membro, $user! Voce ganhou $tickets ticket(s).',             cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Youtube' },
+  { id: 'evt-youtube-giftmember', label: 'Gift member YouTube', trigger: 'event:youtube:giftmember',  resposta: 'Obrigado $user por presentear $count membro(s) no YouTube!',                   cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Youtube' },
+  { id: 'evt-twitch-bits',        label: 'Bits Twitch',         trigger: 'event:twitch:bits',         resposta: 'Valeu pelos $valor bits, $user! $msg',                                          cooldown: 0, habilitado: false, isEvento: true, origem: 'Automatico', platform: 'Twitch' },
 ]
 
 export default function ComandosPage() {
@@ -124,6 +127,8 @@ export default function ComandosPage() {
   const [saving, setSaving]       = useState(false)
   const [saveErr, setSaveErr]     = useState('')
   const [saveOk, setSaveOk]       = useState(false)
+  const [userId, setUserId]       = useState<string | null>(null)
+  const [copiedUrl, setCopiedUrl] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   type DbRow = { id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string; notif_overlay: boolean }
@@ -153,6 +158,10 @@ export default function ComandosPage() {
   }, [applyDbRows])
 
   useEffect(() => {
+    fetch('/api/me').then(r => r.ok ? r.json() : null).then(u => { if (u?.id) setUserId(u.id) }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
     async function loadAndSeed() {
       const rows: DbRow[] = await fetch('/api/comandos').then(r => r.ok ? r.json() : []).catch(() => [])
       const dbEvents  = rows.filter(r => isEventTrigger(r.trigger))
@@ -164,7 +173,7 @@ export default function ComandosPage() {
         fetch('/api/comandos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trigger: def.trigger, resposta: def.resposta, cooldown_s: def.cooldown, habilitado: def.habilitado, permissao: 'todos', platform: def.platform }),
+          body: JSON.stringify({ trigger: def.trigger, resposta: def.resposta, cooldown_s: def.cooldown, habilitado: false, permissao: 'todos', platform: def.platform }),
         }).then(r => r.ok ? r.json() as Promise<DbRow> : null).catch(() => null)
       ))
       for (const s of seeded) { if (s) dbByTrigger.set(s.trigger, s) }
@@ -330,18 +339,33 @@ export default function ComandosPage() {
             <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{cmd.resposta}</span>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
               <Toggle on={cmd.habilitado} onChange={async v => {
-                setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
-                if (cmd.db) {
-                  await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: v }) })
-                } else if (cmd.isEvento) {
-                  // Save default event to DB so the toggle persists
-                  const res = await fetch('/api/comandos', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ trigger: cmd.trigger, resposta: cmd.resposta, cooldown_s: cmd.cooldown, habilitado: v, permissao: 'todos', platform: cmd.platform }),
+                if (v) {
+                  // Activating: open the configuration form
+                  notify('Overlay criado! Configure e pegue a URL em Overlays para adicionar ao OBS.', 'success')
+                  setEditingId(cmd.id)
+                  const trigger = cmd.isEvento ? cmd.trigger : cmd.trigger.replace(/^!/, '')
+                  setForm({
+                    trigger, isEvento: cmd.isEvento, eventoLabel: cmd.label,
+                    resposta: cmd.resposta, cooldown: cmd.cooldown, cooldownUser: 0, custoBase: 0, custoInscritos: 0,
+                    ativo: true,
+                    permissao: cmd.origem.toLowerCase() === 'automatico' ? 'todos' : cmd.origem.toLowerCase(),
+                    responderComo: 'canal', notifOverlay: cmd.notifOverlay ?? false, template: null, extraVars: [], platforms: [cmd.platform],
                   })
-                  if (res.ok) {
-                    const saved = await res.json()
-                    setCmds(p => p.map(c => c.id === cmd.id ? { ...c, id: saved.id, db: true } : c))
+                  setCreating(true)
+                } else {
+                  // Deactivating: persist immediately
+                  setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: false } : c))
+                  if (cmd.db) {
+                    await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: false }) })
+                  } else if (cmd.isEvento) {
+                    const res = await fetch('/api/comandos', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ trigger: cmd.trigger, resposta: cmd.resposta, cooldown_s: cmd.cooldown, habilitado: false, permissao: 'todos', platform: cmd.platform }),
+                    })
+                    if (res.ok) {
+                      const saved = await res.json()
+                      setCmds(p => p.map(c => c.id === cmd.id ? { ...c, id: saved.id, db: true } : c))
+                    }
                   }
                 }
               }} size="sm" />
@@ -373,15 +397,21 @@ export default function ComandosPage() {
     <div style={{ background: C.page, minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
       {/* Top bar */}
-      <div style={{ padding: '0.9rem 2rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+      <div style={{ padding: '0.9rem 2rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
         <button onClick={() => { setCreating(false); setEditingId(null) }} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'none', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '0.84rem', padding: 0 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           Voltar
         </button>
         <span style={{ color: C.vdim, fontSize: '0.9rem' }}>|</span>
-        <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>
-          {form.isEvento ? `Editando: ${form.eventoLabel}` : (editingId ? 'Editar comando' : 'Novo comando')}
+        <span style={{ fontWeight: 800, fontSize: '0.95rem', flex: 1 }}>
+          {form.isEvento ? `Configurando: ${form.eventoLabel}` : (editingId ? 'Editar comando' : 'Novo comando')}
         </span>
+        {form.isEvento && (
+          <Link href="/dashboard/overlays" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.85rem', background: 'rgba(155,48,255,0.1)', border: '1px solid rgba(155,48,255,0.3)', borderRadius: '7px', color: '#9b30ff', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            Configurar overlay no OBS
+          </Link>
+        )}
       </div>
 
       <div style={{ padding: '1.5rem 2rem', maxWidth: '760px' }}>
@@ -541,18 +571,41 @@ export default function ComandosPage() {
           </div>
 
           {/* 6 · Notificação no overlay */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${form.notifOverlay ? C.green + '40' : C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Notificação no overlay</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={form.notifOverlay ? C.green : C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Notificação no overlay (OBS)</span>
                 <span style={{ fontSize: '0.74rem', color: form.notifOverlay ? C.green : C.dim }}>{form.notifOverlay ? 'Ativo' : 'Inativo'}</span>
               </div>
               <Toggle on={form.notifOverlay} onChange={v => setForm(p => ({ ...p, notifOverlay: v }))} size="sm" />
             </div>
-            <div style={{ fontSize: '0.74rem', color: C.dim, lineHeight: 1.5 }}>
-              Quando ativado, o bot exibe a resposta deste comando como um alerta em tempo real no overlay da transmissão.
+            <div style={{ fontSize: '0.74rem', color: C.dim, lineHeight: 1.5, marginBottom: form.notifOverlay ? '0.75rem' : 0 }}>
+              Quando ativado, exibe um alerta visual em tempo real na transmissão quando este evento ocorrer.
             </div>
+            {form.notifOverlay && (
+              <div style={{ marginTop: '0.65rem', background: '#08090d', border: `1px solid rgba(57,255,20,0.2)`, borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.green, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                  Adicionar ao OBS — Browser Source
+                </div>
+                <div style={{ fontSize: '0.74rem', color: C.dim, marginBottom: '0.55rem' }}>
+                  Adicione uma <strong style={{ color: C.text }}>Browser Source</strong> no OBS com a URL abaixo. Dimensões recomendadas: <strong style={{ color: C.text }}>800 × 200</strong>.
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <code style={{ flex: 1, background: '#0b0d1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', padding: '0.45rem 0.75rem', fontSize: '0.75rem', color: C.green, wordBreak: 'break-all', lineHeight: 1.4 }}>
+                    {userId ? `${typeof window !== 'undefined' ? window.location.origin : 'https://www.sheikstream.com.br'}/overlay/alert?uid=${userId}` : '…carregando…'}
+                  </code>
+                  <button type="button" onClick={() => {
+                    if (!userId) return
+                    navigator.clipboard.writeText(`${window.location.origin}/overlay/alert?uid=${userId}`)
+                    setCopiedUrl(true)
+                    setTimeout(() => setCopiedUrl(false), 2000)
+                  }} style={{ flexShrink: 0, padding: '0.45rem 0.85rem', background: copiedUrl ? 'rgba(57,255,20,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${copiedUrl ? 'rgba(57,255,20,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: '6px', color: copiedUrl ? C.green : C.dim, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {copiedUrl ? '✓ Copiado!' : 'Copiar URL'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 7 · Configurações avançadas */}

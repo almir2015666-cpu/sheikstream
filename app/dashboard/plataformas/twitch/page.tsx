@@ -196,11 +196,12 @@ export default function TwitchSubsPage() {
   const totalBruto = subs.reduce((acc, s) => acc + tierValue(s.tier, tiers), 0)
   const totalLiquid = totalBruto * 0.5
 
-  const totalBits = cheers.reduce((acc, c) => acc + c.bits, 0)  // period-filtered
-  const bitsHistorical = channelStats?.bits_total_historical ?? 0  // all-time, info only
+  const totalBitsDB = cheers.reduce((acc, c) => acc + c.bits, 0)  // DB-tracked (since EventSub setup)
+  const bitsHistorical = channelStats?.bits_total_historical ?? 0  // Twitch leaderboard, period-filtered
+  // Prefer leaderboard data (includes all historical bits for the period); fallback to DB-only
+  const totalBits = bitsHistorical > 0 ? bitsHistorical : totalBitsDB
   const bitsUSD = totalBits * 0.01
   const bitsBRL = bitsUSD * EXCHANGE
-  const bitsHistoricalBRL = bitsHistorical * 0.01 * EXCHANGE
 
   // Repasse uses same period-filtered values for consistency
   const totalUSD = totalLiquid / EXCHANGE + bitsUSD
@@ -581,10 +582,9 @@ export default function TwitchSubsPage() {
             }
           </div>
         </div>
-        {bitsHistorical > totalBits && (
-          <div style={{ marginTop: '0.6rem', fontSize: '0.71rem', color: C.dim }}>
-            Total histórico (todos os tempos): <span style={{ color: '#f59e0b', fontWeight: 700 }}>{bitsHistorical.toLocaleString('pt-BR')} bits</span>
-            {' '}≈ <span style={{ color: C.accent }}>{fmt(bitsHistoricalBRL)}</span>
+        {bitsHistorical > 0 && (
+          <div style={{ marginTop: '0.6rem', fontSize: '0.71rem', color: C.vdim }}>
+            Dados via leaderboard Twitch · período selecionado{totalBitsDB > 0 && bitsHistorical !== totalBitsDB ? ` · ${totalBitsDB.toLocaleString('pt-BR')} registrados via webhook neste período` : ''}
           </div>
         )}
       </div>

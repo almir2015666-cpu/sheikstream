@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     if (!body.message?.trim()) return NextResponse.json({ error: 'message required' }, { status: 400 })
     const db = getSupabaseAdmin()
+    const maxViews = Number(body.max_views)
     const { data, error } = await db.from('admin_notifications')
       .insert({
         title:           body.title?.trim() || '',
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
         icon:            body.icon || '📢',
         color:           body.color || '#9b30ff',
         target_username: body.target_username?.trim() || null,
+        max_views:       maxViews > 0 ? maxViews : null,
         active:          true,
         created_at:      new Date().toISOString(),
       })

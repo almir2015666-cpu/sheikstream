@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(git add app/lib/eventsub.ts app/api/auth/twitch/callback/route.ts)",
+      "PowerShell(git push origin main 2>&1)",
+      "PowerShell(git add app/api/twitch/resync/route.ts)",
+      "PowerShell(git add app/api/twitch/eventsub/route.ts app/api/twitch/resync/route.ts)",
+      "PowerShell(git add app/api/twitch/eventsub/route.ts)",
+      "PowerShell(git add app/dashboard/plataformas/twitch/page.tsx)",
+      "PowerShell(git add app/api/twitch/eventsub/route.ts app/dashboard/plataformas/twitch/page.tsx)",
+      "PowerShell(git add app/api/twitch/eventsub/route.ts app/api/twitch/channel-stats/route.ts app/dashboard/plataformas/twitch/page.tsx)",
+      "PowerShell(git add app/dashboard/plataformas/twitch/page.tsx app/api/dashboard/stats/route.ts)",
+      "PowerShell(git add app/dashboard/plataformas/twitch/page.tsx app/api/twitch/channel-stats/route.ts)"
+    ]
+  }
+}

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { data, error } = await getSupabaseAdmin()
     .from('admin_notifications')
-    .select('id,title,message,icon,color,created_at,target_username')
+    .select('id,title,message,icon,color,created_at,target_username,max_views')
     .eq('active', true)
     .order('created_at', { ascending: false })
     .limit(50)

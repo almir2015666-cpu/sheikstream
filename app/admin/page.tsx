@@ -190,7 +190,7 @@ export default function AdminPage() {
   const [notifyList, setNotifyList] = useState<AdminNotification[]>([])
   const [notifyLoading, setNotifyLoading] = useState(false)
   const [notifySaving, setNotifySaving] = useState(false)
-  const [notifyForm, setNotifyForm] = useState({ title: '', message: '', icon: '📢', color: '#9b30ff', target_username: '' })
+  const [notifyForm, setNotifyForm] = useState({ title: '', message: '', icon: '📢', color: '#9b30ff', target_username: '', max_views: 0 })
   type ChangelogEntry = { date: string; time?: string; title: string; desc: string }
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([])
   const [changelogLoading, setChangelogLoading] = useState(false)
@@ -444,7 +444,7 @@ export default function AdminPage() {
       if (res.ok) {
         const d = await res.json()
         setNotifyList(prev => [d, ...prev])
-        setNotifyForm(p => ({ ...p, title: '', message: '' }))
+        setNotifyForm(p => ({ ...p, title: '', message: '', max_views: 0 }))
       } else {
         const d = await res.json().catch(() => ({}))
         alert(`Erro ao salvar aviso: ${d.error ?? res.status}`)
@@ -1858,6 +1858,28 @@ export default function AdminPage() {
                   )}
                 </div>
 
+                {/* Quantas vezes */}
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>Quantas vezes exibir</div>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Ilimitado', value: 0 },
+                      { label: '1×', value: 1 },
+                      { label: '2×', value: 2 },
+                      { label: '3×', value: 3 },
+                      { label: '5×', value: 5 },
+                    ].map(opt => (
+                      <button key={opt.value} onClick={() => setNotifyForm(p => ({ ...p, max_views: opt.value }))}
+                        style={{ padding: '0.35rem 0.85rem', borderRadius: '7px', border: `1px solid ${notifyForm.max_views === opt.value ? C.primary + '60' : C.border}`, background: notifyForm.max_views === opt.value ? C.primaryBg : 'transparent', color: notifyForm.max_views === opt.value ? C.primary : C.muted, fontSize: '0.8rem', fontWeight: notifyForm.max_views === opt.value ? 700 : 500, cursor: 'pointer' }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.3rem' }}>
+                    {notifyForm.max_views === 0 ? 'Aviso permanece até ser removido manualmente.' : `Aviso desaparece automaticamente após aparecer ${notifyForm.max_views}× para cada usuário.`}
+                  </div>
+                </div>
+
                 {/* Title (optional) */}
                 <div style={{ marginBottom: '0.75rem' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Título (opcional)</div>
@@ -1907,11 +1929,20 @@ export default function AdminPage() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           {n.title && <div style={{ fontWeight: 700, fontSize: '0.82rem', color: n.color, marginBottom: '0.15rem' }}>{n.title}</div>}
                           <div style={{ fontSize: '0.8rem', color: C.muted }}>{n.message}</div>
-                          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginTop: '0.3rem' }}>
+                          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginTop: '0.3rem', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '0.68rem', color: C.vdim }}>{new Date(n.created_at).toLocaleString('pt-BR')}</span>
                             <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '999px', background: n.target_username ? 'rgba(155,48,255,0.12)' : 'rgba(255,255,255,0.05)', color: n.target_username ? C.primary : C.vdim, border: `1px solid ${n.target_username ? C.border : 'rgba(255,255,255,0.06)'}` }}>
                               {n.target_username ? `👤 ${n.target_username}` : '👥 Todos'}
                             </span>
+                            {(n as Record<string, unknown>).max_views ? (
+                              <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '999px', background: 'rgba(245,158,11,0.08)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
+                                🔁 {(n as Record<string, unknown>).max_views as number}×
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '999px', background: 'rgba(255,255,255,0.04)', color: C.vdim, border: '1px solid rgba(255,255,255,0.06)' }}>
+                                ∞ sempre
+                              </span>
+                            )}
                           </div>
                         </div>
                         <button onClick={() => deleteNotification(n.id)} style={{ background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', padding: '0.28rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Remover</button>
