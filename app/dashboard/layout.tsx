@@ -422,6 +422,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     .sk-sidebar-mobile{animation:sk-slide-in 0.22s cubic-bezier(0.4,0,0.2,1) forwards;}
     @keyframes sk-pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
     main{background:${S.bg};transition:background 0.25s ease!important;}
+    @media(max-width:767px){
+      main>div[style]{padding:1rem!important;}
+      main [style*="padding: 1.5rem 2rem"]{padding:1rem!important;}
+      main [style*="padding:1.5rem 2rem"]{padding:1rem!important;}
+      main [style*="grid-template-columns: 340px"]{grid-template-columns:1fr!important;}
+      main [style*="grid-template-columns:340px"]{grid-template-columns:1fr!important;}
+      main [style*="grid-template-columns: repeat(3"]{grid-template-columns:1fr!important;}
+      main [style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr!important;}
+      main [style*="grid-template-columns: repeat(4"]{grid-template-columns:1fr 1fr!important;}
+      main [style*="grid-template-columns:repeat(4"]{grid-template-columns:1fr 1fr!important;}
+      main [style*="grid-template-columns: 1fr 1fr 1fr"]{grid-template-columns:1fr!important;}
+      main [style*="font-size: 120px"]{font-size:72px!important;}
+      main [style*="font-size:120px"]{font-size:72px!important;}
+      main [style*="width: 560px"]{width:100%!important;max-width:100%!important;}
+    }
     ${!isDark ? `
     main>div{background:${S.bg}!important;color:${S.text}!important;}
     main [style*="rgb(8, 9, 13)"]{background:${S.bg}!important;color:${S.text}!important;}

@@ -373,21 +373,26 @@ export default function ComandosPage() {
             <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{cmd.resposta}</span>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
               <Toggle on={cmd.habilitado} onChange={async v => {
+                // Optimistic update
+                setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
+
                 if (v) {
+                  // Activating: persist to DB + show modal
+                  if (cmd.db) {
+                    await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: true }) })
+                  } else {
+                    const res = await fetch('/api/comandos', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ trigger: cmd.trigger, resposta: cmd.resposta, cooldown_s: cmd.cooldown, habilitado: true, permissao: 'todos', platform: cmd.platform }),
+                    })
+                    if (res.ok) {
+                      const saved = await res.json()
+                      setCmds(p => p.map(c => c.id === cmd.id ? { ...c, id: saved.id, db: true } : c))
+                    }
+                  }
                   setOverlayModal(true)
-                  setEditingId(cmd.id)
-                  const trigger = cmd.isEvento ? cmd.trigger : cmd.trigger.replace(/^!/, '')
-                  setForm({
-                    trigger, isEvento: cmd.isEvento, eventoLabel: cmd.label,
-                    resposta: cmd.resposta, cooldown: cmd.cooldown, cooldownUser: 0, custoBase: 0, custoInscritos: 0,
-                    ativo: true,
-                    permissao: cmd.origem.toLowerCase() === 'automatico' ? 'todos' : cmd.origem.toLowerCase(),
-                    responderComo: 'canal', notifOverlay: cmd.notifOverlay ?? false, template: null, extraVars: [], platforms: [cmd.platform],
-                  })
-                  setCreating(true)
                 } else {
-                  // Deactivating: persist immediately
-                  setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: false } : c))
+                  // Deactivating: persist to DB
                   if (cmd.db) {
                     await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: false }) })
                   } else if (cmd.isEvento) {
