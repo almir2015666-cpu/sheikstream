@@ -67,52 +67,41 @@ export async function POST(req: NextRequest) {
   const prompt: string = (body.prompt ?? '').trim().slice(0, 1000)
   if (!prompt) return NextResponse.json({ error: 'Prompt obrigatório' }, { status: 400 })
   const size: Size = ALLOWED_SIZES.includes(body.size) ? body.size : '1792x1024'
-  const [w, h] = size.split('x').map(Number)
+  const quality: 'standard' | 'hd' = body.quality === 'hd' ? 'hd' : 'standard'
 
-  const apiKey = process.env.TOGETHER_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({
-      error: 'TOGETHER_API_KEY não configurada. Acesse api.together.ai, crie uma conta gratuita e adicione a chave no Vercel em Settings → Environment Variables.',
-    }, { status: 500 })
-  }
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY não configurada no servidor' }, { status: 500 })
 
   let imageUrl = ''
+  let revisedPrompt = ''
   try {
-    const res = await fetch('https://api.together.xyz/v1/images/generations', {
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: 'black-forest-labs/FLUX.1-schnell-Free',
-        prompt,
-        width: w,
-        height: h,
-        steps: 4,
-        n: 1,
-      }),
+      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size, quality }),
     })
     const json = await res.json()
     if (!res.ok) {
-      const msg = json?.error?.message ?? json?.error ?? 'Erro na API Together AI'
-      return NextResponse.json({ error: String(msg) }, { status: res.status })
+      const raw: string = json?.error?.message ?? ''
+      const noBilling = raw.toLowerCase().includes('billing') || raw.toLowerCase().includes('quota') || raw.toLowerCase().includes('does not exist') || json?.error?.code === 'billing_hard_limit_reached'
+      const msg = noBilling
+        ? 'Sua conta OpenAI não tem créditos. Adicione em: platform.openai.com/settings/organization/billing'
+        : raw || 'Erro na API da OpenAI'
+      return NextResponse.json({ error: msg }, { status: res.status })
     }
     imageUrl = json.data?.[0]?.url ?? ''
-    if (!imageUrl) return NextResponse.json({ error: 'Nenhuma imagem retornada pela API' }, { status: 502 })
+    revisedPrompt = json.data?.[0]?.revised_prompt ?? prompt
   } catch {
-    return NextResponse.json({ error: 'Falha ao contactar Together AI' }, { status: 502 })
+    return NextResponse.json({ error: 'Falha ao contactar a OpenAI' }, { status: 502 })
   }
 
   try {
     await db.from('ai_image_generations').insert({
-      user_id: userId,
-      user_name: session.name,
-      user_role: userRole,
-      prompt,
-      image_url: imageUrl,
-      revised_prompt: prompt,
-      image_format: size,
-      status: 'done',
+      user_id: userId, user_name: session.name, user_role: userRole,
+      prompt, image_url: imageUrl, revised_prompt: revisedPrompt,
+      image_format: size, status: 'done',
     })
   } catch {}
 
-  return NextResponse.json({ imageUrl, revisedPrompt: prompt, modelUsed: 'flux-schnell' })
+  return NextResponse.json({ imageUrl, revisedPrompt, modelUsed: 'dall-e-3' })
 }
