@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 
 type AlertEvent = {
   id: string
+  createdAt?: string
   type: 'sub' | 'resub' | 'giftsub' | 'follow' | 'bits' | 'donation' | 'member' | 'command'
   user: string
   extra?: string
@@ -235,22 +236,21 @@ function AlertOverlayContent() {
     const baseUrl = `/api/overlay/alert?uid=${uid}${eventSlug ? '&event=' + eventSlug : ''}`
     let stopped = false
     let iv: ReturnType<typeof setInterval> | null = null
-    // maxSeenId tracks the highest event ID we've processed — used as &after= for efficient polling
-    let maxSeenId = 0
+    // lastSeenTs: ISO timestamp of the newest event we've processed, used for ?after= filtering
+    let lastSeenTs = ''
 
     const poll = () => {
       if (stopped) return
-      const url = maxSeenId > 0 ? `${baseUrl}&after=${maxSeenId}` : baseUrl
+      const url = lastSeenTs ? `${baseUrl}&after=${encodeURIComponent(lastSeenTs)}` : baseUrl
       fetch(url, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
         .then((data: AlertEvent[] | null) => {
           if (!data || data.length === 0 || stopped) return
           setQueue(prev => {
-            const newEvents = data.filter(e => !seenIds.current.has(String(e.id)))
+            const newEvents = data.filter(e => !seenIds.current.has(e.id))
             newEvents.forEach(e => {
-              seenIds.current.add(String(e.id))
-              const n = parseInt(String(e.id), 10)
-              if (n > maxSeenId) maxSeenId = n
+              seenIds.current.add(e.id)
+              if (e.createdAt && e.createdAt > lastSeenTs) lastSeenTs = e.createdAt
             })
             return newEvents.length > 0 ? [...prev, ...newEvents] : prev
           })
@@ -258,20 +258,18 @@ function AlertOverlayContent() {
         .catch(() => {})
     }
 
-    // Step 1: watermark — mark all events currently in DB as seen (no display)
-    // Step 2: only THEN start polling so no concurrent priming race can occur
+    // Watermark: mark all events currently in DB as seen (no display), then start polling
     fetch(baseUrl, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : [])
       .then((data: AlertEvent[]) => {
         if (stopped) return
         ;(data ?? []).forEach(e => {
-          seenIds.current.add(String(e.id))
-          const n = parseInt(String(e.id), 10)
-          if (n > maxSeenId) maxSeenId = n
+          seenIds.current.add(e.id)
+          if (e.createdAt && e.createdAt > lastSeenTs) lastSeenTs = e.createdAt
         })
         isInitialized.current = true
-        poll()                          // fire once immediately after watermark
-        iv = setInterval(poll, 1000)   // poll every 1s for faster detection
+        poll()
+        iv = setInterval(poll, 1000)
       })
       .catch(() => {
         if (!stopped) {

@@ -29,15 +29,15 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
   let query = db
     .from('twitch_events')
-    .select('id, event_type, event_data')
-    .order('id', { ascending: false })
+    .select('id, event_type, event_data, created_at')
+    .order('created_at', { ascending: false })
     .limit(20)
 
   if (uid) query = query.eq('broadcaster_id', uid)
 
-  // after=<id>: only return events strictly newer than this ID
+  // after=<ISO timestamp>: only return events strictly newer than this timestamp
   const after = req.nextUrl.searchParams.get('after')
-  if (after && /^\d+$/.test(after)) query = query.gt('id', parseInt(after, 10))
+  if (after) query = query.gt('created_at', after)
 
   if (eventSlug && SLUG_TO_TYPES[eventSlug]) {
     query = query.in('event_type', SLUG_TO_TYPES[eventSlug])
@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
     const type = mapEventType(e.event_type)
     return {
       id: e.id,
+      createdAt: e.created_at,
       type,
       user: String(d.user_name ?? d.user_login ?? d.gifter_user_name ?? 'Anônimo'),
       amount: extractAmount(e.event_type, d),
