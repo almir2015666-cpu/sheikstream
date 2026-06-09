@@ -212,20 +212,65 @@ function EffectGrid({ effects, value, onChange }: { effects: { id: string; label
   )
 }
 
+// ─── Animation helpers (shared with overlay page) ──────────────────────────────
+function getPreviewAnimStyle(animIn: string, visible: boolean): React.CSSProperties {
+  if (visible) return { transform: 'none', opacity: 1, filter: 'none' }
+  const transforms: Record<string, string> = {
+    'slide-right': 'translateX(-120%)', 'slide-left': 'translateX(120%)',
+    'slide-up': 'translateY(50px)', 'slide-down': 'translateY(-50px)',
+    'fade': 'none', 'zoom-in': 'scale(0.4)', 'zoom-out': 'scale(1.5)',
+    'bounce-in': 'translateY(-60px)', 'flip-x': 'rotateX(90deg)', 'flip-y': 'rotateY(90deg)',
+    'rotate-in': 'rotate(-180deg) scale(0.5)', 'elastic': 'translateX(-120%)',
+    'shake': 'translateX(-80%)', 'blur-in': 'none', 'drop-in': 'translateY(-100px)', 'swing': 'rotate(-25deg)',
+  }
+  return { transform: transforms[animIn] ?? 'translateX(-120%)', opacity: 0, filter: animIn === 'blur-in' ? 'blur(16px)' : 'none' }
+}
+
+function getPreviewTransition(animIn: string): string {
+  const m: Record<string, string> = {
+    'bounce-in': 'transform 0.55s cubic-bezier(.22,.68,0,1.8), opacity 0.3s',
+    'elastic':   'transform 0.65s cubic-bezier(.22,.68,0,2), opacity 0.3s',
+    'zoom-in':   'transform 0.4s cubic-bezier(.22,.68,0,1.2), opacity 0.35s',
+    'zoom-out':  'transform 0.4s ease, opacity 0.35s',
+    'flip-x':    'transform 0.5s ease, opacity 0.35s',
+    'flip-y':    'transform 0.5s ease, opacity 0.35s',
+    'rotate-in': 'transform 0.5s cubic-bezier(.22,.68,0,1.2), opacity 0.35s',
+    'drop-in':   'transform 0.5s cubic-bezier(.22,.68,0,1.3), opacity 0.3s',
+    'blur-in':   'filter 0.4s ease, opacity 0.4s',
+  }
+  return m[animIn] ?? 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.35s'
+}
+
 // ─── Preview renderers ─────────────────────────────────────────────────────────
-function AlertPreview({ s }: { s: StyleCfg }) {
+function AlertPreview({ s, animKey }: { s: StyleCfg; animKey?: number }) {
+  const [visible, setVisible] = useState(false)
   const bg = s.bgOpacity === 0 ? 'transparent' : s.bgColor
   const accent = s.timerColor
+
+  useEffect(() => {
+    setVisible(false)
+    const t = setTimeout(() => setVisible(true), 80)
+    return () => clearTimeout(t)
+  }, [animKey, s.animIn])
+
+  const animStyle = animKey !== undefined ? getPreviewAnimStyle(s.animIn, visible) : {}
+  const transition = animKey !== undefined ? getPreviewTransition(s.animIn) : 'none'
+
   return (
     <div style={{ width: Math.min(s.width, 480), margin: '0 auto', fontFamily: s.font }}>
-      <div style={{ background: bg, border: s.border ? `${s.borderThick}px solid ${accent}` : `1px solid ${accent}44`, borderRadius: s.borderRadius, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: `0 0 24px ${accent}22`, position: 'relative', overflow: 'hidden' }}>
+      <div style={{
+        background: bg, border: s.border ? `${s.borderThick}px solid ${accent}` : `1px solid ${accent}44`,
+        borderRadius: s.borderRadius, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+        boxShadow: `0 0 24px ${accent}22`, position: 'relative', overflow: 'hidden',
+        ...animStyle, transition,
+      }}>
         <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${accent}22`, border: `1px solid ${accent}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18 }}>⭐</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: s.titleSize + 1, fontWeight: 800, color: accent }}>Novo inscrito!</div>
           <div style={{ fontSize: s.supportSize + 1, color: s.textColor, opacity: 0.7, marginTop: 2 }}>viewer123 se inscreveu!</div>
         </div>
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `${accent}22` }}>
-          <div style={{ width: '60%', height: '100%', background: accent }} />
+          <div style={{ width: visible ? '0%' : '100%', height: '100%', background: accent, transition: visible ? `width ${s.duration ?? 6}s linear` : 'none' }} />
         </div>
       </div>
     </div>
@@ -357,6 +402,15 @@ export default function OverlayEditorPage({ params }: Ctx) {
   const [banLayout, setBanLayout] = useState<'single' | 'double'>('single')
   const [newBannerUrl, setNewBannerUrl] = useState('')
   const [subathonActive, setSubathonActive] = useState<boolean | null>(null)
+  const [previewAnimKey, setPreviewAnimKey] = useState(0)
+
+  // Auto-loop preview animation when in Efeitos tab
+  useEffect(() => {
+    if (tab !== 'efeitos') return
+    setPreviewAnimKey(k => k + 1)
+    const iv = setInterval(() => setPreviewAnimKey(k => k + 1), 3500)
+    return () => clearInterval(iv)
+  }, [tab, style.animIn, style.textEffect])
 
   useEffect(() => {
     if (type === 'subathon') {
@@ -457,10 +511,23 @@ export default function OverlayEditorPage({ params }: Ctx) {
             <Tog key={k} on={!!vis[k]} onChange={v => setVis(vv => ({ ...vv, [k]: v }))} label={`${icon} ${l}`} />
           ))}
           <div style={{ marginTop: '1rem', padding: '0.65rem 0.85rem', background: C.orangeBg, border: `1px solid ${C.orangeB}`, borderRadius: 8 }}>
-            <p style={{ margin: 0, fontSize: '0.77rem', color: C.orange, lineHeight: 1.5 }}>
-              Para overlays individuais por evento, acesse a página de{' '}
-              <Link href="/dashboard/overlays" style={{ color: C.orange, textDecoration: 'underline' }}>Overlays → Alertas por Evento</Link>.
+            <p style={{ margin: '0 0 0.5rem', fontSize: '0.77rem', color: C.orange }}>
+              URLs individuais por evento (use no OBS para alertas separados):
             </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              {[
+                { slug: 'twitch-sub',     label: '⭐ Sub Twitch' },
+                { slug: 'twitch-follow',  label: '❤️ Follow Twitch' },
+                { slug: 'twitch-bits',    label: '💎 Bits Twitch' },
+                { slug: 'twitch-giftsub', label: '🎁 Gift Sub Twitch' },
+                { slug: 'livepix',        label: '💸 Doação Livepix' },
+              ].map(ev => (
+                <div key={ev.slug} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Link href={`/dashboard/overlays/alert?event=${ev.slug}`} style={{ fontSize: '0.72rem', color: C.orange, textDecoration: 'underline' }}>{ev.label}</Link>
+                </div>
+              ))}
+              <Link href="/dashboard/overlays" style={{ fontSize: '0.7rem', color: 'rgba(251,146,60,0.6)', textDecoration: 'none', marginTop: '0.25rem' }}>Ver todos os eventos →</Link>
+            </div>
           </div>
         </Card>
       )
@@ -742,7 +809,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
     if (type === 'patrocinadores') return <PatroPreview s={style} />
     if (type === 'subathon')       return <SubathonPreview s={style} vis={vis} />
     if (type === 'sorteio')        return <SorteioPreview s={style} vis={vis} fontes={fontes} />
-    if (type === 'alert')          return <AlertPreview s={style} />
+    if (type === 'alert')          return <AlertPreview s={style} animKey={tab === 'efeitos' ? previewAnimKey : undefined} />
     return <MetaPreview s={style} vis={vis} />
   }
 
@@ -754,6 +821,10 @@ export default function OverlayEditorPage({ params }: Ctx) {
 
   return (
     <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;700;800&family=Poppins:wght@400;600;700&family=Rajdhani:wght@400;600;700&family=Exo+2:wght@400;700&family=Nunito:wght@400;700&display=swap');
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -826,8 +897,17 @@ export default function OverlayEditorPage({ params }: Ctx) {
                 <span style={{ fontSize: '0.7rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prévia ao vivo</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.green, display: 'inline-block' }} />
-                <span style={{ fontSize: '0.7rem', color: C.dim }}>Visual em tempo real</span>
+                {tab === 'efeitos' ? (
+                  <>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.primary, display: 'inline-block', animation: 'pulse 1s ease-in-out infinite' }} />
+                    <span style={{ fontSize: '0.7rem', color: C.primary, fontWeight: 600 }}>Animando preview...</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.green, display: 'inline-block' }} />
+                    <span style={{ fontSize: '0.7rem', color: C.dim }}>Visual em tempo real</span>
+                  </>
+                )}
               </div>
             </div>
 
