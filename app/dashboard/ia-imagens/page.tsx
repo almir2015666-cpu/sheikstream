@@ -111,16 +111,12 @@ export default function IAImagensPage() {
     setGenerating(false)
   }
 
-  async function download() {
+  function download() {
     if (!result) return
-    try {
-      const res = await fetch(result.imageUrl)
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url; a.download = `sheikstream-ia-${Date.now()}.png`
-      a.click(); URL.revokeObjectURL(url)
-    } catch { window.open(result.imageUrl, '_blank') }
+    const a = document.createElement('a')
+    a.href = result.imageUrl
+    a.download = `sheikstream-ia-${Date.now()}.png`
+    a.click()
   }
 
   if (loading) return (
@@ -329,12 +325,9 @@ export default function IAImagensPage() {
                   <button onClick={download} style={{ flex: 1, padding: '0.6rem', background: C.primaryBg, border: `1px solid ${C.primaryBd}`, borderRadius: 8, color: C.primary, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
                     ⬇ Baixar PNG
                   </button>
-                  <button onClick={() => window.open(result.imageUrl, '_blank')} style={{ padding: '0.6rem 0.9rem', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
-                    🔗 Abrir
-                  </button>
                 </div>
                 <div style={{ fontSize: '0.65rem', color: C.dim, marginTop: '0.45rem' }}>
-                  ⚠ O link expira em ~1 hora. Clique em Baixar agora para salvar.
+                  Imagem gerada com gpt-image-1. Clique em Baixar para salvar no computador.
                 </div>
               </div>
             </div>
@@ -343,7 +336,7 @@ export default function IAImagensPage() {
           {generating && (
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '2.5rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', animation: 'ia-spin 2s linear infinite', display: 'inline-block', marginBottom: '0.75rem' }}>🎨</div>
-              <div style={{ fontSize: '0.9rem', color: C.muted, fontWeight: 600 }}>Criando sua imagem com DALL-E 3...</div>
+              <div style={{ fontSize: '0.9rem', color: C.muted, fontWeight: 600 }}>Criando sua imagem com gpt-image-1...</div>
               <div style={{ fontSize: '0.75rem', color: C.dim, marginTop: '0.35rem' }}>Pode levar até 20 segundos</div>
             </div>
           )}

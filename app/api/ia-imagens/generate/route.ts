@@ -69,24 +69,39 @@ export async function POST(req: NextRequest) {
   const size: Size = ALLOWED_SIZES.includes(body.size) ? body.size : '1792x1024'
   const quality: 'standard' | 'hd' = body.quality === 'hd' ? 'hd' : 'standard'
 
+  // gpt-image-1 uses different size names and quality values
+  const SIZE_MAP: Record<Size, string> = {
+    '1024x1024': '1024x1024',
+    '1792x1024': '1536x1024',
+    '1024x1792': '1024x1536',
+  }
+
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY não configurada no servidor' }, { status: 500 })
 
   let imageUrl = ''
-  let revisedPrompt = ''
+  let revisedPrompt = prompt
   try {
     const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size, quality }),
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        prompt,
+        n: 1,
+        size: SIZE_MAP[size],
+        quality: quality === 'hd' ? 'high' : 'medium',
+      }),
     })
     const json = await res.json()
     if (!res.ok) {
       const raw: string = json?.error?.message ?? json?.error?.code ?? 'Erro desconhecido'
       return NextResponse.json({ error: `OpenAI: ${raw}` }, { status: res.status })
     }
-    imageUrl = json.data?.[0]?.url ?? ''
-    revisedPrompt = json.data?.[0]?.revised_prompt ?? prompt
+    // gpt-image-1 returns base64, convert to data URL
+    const b64 = json.data?.[0]?.b64_json ?? ''
+    if (!b64) return NextResponse.json({ error: 'Nenhuma imagem retornada' }, { status: 502 })
+    imageUrl = `data:image/png;base64,${b64}`
   } catch {
     return NextResponse.json({ error: 'Falha ao contactar a OpenAI' }, { status: 502 })
   }
