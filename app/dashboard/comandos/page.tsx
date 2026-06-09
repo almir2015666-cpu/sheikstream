@@ -144,6 +144,7 @@ type OvCfg = {
   borderRadius: number; border: boolean; borderColor: string; borderThick: number
   titleSize: number; supportSize: number; width: number
   titleText: string; subtitleText: string; titleColor: string; subtitleColor: string
+  iconShape: 'circle' | 'square' | 'none'
 }
 const OV_DEF: OvCfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, font: 'Inter',
@@ -151,6 +152,7 @@ const OV_DEF: OvCfg = {
   borderRadius: 14, border: true, borderColor: '#9146FF', borderThick: 1,
   titleSize: 15, supportSize: 12, width: 480,
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
+  iconShape: 'circle',
 }
 const OV_ANIMS = [
   { id: 'slide-right', label: 'Slide →', dur: '0.45s' }, { id: 'slide-left', label: 'Slide ←', dur: '0.45s' },
@@ -221,7 +223,9 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
         ...(vis ? { transform:'none',opacity:1,filter:'none' } : ovHidden(cfg.animIn)),
         transition: vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none',
       }}>
-        <div style={{ width:38,height:38,borderRadius:'50%',background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17 }}>⭐</div>
+        {cfg.iconShape !== 'none' && (
+          <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17 }}>⭐</div>
+        )}
         <div style={{ flex:1 }}>
           <div style={{ fontSize:cfg.titleSize,fontWeight:800,color:titleClr }}>{titleLabel}</div>
           <div style={{ fontSize:cfg.supportSize,color:subClr,opacity:0.75,marginTop:3 }}>{subLabel}</div>
@@ -292,7 +296,6 @@ function OverlayQuickEdit({ trigger }: { trigger: string }) {
   function up<K extends keyof OvCfg>(k: K, v: OvCfg[K]) { setCfg(p => ({ ...p, [k]: v })) }
 
   async function saveCfg() {
-    if (!uid) return
     try {
       const r = await fetch(`/api/overlay-config/${cfgKey}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -408,6 +411,16 @@ function OverlayQuickEdit({ trigger }: { trigger: string }) {
 
           {tab === 'estilo' && (
             <div style={{ display:'flex',flexDirection:'column',gap:'0.5rem' }}>
+              <div>
+                <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.28rem' }}>Ícone lateral</div>
+                <div style={{ display:'flex',gap:'0.3rem' }}>
+                  {([['circle','○ Círculo'],['square','□ Quadrado'],['none','✕ Nenhum']] as [OvCfg['iconShape'],string][]).map(([v,lbl]) => (
+                    <button type="button" key={v} onClick={() => up('iconShape',v)} style={{ flex:1,padding:'0.32rem 0.1rem',background:cfg.iconShape===v?PBg:'rgba(255,255,255,0.02)',border:`1px solid ${cfg.iconShape===v?PB:BD}`,borderRadius:5,color:cfg.iconShape===v?P:DIM,cursor:'pointer',fontSize:'0.68rem',fontWeight:cfg.iconShape===v?700:400 }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.45rem' }}>
                 <ColorPicker label="Cor principal" value={cfg.timerColor} onChange={v => up('timerColor',v)} />
                 <ColorPicker label="Texto"         value={cfg.textColor}  onChange={v => up('textColor',v)} />
@@ -1003,23 +1016,33 @@ export default function ComandosPage() {
 
           {/* 4 · Plataformas */}
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.8rem' }}>Plataformas</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-              {[{ id: 'Twitch', color: '#9147ff' }, { id: 'YouTube', color: '#ff4444' }].map(pl => {
-                const sel = form.platforms.includes(pl.id)
-                return (
-                  <button key={pl.id} type="button"
-                    onClick={() => setForm(p => ({ ...p, platforms: [pl.id] }))}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem', background: sel ? `${pl.color}15` : 'transparent', border: `1px ${sel ? 'solid' : 'dashed'} ${sel ? pl.color + '55' : 'rgba(255,255,255,0.12)'}`, borderRadius: '8px', color: sel ? pl.color : C.dim, fontSize: '0.8rem', fontWeight: sel ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s' }}>
-                    {sel
-                      ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                    }
-                    {sel ? `${pl.id} ✓` : `Conectar ${pl.id}`}
-                  </button>
-                )
-              })}
-            </div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.75rem' }}>Plataforma</div>
+            {form.isEvento ? (
+              // For event commands the platform is determined by the trigger — show as static badge
+              <div style={{ display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.55rem 0.9rem',background:'rgba(145,71,255,0.08)',border:'1px solid rgba(145,71,255,0.25)',borderRadius:'8px' }}>
+                <svg width="13" height="13" viewBox="0 0 24 28" fill="#9147ff"><path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/></svg>
+                <span style={{ fontSize:'0.82rem',fontWeight:700,color:'#9147ff' }}>{PLAT_COLOR[form.platforms[0]] ? form.platforms[0] : 'Twitch'}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft:'auto' }}><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+            ) : (
+              // For custom commands: show Twitch connected + links to connect others via OAuth
+              <div style={{ display:'flex',flexDirection:'column',gap:'0.4rem' }}>
+                <div style={{ display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.55rem 0.9rem',background:'rgba(145,71,255,0.08)',border:'1px solid rgba(145,71,255,0.25)',borderRadius:'8px' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 28" fill="#9147ff"><path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/></svg>
+                  <span style={{ fontSize:'0.82rem',fontWeight:700,color:'#9147ff' }}>Twitch</span>
+                  <span style={{ marginLeft:'auto',fontSize:'0.7rem',color:'#22c55e',fontWeight:600 }}>✓ Conectado</span>
+                </div>
+                {[
+                  { id: 'YouTube', color: '#ff4444', href: '/api/auth/youtube' },
+                  { id: 'Kick',    color: '#53FC18', href: '/dashboard/plataformas/kick' },
+                ].map(pl => (
+                  <a key={pl.id} href={pl.href} style={{ display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.5rem 0.9rem',background:'transparent',border:'1px dashed rgba(255,255,255,0.1)',borderRadius:'8px',textDecoration:'none',cursor:'pointer' }}>
+                    <span style={{ fontSize:'0.82rem',color:C.dim }}>{pl.id}</span>
+                    <span style={{ marginLeft:'auto',fontSize:'0.72rem',fontWeight:600,color:C.primary }}>Conectar →</span>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 5 · Responder como */}

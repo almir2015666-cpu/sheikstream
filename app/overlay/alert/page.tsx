@@ -15,14 +15,18 @@ type Cfg = {
   bgColor: string; bgOpacity: number; textColor: string; accentColor: string
   borderRadius: number; border: boolean; borderColor: string; borderThick: number
   font: string; titleSize: number; supportSize: number; width: number
-  animIn: string; duration: number; timerColor: string
+  animIn: string; animSpeed: number; duration: number; timerColor: string
+  titleText: string; subtitleText: string; titleColor: string; subtitleColor: string
+  iconShape: 'circle' | 'square' | 'none'
 }
 
 const DEF: Cfg = {
   bgColor: '#0b0c17', bgOpacity: 0.92, textColor: '#ffffff', accentColor: '#9146FF',
   borderRadius: 14, border: true, borderColor: '#9146FF', borderThick: 1,
   font: 'Inter', titleSize: 15, supportSize: 12, width: 480,
-  animIn: 'slide-right', duration: 6, timerColor: '#9146FF',
+  animIn: 'slide-right', animSpeed: 5, duration: 6, timerColor: '#9146FF',
+  titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
+  iconShape: 'circle',
 }
 
 const EVENT_META: Record<string, { icon: string; label: string; color: string }> = {
@@ -36,10 +40,11 @@ const EVENT_META: Record<string, { icon: string; label: string; color: string }>
   command:  { icon: '⚡', label: 'Evento!',             color: '#22d3ee' },
 }
 
-function hexToRgb(hex: string) {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
+function hexToRgb(hex: string): string {
+  if (!hex || hex === 'transparent' || !hex.startsWith('#')) return '0,0,0'
+  const r = parseInt(hex.slice(1, 3), 16) || 0
+  const g = parseInt(hex.slice(3, 5), 16) || 0
+  const b = parseInt(hex.slice(5, 7), 16) || 0
   return `${r},${g},${b}`
 }
 
@@ -69,26 +74,30 @@ function getAnimStyle(animIn: string): React.CSSProperties {
   }
 }
 
-function getAnimTransition(animIn: string): string {
+function getAnimTransition(animIn: string, animSpeed = 5): string {
+  const d = ((11 - animSpeed) * 0.2).toFixed(2)
+  const d6 = ((11 - animSpeed) * 0.12).toFixed(2)
   const transitions: Record<string, string> = {
-    'bounce-in':  'transform 0.6s cubic-bezier(.22,.68,0,1.8), opacity 0.3s ease',
-    'elastic':    'transform 0.7s cubic-bezier(.22,.68,0,2), opacity 0.3s ease',
-    'shake':      'transform 0.5s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
-    'zoom-out':   'transform 0.4s cubic-bezier(.22,.68,0,1), opacity 0.35s ease',
-    'flip-x':     'transform 0.5s ease, opacity 0.35s ease',
-    'flip-y':     'transform 0.5s ease, opacity 0.35s ease',
-    'rotate-in':  'transform 0.5s cubic-bezier(.22,.68,0,1.2), opacity 0.35s ease',
-    'drop-in':    'transform 0.5s cubic-bezier(.22,.68,0,1.3), opacity 0.3s ease',
-    'swing':      'transform 0.6s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
-    'blur-in':    'filter 0.4s ease, opacity 0.4s ease',
+    'bounce-in':  `transform ${d}s cubic-bezier(.22,.68,0,1.8), opacity ${d6}s ease`,
+    'elastic':    `transform ${d}s cubic-bezier(.22,.68,0,2), opacity ${d6}s ease`,
+    'shake':      `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`,
+    'zoom-out':   `transform ${d}s cubic-bezier(.22,.68,0,1), opacity ${d6}s ease`,
+    'flip-x':     `transform ${d}s ease, opacity ${d6}s ease`,
+    'flip-y':     `transform ${d}s ease, opacity ${d6}s ease`,
+    'rotate-in':  `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`,
+    'drop-in':    `transform ${d}s cubic-bezier(.22,.68,0,1.3), opacity ${d6}s ease`,
+    'swing':      `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`,
+    'blur-in':    `filter ${d}s ease, opacity ${d}s ease`,
   }
-  return transitions[animIn] ?? 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.35s ease'
+  return transitions[animIn] ?? `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`
 }
 
 function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
   const [visible, setVisible] = useState(false)
   const meta = EVENT_META[ev.type] ?? EVENT_META.command
   const accent = cfg.timerColor !== '#9146FF' ? cfg.timerColor : (cfg.accentColor !== '#9146FF' ? cfg.accentColor : meta.color)
+  const titleClr = cfg.titleColor || accent
+  const subClr = cfg.subtitleColor || cfg.textColor
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50)
@@ -96,8 +105,13 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
   }, [])
 
   const hiddenStyle = getAnimStyle(cfg.animIn)
-  const transition = getAnimTransition(cfg.animIn)
-  const bg = cfg.bgOpacity === 0 ? 'transparent' : `rgba(${hexToRgb(cfg.bgColor)},${cfg.bgOpacity})`
+  const transition = getAnimTransition(cfg.animIn, cfg.animSpeed)
+
+  const isTransparent = cfg.bgColor === 'transparent' || cfg.bgOpacity === 0
+  const bg = isTransparent ? 'transparent' : `rgba(${hexToRgb(cfg.bgColor)},${cfg.bgOpacity})`
+
+  const titleLabel = cfg.titleText || meta.label
+  const iconShape = cfg.iconShape ?? 'circle'
 
   return (
     <div style={{
@@ -116,22 +130,29 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
       ...(visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle),
       transition: visible ? transition : 'none',
     }}>
-      <div style={{
-        width: 44, height: 44, borderRadius: '50%',
-        background: `${accent}22`, border: `1px solid ${accent}55`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 20, flexShrink: 0,
-      }}>
-        {meta.icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: cfg.titleSize, fontWeight: 800, color: accent, lineHeight: 1.2 }}>
-          {meta.label}
+      {iconShape !== 'none' && (
+        <div style={{
+          width: 44, height: 44,
+          borderRadius: iconShape === 'circle' ? '50%' : 10,
+          background: `${accent}22`, border: `1px solid ${accent}55`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 20, flexShrink: 0,
+        }}>
+          {meta.icon}
         </div>
-        <div style={{ fontSize: cfg.supportSize + 1, color: cfg.textColor, opacity: 0.8, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          <strong>{ev.user}</strong>
-          {ev.amount ? ` · ${ev.amount}${ev.type === 'bits' ? ' bits' : ev.type === 'donation' ? ' R$' : '×'}` : ''}
-          {ev.extra ? ` · ${ev.extra}` : ''}
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: cfg.titleSize, fontWeight: 800, color: titleClr, lineHeight: 1.2 }}>
+          {titleLabel}
+        </div>
+        <div style={{ fontSize: cfg.supportSize + 1, color: subClr, opacity: 0.85, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {cfg.subtitleText ? cfg.subtitleText.replace('$user', ev.user).replace('$valor', String(ev.amount ?? '')) : (
+            <>
+              <strong>{ev.user}</strong>
+              {ev.amount ? ` · ${ev.amount}${ev.type === 'bits' ? ' bits' : ev.type === 'donation' ? ' R$' : '×'}` : ''}
+              {ev.extra ? ` · ${ev.extra}` : ''}
+            </>
+          )}
         </div>
       </div>
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `${accent}22`, borderRadius: `0 0 ${cfg.borderRadius}px ${cfg.borderRadius}px`, overflow: 'hidden' }}>
@@ -156,7 +177,6 @@ function AlertOverlayContent() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seenIds = useRef<Set<string>>(new Set())
 
-  // Force transparent background (OBS fix)
   useEffect(() => {
     document.body.style.background = 'transparent'
     document.body.style.backgroundColor = 'transparent'
@@ -169,7 +189,7 @@ function AlertOverlayContent() {
     const loadCfg = () =>
       fetch(`/api/overlay-config/${cfgType}?uid=${uid}`)
         .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d?.style) setCfg(prev => ({ ...prev, ...d.style })) })
+        .then(d => { if (d?.style) setCfg(prev => ({ ...DEF, ...prev, ...d.style })) })
         .catch(() => {})
     loadCfg()
     const iv = setInterval(loadCfg, 15000)
