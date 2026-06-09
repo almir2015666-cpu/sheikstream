@@ -111,7 +111,6 @@ export async function POST(req: NextRequest) {
           broadcaster_id: user.id,
           event_type: ev.event_type,
           event_data: ev.event_data,
-          created_at: new Date().toISOString(),
         })
       if (dbErr) errors.push('overlay_failed: ' + dbErr.message)
     }

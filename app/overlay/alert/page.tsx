@@ -8,7 +8,6 @@ type AlertEvent = {
   user: string
   extra?: string
   amount?: number
-  createdAt: number
 }
 
 type Cfg = {
@@ -176,6 +175,7 @@ function AlertOverlayContent() {
   const [current, setCurrent] = useState<AlertEvent | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seenIds = useRef<Set<string>>(new Set())
+  const isInitialized = useRef(false)
 
   useEffect(() => {
     document.body.style.background = 'transparent'
@@ -205,13 +205,21 @@ function AlertOverlayContent() {
       fetch(apiUrl)
         .then(r => r.ok ? r.json() : null)
         .then((data: AlertEvent[] | null) => {
-          if (data && data.length > 0) {
-            setQueue(prev => {
-              const newEvents = data.filter(e => !seenIds.current.has(e.id))
-              newEvents.forEach(e => seenIds.current.add(e.id))
-              return [...prev, ...newEvents]
-            })
+          if (!data || data.length === 0) {
+            isInitialized.current = true
+            return
           }
+          if (!isInitialized.current) {
+            // Prime: mark all existing events as seen so we don't replay history
+            isInitialized.current = true
+            data.forEach(e => seenIds.current.add(e.id))
+            return
+          }
+          setQueue(prev => {
+            const newEvents = data.filter(e => !seenIds.current.has(e.id))
+            newEvents.forEach(e => seenIds.current.add(e.id))
+            return [...prev, ...newEvents]
+          })
         })
         .catch(() => {})
     poll()

@@ -24,17 +24,16 @@ export async function GET(req: NextRequest) {
   if (!uid) return NextResponse.json([], { status: 400 })
 
   const eventSlug = req.nextUrl.searchParams.get('event')
-  // 30s window — accounts for server clock drift and polling intervals
-  const since = new Date(Date.now() - 30000).toISOString()
 
   const db = getSupabaseAdmin()
+  // No created_at filter — table doesn't have that column.
+  // The overlay page handles deduplication via seenIds (priming on first load).
   let query = db
     .from('twitch_events')
-    .select('id, event_type, event_data, created_at')
+    .select('id, event_type, event_data')
     .eq('broadcaster_id', uid)
-    .gte('created_at', since)
-    .order('created_at', { ascending: true })
-    .limit(10)
+    .order('id', { ascending: true })
+    .limit(20)
 
   if (eventSlug && SLUG_TO_TYPES[eventSlug]) {
     query = query.in('event_type', SLUG_TO_TYPES[eventSlug])
@@ -51,7 +50,6 @@ export async function GET(req: NextRequest) {
       user: String(d.user_name ?? d.user_login ?? d.gifter_user_name ?? 'Anônimo'),
       amount: extractAmount(e.event_type, d),
       extra: extractExtra(e.event_type, d),
-      createdAt: new Date(e.created_at).getTime(),
     }
   })
 

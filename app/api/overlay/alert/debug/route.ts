@@ -14,21 +14,16 @@ export async function GET(req: NextRequest) {
 
   const { data: events, error } = await db
     .from('twitch_events')
-    .select('id, broadcaster_id, event_type, event_data, created_at')
+    .select('id, broadcaster_id, event_type, event_data')
     .eq('broadcaster_id', user.id)
-    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(10)
-
-  const since30 = new Date(Date.now() - 30000).toISOString()
-  const recent = (events ?? []).filter(e => e.created_at >= since30)
 
   return NextResponse.json({
     user_id: user.id,
     total_events: events?.length ?? 0,
-    recent_events_30s: recent.length,
     events: events ?? [],
     db_error: error?.message ?? null,
     server_time: new Date().toISOString(),
-    since_30s: since30,
   }, { headers: { 'Cache-Control': 'no-store' } })
 }
