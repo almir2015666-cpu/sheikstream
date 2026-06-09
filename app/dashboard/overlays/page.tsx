@@ -13,20 +13,23 @@ function Icon({ type, color }: { type: string; color: string }) {
   if (type === 'subathon')       return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
   if (type === 'meta-subs')      return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill={color}/></svg>
   if (type === 'sorteio')        return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M8 21h8M12 17v4M17 3H7l-2 6h14L17 3z"/><path d="M5 9c0 3.5 2 6 7 6s7-2.5 7-6"/></svg>
+  if (type === 'alert')          return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
   return                                <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
 }
 
 const CATALOG = [
-  { type: 'patrocinadores', label: 'Patrocinadores', badge: 'NOVO', color: '#a78bfa', live: false,
-    desc: 'Carrossel de banners de patrocinadores com timing, dimensões e layout configurável.' },
-  { type: 'subathon',       label: 'Subathon',       badge: 'NOVO', color: '#60a5fa', live: true,
+  { type: 'alert',          label: 'Alertas',         badge: 'NOVO', color: '#fb923c', live: true,
+    desc: 'Notificações visuais em tempo real para eventos como subs, follows, doações e comandos.' },
+  { type: 'subathon',       label: 'Subathon',        badge: 'NOVO', color: '#60a5fa', live: true,
     desc: 'Cronômetro de live progressivo — cada contribuição adiciona tempo ao relógio.' },
-  { type: 'meta-subs',      label: 'Meta de Subs',   badge: null,   color: '#34d399', live: true,
+  { type: 'meta-subs',      label: 'Meta de Subs',    badge: null,   color: '#34d399', live: true,
     desc: 'Barra de progresso da meta de inscrições da Twitch em tempo real.' },
-  { type: 'sorteio',        label: 'Meta de Sorteio', badge: null,  color: '#fbbf24', live: true,
+  { type: 'sorteio',        label: 'Meta de Sorteio', badge: null,   color: '#fbbf24', live: true,
     desc: 'Progresso do sorteio unificado com contadores por fonte (Livepix, Twitch, YouTube).' },
   { type: 'meta',           label: 'Meta',            badge: 'NOVO', color: '#f87171', live: true,
     desc: 'Overlay dedicado ao progresso de uma meta ativa criada pelo streamer.' },
+  { type: 'patrocinadores', label: 'Patrocinadores',  badge: 'NOVO', color: '#a78bfa', live: false,
+    desc: 'Carrossel de banners de patrocinadores com timing, dimensões e layout configurável.' },
 ]
 
 export default function OverlaysPage() {

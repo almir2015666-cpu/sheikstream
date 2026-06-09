@@ -1,0 +1,65 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseAdmin } from '@/app/lib/supabase'
+
+// Returns recent events from the last 10 seconds for the given uid
+export async function GET(req: NextRequest) {
+  const uid = req.nextUrl.searchParams.get('uid')
+  if (!uid) return NextResponse.json([], { status: 400 })
+
+  const since = new Date(Date.now() - 10000).toISOString()
+
+  const db = getSupabaseAdmin()
+  const { data: events } = await db
+    .from('twitch_events')
+    .select('id, event_type, event_data, created_at')
+    .eq('broadcaster_id', uid)
+    .gte('created_at', since)
+    .order('created_at', { ascending: true })
+    .limit(10)
+
+  const alerts = (events ?? []).map(e => {
+    const d = e.event_data as Record<string, unknown> ?? {}
+    const type = mapEventType(e.event_type)
+    return {
+      id: e.id,
+      type,
+      user: String(d.user_name ?? d.user_login ?? d.gifter_user_name ?? 'Anônimo'),
+      amount: extractAmount(e.event_type, d),
+      extra: extractExtra(e.event_type, d),
+      createdAt: new Date(e.created_at).getTime(),
+    }
+  })
+
+  return NextResponse.json(alerts)
+}
+
+function mapEventType(eventType: string): string {
+  if (eventType === 'channel.subscribe') return 'sub'
+  if (eventType === 'channel.subscription.message') return 'resub'
+  if (eventType === 'channel.subscription.gift') return 'giftsub'
+  if (eventType === 'channel.follow') return 'follow'
+  if (eventType === 'channel.cheer') return 'bits'
+  if (eventType === 'livepix.donation') return 'donation'
+  if (eventType === 'channel.channel_points_custom_reward_redemption.add') return 'command'
+  return 'command'
+}
+
+function extractAmount(eventType: string, d: Record<string, unknown>): number | undefined {
+  if (eventType === 'channel.cheer') return Number(d.bits ?? 0)
+  if (eventType === 'livepix.donation') return Number(d.amount ?? 0)
+  if (eventType === 'channel.subscription.gift') return Number(d.total ?? 1)
+  return undefined
+}
+
+function extractExtra(eventType: string, d: Record<string, unknown>): string | undefined {
+  if (eventType === 'channel.subscription.message') {
+    const months = d.cumulative_months
+    return months ? `${months} meses` : undefined
+  }
+  if (d.message) {
+    const msg = d.message as Record<string, unknown>
+    const text = typeof msg === 'string' ? msg : String(msg.text ?? '')
+    return text.length > 0 ? text.slice(0, 60) : undefined
+  }
+  return undefined
+}

@@ -160,6 +160,14 @@ export default function ComandosPage() {
 
   useEffect(() => {
     fetch('/api/me').then(r => r.ok ? r.json() : null).then(u => { if (u?.id) setUserId(u.id) }).catch(() => {})
+    // One-time migration: disable all commands for existing users
+    try {
+      if (!localStorage.getItem('sk-cmds-disabled-v1')) {
+        fetch('/api/comandos/reset', { method: 'POST' }).then(r => {
+          if (r.ok) localStorage.setItem('sk-cmds-disabled-v1', '1')
+        }).catch(() => {})
+      }
+    } catch {}
   }, [])
 
   useEffect(() => {
@@ -588,7 +596,7 @@ export default function ComandosPage() {
                 const sel = form.platforms.includes(pl.id)
                 return (
                   <button key={pl.id} type="button"
-                    onClick={() => setForm(p => ({ ...p, platforms: sel ? p.platforms.filter(x => x !== pl.id) : [...p.platforms, pl.id] }))}
+                    onClick={() => setForm(p => ({ ...p, platforms: [pl.id] }))}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem', background: sel ? `${pl.color}15` : 'transparent', border: `1px ${sel ? 'solid' : 'dashed'} ${sel ? pl.color + '55' : 'rgba(255,255,255,0.12)'}`, borderRadius: '8px', color: sel ? pl.color : C.dim, fontSize: '0.8rem', fontWeight: sel ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s' }}>
                     {sel
                       ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -634,26 +642,9 @@ export default function ComandosPage() {
               Quando ativado, exibe um alerta visual em tempo real na transmissão quando este evento ocorrer.
             </div>
             {form.notifOverlay && (
-              <div style={{ marginTop: '0.65rem', background: '#08090d', border: `1px solid rgba(57,255,20,0.2)`, borderRadius: '10px', padding: '0.85rem 1rem' }}>
-                <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.green, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
-                  Adicionar ao OBS — Browser Source
-                </div>
-                <div style={{ fontSize: '0.74rem', color: C.dim, marginBottom: '0.55rem' }}>
-                  Adicione uma <strong style={{ color: C.text }}>Browser Source</strong> no OBS com a URL abaixo. Dimensões recomendadas: <strong style={{ color: C.text }}>800 × 200</strong>.
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <code style={{ flex: 1, background: '#0b0d1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', padding: '0.45rem 0.75rem', fontSize: '0.75rem', color: C.green, wordBreak: 'break-all', lineHeight: 1.4 }}>
-                    {userId ? `${typeof window !== 'undefined' ? window.location.origin : 'https://www.sheikstream.com.br'}/overlay/alert?uid=${userId}` : '…carregando…'}
-                  </code>
-                  <button type="button" onClick={() => {
-                    if (!userId) return
-                    navigator.clipboard.writeText(`${window.location.origin}/overlay/alert?uid=${userId}`)
-                    setCopiedUrl(true)
-                    setTimeout(() => setCopiedUrl(false), 2000)
-                  }} style={{ flexShrink: 0, padding: '0.45rem 0.85rem', background: copiedUrl ? 'rgba(57,255,20,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${copiedUrl ? 'rgba(57,255,20,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: '6px', color: copiedUrl ? C.green : C.dim, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                    {copiedUrl ? '✓ Copiado!' : 'Copiar URL'}
-                  </button>
-                </div>
+              <div style={{ marginTop: '0.55rem', fontSize: '0.74rem', color: C.dim, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Configure o visual e pegue a URL em <Link href="/dashboard/overlays" style={{ color: C.primary, textDecoration: 'none', fontWeight: 600 }}>Overlays → Alertas</Link>.
               </div>
             )}
           </div>

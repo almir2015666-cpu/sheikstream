@@ -65,6 +65,7 @@ const PRESETS = [
 ]
 
 const TYPE_META: Record<string, { label: string; overlayPath: string; defVis: VisCfg; defFon: FontesCfg }> = {
+  alert:          { label: 'Alertas',          overlayPath: '/overlay/alert',    defVis: { sub: true, follow: true, bits: true, donation: true }, defFon: {} },
   patrocinadores: { label: 'Patrocinadores',   overlayPath: '/overlay/banners',  defVis: {}, defFon: {} },
   subathon:       { label: 'Subathon',         overlayPath: '/overlay/subathon', defVis: { title: true, tags: true, lastContrib: true }, defFon: {} },
   'meta-subs':    { label: 'Meta de Subs',     overlayPath: '/overlay/meta',     defVis: { title: true, desc: false, pct: true, values: true }, defFon: { subs: true, resubs: true, gifts: true, prime: false, ytMembers: false, ytGifts: false } },
@@ -142,6 +143,21 @@ function Collapse({ title, open, onToggle, children }: { title: string; open: bo
 }
 
 // ─── Mock preview renderers ────────────────────────────────────────────────────
+function AlertPreview({ s }: { s: StyleCfg }) {
+  const bg = s.bgOpacity === 0 ? 'transparent' : s.bgColor
+  return (
+    <div style={{ width: Math.min(s.width, 480), margin: '0 auto', fontFamily: s.font }}>
+      <div style={{ background: bg, border: s.border ? `${s.borderThick}px solid ${s.borderColor}` : `1px solid ${s.timerColor}44`, borderRadius: s.borderRadius, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: `0 0 24px ${s.timerColor}22` }}>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${s.timerColor}22`, border: `1px solid ${s.timerColor}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>⭐</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: s.titleSize + 1, fontWeight: 800, color: s.timerColor }}>Novo inscrito!</div>
+          <div style={{ fontSize: s.supportSize + 1, color: s.textColor, opacity: 0.7, marginTop: 2 }}>viewer123 se inscreveu no canal!</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MetaPreview({ s, vis }: { s: StyleCfg; vis: VisCfg }) {
   const pct = 65
   const bg = s.bgOpacity === 0 ? 'transparent' : s.bgColor
@@ -341,6 +357,30 @@ export default function OverlayEditorPage({ params }: Ctx) {
 
   // ─── Left panel per type ───────────────────────────────────────────────────
   function renderLeft() {
+    if (type === 'alert') {
+      return (
+        <Card>
+          <Label>Eventos exibidos</Label>
+          <p style={{ margin: '0 0 0.75rem', fontSize: '0.73rem', color: C.dim }}>Escolha quais eventos geram alertas na live.</p>
+          {[
+            ['sub',      'Sub / Resub Twitch'],
+            ['giftsub',  'Gift Sub Twitch'],
+            ['follow',   'Follow Twitch'],
+            ['bits',     'Bits Twitch'],
+            ['donation', 'Doação Livepix'],
+            ['member',   'Membro YouTube'],
+          ].map(([k, l]) => (
+            <Tog key={k} on={!!vis[k]} onChange={v => setVis(vv => ({ ...vv, [k]: v }))} label={l} />
+          ))}
+          <div style={{ marginTop: '1rem', padding: '0.65rem 0.85rem', background: 'rgba(251,146,60,0.06)', border: '1px solid rgba(251,146,60,0.2)', borderRadius: 8 }}>
+            <p style={{ margin: 0, fontSize: '0.77rem', color: '#fb923c', lineHeight: 1.5 }}>
+              Os alertas aparecem automaticamente quando os eventos ocorrem na live. Configure o visual ao lado e copie a URL para o OBS.
+            </p>
+          </div>
+        </Card>
+      )
+    }
+
     if (type === 'patrocinadores') {
       return (
         <>
@@ -542,6 +582,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
     if (type === 'patrocinadores') return <PatroPreview s={style} />
     if (type === 'subathon')       return <SubathonPreview s={style} vis={vis} />
     if (type === 'sorteio')        return <SorteioPreview s={style} vis={vis} fontes={fontes} />
+    if (type === 'alert')          return <AlertPreview s={style} />
     return <MetaPreview s={style} vis={vis} />
   }
 
@@ -565,7 +606,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
     return null
   }
 
-  const isBarType = type !== 'subathon' && type !== 'patrocinadores'
+  const isBarType = type !== 'subathon' && type !== 'patrocinadores' && type !== 'alert'
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
