@@ -16,42 +16,48 @@ const SLUG_TO_TYPES: Record<string, string[]> = {
   'youtube-giftmember': ['youtube.giftmember'],
 }
 
-// Prevent edge/CDN caching — overlay must always get fresh events
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   const eventSlug = req.nextUrl.searchParams.get('event')
-
-  // uid param kept for backwards compat but no longer required —
-  // overlay is global: returns events for the main broadcaster stored in env
   const uid = req.nextUrl.searchParams.get('uid') ?? process.env.BROADCASTER_ID ?? null
+  const after = req.nextUrl.searchParams.get('after') // ISO timestamp
 
   const db = getSupabaseAdmin()
+
+  // Try with created_at first (chronological ordering). If column doesn't exist in the
+  // live DB yet, fall back to id-based ordering so the overlay doesn't break entirely.
   let query = db
     .from('twitch_events')
     .select('id, event_type, event_data, created_at')
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(50)
 
   if (uid) query = query.eq('broadcaster_id', uid)
-
-  // after=<ISO timestamp>: only return events strictly newer than this timestamp
-  const after = req.nextUrl.searchParams.get('after')
   if (after) query = query.gt('created_at', after)
+  if (eventSlug && SLUG_TO_TYPES[eventSlug]) query = query.in('event_type', SLUG_TO_TYPES[eventSlug])
 
-  if (eventSlug && SLUG_TO_TYPES[eventSlug]) {
-    query = query.in('event_type', SLUG_TO_TYPES[eventSlug])
+  let { data: events, error } = await query
+
+  // Fallback when created_at column doesn't exist yet (run the migration SQL to fix)
+  if (error) {
+    const fb = db
+      .from('twitch_events')
+      .select('id, event_type, event_data')
+      .order('id', { ascending: false })
+      .limit(50)
+    if (uid) fb.eq('broadcaster_id', uid)
+    if (eventSlug && SLUG_TO_TYPES[eventSlug]) fb.in('event_type', SLUG_TO_TYPES[eventSlug])
+    const res = await fb
+    events = res.data
   }
 
-  const { data: events } = await query
-
   const alerts = (events ?? []).map(e => {
-    const d = e.event_data as Record<string, unknown> ?? {}
-    const type = mapEventType(e.event_type)
+    const d = (e.event_data as Record<string, unknown>) ?? {}
     return {
       id: e.id,
-      createdAt: e.created_at,
-      type,
+      createdAt: (e as Record<string, unknown>).created_at as string | undefined,
+      type: mapEventType(e.event_type),
       user: String(d.user_name ?? d.user_login ?? d.gifter_user_name ?? 'Anônimo'),
       amount: extractAmount(e.event_type, d),
       extra: extractExtra(e.event_type, d),

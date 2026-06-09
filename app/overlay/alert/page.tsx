@@ -236,12 +236,18 @@ function AlertOverlayContent() {
     const baseUrl = `/api/overlay/alert?uid=${uid}${eventSlug ? '&event=' + eventSlug : ''}`
     let stopped = false
     let iv: ReturnType<typeof setInterval> | null = null
-    // lastSeenTs: ISO timestamp of the newest event we've processed, used for ?after= filtering
-    let lastSeenTs = ''
+
+    // Use client-side load time as the "after" anchor.
+    // This eliminates the watermark race: events inserted before the overlay loaded
+    // are ignored; any event inserted AFTER this moment will show up in the next poll.
+    // 3-second buffer handles: clock skew between browser and DB server + cold-start
+    // delay where the user might click "Testar" while JS is still loading.
+    const loadTime = new Date(Date.now() - 3000).toISOString()
+    let lastSeenTs = loadTime
 
     const poll = () => {
       if (stopped) return
-      const url = lastSeenTs ? `${baseUrl}&after=${encodeURIComponent(lastSeenTs)}` : baseUrl
+      const url = `${baseUrl}&after=${encodeURIComponent(lastSeenTs)}`
       fetch(url, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
         .then((data: AlertEvent[] | null) => {
@@ -258,31 +264,11 @@ function AlertOverlayContent() {
         .catch(() => {})
     }
 
-    // Watermark: mark all events currently in DB as seen (no display), then start polling
-    fetch(baseUrl, { cache: 'no-store' })
-      .then(r => r.ok ? r.json() : [])
-      .then((data: AlertEvent[]) => {
-        if (stopped) return
-        ;(data ?? []).forEach(e => {
-          seenIds.current.add(e.id)
-          if (e.createdAt && e.createdAt > lastSeenTs) lastSeenTs = e.createdAt
-        })
-        isInitialized.current = true
-        poll()
-        iv = setInterval(poll, 1000)
-      })
-      .catch(() => {
-        if (!stopped) {
-          isInitialized.current = true
-          poll()
-          iv = setInterval(poll, 1000)
-        }
-      })
+    isInitialized.current = true
+    poll()
+    iv = setInterval(poll, 1000)
 
-    return () => {
-      stopped = true
-      if (iv) clearInterval(iv)
-    }
+    return () => { stopped = true; if (iv) clearInterval(iv) }
   }, [uid, eventSlug])
 
   useEffect(() => {
