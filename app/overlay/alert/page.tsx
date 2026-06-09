@@ -5,11 +5,18 @@ import { useSearchParams } from 'next/navigation'
 type AlertEvent = {
   id: string
   createdAt?: string
+  slug?: string | null
   type: 'sub' | 'resub' | 'giftsub' | 'follow' | 'bits' | 'donation' | 'member' | 'command'
   user: string
   extra?: string
   amount?: number
 }
+
+const ALL_EVENT_SLUGS = [
+  'twitch-sub','twitch-giftsub','twitch-resub','twitch-follow','twitch-bits',
+  'livepix','paypal','kick-sub','kick-follow','kick-giftsub',
+  'youtube-member','youtube-giftmember',
+]
 
 type Cfg = {
   bgColor: string; bgOpacity: number; textColor: string; accentColor: string
@@ -33,27 +40,42 @@ const DEF: Cfg = {
   soundEnabled: true, soundUrl: '', soundVolume: 70,
 }
 
-function playAlertSound(soundUrl: string, soundVolume: number) {
-  const vol = soundVolume / 100
-  if (soundUrl) {
-    const a = new Audio(soundUrl)
-    a.volume = vol
-    a.play().catch(() => {})
-    return
-  }
+async function playAlertSound(soundUrl: string, soundVolume: number) {
+  const vol = Math.max(0, Math.min(1, soundVolume / 100))
+  // AudioContext starts suspended in OBS Browser Source — must resume before playing
+  const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
   try {
-    const ctx = new AudioContext()
+    await ctx.resume()
+    if (soundUrl) {
+      try {
+        const res = await fetch(soundUrl, { cache: 'no-store' })
+        const buf = await res.arrayBuffer()
+        const decoded = await ctx.decodeAudioData(buf)
+        const src = ctx.createBufferSource()
+        const gain = ctx.createGain()
+        gain.gain.value = vol
+        src.buffer = decoded
+        src.connect(gain); gain.connect(ctx.destination)
+        src.start(0)
+        return
+      } catch {
+        // CORS or decode failure — fall back to Audio element
+        const a = new Audio(soundUrl); a.volume = vol; a.play().catch(() => {})
+        return
+      }
+    }
+    // Default: two-tone notification (880 Hz → 1108 Hz)
     const tone = (f: number, t: number, d: number) => {
       const o = ctx.createOscillator(), g = ctx.createGain()
       o.connect(g); g.connect(ctx.destination); o.type = 'sine'
       o.frequency.setValueAtTime(f, ctx.currentTime + t)
       g.gain.setValueAtTime(0, ctx.currentTime + t)
-      g.gain.linearRampToValueAtTime(vol * 0.4, ctx.currentTime + t + 0.01)
+      g.gain.linearRampToValueAtTime(vol * 0.45, ctx.currentTime + t + 0.01)
       g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d)
-      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + d + 0.01)
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + d + 0.05)
     }
-    tone(880, 0, 0.15)
-    tone(1108, 0.18, 0.25)
+    tone(880, 0, 0.18)
+    tone(1108, 0.2, 0.28)
   } catch {}
 }
 
@@ -239,14 +261,15 @@ function AlertOverlayContent() {
   const sp = useSearchParams()
   const uid = sp.get('uid') ?? ''
   const eventSlug = sp.get('event') ?? ''
-  const cfgType = eventSlug ? `alert-${eventSlug}` : 'alert'
 
-  const [cfg, setCfg] = useState<Cfg>(DEF)
+  // cfgMap holds one config per event slug (+ '' for the generic fallback)
+  const cfgMapRef = useRef<Record<string, Cfg>>({})
+  const [, forceUpdate] = useState(0)
+
   const [queue, setQueue] = useState<AlertEvent[]>([])
   const [current, setCurrent] = useState<AlertEvent | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seenIds = useRef<Set<string>>(new Set())
-  const isInitialized = useRef(false)
 
   useEffect(() => {
     document.body.style.background = 'transparent'
@@ -255,27 +278,46 @@ function AlertOverlayContent() {
     document.documentElement.style.backgroundColor = 'transparent'
   }, [])
 
+  // Load configs for all event types (and the generic fallback).
+  // This lets each event type use its own sound, color, and animation.
   useEffect(() => {
     if (!uid) return
-    const loadCfg = () =>
-      fetch(`/api/overlay-config/${cfgType}?uid=${uid}`)
+    const load = (key: string) =>
+      fetch(`/api/overlay-config/${key}?uid=${uid}`, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d?.style) setCfg(prev => ({ ...DEF, ...prev, ...d.style })) })
-        .catch(() => {})
-    loadCfg()
-    const iv = setInterval(loadCfg, 15000)
+        .then(d => d?.style ? { ...DEF, ...d.style } as Cfg : null)
+        .catch(() => null)
+
+    const loadAll = () => {
+      const slugsToLoad = eventSlug ? [eventSlug] : ALL_EVENT_SLUGS
+      Promise.all([
+        load('alert'),
+        ...slugsToLoad.map(s => load(`alert-${s}`)),
+      ]).then(([generic, ...eventCfgs]) => {
+        const map: Record<string, Cfg> = { '': generic ?? DEF }
+        slugsToLoad.forEach((s, i) => { map[s] = eventCfgs[i] ?? generic ?? DEF })
+        cfgMapRef.current = map
+        forceUpdate(n => n + 1)
+      })
+    }
+
+    loadAll()
+    const iv = setInterval(loadAll, 15000)
     return () => clearInterval(iv)
-  }, [uid, cfgType])
+  }, [uid, eventSlug])
+
+  const getCfg = (ev: AlertEvent): Cfg => {
+    const map = cfgMapRef.current
+    if (ev.slug && map[ev.slug]) return map[ev.slug]
+    return map[''] ?? DEF
+  }
 
   useEffect(() => {
     if (!uid) return
     const baseUrl = `/api/overlay/alert?uid=${uid}${eventSlug ? '&event=' + eventSlug : ''}`
     let stopped = false
     let iv: ReturnType<typeof setInterval> | null = null
-
-    // lastSeenTs advances as events are seen (used for ?after= filtering with created_at)
     let lastSeenTs = ''
-    // watermarked: true after the first poll primes seenIds so old events are never shown
     let watermarked = false
 
     const poll = () => {
@@ -287,7 +329,6 @@ function AlertOverlayContent() {
           if (!data || stopped) return
           setQueue(prev => {
             if (!watermarked) {
-              // First response: silently prime seenIds (watermark) — don't show anything yet
               watermarked = true
               data.forEach(e => {
                 seenIds.current.add(e.id)
@@ -306,10 +347,8 @@ function AlertOverlayContent() {
         .catch(() => { if (!watermarked) watermarked = true })
     }
 
-    isInitialized.current = true
     poll()
     iv = setInterval(poll, 1000)
-
     return () => { stopped = true; if (iv) clearInterval(iv) }
   }, [uid, eventSlug])
 
@@ -319,14 +358,16 @@ function AlertOverlayContent() {
     const [next, ...rest] = queue
     setCurrent(next)
     setQueue(rest)
-    timerRef.current = setTimeout(() => setCurrent(null), (cfg.duration + 0.5) * 1000)
-  }, [queue, current, cfg.duration])
+    const evCfg = getCfg(next)
+    timerRef.current = setTimeout(() => setCurrent(null), (evCfg.duration + 0.5) * 1000)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queue, current])
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   if (!current) return null
 
-  return <AlertCard key={current.id} ev={current} cfg={cfg} />
+  return <AlertCard key={current.id} ev={current} cfg={getCfg(current)} />
 }
 
 export default function AlertOverlayPage() {

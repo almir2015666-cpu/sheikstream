@@ -16,6 +16,21 @@ const SLUG_TO_TYPES: Record<string, string[]> = {
   'youtube-giftmember': ['youtube.giftmember'],
 }
 
+const EVENT_TYPE_TO_SLUG: Record<string, string> = {
+  'channel.subscribe':                    'twitch-sub',
+  'channel.subscription.gift':            'twitch-giftsub',
+  'channel.subscription.message':         'twitch-resub',
+  'channel.follow':                       'twitch-follow',
+  'channel.cheer':                        'twitch-bits',
+  'livepix.donation':                     'livepix',
+  'paypal.donation':                      'paypal',
+  'kick.subscribe':                       'kick-sub',
+  'kick.follow':                          'kick-follow',
+  'kick.subscription.gift':              'kick-giftsub',
+  'youtube.member':                       'youtube-member',
+  'youtube.giftmember':                   'youtube-giftmember',
+}
+
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
@@ -57,6 +72,7 @@ export async function GET(req: NextRequest) {
     return {
       id: e.id,
       createdAt: (e as Record<string, unknown>).created_at as string | undefined,
+      slug: EVENT_TYPE_TO_SLUG[e.event_type] ?? null,
       type: mapEventType(e.event_type),
       user: String(d.user_name ?? d.user_login ?? d.gifter_user_name ?? 'Anônimo'),
       amount: extractAmount(e.event_type, d),
