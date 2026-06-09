@@ -18,9 +18,7 @@ function Icon({ type, color }: { type: string; color: string }) {
 }
 
 const CATALOG = [
-  { type: 'alert',         label: 'Alertas',         badge: null,   color: '#9b30ff', live: true,
-    desc: 'Alertas visuais em tempo real para subs, follows, bits, doações e mais.' },
-  { type: 'subathon',      label: 'Subathon',        badge: 'NOVO', color: '#60a5fa', live: true,
+{ type: 'subathon',      label: 'Subathon',        badge: 'NOVO', color: '#60a5fa', live: true,
     desc: 'Cronômetro de live progressivo — cada contribuição adiciona tempo ao relógio.' },
   { type: 'meta-subs',     label: 'Meta de Subs',    badge: null,   color: '#34d399', live: true,
     desc: 'Barra de progresso da meta de inscrições da Twitch em tempo real.' },
