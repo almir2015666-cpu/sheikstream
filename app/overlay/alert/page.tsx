@@ -113,9 +113,8 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 
 function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
-  // outerRef: exit animation layer — React only sets display+position here, NEVER opacity/transform/transition
-  // So direct DOM writes to opacity/transform survive React re-renders from the polling loop
-  const outerRef = useRef<HTMLDivElement>(null)
+  const [isExiting, setIsExiting] = useState(false)
+  const [exitStarted, setExitStarted] = useState(false)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
@@ -132,45 +131,23 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     const t1 = setTimeout(() => setVisible(true), 50)
     let t2: ReturnType<typeof setTimeout>
     let t3: ReturnType<typeof setTimeout>
-    let animEndHandler: ((e: AnimationEvent) => void) | null = null
+    let t4: ReturnType<typeof setTimeout>
 
     t2 = setTimeout(() => {
-      const el = outerRef.current
-      if (!el || animOut === 'none') {
+      if (animOut === 'none') {
         t3 = setTimeout(() => onDoneRef.current(), 50)
         return
       }
-      // Use CSS @keyframes sk-out-* directly — same engine as entrance keyframe animations.
-      // Setting el.style.animation directly bypasses React (outerRef only has display+position in its React style prop).
-      const validAnims = new Set(['fade','slide-right','slide-left','slide-up','slide-down','zoom-out','zoom-in','flip-x'])
-      const kfName = validAnims.has(animOut) ? `sk-out-${animOut}` : 'sk-out-fade'
-      el.style.animation = `${kfName} ${exitDurS}s ease-out forwards`
-      animEndHandler = (e: AnimationEvent) => {
-        if (e.target !== el) return
-        el.removeEventListener('animationend', animEndHandler as EventListener)
-        animEndHandler = null
-        onDoneRef.current()
-      }
-      el.addEventListener('animationend', animEndHandler as EventListener)
-      // Fallback: unmount even if animationend doesn't fire (e.g. old OBS CEF)
-      t3 = setTimeout(() => {
-        if (animEndHandler && outerRef.current) {
-          outerRef.current.removeEventListener('animationend', animEndHandler as EventListener)
-          animEndHandler = null
-        }
-        onDoneRef.current()
-      }, exitDurMs + 500)
+      // Exact same two-step pattern as entrance — proven to work:
+      // Step 1: set transition on outer div (values unchanged, no visible jump)
+      // Step 2 (100ms later, guaranteed separate paint): apply exit values → CSS transition fires
+      setIsExiting(true)
+      t3 = setTimeout(() => setExitStarted(true), 100)
+      t4 = setTimeout(() => onDoneRef.current(), 100 + exitDurMs + 100)
     }, cfg.duration * 1000)
 
     return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(t3)
-      const el = outerRef.current
-      if (el) {
-        if (animEndHandler) el.removeEventListener('animationend', animEndHandler as EventListener)
-        el.style.animation = ''
-      }
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -207,13 +184,29 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  // wrapperStyle: entrance only — outerRef handles exit via direct DOM (immune to React re-renders)
+  // wrapperStyle: entrance only (inner div)
   const wrapperStyle: React.CSSProperties = {
     animation: entranceAnim,
     ...(!isKeyframeAnim
       ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
       : (visible ? {} : { opacity: 0 })),
     transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
+  }
+
+  // outerStyle: exit only (outer div). Two-step CSS transition mirrors the entrance pattern exactly.
+  // React controls this div's style — transition fires when exitStarted changes opacity/transform.
+  const exitTransforms: Record<string, string> = {
+    'slide-right': 'translateX(110%)', 'slide-left': 'translateX(-110%)',
+    'slide-up': 'translateY(-80px)',   'slide-down': 'translateY(80px)',
+    'zoom-out': 'scale(0.05)',         'zoom-in': 'scale(2.2)',
+    'flip-x': 'rotateX(90deg)',
+  }
+  const exitTransform = exitTransforms[animOut]
+  const exitTransitionStr = `opacity ${exitDurS}s ease-out${exitTransform ? `, transform ${exitDurS}s ease-out` : ''}`
+  const outerStyle: React.CSSProperties = {
+    display: 'inline-block', position: 'relative',
+    ...(isExiting ? { transition: exitTransitionStr } : {}),
+    ...(isExiting && exitStarted ? { opacity: 0, ...(exitTransform ? { transform: exitTransform } : {}) } : {}),
   }
 
   const ANIM_CSS = `
@@ -245,8 +238,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   if (cfg.customArt) return (
     <>
       <style>{ANIM_CSS}</style>
-      {/* outerRef: exit layer — React only sets display here, never opacity/transform/transition */}
-      <div ref={outerRef} style={{ display: 'inline-block' }}>
+      <div style={outerStyle}>
         <img
           src={cfg.customArt}
           alt=""
@@ -265,9 +257,8 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   return (
     <>
       <style>{ANIM_CSS}</style>
-      {/* outerRef: exit animation layer — React only sets display+position here */}
-      <div ref={outerRef} style={{ display: 'inline-block', position: 'relative' }}>
-      {/* inner: entrance animation — React fully controls wrapperStyle */}
+      <div style={outerStyle}>
+      {/* inner div: entrance animation via wrapperStyle */}
       <div style={{ position: 'relative', display: 'inline-block', ...wrapperStyle }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
       {cardEffect !== 'none' && (
