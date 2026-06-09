@@ -17,6 +17,8 @@ type Cfg = {
   animIn: string; animSpeed: number; duration: number; timerColor: string
   titleText: string; subtitleText: string; titleColor: string; subtitleColor: string
   iconShape: 'circle' | 'square' | 'none'
+  iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
+  cardEffect: 'none' | 'glow' | 'pulse'
 }
 
 const DEF: Cfg = {
@@ -25,7 +27,7 @@ const DEF: Cfg = {
   font: 'Inter', titleSize: 15, supportSize: 12, width: 480,
   animIn: 'slide-right', animSpeed: 5, duration: 6, timerColor: '#9146FF',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
-  iconShape: 'circle',
+  iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
 }
 
 const EVENT_META: Record<string, { icon: string; label: string; color: string }> = {
@@ -111,8 +113,27 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
 
   const titleLabel = cfg.titleText || meta.label
   const iconShape = cfg.iconShape ?? 'circle'
+  const iconAnim = cfg.iconAnim ?? 'none'
+  const cardEffect = cfg.cardEffect ?? 'none'
+
+  const iconAnimStyle: React.CSSProperties = iconAnim === 'none' ? {} : {
+    animation: `sk-icon-${iconAnim} ${iconAnim === 'spin' ? '2s linear' : '1.5s ease-in-out'} infinite`,
+  }
+  const cardAnimValue = visible && cardEffect !== 'none'
+    ? `sk-card-${cardEffect} 2s ease-in-out 0.8s infinite`
+    : undefined
 
   return (
+    <>
+      <style>{`
+        @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+        @keyframes sk-icon-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @keyframes sk-icon-bounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-10px)}}
+        @keyframes sk-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+        @keyframes sk-card-glow{0%,100%{box-shadow:0 0 30px ${accent}33}50%{box-shadow:0 0 60px ${accent}99,0 0 20px ${accent}66}}
+        @keyframes sk-card-pulse{0%,100%{box-shadow:0 0 30px ${accent}33}50%{box-shadow:0 0 45px ${accent}66}}
+        @keyframes sk-alert-bar{from{width:100%}to{width:0%}}
+      `}</style>
     <div style={{
       width: cfg.width,
       background: bg,
@@ -128,6 +149,7 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
       overflow: 'hidden',
       ...(visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle),
       transition: visible ? transition : 'none',
+      ...(cardAnimValue ? { animation: cardAnimValue } : {}),
     }}>
       {iconShape !== 'none' && (
         <div style={{
@@ -135,7 +157,7 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
           borderRadius: iconShape === 'circle' ? '50%' : 10,
           background: `${accent}22`, border: `1px solid ${accent}55`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 20, flexShrink: 0,
+          fontSize: 20, flexShrink: 0, ...iconAnimStyle,
         }}>
           {meta.icon}
         </div>
@@ -161,6 +183,7 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
         }} />
       </div>
     </div>
+    </>
   )
 }
 
@@ -198,33 +221,59 @@ function AlertOverlayContent() {
 
   useEffect(() => {
     if (!uid) return
-    const apiUrl = eventSlug
-      ? `/api/overlay/alert?uid=${uid}&event=${eventSlug}`
-      : `/api/overlay/alert?uid=${uid}`
-    const poll = () =>
-      fetch(apiUrl)
+    const baseUrl = `/api/overlay/alert?uid=${uid}${eventSlug ? '&event=' + eventSlug : ''}`
+    let stopped = false
+    let iv: ReturnType<typeof setInterval> | null = null
+    // maxSeenId tracks the highest event ID we've processed — used as &after= for efficient polling
+    let maxSeenId = 0
+
+    const poll = () => {
+      if (stopped) return
+      const url = maxSeenId > 0 ? `${baseUrl}&after=${maxSeenId}` : baseUrl
+      fetch(url)
         .then(r => r.ok ? r.json() : null)
         .then((data: AlertEvent[] | null) => {
-          if (!data || data.length === 0) {
-            isInitialized.current = true
-            return
-          }
-          if (!isInitialized.current) {
-            // Prime: mark all existing events as seen so we don't replay history
-            isInitialized.current = true
-            data.forEach(e => seenIds.current.add(e.id))
-            return
-          }
+          if (!data || data.length === 0 || stopped) return
           setQueue(prev => {
             const newEvents = data.filter(e => !seenIds.current.has(e.id))
-            newEvents.forEach(e => seenIds.current.add(e.id))
-            return [...prev, ...newEvents]
+            newEvents.forEach(e => {
+              seenIds.current.add(e.id)
+              const n = parseInt(e.id, 10)
+              if (n > maxSeenId) maxSeenId = n
+            })
+            return newEvents.length > 0 ? [...prev, ...newEvents] : prev
           })
         })
         .catch(() => {})
-    poll()
-    const iv = setInterval(poll, 2000)
-    return () => clearInterval(iv)
+    }
+
+    // Step 1: watermark — mark all events currently in DB as seen (no display)
+    // Step 2: only THEN start polling so no concurrent priming race can occur
+    fetch(baseUrl)
+      .then(r => r.ok ? r.json() : [])
+      .then((data: AlertEvent[]) => {
+        if (stopped) return
+        ;(data ?? []).forEach(e => {
+          seenIds.current.add(e.id)
+          const n = parseInt(e.id, 10)
+          if (n > maxSeenId) maxSeenId = n
+        })
+        isInitialized.current = true
+        poll()                          // fire once immediately after watermark
+        iv = setInterval(poll, 2000)   // then every 2s
+      })
+      .catch(() => {
+        if (!stopped) {
+          isInitialized.current = true
+          poll()
+          iv = setInterval(poll, 2000)
+        }
+      })
+
+    return () => {
+      stopped = true
+      if (iv) clearInterval(iv)
+    }
   }, [uid, eventSlug])
 
   useEffect(() => {

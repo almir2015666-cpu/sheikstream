@@ -35,6 +35,10 @@ export async function GET(req: NextRequest) {
 
   if (uid) query = query.eq('broadcaster_id', uid)
 
+  // after=<id>: only return events strictly newer than this ID
+  const after = req.nextUrl.searchParams.get('after')
+  if (after && /^\d+$/.test(after)) query = query.gt('id', parseInt(after, 10))
+
   if (eventSlug && SLUG_TO_TYPES[eventSlug]) {
     query = query.in('event_type', SLUG_TO_TYPES[eventSlug])
   }

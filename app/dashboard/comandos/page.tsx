@@ -145,6 +145,8 @@ type OvCfg = {
   titleSize: number; supportSize: number; width: number
   titleText: string; subtitleText: string; titleColor: string; subtitleColor: string
   iconShape: 'circle' | 'square' | 'none'
+  iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
+  cardEffect: 'none' | 'glow' | 'pulse'
 }
 const OV_DEF: OvCfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, font: 'Inter',
@@ -152,7 +154,7 @@ const OV_DEF: OvCfg = {
   borderRadius: 14, border: true, borderColor: '#9146FF', borderThick: 1,
   titleSize: 15, supportSize: 12, width: 480,
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
-  iconShape: 'circle',
+  iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
 }
 const OV_ANIMS = [
   { id: 'slide-right', label: 'Slide →', dur: '0.45s' }, { id: 'slide-left', label: 'Slide ←', dur: '0.45s' },
@@ -165,6 +167,22 @@ const OV_ANIMS = [
   { id: 'drop-in',     label: 'Cair',    dur: '0.5s'  }, { id: 'swing',      label: 'Balançar',dur: '0.6s'  },
 ]
 const OV_FONTS = ['Inter','Open Sans','Roboto','Montserrat','Poppins','Rajdhani']
+
+// Per-event default text + accent color — applied when no saved config exists
+const SLUG_PRESETS: Partial<Record<string, Partial<OvCfg>>> = {
+  'twitch-sub':         { titleText: 'Novo inscrito!',       subtitleText: '$user se inscreveu!',              timerColor: '#9146FF', titleColor: '#9146FF', borderColor: '#9146FF' },
+  'twitch-giftsub':     { titleText: 'Gift Sub!',            subtitleText: '$user presenteou $valor inscrito(s)!', timerColor: '#c084fc', titleColor: '#c084fc', borderColor: '#c084fc' },
+  'twitch-resub':       { titleText: 'Reinscrição!',         subtitleText: '$user inscrito há $valor meses!',  timerColor: '#9146FF', titleColor: '#9146FF', borderColor: '#9146FF' },
+  'twitch-follow':      { titleText: 'Novo seguidor!',       subtitleText: '$user começou a seguir!',          timerColor: '#ff6eb6', titleColor: '#ff6eb6', borderColor: '#ff6eb6' },
+  'twitch-bits':        { titleText: 'Bits recebidos!',      subtitleText: '$user enviou $valor bits!',        timerColor: '#fbbf24', titleColor: '#fbbf24', borderColor: '#fbbf24' },
+  'livepix':            { titleText: 'Doação recebida!',     subtitleText: '$user doou R$$valor!',             timerColor: '#39ff14', titleColor: '#39ff14', borderColor: '#39ff14' },
+  'paypal':             { titleText: 'Doação PayPal!',       subtitleText: '$user doou R$$valor!',             timerColor: '#0070ba', titleColor: '#0070ba', borderColor: '#0070ba' },
+  'kick-sub':           { titleText: 'Novo inscrito!',       subtitleText: '$user se inscreveu no Kick!',      timerColor: '#53fc18', titleColor: '#53fc18', borderColor: '#53fc18' },
+  'kick-follow':        { titleText: 'Novo seguidor!',       subtitleText: '$user seguiu no Kick!',            timerColor: '#53fc18', titleColor: '#53fc18', borderColor: '#53fc18' },
+  'kick-giftsub':       { titleText: 'Gift Sub Kick!',       subtitleText: '$user presenteou no Kick!',        timerColor: '#53fc18', titleColor: '#53fc18', borderColor: '#53fc18' },
+  'youtube-member':     { titleText: 'Novo membro!',         subtitleText: '$user virou membro!',              timerColor: '#ff0000', titleColor: '#ff0000', borderColor: '#ff0000' },
+  'youtube-giftmember': { titleText: 'Gift de Membros!',     subtitleText: '$user presenteou membros!',        timerColor: '#ff4040', titleColor: '#ff4040', borderColor: '#ff4040' },
+}
 
 function ovHidden(animIn: string): React.CSSProperties {
   const t: Record<string,string> = {
@@ -207,8 +225,22 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
     return () => clearTimeout(t)
   }, [animKey, cfg.animIn, cfg.animSpeed])
   const checkers = 'repeating-conic-gradient(#333 0% 25%,#1a1a1a 0% 50%) 0 0/12px 12px'
+  const iconAnimStyle: React.CSSProperties = cfg.iconAnim === 'none' ? {} : {
+    animation: `ovqe-icon-${cfg.iconAnim} ${cfg.iconAnim === 'spin' ? '2s linear' : '1.5s ease-in-out'} infinite`,
+  }
+  const cardAnim = vis && cfg.cardEffect !== 'none'
+    ? `ovqe-card-${cfg.cardEffect} 2s ease-in-out 0.8s infinite`
+    : undefined
   return (
     <div style={{ width:'100%', fontFamily: cfg.font, position:'relative' }}>
+      <style>{`
+        @keyframes ovqe-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.28)}}
+        @keyframes ovqe-icon-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @keyframes ovqe-icon-bounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-9px)}}
+        @keyframes ovqe-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+        @keyframes ovqe-card-glow{0%,100%{box-shadow:0 0 20px ${acc}22}50%{box-shadow:0 0 45px ${acc}88,0 0 15px ${acc}55}}
+        @keyframes ovqe-card-pulse{0%,100%{box-shadow:0 0 20px ${acc}22}50%{box-shadow:0 0 30px ${acc}55}}
+      `}</style>
       {bg === 'transparent' && (
         <div style={{ position:'absolute',inset:0,borderRadius:cfg.borderRadius,background:checkers,opacity:0.35,pointerEvents:'none' }} />
       )}
@@ -219,9 +251,10 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
         boxShadow:`0 0 20px ${acc}22`, position:'relative', overflow:'hidden',
         ...(vis ? { transform:'none',opacity:1,filter:'none' } : ovHidden(cfg.animIn)),
         transition: vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none',
+        ...(cardAnim ? { animation: cardAnim } : {}),
       }}>
         {cfg.iconShape !== 'none' && (
-          <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17 }}>⭐</div>
+          <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17,...iconAnimStyle }}>⭐</div>
         )}
         <div style={{ flex:1 }}>
           <div style={{ fontSize:cfg.titleSize,fontWeight:800,color:titleClr }}>{titleLabel}</div>
@@ -258,8 +291,15 @@ function ColorPicker({ label, value, onChange }: { label: string; value: string;
 }
 
 function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: string }) {
+  const slug = TRIGGER_TO_SLUG[trigger] ?? ''
+  const cfgKey = slug ? `alert-${slug}` : 'alert'
+  const slugDefault = React.useMemo(
+    () => ({ ...OV_DEF, ...(SLUG_PRESETS[slug] ?? {}) }),
+    [slug],
+  )
+
   const [uid, setUid] = useState('')
-  const [cfg, setCfg] = useState<OvCfg>(OV_DEF)
+  const [cfg, setCfg] = useState<OvCfg>(() => slugDefault)
   const [tab, setTab] = useState<'efeitos'|'estilo'|'texto'>('efeitos')
   const [animKey, setAnimKey] = useState(0)
   const [savedOk, setSavedOk] = useState(false)
@@ -267,19 +307,16 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
   const [testing, setTesting] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const slug = TRIGGER_TO_SLUG[trigger] ?? ''
-  const cfgKey = slug ? `alert-${slug}` : 'alert'
-
   useEffect(() => {
     fetch('/api/me').then(r => r.json()).then(d => {
       if (!d?.id) return
       setUid(d.id)
       fetch(`/api/overlay-config/${cfgKey}?uid=${d.id}`)
         .then(r => r.ok ? r.json() : null)
-        .then(c => { if (c?.style) setCfg(p => ({ ...OV_DEF, ...c.style })) })
+        .then(c => setCfg(c?.style ? { ...slugDefault, ...c.style } : slugDefault))
         .catch(() => {})
     }).catch(() => {})
-  }, [cfgKey])
+  }, [cfgKey, slugDefault])
 
   useEffect(() => {
     if (tab !== 'efeitos') return
@@ -415,23 +452,50 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
           )}
 
           {tab === 'estilo' && (
-            <div style={{ display:'flex',flexDirection:'column',gap:'0.5rem' }}>
+            <div style={{ display:'flex',flexDirection:'column',gap:'0.55rem' }}>
+              {/* Icon shape */}
               <div>
                 <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.28rem' }}>Ícone lateral</div>
                 <div style={{ display:'flex',gap:'0.3rem' }}>
-                  {([['circle','○ Círculo'],['square','□ Quadrado'],['none','✕ Nenhum']] as [OvCfg['iconShape'],string][]).map(([v,lbl]) => (
-                    <button type="button" key={v} onClick={() => up('iconShape',v)} style={{ flex:1,padding:'0.32rem 0.1rem',background:cfg.iconShape===v?PBg:'rgba(255,255,255,0.02)',border:`1px solid ${cfg.iconShape===v?PB:BD}`,borderRadius:5,color:cfg.iconShape===v?P:DIM,cursor:'pointer',fontSize:'0.68rem',fontWeight:cfg.iconShape===v?700:400 }}>
+                  {([['circle','○ Círculo'],['square','□ Quadrado'],['none','✕ Sem ícone']] as [OvCfg['iconShape'],string][]).map(([v,lbl]) => (
+                    <button type="button" key={v} onClick={() => up('iconShape',v)} style={{ flex:1,padding:'0.32rem 0.1rem',background:cfg.iconShape===v?PBg:'rgba(255,255,255,0.02)',border:`1px solid ${cfg.iconShape===v?PB:BD}`,borderRadius:5,color:cfg.iconShape===v?P:DIM,cursor:'pointer',fontSize:'0.67rem',fontWeight:cfg.iconShape===v?700:400 }}>
                       {lbl}
                     </button>
                   ))}
                 </div>
               </div>
+              {/* Icon animation */}
+              {cfg.iconShape !== 'none' && (
+                <div>
+                  <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.28rem' }}>Animação do ícone</div>
+                  <div style={{ display:'flex',gap:'0.3rem' }}>
+                    {([['none','Estático'],['pulse','Pulso'],['spin','Girar'],['bounce','Saltar'],['shake','Tremer']] as [OvCfg['iconAnim'],string][]).map(([v,lbl]) => (
+                      <button type="button" key={v} onClick={() => up('iconAnim',v)} style={{ flex:1,padding:'0.3rem 0.05rem',background:cfg.iconAnim===v?PBg:'rgba(255,255,255,0.02)',border:`1px solid ${cfg.iconAnim===v?PB:BD}`,borderRadius:5,color:cfg.iconAnim===v?P:DIM,cursor:'pointer',fontSize:'0.63rem',fontWeight:cfg.iconAnim===v?700:400,whiteSpace:'nowrap' }}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Card effect */}
+              <div>
+                <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.28rem' }}>Efeito do balão</div>
+                <div style={{ display:'flex',gap:'0.3rem' }}>
+                  {([['none','Nenhum'],['glow','✦ Brilho'],['pulse','◉ Pulso']] as [OvCfg['cardEffect'],string][]).map(([v,lbl]) => (
+                    <button type="button" key={v} onClick={() => up('cardEffect',v)} style={{ flex:1,padding:'0.32rem 0.1rem',background:cfg.cardEffect===v?PBg:'rgba(255,255,255,0.02)',border:`1px solid ${cfg.cardEffect===v?PB:BD}`,borderRadius:5,color:cfg.cardEffect===v?P:DIM,cursor:'pointer',fontSize:'0.68rem',fontWeight:cfg.cardEffect===v?700:400 }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Colors */}
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.45rem' }}>
                 <ColorPicker label="Cor principal" value={cfg.timerColor} onChange={v => up('timerColor',v)} />
                 <ColorPicker label="Texto"         value={cfg.textColor}  onChange={v => up('textColor',v)} />
                 <ColorPicker label="Fundo"         value={cfg.bgColor}    onChange={v => up('bgColor',v)} />
                 <ColorPicker label="Borda"         value={cfg.borderColor} onChange={v => up('borderColor',v)} />
               </div>
+              {/* Opacity */}
               <div>
                 <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.18rem' }}>
                   <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Opacidade fundo</span>
@@ -439,6 +503,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                 </div>
                 <input type="range" min={0} max={100} value={Math.round(cfg.bgOpacity*100)} onChange={e => up('bgOpacity',Number(e.target.value)/100)} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
               </div>
+              {/* Font + border radius */}
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.45rem' }}>
                 <div>
                   <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.18rem' }}>Fonte</div>
@@ -454,6 +519,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                   <input type="range" min={0} max={30} value={cfg.borderRadius} onChange={e => up('borderRadius',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer',marginTop:'0.28rem' }} />
                 </div>
               </div>
+              {/* Text sizes */}
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.45rem' }}>
                 <div>
                   <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.18rem' }}>
@@ -464,11 +530,38 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                 </div>
                 <div>
                   <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.18rem' }}>
-                    <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Tam. apoio</span>
+                    <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Tam. subtítulo</span>
                     <span style={{ fontSize:'0.65rem',color:MUT }}>{cfg.supportSize}px</span>
                   </div>
-                  <input type="range" min={7} max={24} value={cfg.supportSize} onChange={e => up('supportSize',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
+                  <input type="range" min={7} max={30} value={cfg.supportSize} onChange={e => up('supportSize',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
                 </div>
+              </div>
+              {/* Border toggle + thickness */}
+              <div style={{ display:'grid',gridTemplateColumns:'auto 1fr',gap:'0.45rem',alignItems:'center' }}>
+                <div>
+                  <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.28rem' }}>Borda</div>
+                  <div style={{ display:'flex',gap:'0.25rem' }}>
+                    <button type="button" onClick={() => up('border',true)}  style={{ padding:'0.28rem 0.6rem',background:cfg.border?PBg:'rgba(255,255,255,0.02)',border:`1px solid ${cfg.border?PB:BD}`,borderRadius:5,color:cfg.border?P:DIM,cursor:'pointer',fontSize:'0.68rem',fontWeight:cfg.border?700:400 }}>Ligado</button>
+                    <button type="button" onClick={() => up('border',false)} style={{ padding:'0.28rem 0.6rem',background:!cfg.border?PBg:'rgba(255,255,255,0.02)',border:`1px solid ${!cfg.border?PB:BD}`,borderRadius:5,color:!cfg.border?P:DIM,cursor:'pointer',fontSize:'0.68rem',fontWeight:!cfg.border?700:400 }}>Desligado</button>
+                  </div>
+                </div>
+                {cfg.border && (
+                  <div>
+                    <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.18rem' }}>
+                      <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Espessura</span>
+                      <span style={{ fontSize:'0.65rem',color:MUT }}>{cfg.borderThick}px</span>
+                    </div>
+                    <input type="range" min={1} max={6} value={cfg.borderThick} onChange={e => up('borderThick',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer',marginTop:'0.28rem' }} />
+                  </div>
+                )}
+              </div>
+              {/* Width */}
+              <div>
+                <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.18rem' }}>
+                  <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Largura do alerta</span>
+                  <span style={{ fontSize:'0.65rem',color:MUT }}>{cfg.width}px</span>
+                </div>
+                <input type="range" min={260} max={700} step={10} value={cfg.width} onChange={e => up('width',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
               </div>
             </div>
           )}
@@ -493,7 +586,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                 <ColorPicker label="Cor do título"    value={cfg.titleColor}    onChange={v => up('titleColor',v)} />
                 <ColorPicker label="Cor do subtítulo" value={cfg.subtitleColor} onChange={v => up('subtitleColor',v)} />
               </div>
-              <button type="button" onClick={() => setCfg(p => ({ ...p, titleText: OV_DEF.titleText, subtitleText: OV_DEF.subtitleText, titleColor: OV_DEF.titleColor, subtitleColor: OV_DEF.subtitleColor }))} style={{ padding:'0.35rem',background:'rgba(255,255,255,0.03)',border:`1px solid ${BD}`,borderRadius:6,color:DIM,fontSize:'0.7rem',cursor:'pointer' }}>
+              <button type="button" onClick={() => setCfg(p => ({ ...p, titleText: slugDefault.titleText, subtitleText: slugDefault.subtitleText, titleColor: slugDefault.titleColor, subtitleColor: slugDefault.subtitleColor }))} style={{ padding:'0.35rem',background:'rgba(255,255,255,0.03)',border:`1px solid ${BD}`,borderRadius:6,color:DIM,fontSize:'0.7rem',cursor:'pointer' }}>
                 ↺ Restaurar padrão
               </button>
               <div style={{ fontSize:'0.66rem',color:DIM,background:'rgba(155,48,255,0.06)',border:'1px solid rgba(155,48,255,0.15)',borderRadius:6,padding:'0.4rem 0.6rem',lineHeight:1.5 }}>
