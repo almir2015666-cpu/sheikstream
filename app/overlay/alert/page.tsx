@@ -20,6 +20,7 @@ type Cfg = {
   iconShape: 'circle' | 'square' | 'none'
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
+  soundEnabled: boolean; soundUrl: string; soundVolume: number
 }
 
 const DEF: Cfg = {
@@ -29,6 +30,31 @@ const DEF: Cfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, timerColor: '#9146FF',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
+  soundEnabled: true, soundUrl: '', soundVolume: 70,
+}
+
+function playAlertSound(soundUrl: string, soundVolume: number) {
+  const vol = soundVolume / 100
+  if (soundUrl) {
+    const a = new Audio(soundUrl)
+    a.volume = vol
+    a.play().catch(() => {})
+    return
+  }
+  try {
+    const ctx = new AudioContext()
+    const tone = (f: number, t: number, d: number) => {
+      const o = ctx.createOscillator(), g = ctx.createGain()
+      o.connect(g); g.connect(ctx.destination); o.type = 'sine'
+      o.frequency.setValueAtTime(f, ctx.currentTime + t)
+      g.gain.setValueAtTime(0, ctx.currentTime + t)
+      g.gain.linearRampToValueAtTime(vol * 0.4, ctx.currentTime + t + 0.01)
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d)
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + d + 0.01)
+    }
+    tone(880, 0, 0.15)
+    tone(1108, 0.18, 0.25)
+  } catch {}
 }
 
 const EVENT_META: Record<string, { icon: string; label: string; color: string }> = {
@@ -105,6 +131,14 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
     const t = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    if (!visible) return
+    if (cfg.soundEnabled !== false) {
+      playAlertSound(cfg.soundUrl ?? '', cfg.soundVolume ?? 70)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible])
 
   const hiddenStyle = getAnimStyle(cfg.animIn)
   const transition = getAnimTransition(cfg.animIn, cfg.animSpeed)

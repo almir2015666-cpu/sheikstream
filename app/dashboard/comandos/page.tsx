@@ -147,6 +147,7 @@ type OvCfg = {
   iconShape: 'circle' | 'square' | 'none'
   iconAnim: 'none' | 'pulse' | 'spin' | 'bounce' | 'shake'
   cardEffect: 'none' | 'glow' | 'pulse'
+  soundEnabled: boolean; soundUrl: string; soundVolume: number
 }
 const OV_DEF: OvCfg = {
   animIn: 'slide-right', animSpeed: 5, duration: 6, font: 'Inter',
@@ -155,6 +156,7 @@ const OV_DEF: OvCfg = {
   titleSize: 15, supportSize: 12, width: 480,
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
+  soundEnabled: true, soundUrl: '', soundVolume: 70,
 }
 const OV_ANIMS = [
   { id: 'slide-right', label: 'Slide →', dur: '0.45s' }, { id: 'slide-left', label: 'Slide ←', dur: '0.45s' },
@@ -472,6 +474,55 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                   </div>
                   <input type="range" min={2} max={20} value={cfg.duration} onChange={e => up('duration',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
                 </div>
+              </div>
+              {/* Sound */}
+              <div style={{ borderTop:`1px solid ${BD}`,paddingTop:'0.55rem' }}>
+                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.4rem' }}>
+                  <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>🔔 Som do alerta</span>
+                  <Toggle on={cfg.soundEnabled} onChange={v => up('soundEnabled',v)} size="sm" />
+                </div>
+                {cfg.soundEnabled && (
+                  <div style={{ display:'flex',flexDirection:'column',gap:'0.4rem' }}>
+                    <div>
+                      <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.15rem' }}>
+                        <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Volume</span>
+                        <span style={{ fontSize:'0.65rem',color:MUT,fontWeight:700 }}>{cfg.soundVolume}%</span>
+                      </div>
+                      <input type="range" min={0} max={100} value={cfg.soundVolume} onChange={e => up('soundVolume',Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.15rem' }}>URL do som personalizado</div>
+                      <div style={{ display:'flex',gap:'0.3rem' }}>
+                        <input value={cfg.soundUrl} onChange={e => up('soundUrl',e.target.value)}
+                          placeholder="Deixe vazio para usar o som padrão"
+                          style={{ ...inp, fontSize:'0.72rem', padding:'0.38rem 0.6rem', flex:1 }} />
+                        <button type="button" onClick={() => {
+                          const vol = cfg.soundVolume / 100
+                          if (cfg.soundUrl) {
+                            const a = new Audio(cfg.soundUrl); a.volume = vol; a.play().catch(() => {})
+                          } else {
+                            try {
+                              const ctx = new AudioContext()
+                              const tone = (f: number, t: number, d: number) => {
+                                const o = ctx.createOscillator(), g = ctx.createGain()
+                                o.connect(g); g.connect(ctx.destination); o.type = 'sine'
+                                o.frequency.setValueAtTime(f, ctx.currentTime + t)
+                                g.gain.setValueAtTime(0, ctx.currentTime + t)
+                                g.gain.linearRampToValueAtTime(vol * 0.4, ctx.currentTime + t + 0.01)
+                                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d)
+                                o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + d + 0.01)
+                              }
+                              tone(880, 0, 0.15); tone(1108, 0.18, 0.25)
+                            } catch {}
+                          }
+                        }} style={{ flexShrink:0,padding:'0.38rem 0.7rem',background:PBg,border:`1px solid ${PB}`,borderRadius:6,color:P,cursor:'pointer',fontSize:'0.7rem',fontWeight:700 }}>
+                          🔊 Testar
+                        </button>
+                      </div>
+                      <div style={{ fontSize:'0.6rem',color:DIM,marginTop:'0.18rem' }}>URL de MP3/WAV público. Vazio = som padrão do Sheikstream.</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
