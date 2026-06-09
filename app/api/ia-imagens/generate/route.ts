@@ -82,12 +82,8 @@ export async function POST(req: NextRequest) {
     })
     const json = await res.json()
     if (!res.ok) {
-      const raw: string = json?.error?.message ?? ''
-      const noBilling = raw.toLowerCase().includes('billing') || raw.toLowerCase().includes('quota') || raw.toLowerCase().includes('does not exist') || json?.error?.code === 'billing_hard_limit_reached'
-      const msg = noBilling
-        ? 'Sua conta OpenAI não tem créditos. Adicione em: platform.openai.com/settings/organization/billing'
-        : raw || 'Erro na API da OpenAI'
-      return NextResponse.json({ error: msg }, { status: res.status })
+      const raw: string = json?.error?.message ?? json?.error?.code ?? 'Erro desconhecido'
+      return NextResponse.json({ error: `OpenAI: ${raw}` }, { status: res.status })
     }
     imageUrl = json.data?.[0]?.url ?? ''
     revisedPrompt = json.data?.[0]?.revised_prompt ?? prompt
