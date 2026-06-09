@@ -132,26 +132,42 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     let t3: ReturnType<typeof setTimeout> | null = null
 
     const t2 = setTimeout(() => {
-      // Seta estado React PRIMEIRO — qualquer re-render subsequente do polling
-      // vai usar exitAnim em vez de entranceAnim, evitando reset da animação
       setIsExiting(true)
       const el = wrapperRef.current
-      if (el && animOut !== 'none') {
-        // DOM direto + forced reflow garante início imediato da animação
-        el.style.transition = 'none'
-        el.style.animation = 'none'
-        void el.offsetWidth
-        el.style.animation = `sk-out-${animOut} ${exitDur}s ease forwards`
-
-        const onEnd = () => onDoneRef.current()
-        el.addEventListener('animationend', onEnd, { once: true })
-        t3 = setTimeout(() => {
-          el.removeEventListener('animationend', onEnd)
-          onDoneRef.current()
-        }, exitDurMs + 1500)
-      } else {
+      if (!el || animOut === 'none') {
         t3 = setTimeout(() => onDoneRef.current(), 200)
+        return
       }
+
+      // Animação 100% JavaScript — sem dependência de CSS animation do browser
+      // Usa setInterval para garantir funcionamento no OBS/Chromium
+      const STEPS = 16
+      const STEP_MS = Math.round(exitDurMs / STEPS)
+      const exitTransforms: Record<string, (p: number) => string> = {
+        'slide-right': p => `translateX(${Math.round(110 * p)}%)`,
+        'slide-left':  p => `translateX(${Math.round(-110 * p)}%)`,
+        'slide-up':    p => `translateY(${Math.round(-80 * p)}px)`,
+        'slide-down':  p => `translateY(${Math.round(80 * p)}px)`,
+        'zoom-out':    p => `scale(${(1 - 0.95 * p).toFixed(3)})`,
+        'zoom-in':     p => `scale(${(1 + 1.2 * p).toFixed(3)})`,
+        'flip-x':      p => `rotateX(${Math.round(90 * p)}deg)`,
+      }
+      el.style.transition = 'none'
+      el.style.animation = 'none'
+      let step = 0
+      const iv = setInterval(() => {
+        step++
+        const p = Math.min(step / STEPS, 1)
+        const ease = 1 - (1 - p) * (1 - p) // ease-out quadratic
+        el.style.opacity = String((1 - ease).toFixed(3))
+        const tfn = exitTransforms[animOut]
+        if (tfn) el.style.transform = tfn(ease)
+        if (step >= STEPS) {
+          clearInterval(iv)
+          onDoneRef.current()
+        }
+      }, STEP_MS)
+      t3 = iv as unknown as ReturnType<typeof setTimeout>
     }, cfg.duration * 1000)
 
     return () => {
