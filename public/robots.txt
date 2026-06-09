@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /overlay
+Disallow: /api
+Disallow: /pending
+
+Sitemap: https://sheikstream.com.br/sitemap.xml
