@@ -113,8 +113,7 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 
 function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
-  const [isExiting, setIsExiting] = useState(false)
-  // Keep onDone stable so the effect closure always calls the latest version
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
@@ -123,12 +122,25 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   const titleClr = cfg.titleColor || accent
   const subClr = cfg.subtitleColor || cfg.textColor
 
-  // All timing lives here — same pattern as setVisible(50ms) that already works in OBS
   useEffect(() => {
     const animOut = cfg.animOut ?? 'fade'
     const exitDurMs = animOut !== 'none' ? ((11 - (cfg.animSpeed ?? 5)) * 0.06) * 1000 : 0
+    const exitDur = `${((11-(cfg.animSpeed??5))*0.06).toFixed(2)}s`
+
     const t1 = setTimeout(() => setVisible(true), 50)
-    const t2 = setTimeout(() => setIsExiting(true), cfg.duration * 1000)
+
+    const t2 = setTimeout(() => {
+      const el = wrapperRef.current
+      if (el && animOut !== 'none') {
+        // Force reflow trick: clear → reflow → set new animation
+        // This guarantees the browser starts a fresh animation regardless of prior state
+        el.style.transition = 'none'
+        el.style.animation = 'none'
+        void el.offsetWidth  // synchronous layout — forces browser to commit the 'none' state
+        el.style.animation = `sk-out-${animOut} ${exitDur}s ease forwards`
+      }
+    }, cfg.duration * 1000)
+
     const t3 = setTimeout(() => onDoneRef.current(), cfg.duration * 1000 + exitDurMs + 150)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,20 +180,14 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  // Exit keyframe applied immediately when isExiting=true — identical mechanism to entrance
-  const exitAnim = isExiting && animOut !== 'none'
-    ? `sk-out-${animOut} ${exitDur}s ease forwards`
-    : undefined
-
-  const wrapperStyle: React.CSSProperties = isExiting
-    ? { animation: exitAnim }
-    : {
-        animation: entranceAnim,
-        ...(!isKeyframeAnim
-          ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
-          : (visible ? {} : { opacity: 0 })),
-        transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
-      }
+  // Entrance style — exit is applied directly on the DOM via wrapperRef (see useEffect above)
+  const wrapperStyle: React.CSSProperties = {
+    animation: entranceAnim,
+    ...(!isKeyframeAnim
+      ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
+      : (visible ? {} : { opacity: 0 })),
+    transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
+  }
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
@@ -229,7 +235,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   return (
     <>
       <style>{ANIM_CSS}</style>
-      <div style={{ position: 'relative', display: 'inline-block', ...wrapperStyle }}>
+      <div ref={wrapperRef} style={{ position: 'relative', display: 'inline-block', ...wrapperStyle }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
       {cardEffect !== 'none' && (
         <div style={{
