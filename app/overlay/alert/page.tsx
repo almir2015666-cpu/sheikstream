@@ -126,7 +126,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   useEffect(() => {
     const animOut = cfg.animOut ?? 'fade'
     const exitDurMs = animOut !== 'none' ? ((11 - (cfg.animSpeed ?? 5)) * 0.06) * 1000 : 0
-    const exitDur = `${((11-(cfg.animSpeed??5))*0.06).toFixed(2)}s`
+    const exitDur = `${((11-(cfg.animSpeed??5))*0.15).toFixed(2)}s`
 
     const t1 = setTimeout(() => setVisible(true), 50)
     let t3: ReturnType<typeof setTimeout> | null = null
@@ -189,7 +189,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
 
   const isKeyframeAnim = SK_KEYFRAME_ANIMS.has(cfg.animIn)
   const entranceDur = `${((11-(cfg.animSpeed??5))*0.085).toFixed(2)}s`
-  const exitDur = `${((11-(cfg.animSpeed??5))*0.06).toFixed(2)}s`
+  const exitDur = `${((11-(cfg.animSpeed??5))*0.15).toFixed(2)}s`
   const animOut = cfg.animOut ?? 'fade'
 
   const entranceAnim = visible && isKeyframeAnim
@@ -227,14 +227,14 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     @keyframes sk-e-tada{0%{opacity:0;transform:scale(.8)}10%{opacity:1;transform:scale(.8) rotate(-3deg)}20%,40%,60%{transform:scale(1.08) rotate(3deg)}30%,50%{transform:scale(1.08) rotate(-3deg)}70%{transform:scale(1.04)}100%{opacity:1;transform:scale(1) rotate(0deg)}}
     @keyframes sk-e-wobble{0%{opacity:0;transform:translateX(-28px)}15%{opacity:1;transform:translateX(18px) rotate(2deg)}30%{transform:translateX(-12px) rotate(-2deg)}45%{transform:translateX(8px) rotate(1deg)}60%{transform:translateX(-4px) rotate(-.5deg)}75%{transform:translateX(2px)}100%{opacity:1;transform:translateX(0)}}
     @keyframes sk-e-flash{0%,50%{opacity:0}25%,75%{opacity:1}100%{opacity:1}}
-    @keyframes sk-out-fade{to{opacity:0}}
-    @keyframes sk-out-slide-right{to{transform:translateX(110%);opacity:0}}
-    @keyframes sk-out-slide-left{to{transform:translateX(-110%);opacity:0}}
-    @keyframes sk-out-slide-up{to{transform:translateY(-80px);opacity:0}}
-    @keyframes sk-out-slide-down{to{transform:translateY(80px);opacity:0}}
-    @keyframes sk-out-zoom-out{to{transform:scale(0.05);opacity:0}}
-    @keyframes sk-out-zoom-in{to{transform:scale(2.2);opacity:0}}
-    @keyframes sk-out-flip-x{to{transform:rotateX(90deg);opacity:0}}
+    @keyframes sk-out-fade{from{opacity:1}to{opacity:0}}
+    @keyframes sk-out-slide-right{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(110%)}}
+    @keyframes sk-out-slide-left{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(-110%)}}
+    @keyframes sk-out-slide-up{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-80px)}}
+    @keyframes sk-out-slide-down{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(80px)}}
+    @keyframes sk-out-zoom-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(0.05)}}
+    @keyframes sk-out-zoom-in{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(2.2)}}
+    @keyframes sk-out-flip-x{from{opacity:1;transform:rotateX(0deg)}to{opacity:0;transform:rotateX(90deg)}}
   `
 
   // Custom art: replace entire card with image
