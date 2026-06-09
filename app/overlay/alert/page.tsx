@@ -113,10 +113,9 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 
 function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
-  // isExiting=true: enable transition (keep values), exitStarted=true: apply exit target (fires transition)
-  // This mirrors entrance: frame1=hidden+transition:none, frame2=visible+transition (50ms gap)
-  const [isExiting, setIsExiting] = useState(false)
-  const [exitStarted, setExitStarted] = useState(false)
+  // outerRef: exit animation layer — React only sets display+position here, NEVER opacity/transform/transition
+  // So direct DOM writes to opacity/transform survive React re-renders from the polling loop
+  const outerRef = useRef<HTMLDivElement>(null)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
@@ -136,15 +135,31 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     let t4: ReturnType<typeof setTimeout>
 
     t2 = setTimeout(() => {
-      if (animOut === 'none') {
+      const el = outerRef.current
+      if (!el || animOut === 'none') {
         t3 = setTimeout(() => onDoneRef.current(), 50)
         return
       }
-      // Step 1: arm the transition (keep element visible, browser paints this frame)
-      setIsExiting(true)
-      // Step 2: after browser paints step 1, apply exit target → CSS transition fires
-      t3 = setTimeout(() => setExitStarted(true), 50)
-      // Step 3: remove card after transition completes
+      // Frame 1: arm the transition on outerRef — React never resets these because
+      // the outerRef div's style prop only contains display+position (static)
+      el.style.transition = `opacity ${exitDurS}s ease-out, transform ${exitDurS}s ease-out`
+      // Frame 2 (50ms later): change values → CSS transition fires
+      t3 = setTimeout(() => {
+        const targets: Record<string, [string, string]> = {
+          'fade':        ['0', ''],
+          'slide-right': ['0', 'translateX(110%)'],
+          'slide-left':  ['0', 'translateX(-110%)'],
+          'slide-up':    ['0', 'translateY(-80px)'],
+          'slide-down':  ['0', 'translateY(80px)'],
+          'zoom-out':    ['0', 'scale(0.05)'],
+          'zoom-in':     ['0', 'scale(2.2)'],
+          'flip-x':      ['0', 'rotateX(90deg)'],
+        }
+        const [op, tr] = targets[animOut] ?? ['0', '']
+        el.style.opacity = op
+        if (tr) el.style.transform = tr
+      }, 50)
+      // Frame 3: remove card after transition completes
       t4 = setTimeout(() => onDoneRef.current(), 50 + exitDurMs + 50)
     }, cfg.duration * 1000)
 
@@ -189,36 +204,14 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  // Exit targets
-  const exitTargets: Record<string, React.CSSProperties> = {
-    'fade':        { opacity: 0 },
-    'slide-right': { opacity: 0, transform: 'translateX(110%)' },
-    'slide-left':  { opacity: 0, transform: 'translateX(-110%)' },
-    'slide-up':    { opacity: 0, transform: 'translateY(-80px)' },
-    'slide-down':  { opacity: 0, transform: 'translateY(80px)' },
-    'zoom-out':    { opacity: 0, transform: 'scale(0.05)' },
-    'zoom-in':     { opacity: 0, transform: 'scale(2.2)' },
-    'flip-x':      { opacity: 0, transform: 'rotateX(90deg)' },
+  // wrapperStyle: entrance only — outerRef handles exit via direct DOM (immune to React re-renders)
+  const wrapperStyle: React.CSSProperties = {
+    animation: entranceAnim,
+    ...(!isKeyframeAnim
+      ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
+      : (visible ? {} : { opacity: 0 })),
+    transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
   }
-  const exitTarget = exitTargets[animOut] ?? { opacity: 0 }
-  const exitTransitionStr = `opacity ${exitDurS}s ease-out, transform ${exitDurS}s ease-out`
-
-  // Three-phase exit (mirrors entrance 50ms two-step pattern):
-  // frame 0 (normal):       entrance styles, opacity:1
-  // frame 1 (isExiting):    transition armed, still opacity:1/transform:none — browser paints this
-  // frame 2 (exitStarted):  exit target applied — CSS transition fires from frame1 to frame2
-  const wrapperStyle: React.CSSProperties =
-    isExiting && exitStarted
-      ? { animation: 'none', transition: exitTransitionStr, ...exitTarget }
-      : isExiting
-      ? { animation: 'none', transition: exitTransitionStr, opacity: 1, transform: 'none', filter: 'none' }
-      : {
-          animation: entranceAnim,
-          ...(!isKeyframeAnim
-            ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
-            : (visible ? {} : { opacity: 0 })),
-          transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
-        }
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
@@ -249,23 +242,29 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   if (cfg.customArt) return (
     <>
       <style>{ANIM_CSS}</style>
-      <img
-        src={cfg.customArt}
-        alt=""
-        style={{
-          width: cfg.width,
-          maxHeight: 200,
-          objectFit: 'contain',
-          borderRadius: cfg.borderRadius,
-          ...wrapperStyle,
-        }}
-      />
+      {/* outerRef: exit layer — React only sets display here, never opacity/transform/transition */}
+      <div ref={outerRef} style={{ display: 'inline-block' }}>
+        <img
+          src={cfg.customArt}
+          alt=""
+          style={{
+            width: cfg.width,
+            maxHeight: 200,
+            objectFit: 'contain',
+            borderRadius: cfg.borderRadius,
+            ...wrapperStyle,
+          }}
+        />
+      </div>
     </>
   )
 
   return (
     <>
       <style>{ANIM_CSS}</style>
+      {/* outerRef: exit animation layer — React only sets display+position here */}
+      <div ref={outerRef} style={{ display: 'inline-block', position: 'relative' }}>
+      {/* inner: entrance animation — React fully controls wrapperStyle */}
       <div style={{ position: 'relative', display: 'inline-block', ...wrapperStyle }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
       {cardEffect !== 'none' && (
@@ -332,6 +331,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
             transition: visible ? `width ${cfg.duration}s linear` : 'none',
           }} />
         </div>
+      </div>
       </div>
       </div>
     </>
