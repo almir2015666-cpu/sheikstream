@@ -241,11 +241,13 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
         @keyframes ovqe-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
         @keyframes ovqe-card-glow{0%,100%{box-shadow:0 0 12px ${acc}33}50%{box-shadow:0 0 55px ${acc}cc,0 0 22px ${acc}88}}
         @keyframes ovqe-card-pulse{0%,100%{box-shadow:0 0 12px ${acc}33}50%{box-shadow:0 0 32px ${acc}88}}
+        @keyframes ovqe-e-shake{0%{transform:translateX(-70px);opacity:0}25%{opacity:1}38%{transform:translateX(14px)}54%{transform:translateX(-9px)}68%{transform:translateX(5px)}80%{transform:translateX(-2px)}100%{transform:translateX(0)}}
+        @keyframes ovqe-e-swing{0%{transform:rotate(-22deg);opacity:0}20%{opacity:1}42%{transform:rotate(11deg)}62%{transform:rotate(-6deg)}76%{transform:rotate(3deg)}88%{transform:rotate(-1deg)}100%{transform:rotate(0deg)}}
       `}</style>
       {bg === 'transparent' && (
         <div style={{ position:'absolute',inset:0,borderRadius:cfg.borderRadius,background:checkers,opacity:0.35,pointerEvents:'none' }} />
       )}
-      {/* effect wrapper: owns box-shadow animation; inner card owns entrance transition — no property conflict */}
+      {/* effect wrapper: owns box-shadow animation; inner card owns entrance — no property conflict */}
       <div style={wrapAnim}>
       <div style={{
         background: bg, borderRadius: cfg.borderRadius, padding:'12px 16px',
@@ -253,8 +255,12 @@ function OvPreview({ cfg, animKey }: { cfg: OvCfg; animKey: number }) {
         border: cfg.border ? `${cfg.borderThick}px solid ${acc}` : `1px solid ${acc}44`,
         boxShadow: cfg.cardEffect === 'none' ? `0 0 20px ${acc}22` : undefined,
         position:'relative', overflow:'hidden',
-        ...(vis ? { transform:'none',opacity:1,filter:'none' } : ovHidden(cfg.animIn)),
-        transition: vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none',
+        ...((cfg.animIn === 'shake' || cfg.animIn === 'swing')
+          ? (vis
+              ? { animation: `ovqe-e-${cfg.animIn} ${((11-cfg.animSpeed)*0.065).toFixed(2)}s ease forwards` }
+              : { opacity: 0 })
+          : (vis ? { transform:'none',opacity:1,filter:'none' } : ovHidden(cfg.animIn))),
+        transition: (cfg.animIn === 'shake' || cfg.animIn === 'swing') ? 'none' : (vis ? ovTrans(cfg.animIn, cfg.animSpeed) : 'none'),
       }}>
         {cfg.iconShape !== 'none' && (
           <div style={{ width:38,height:38,borderRadius:cfg.iconShape==='circle'?'50%':8,background:`${acc}22`,border:`1px solid ${acc}55`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:17,...iconAnimStyle }}>⭐</div>

@@ -137,6 +137,8 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
         @keyframes sk-icon-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
         @keyframes sk-card-glow{0%,100%{box-shadow:0 0 20px ${accent}33}50%{box-shadow:0 0 65px ${accent}cc,0 0 25px ${accent}88}}
         @keyframes sk-card-pulse{0%,100%{box-shadow:0 0 20px ${accent}33}50%{box-shadow:0 0 40px ${accent}88}}
+        @keyframes sk-e-shake{0%{transform:translateX(-90px);opacity:0}25%{opacity:1}38%{transform:translateX(18px)}54%{transform:translateX(-11px)}68%{transform:translateX(6px)}82%{transform:translateX(-2px)}100%{transform:translateX(0)}}
+        @keyframes sk-e-swing{0%{transform:rotate(-25deg);opacity:0}20%{opacity:1}42%{transform:rotate(12deg)}62%{transform:rotate(-7deg)}76%{transform:rotate(4deg)}88%{transform:rotate(-1deg)}100%{transform:rotate(0deg)}}
       `}</style>
       <div style={wrapStyle}>
         <div style={{
@@ -152,8 +154,12 @@ function AlertCard({ ev, cfg }: { ev: AlertEvent; cfg: Cfg }) {
           boxShadow: cardEffect === 'none' ? `0 0 30px ${accent}33` : undefined,
           position: 'relative',
           overflow: 'hidden',
-          ...(visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle),
-          transition: visible ? transition : 'none',
+          ...((cfg.animIn === 'shake' || cfg.animIn === 'swing')
+            ? (visible
+                ? { animation: `sk-e-${cfg.animIn} ${((11-(cfg.animSpeed??5))*0.065).toFixed(2)}s ease forwards` }
+                : { opacity: 0 })
+            : (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)),
+          transition: (cfg.animIn === 'shake' || cfg.animIn === 'swing') ? 'none' : (visible ? transition : 'none'),
         }}>
           {iconShape !== 'none' && (
             <div style={{
@@ -235,15 +241,15 @@ function AlertOverlayContent() {
     const poll = () => {
       if (stopped) return
       const url = maxSeenId > 0 ? `${baseUrl}&after=${maxSeenId}` : baseUrl
-      fetch(url)
+      fetch(url, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
         .then((data: AlertEvent[] | null) => {
           if (!data || data.length === 0 || stopped) return
           setQueue(prev => {
-            const newEvents = data.filter(e => !seenIds.current.has(e.id))
+            const newEvents = data.filter(e => !seenIds.current.has(String(e.id)))
             newEvents.forEach(e => {
-              seenIds.current.add(e.id)
-              const n = parseInt(e.id, 10)
+              seenIds.current.add(String(e.id))
+              const n = parseInt(String(e.id), 10)
               if (n > maxSeenId) maxSeenId = n
             })
             return newEvents.length > 0 ? [...prev, ...newEvents] : prev
@@ -254,24 +260,24 @@ function AlertOverlayContent() {
 
     // Step 1: watermark — mark all events currently in DB as seen (no display)
     // Step 2: only THEN start polling so no concurrent priming race can occur
-    fetch(baseUrl)
+    fetch(baseUrl, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : [])
       .then((data: AlertEvent[]) => {
         if (stopped) return
         ;(data ?? []).forEach(e => {
-          seenIds.current.add(e.id)
-          const n = parseInt(e.id, 10)
+          seenIds.current.add(String(e.id))
+          const n = parseInt(String(e.id), 10)
           if (n > maxSeenId) maxSeenId = n
         })
         isInitialized.current = true
         poll()                          // fire once immediately after watermark
-        iv = setInterval(poll, 2000)   // then every 2s
+        iv = setInterval(poll, 1000)   // poll every 1s for faster detection
       })
       .catch(() => {
         if (!stopped) {
           isInitialized.current = true
           poll()
-          iv = setInterval(poll, 2000)
+          iv = setInterval(poll, 1000)
         }
       })
 
