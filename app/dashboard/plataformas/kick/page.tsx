@@ -38,6 +38,7 @@ export default function KickPlataformaPage() {
   const [viewerCount, setViewerCount] = useState<number | null>(null)
   const [tokenValid, setTokenValid] = useState(true)
   const [channelLoading, setChannelLoading] = useState(false)
+  const [channelKey, setChannelKey] = useState(0)
 
   const [stats, setStats] = useState<KickStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
@@ -114,7 +115,7 @@ export default function KickPlataformaPage() {
     if (!connected) return
     setChannelLoading(true)
     fetch('/api/kick/channel')
-      .then(r => r.ok ? r.json() : null)
+      .then(r => r.ok ? r.json() : r.status === 404 ? { token_valid: false } : null)
       .then(d => {
         if (!d) return
         if (d.username)    setUsername(d.username)
@@ -127,7 +128,7 @@ export default function KickPlataformaPage() {
       })
       .catch(() => {})
       .finally(() => setChannelLoading(false))
-  }, [connected])
+  }, [connected, channelKey])
 
   function openKickPopup() {
     const w = 500, h = 700
@@ -141,6 +142,8 @@ export default function KickPlataformaPage() {
         clearInterval(check)
         fetch('/api/tokens/status').then(r => r.json()).then((s: TokenStatus) => {
           setConnected(!!s.kick); setUsername(s.kick_username ?? null); setChannelId(s.kick_channel_id ?? null)
+          setTokenValid(true)
+          setChannelKey(k => k + 1)
           if (s.kick) {
             fetch('/api/kick/stats').then(r => r.ok ? r.json() : null).then(d => {
               setSyncSubCount(d?.total_subs ?? 0)

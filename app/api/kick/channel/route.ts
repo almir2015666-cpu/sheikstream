@@ -63,12 +63,16 @@ export async function GET(req: NextRequest) {
   if (profileRes.ok) {
     try {
       const d = await profileRes.json()
-      const u = d?.data ?? d
-      displayName      = String(u.username ?? u.name ?? u.slug ?? displayName)
-      resolvedChannelId = String(u.id ?? u.user_id ?? resolvedChannelId)
+      // Kick may return data as object or array
+      const raw = d?.data ?? d
+      const u = Array.isArray(raw) ? raw[0] : raw
+      if (u) {
+        const newName = String(u.username ?? u.name ?? u.slug ?? u.login ?? '')
+        const newId   = String(u.id ?? u.user_id ?? u.channel_id ?? '')
+        if (newName) displayName      = newName
+        if (newId)   resolvedChannelId = newId
 
-      // Persist updated info
-      if (displayName || resolvedChannelId) {
+        // Persist updated info
         await db.from('user_tokens').update({
           kick_username:   displayName || null,
           kick_channel_id: resolvedChannelId || null,
@@ -83,34 +87,54 @@ export async function GET(req: NextRequest) {
   let streamTitle: string | null = null
   let viewerCount: number | null = null
 
+  async function fetchChannelSlug(slug: string) {
+    // Try with auth first, then without (public endpoint)
+    for (const headers of [
+      { Authorization: `Bearer ${token}`, 'Client-Id': clientId },
+      { 'Client-Id': clientId },
+    ]) {
+      try {
+        const res = await fetch(`https://api.kick.com/public/v1/channels/${slug}`, { headers })
+        if (res.ok) return res
+      } catch { /* ignore */ }
+    }
+    return null
+  }
+
+  function parseChannelData(c: Record<string, unknown>) {
+    followersCount = (c.followers_count ?? c.followersCount ?? null) as number | null
+    isLive         = !!(c.is_live ?? c.livestream)
+    const ls = c.livestream as Record<string, unknown> | null
+    streamTitle    = (ls?.session_title ?? (c.currentLivestream as Record<string, unknown>)?.session_title ?? null) as string | null
+    viewerCount    = (ls?.viewer_count ?? null) as number | null
+  }
+
   const slug = displayName.toLowerCase()
   if (slug) {
     try {
-      const chanRes = await kickFetch(`https://api.kick.com/public/v1/channels/${slug}`, token)
-      if (chanRes.ok) {
-        const d = await chanRes.json()
-        const c = d?.data ?? d
-        followersCount = c.followers_count ?? c.followersCount ?? null
-        isLive         = !!(c.is_live ?? c.livestream)
-        streamTitle    = c.livestream?.session_title ?? c.currentLivestream?.session_title ?? null
-        viewerCount    = c.livestream?.viewer_count ?? null
+      const res = await fetchChannelSlug(slug)
+      if (res) {
+        const d = await res.json()
+        const raw = d?.data ?? d
+        const c = Array.isArray(raw) ? raw[0] : raw
+        if (c) parseChannelData(c)
       }
     } catch { /* ignore */ }
   }
 
   // Fallback: try with channel ID
-  if (followersCount === null && resolvedChannelId) {
+  if (followersCount === null && resolvedChannelId && resolvedChannelId !== slug) {
     try {
-      const chanRes = await kickFetch(`https://api.kick.com/public/v1/channels/${resolvedChannelId}`, token)
-      if (chanRes.ok) {
-        const d = await chanRes.json()
-        const c = d?.data ?? d
-        followersCount = c.followers_count ?? c.followersCount ?? null
-        isLive         = !!(c.is_live ?? c.livestream)
-        streamTitle    = c.livestream?.session_title ?? null
-        viewerCount    = c.livestream?.viewer_count ?? null
-        if (!displayName && (c.slug ?? c.channel_name)) {
-          displayName = c.slug ?? c.channel_name
+      const res = await fetchChannelSlug(resolvedChannelId)
+      if (res) {
+        const d = await res.json()
+        const raw = d?.data ?? d
+        const c = Array.isArray(raw) ? raw[0] : raw
+        if (c) {
+          parseChannelData(c)
+          if (!displayName && (c.slug ?? c.channel_name)) {
+            displayName = String(c.slug ?? c.channel_name)
+          }
         }
       }
     } catch { /* ignore */ }
