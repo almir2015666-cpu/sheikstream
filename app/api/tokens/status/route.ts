@@ -9,18 +9,26 @@ export async function GET(req: NextRequest) {
   const user = decodeSession(token)
   if (!user) return NextResponse.json({ twitch: false, youtube: false, spotify: false, kick: false })
 
-  const { data } = await getSupabaseAdmin()
+  const { data: baseData } = await getSupabaseAdmin()
     .from('user_tokens')
-    .select('twitch_token, youtube_token, spotify_token, spotify_username, kick_token, kick_username')
+    .select('twitch_token, youtube_token, spotify_token, spotify_username')
     .eq('user_id', user.id)
     .maybeSingle()
 
+  // Kick columns may not exist yet — query separately to avoid breaking everything
+  const { data: kickData } = await getSupabaseAdmin()
+    .from('user_tokens')
+    .select('kick_token, kick_username')
+    .eq('user_id', user.id)
+    .maybeSingle()
+    .then(r => r.error ? { data: null } : r)
+
   return NextResponse.json({
-    twitch:           !!data?.twitch_token,
-    youtube:          !!data?.youtube_token,
-    spotify:          !!data?.spotify_token,
-    spotify_username: data?.spotify_username ?? null,
-    kick:             !!data?.kick_token,
-    kick_username:    data?.kick_username ?? null,
+    twitch:           !!baseData?.twitch_token,
+    youtube:          !!baseData?.youtube_token,
+    spotify:          !!baseData?.spotify_token,
+    spotify_username: baseData?.spotify_username ?? null,
+    kick:             !!kickData?.kick_token,
+    kick_username:    kickData?.kick_username ?? null,
   })
 }
