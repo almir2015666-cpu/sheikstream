@@ -186,6 +186,8 @@ export default function ConexoesPage() {
   }
 
   function openSpotifyPopup() {
+    window.location.href = '/api/auth/spotify'
+    return
     const w = 500, h = 700
     const left = window.screen.width - w - 20
     const top = Math.max(0, (window.screen.height - h) / 2)
