@@ -113,7 +113,7 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 
 function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
-  const outerRef = useRef<HTMLDivElement>(null)
+  const [isExiting, setIsExiting] = useState(false)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
@@ -126,48 +126,13 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   const exitDurMs = Math.max(400, (11 - (cfg.animSpeed ?? 5)) * 200)
 
   useEffect(() => {
+    // Entrance: set visible after 50ms so CSS transition has a "from" state to diff against
     const t1 = setTimeout(() => setVisible(true), 50)
-    let t2: ReturnType<typeof setTimeout>
-    let t3: ReturnType<typeof setTimeout>
-    let rafActive = true
-
-    t2 = setTimeout(() => {
-      const el = outerRef.current
-      if (!el || animOut === 'none') {
-        t3 = setTimeout(() => onDoneRef.current(), 50)
-        return
-      }
-      // Pure JS rAF animation — no CSS transitions, no React state, no browser engine.
-      // Sets el.style.opacity and el.style.transform directly every frame.
-      const startTime = performance.now()
-      const tick = (now: number) => {
-        if (!rafActive) return
-        const t = Math.min((now - startTime) / exitDurMs, 1)
-        el.style.opacity = String((1 - t).toFixed(4))
-        if      (animOut === 'slide-down')  el.style.transform = `translateY(${(80 * t).toFixed(1)}px)`
-        else if (animOut === 'slide-up')    el.style.transform = `translateY(${(-80 * t).toFixed(1)}px)`
-        else if (animOut === 'slide-right') el.style.transform = `translateX(${(110 * t).toFixed(1)}%)`
-        else if (animOut === 'slide-left')  el.style.transform = `translateX(${(-110 * t).toFixed(1)}%)`
-        else if (animOut === 'zoom-out')    el.style.transform = `scale(${(1 - 0.95 * t).toFixed(4)})`
-        else if (animOut === 'zoom-in')     el.style.transform = `scale(${(1 + 1.2 * t).toFixed(4)})`
-        else if (animOut === 'flip-x')      el.style.transform = `rotateX(${(90 * t).toFixed(1)}deg)`
-        if (t < 1) {
-          requestAnimationFrame(tick)
-        } else {
-          el.style.opacity = '0'
-          clearTimeout(t3)
-          onDoneRef.current()
-        }
-      }
-      requestAnimationFrame(tick)
-      // Fallback: if rAF never fires (0fps throttle), unmount after timeout
-      t3 = setTimeout(() => { rafActive = false; onDoneRef.current() }, exitDurMs + 600)
-    }, cfg.duration * 1000)
-
-    return () => {
-      rafActive = false
-      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3)
-    }
+    // Exit: switch to isExiting — CSS keyframe on inner div fires on compositor thread (no rAF needed)
+    const t2 = setTimeout(() => setIsExiting(true), cfg.duration * 1000)
+    // Unmount: after exit animation completes
+    const t3 = setTimeout(() => onDoneRef.current(), cfg.duration * 1000 + exitDurMs + 50)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -203,16 +168,20 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     ? `sk-e-${cfg.animIn} ${entranceDur} ease forwards`
     : undefined
 
-  // wrapperStyle: entrance only (inner div)
-  const wrapperStyle: React.CSSProperties = {
-    animation: entranceAnim,
-    ...(!isKeyframeAnim
-      ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
-      : (visible ? {} : { opacity: 0 })),
-    transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
-  }
-
-  // outerRef div: exit animation target — rAF writes opacity/transform directly, React never sets them
+  // wrapperStyle: handles both entrance (CSS transition/keyframe) and exit (CSS keyframe on compositor)
+  // When isExiting: only `animation` is set — no conflicting opacity/transform inline styles so the
+  // keyframe animation can freely control those properties (inline styles override animation values)
+  const wrapperStyle: React.CSSProperties = isExiting
+    ? (animOut === 'none'
+        ? { opacity: 0 }
+        : { animation: `sk-out-${animOut} ${exitDurMs}ms ease forwards` })
+    : {
+        animation: entranceAnim,
+        ...(!isKeyframeAnim
+          ? (visible ? { transform: 'none', opacity: 1, filter: 'none' } : hiddenStyle)
+          : (visible ? {} : { opacity: 0 })),
+        transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
+      }
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
@@ -244,7 +213,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   if (cfg.customArt) return (
     <>
       <style>{ANIM_CSS}</style>
-      <div ref={outerRef} style={{ display: 'inline-block', position: 'relative' }}>
+      <div style={{ display: 'inline-block', position: 'relative' }}>
         <img
           src={cfg.customArt}
           alt=""
@@ -263,10 +232,10 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   return (
     <>
       <style>{ANIM_CSS}</style>
-      <div ref={outerRef} style={{ display: 'inline-block', position: 'relative' }}>
+      <div style={{ display: 'inline-block', position: 'relative' }}>
       {/* 1px invisible div — keeps GPU compositor active so exit transition fires reliably in OBS */}
       <div style={{ position: 'absolute', width: 1, height: 1, opacity: 0.001, pointerEvents: 'none', animation: 'sk-keep-awake 1s linear infinite' }} />
-      {/* inner div: entrance animation via wrapperStyle */}
+      {/* inner div: entrance AND exit animations via wrapperStyle (CSS compositor thread) */}
       <div style={{ position: 'relative', display: 'inline-block', ...wrapperStyle }}>
       {/* Card effect in its own div — isolated so entrance animation uses transition freely */}
       {cardEffect !== 'none' && (
