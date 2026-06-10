@@ -186,7 +186,38 @@ export default function ConexoesPage() {
   }
 
   function openSpotifyPopup() {
-    window.location.href = '/api/auth/spotify'
+    const w = 500, h = 700
+    const left = window.screen.width - w - 20
+    const top = Math.max(0, (window.screen.height - h) / 2)
+    const popup = window.open(
+      '/api/auth/spotify?popup=1',
+      'spotify_oauth',
+      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
+    )
+    if (!popup) { window.location.href = '/api/auth/spotify'; return }
+
+    function refreshStatus() {
+      fetch('/api/tokens/status').then(r => r.json()).then(s => setTokenStatus(s)).catch(() => {})
+    }
+    function onMessage(e: MessageEvent) {
+      if (e.data?.type === 'spotify_connected') {
+        window.removeEventListener('message', onMessage)
+        clearInterval(check)
+        refreshStatus()
+        setSpotifySuccess(true)
+      } else if (e.data?.type === 'spotify_error') {
+        window.removeEventListener('message', onMessage)
+        clearInterval(check)
+        alert(`Erro ao conectar Spotify: ${e.data.error ?? 'desconhecido'}`)
+      }
+    }
+    window.addEventListener('message', onMessage)
+    const check = setInterval(() => {
+      if (!popup.closed) return
+      clearInterval(check)
+      window.removeEventListener('message', onMessage)
+      setTimeout(refreshStatus, 600)
+    }, 500)
   }
 
   async function handleSpotifyDisconnect() {
