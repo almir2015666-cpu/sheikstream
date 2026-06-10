@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState, useRef, Suspense } from 'react'
-import { flushSync } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { playAlertSound } from '@/app/lib/sound'
 
@@ -114,8 +113,7 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
 
 function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
-  const [isExiting, setIsExiting] = useState(false)
-  const [exitStarted, setExitStarted] = useState(false)
+  const outerRef = useRef<HTMLDivElement>(null)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
@@ -125,31 +123,50 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   const subClr = cfg.subtitleColor || cfg.textColor
 
   const animOut = cfg.animOut ?? 'fade'
-  const exitDurS = ((11 - (cfg.animSpeed ?? 5)) * 0.2).toFixed(2)
-  const exitDurMs = parseFloat(exitDurS) * 1000
+  const exitDurMs = Math.max(400, (11 - (cfg.animSpeed ?? 5)) * 200)
 
   useEffect(() => {
     const t1 = setTimeout(() => setVisible(true), 50)
     let t2: ReturnType<typeof setTimeout>
     let t3: ReturnType<typeof setTimeout>
-    let t4: ReturnType<typeof setTimeout>
+    let rafActive = true
 
     t2 = setTimeout(() => {
-      if (animOut === 'none') {
+      const el = outerRef.current
+      if (!el || animOut === 'none') {
         t3 = setTimeout(() => onDoneRef.current(), 50)
         return
       }
-      // flushSync forces React 18 to commit setIsExiting to the DOM IMMEDIATELY
-      // (before this setTimeout returns), preventing it from being batched with
-      // setExitStarted — without this, React defers both updates and commits them
-      // together in one render, skipping the intermediate frame the CSS transition needs.
-      flushSync(() => setIsExiting(true))
-      t3 = setTimeout(() => setExitStarted(true), 50)
-      t4 = setTimeout(() => onDoneRef.current(), 50 + exitDurMs + 100)
+      // Pure JS rAF animation — no CSS transitions, no React state, no browser engine.
+      // Sets el.style.opacity and el.style.transform directly every frame.
+      const startTime = performance.now()
+      const tick = (now: number) => {
+        if (!rafActive) return
+        const t = Math.min((now - startTime) / exitDurMs, 1)
+        el.style.opacity = String((1 - t).toFixed(4))
+        if      (animOut === 'slide-down')  el.style.transform = `translateY(${(80 * t).toFixed(1)}px)`
+        else if (animOut === 'slide-up')    el.style.transform = `translateY(${(-80 * t).toFixed(1)}px)`
+        else if (animOut === 'slide-right') el.style.transform = `translateX(${(110 * t).toFixed(1)}%)`
+        else if (animOut === 'slide-left')  el.style.transform = `translateX(${(-110 * t).toFixed(1)}%)`
+        else if (animOut === 'zoom-out')    el.style.transform = `scale(${(1 - 0.95 * t).toFixed(4)})`
+        else if (animOut === 'zoom-in')     el.style.transform = `scale(${(1 + 1.2 * t).toFixed(4)})`
+        else if (animOut === 'flip-x')      el.style.transform = `rotateX(${(90 * t).toFixed(1)}deg)`
+        if (t < 1) {
+          requestAnimationFrame(tick)
+        } else {
+          el.style.opacity = '0'
+          clearTimeout(t3)
+          onDoneRef.current()
+        }
+      }
+      requestAnimationFrame(tick)
+      // Fallback: if rAF never fires (0fps throttle), unmount after timeout
+      t3 = setTimeout(() => { rafActive = false; onDoneRef.current() }, exitDurMs + 600)
     }, cfg.duration * 1000)
 
     return () => {
-      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4)
+      rafActive = false
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -195,21 +212,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
     transition: !isKeyframeAnim ? (visible ? transition : 'none') : undefined,
   }
 
-  // outerStyle: exit only (outer div). Two-step CSS transition mirrors the entrance pattern exactly.
-  // React controls this div's style — transition fires when exitStarted changes opacity/transform.
-  const exitTransforms: Record<string, string> = {
-    'slide-right': 'translateX(110%)', 'slide-left': 'translateX(-110%)',
-    'slide-up': 'translateY(-80px)',   'slide-down': 'translateY(80px)',
-    'zoom-out': 'scale(0.05)',         'zoom-in': 'scale(2.2)',
-    'flip-x': 'rotateX(90deg)',
-  }
-  const exitTransform = exitTransforms[animOut]
-  const exitTransitionStr = `opacity ${exitDurS}s ease-out${exitTransform ? `, transform ${exitDurS}s ease-out` : ''}`
-  const outerStyle: React.CSSProperties = {
-    display: 'inline-block', position: 'relative',
-    ...(isExiting ? { transition: exitTransitionStr } : {}),
-    ...(isExiting && exitStarted ? { opacity: 0, ...(exitTransform ? { transform: exitTransform } : {}) } : {}),
-  }
+  // outerRef div: exit animation target — rAF writes opacity/transform directly, React never sets them
 
   const ANIM_CSS = `
     @keyframes sk-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
@@ -241,7 +244,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   if (cfg.customArt) return (
     <>
       <style>{ANIM_CSS}</style>
-      <div style={outerStyle}>
+      <div ref={outerRef} style={{ display: 'inline-block', position: 'relative' }}>
         <img
           src={cfg.customArt}
           alt=""
@@ -260,7 +263,7 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   return (
     <>
       <style>{ANIM_CSS}</style>
-      <div style={outerStyle}>
+      <div ref={outerRef} style={{ display: 'inline-block', position: 'relative' }}>
       {/* 1px invisible div — keeps GPU compositor active so exit transition fires reliably in OBS */}
       <div style={{ position: 'absolute', width: 1, height: 1, opacity: 0.001, pointerEvents: 'none', animation: 'sk-keep-awake 1s linear infinite' }} />
       {/* inner div: entrance animation via wrapperStyle */}
