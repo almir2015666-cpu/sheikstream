@@ -59,10 +59,17 @@ export async function GET(req: NextRequest) {
     db.from('waitlist').select('id,platform,platform_username,email,status,created_at').eq('status', 'approved').order('created_at', { ascending: false }),
     db.from('activity_logs').select('username,performed_at').gte('performed_at', fifteenMinAgo).not('username', 'is', null),
     db.from('activity_logs').select('username,performed_at').gte('performed_at', sevenDaysAgo).not('username', 'is', null).order('performed_at', { ascending: false }).limit(5000),
-    db.from('user_tokens').select('user_id,twitch_token,twitch_username,spotify_token,youtube_token,kick_token').limit(1000),
+    db.from('user_tokens').select('user_id,twitch_token,twitch_username,spotify_token,youtube_token').limit(1000),
     db.from('livepix_config').select('user_id').not('client_id', 'is', null).limit(1000),
     db.from('system_logs').select('user_id,data').eq('type', 'auth.login').not('user_id', 'is', null).order('created_at', { ascending: false }).limit(2000),
   ])
+
+  // kick_token queried separately — column may not exist on all installs
+  const { data: kickTokens } = await db
+    .from('user_tokens')
+    .select('user_id,kick_token')
+    .limit(1000)
+    .then(r => r.error ? { data: null } : r)
 
   const onlineSet   = new Set<string>()
   const lastSeenMap = new Map<string, string>()
@@ -88,7 +95,9 @@ export async function GET(req: NextRequest) {
     if (t.twitch_token)    userIdHasToken.add(t.user_id)
     if (t.spotify_token)   userIdHasSpotify.add(t.user_id)
     if (t.youtube_token)   userIdHasYouTube.add(t.user_id)
-    if (t.kick_token)      userIdHasKick.add(t.user_id)
+  }
+  for (const t of kickTokens ?? []) {
+    if (t.kick_token) userIdHasKick.add(t.user_id)
   }
 
   const logUserIdToName = new Map<string, string>()
