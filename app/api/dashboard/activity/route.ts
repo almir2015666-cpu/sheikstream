@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     'livepix.donation', 'paypal.donation',
   ]
 
-  const [livepixRes, eventsRes, tierRes] = await Promise.all([
+  const [livepixRes, eventsRes, twitchSubsRes, tierRes] = await Promise.all([
     db.from('livepix_donors')
       .select('id,username,amount,message,date,created_at')
       .in('broadcaster_id', livepixBids)
@@ -37,6 +37,11 @@ export async function GET(req: NextRequest) {
       .gte('created_at', `${from}T00:00:00Z`)
       .lte('created_at', `${to}T23:59:59Z`)
       .order('created_at', { ascending: false }).limit(500),
+    db.from('twitch_subs')
+      .select('id,tier,date,username')
+      .eq('broadcaster_id', user.id)
+      .gte('date', from).lte('date', to)
+      .order('date', { ascending: false }).limit(500),
     db.from('twitch_tier_config')
       .select('tier1_value,tier2_value,tier3_value')
       .eq('broadcaster_id', user.id).maybeSingle(),
@@ -60,6 +65,13 @@ export async function GET(req: NextRequest) {
     const t = String(d.tier ?? '1000')
     if (t === '2000') return tiers.tier2
     if (t === '3000') return tiers.tier3
+    return tiers.tier1
+  }
+
+  // tier name format used in twitch_subs legacy table ('tier1'/'tier2'/'tier3')
+  function twitchSubValByName(tier: string | null): number {
+    if (tier === 'tier2') return tiers.tier2
+    if (tier === 'tier3') return tiers.tier3
     return tiers.tier1
   }
 
@@ -102,7 +114,24 @@ export async function GET(req: NextRequest) {
     return { id: `ev-${e.id}`, platform, type, username, amount, created_at: e.created_at as string }
   })
 
-  const all = [...livepixItems, ...eventItems]
+  // Only include twitch_subs legacy entries if twitch_events has no sub events for this period
+  // (avoids double-counting when both tables have the same subs)
+  const hasEventSubSubs = (eventsRes.data ?? []).some(e =>
+    e.event_type === 'channel.subscribe' ||
+    e.event_type === 'channel.subscription.message' ||
+    e.event_type === 'channel.subscription.gift'
+  )
+
+  const legacySubItems = hasEventSubSubs ? [] : (twitchSubsRes.data ?? []).map(s => ({
+    id: `ts-${s.id}`,
+    platform: 'twitch',
+    type: 'sub',
+    username: (s.username as string | null) ?? 'Inscrito',
+    amount: twitchSubValByName(s.tier as string | null),
+    created_at: `${s.date}T12:00:00Z`,
+  }))
+
+  const all = [...livepixItems, ...eventItems, ...legacySubItems]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return NextResponse.json(all)
