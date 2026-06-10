@@ -10,12 +10,18 @@ const C_DARK = {
   vdim: 'rgba(232,230,248,0.12)', primary: '#9b30ff',
   blue: '#3b82f6', blueBg: 'rgba(59,130,246,0.12)',
   cyan: '#22d3ee', green: '#22c55e',
+  rowBorder: 'rgba(255,255,255,0.04)', rowHover: 'rgba(255,255,255,0.015)',
+  toggleOff: 'rgba(255,255,255,0.12)', toggleBorder: 'none',
+  editIcon: 'rgba(232,230,248,0.28)', deleteIcon: 'rgba(255,100,100,0.45)',
 }
 const C_LIGHT = {
-  page: '#f0effe', card: '#ffffff', border: 'rgba(0,0,0,0.08)',
-  text: '#0f0e24', muted: 'rgba(15,14,36,0.7)', dim: 'rgba(15,14,36,0.6)',
-  vdim: 'rgba(15,14,36,0.4)', primary: '#7b2eff',
+  page: '#f0effe', card: '#ffffff', border: 'rgba(0,0,0,0.1)',
+  text: '#0f0e24', muted: 'rgba(15,14,36,0.82)', dim: 'rgba(15,14,36,0.78)',
+  vdim: 'rgba(15,14,36,0.55)', primary: '#7b2eff',
   blue: '#2563eb', blueBg: 'rgba(37,99,235,0.08)', cyan: '#0891b2', green: '#059669',
+  rowBorder: 'rgba(0,0,0,0.07)', rowHover: 'rgba(0,0,0,0.04)',
+  toggleOff: 'rgba(0,0,0,0.13)', toggleBorder: '1.5px solid rgba(0,0,0,0.2)',
+  editIcon: 'rgba(15,14,36,0.55)', deleteIcon: 'rgba(200,30,30,0.6)',
 }
 
 const inp: React.CSSProperties = {
@@ -25,15 +31,17 @@ const inp: React.CSSProperties = {
   boxSizing: 'border-box', fontFamily: 'inherit',
 }
 
-function Toggle({ on, onChange, size = 'md' }: { on: boolean; onChange: (v: boolean) => void; size?: 'sm' | 'md' }) {
+function Toggle({ on, onChange, size = 'md', isDark: dark = true }: { on: boolean; onChange: (v: boolean) => void; size?: 'sm' | 'md'; isDark?: boolean }) {
   const [w, h, b, bOff, bOn] = size === 'sm' ? [34, 18, 12, 3, 19] : [44, 24, 18, 3, 23]
+  const tc = dark ? C_DARK : C_LIGHT
   return (
     <button type="button" onClick={() => onChange(!on)} style={{
       width: w, height: h, borderRadius: h / 2,
-      background: on ? C_DARK.green : 'rgba(255,255,255,0.12)',
-      border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+      background: on ? tc.green : tc.toggleOff,
+      border: on ? 'none' : tc.toggleBorder,
+      cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0,
     }}>
-      <span style={{ position: 'absolute', top: bOff, left: on ? bOn : bOff, width: b, height: b, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+      <span style={{ position: 'absolute', top: bOff, left: on ? bOn : bOff, width: b, height: b, borderRadius: '50%', background: dark || on ? '#fff' : '#444', transition: 'left 0.2s', display: 'block' }} />
     </button>
   )
 }
@@ -1196,14 +1204,14 @@ export default function ComandosPage() {
         </div>
 
         {/* Column headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.45rem 1.25rem', borderBottom: `1px solid rgba(255,255,255,0.04)`, fontSize: '0.66rem', fontWeight: 700, color: C.dim, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.45rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, fontSize: '0.66rem', fontWeight: 700, color: C.dim, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
           <span>Comando / Evento</span><span>Resposta</span><span style={{ textAlign: 'right' }}>Ações</span>
         </div>
 
         {/* Eventos automáticos section */}
         {filtered.filter(c => c.isEvento).length > 0 && (
           <>
-            <div style={{ padding: '0.5rem 1.25rem 0.3rem', display: 'flex', alignItems: 'center', gap: '0.45rem', borderTop: `1px solid rgba(255,255,255,0.03)` }}>
+            <div style={{ padding: '0.5rem 1.25rem 0.3rem', display: 'flex', alignItems: 'center', gap: '0.45rem', borderTop: `1px solid ${C.rowBorder}` }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.primary, display: 'inline-block', flexShrink: 0 }} />
               <span style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Eventos automáticos</span>
             </div>
@@ -1211,8 +1219,8 @@ export default function ComandosPage() {
               const platColor = PLAT_COLOR[cmd.platform] ?? C.primary
               return (
                 <div key={cmd.id}
-                  style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid rgba(255,255,255,0.04)`, alignItems: 'center', transition: 'background 0.1s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.015)' }}
+                  style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.rowHover }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                 >
                   <div>
@@ -1224,7 +1232,7 @@ export default function ComandosPage() {
                   </div>
                   <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{cmd.resposta}</span>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
-                    <Toggle on={cmd.habilitado} onChange={async v => {
+                    <Toggle on={cmd.habilitado} isDark={isDark} onChange={async v => {
                       setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
                       if (v) {
                         if (cmd.db) { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: true }) }) }
@@ -1240,7 +1248,7 @@ export default function ComandosPage() {
                         }
                       }
                     }} size="sm" />
-                    <button onClick={() => startEdit(cmd)} style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', padding: '0.15rem', display: 'flex', opacity: 0.7 }}>
+                    <button onClick={() => startEdit(cmd)} style={{ background: 'none', border: 'none', color: C.editIcon, cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                   </div>
@@ -1253,7 +1261,7 @@ export default function ComandosPage() {
         {/* Meus comandos section */}
         {filtered.filter(c => !c.isEvento).length > 0 && (
           <>
-            <div style={{ padding: '0.5rem 1.25rem 0.3rem', display: 'flex', alignItems: 'center', gap: '0.45rem', borderTop: `1px solid rgba(255,255,255,0.03)` }}>
+            <div style={{ padding: '0.5rem 1.25rem 0.3rem', display: 'flex', alignItems: 'center', gap: '0.45rem', borderTop: `1px solid ${C.rowBorder}` }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.blue, display: 'inline-block', flexShrink: 0 }} />
               <span style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Meus comandos</span>
             </div>
@@ -1261,8 +1269,8 @@ export default function ComandosPage() {
               const platColor = PLAT_COLOR[cmd.platform] ?? C.blue
               return (
                 <div key={cmd.id}
-                  style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid rgba(255,255,255,0.04)`, alignItems: 'center', transition: 'background 0.1s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.015)' }}
+                  style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.rowHover }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                 >
                   <div>
@@ -1274,14 +1282,14 @@ export default function ComandosPage() {
                   </div>
                   <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{cmd.resposta}</span>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
-                    <Toggle on={cmd.habilitado} onChange={async v => {
+                    <Toggle on={cmd.habilitado} isDark={isDark} onChange={async v => {
                       setCmds(p => p.map(c => c.id === cmd.id ? { ...c, habilitado: v } : c))
                       if (cmd.db) { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habilitado: v }) }) }
                     }} size="sm" />
-                    <button onClick={() => startEdit(cmd)} style={{ background: 'none', border: 'none', color: C.dim, cursor: 'pointer', padding: '0.15rem', display: 'flex', opacity: 0.7 }}>
+                    <button onClick={() => startEdit(cmd)} style={{ background: 'none', border: 'none', color: C.editIcon, cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
-                    <button onClick={async () => { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'DELETE' }); setCmds(p => p.filter(c => c.id !== cmd.id)) }} style={{ background: 'none', border: 'none', color: 'rgba(255,100,100,0.45)', cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
+                    <button onClick={async () => { await fetch(`/api/comandos?id=${cmd.id}`, { method: 'DELETE' }); setCmds(p => p.filter(c => c.id !== cmd.id)) }} style={{ background: 'none', border: 'none', color: C.deleteIcon, cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                     </button>
                   </div>
