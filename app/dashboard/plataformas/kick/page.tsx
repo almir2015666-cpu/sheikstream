@@ -15,7 +15,7 @@ const PERIODS: [Period, string][] = [['7d','7 dias'],['30d','30 dias'],['90d','9
 type KickStats  = { total_subs: number; gift_subs: number; tickets_gerados: number; total_bruto: number; total_liquido: number; usd_rate: number; tiers: { tier1: number; tier2: number; tier3: number } }
 type KickSub    = { id: string; type: string; username: string; count: number; created_at: string }
 type KickTiers  = { tier1_name: string; tier1_value: number; tier2_name: string; tier2_value: number; tier3_name: string; tier3_value: number }
-type TokenStatus = { kick: boolean; kick_username: string | null }
+type TokenStatus = { kick: boolean; kick_username: string | null; kick_channel_id: string | null }
 
 function fmtBRL(v: number) { return `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
 function todayStr() { return new Date().toISOString().slice(0, 10) }
@@ -28,6 +28,7 @@ export default function KickPlataformaPage() {
 
   const [connected, setConnected] = useState(false)
   const [username, setUsername] = useState<string | null>(null)
+  const [channelId, setChannelId] = useState<string | null>(null)
   const [tokenLoading, setTokenLoading] = useState(true)
 
   const [stats, setStats] = useState<KickStats | null>(null)
@@ -75,7 +76,7 @@ export default function KickPlataformaPage() {
   useEffect(() => {
     fetch('/api/tokens/status')
       .then(r => r.json())
-      .then((s: TokenStatus) => { setConnected(!!s.kick); setUsername(s.kick_username ?? null) })
+      .then((s: TokenStatus) => { setConnected(!!s.kick); setUsername(s.kick_username ?? null); setChannelId(s.kick_channel_id ?? null) })
       .catch(() => {})
       .finally(() => setTokenLoading(false))
     fetch('/api/kick/tiers')
@@ -112,7 +113,7 @@ export default function KickPlataformaPage() {
         window.removeEventListener('message', onMessage)
         clearInterval(check)
         fetch('/api/tokens/status').then(r => r.json()).then((s: TokenStatus) => {
-          setConnected(!!s.kick); setUsername(s.kick_username ?? null)
+          setConnected(!!s.kick); setUsername(s.kick_username ?? null); setChannelId(s.kick_channel_id ?? null)
           if (s.kick) {
             fetch('/api/kick/stats').then(r => r.ok ? r.json() : null).then(d => {
               setSyncSubCount(d?.total_subs ?? 0)
@@ -274,14 +275,18 @@ export default function KickPlataformaPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
 
           {/* Channel */}
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.2rem 1.3rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}>
-              <div style={{ width: 44, height: 44, borderRadius: '12px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', color: C.primary, flexShrink: 0 }}>
-                {username ? username.slice(0, 2).toUpperCase() : 'K'}
-              </div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>{username ?? '—'}</div>
-                <div style={{ fontSize: '0.7rem', color: C.dim }}>Kick</div>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.2rem 1.3rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '12px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', color: C.primary, flexShrink: 0 }}>KI</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {username || 'Canal Kick'}
+                </div>
+                {(channelId || username) && (
+                  <div style={{ fontSize: '0.7rem', color: C.dim, marginTop: '0.1rem' }}>
+                    {channelId ? `ID: ${channelId}` : username}
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ display: 'flex', gap: '1.5rem' }}>
@@ -290,8 +295,7 @@ export default function KickPlataformaPage() {
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   Seguidores
                 </div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>0</div>
-                <div style={{ fontSize: '0.65rem', color: C.vdim }}>0</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>—</div>
               </div>
               <div>
                 <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -301,9 +305,9 @@ export default function KickPlataformaPage() {
                 <div style={{ fontSize: '0.75rem', color: C.vdim }}>Canal offline no momento</div>
               </div>
             </div>
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-              <button onClick={openKickPopup} style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '7px', cursor: 'pointer', fontWeight: 700 }}>Reconectar</button>
-              <button disabled={disconnecting} onClick={handleDisconnect} style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: C.red, borderRadius: '7px', cursor: 'pointer', fontWeight: 700, opacity: disconnecting ? 0.6 : 1 }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+              <button onClick={openKickPopup} style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.8rem', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '7px', cursor: 'pointer', fontWeight: 700 }}>Reconectar</button>
+              <button disabled={disconnecting} onClick={handleDisconnect} style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.8rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: C.red, borderRadius: '7px', cursor: 'pointer', fontWeight: 700, opacity: disconnecting ? 0.6 : 1 }}>
                 {disconnecting ? 'Desconectando...' : 'Desconectar'}
               </button>
             </div>
