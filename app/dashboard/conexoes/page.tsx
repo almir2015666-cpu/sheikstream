@@ -115,7 +115,7 @@ export default function ConexoesPage() {
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
   const [webhookOrigin, setWebhookOrigin] = useState('')
   const [livepixConfigOpen, setLivepixConfigOpen] = useState(false)
-  const [tokenStatus, setTokenStatus] = useState<{ twitch: boolean; youtube: boolean; spotify: boolean; spotify_username?: string | null; kick: boolean; kick_username?: string | null }>({ twitch: false, youtube: false, spotify: false, kick: false })
+  const [tokenStatus, setTokenStatus] = useState<{ twitch: boolean; youtube: boolean; spotify: boolean; spotify_username?: string | null; kick: boolean; kick_username?: string | null; kick_channel_id?: string | null }>({ twitch: false, youtube: false, spotify: false, kick: false })
   const [disconnecting, setDisconnecting] = useState(false)
   const [spotifyDisconnecting, setSpotifyDisconnecting] = useState(false)
   const [spotifySuccess, setSpotifySuccess] = useState(false)
@@ -417,7 +417,7 @@ export default function ConexoesPage() {
   }, [])
 
   return (
-    <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+    <div style={{ background: C.page, minHeight: '100vh', padding: '2rem 4rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
       {urlError && (
         <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1rem', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -508,6 +508,9 @@ export default function ConexoesPage() {
                       )}
                     </div>
                     <StatusPill connected={isConn} />
+                    {isConn && connectedUser && (
+                      <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: '0.2rem' }}>@{connectedUser}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -636,27 +639,37 @@ export default function ConexoesPage() {
                   <span style={{ fontWeight: 800, fontSize: '0.88rem' }}>Kick</span>
                 </div>
                 <StatusPill connected={tokenStatus.kick} />
+                {tokenStatus.kick && (tokenStatus.kick_username || tokenStatus.kick_channel_id) && (
+                  <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: '0.2rem' }}>@{tokenStatus.kick_username || tokenStatus.kick_channel_id}</div>
+                )}
               </div>
             </div>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-            {['Inscrições (subs)', 'Gift Subs', 'Follows'].map(f => <FeatureChip key={f} label={f} />)}
+            {['Inscrições (subs)', 'Seguidores', 'Chat do canal'].map(f => <FeatureChip key={f} label={f} />)}
           </div>
           {tokenStatus.kick ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {tokenStatus.kick_username && (
-                <div style={{ padding: '0.55rem 0.8rem', background: 'rgba(83,252,24,0.06)', border: '1px solid rgba(83,252,24,0.15)', borderRadius: '8px', fontSize: '0.78rem', color: '#53fc18', fontWeight: 600 }}>
-                  ✓ Conectado como {tokenStatus.kick_username}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.65rem 0.8rem', background: 'rgba(83,252,24,0.06)', border: '1px solid rgba(83,252,24,0.15)', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: C.text }}>Integração ativa</div>
+                    <div style={{ fontSize: '0.7rem', color: C.dim }}>Bot usa esta plataforma quando ligado</div>
+                  </div>
+                  <Toggle on={true} onChange={() => {}} />
                 </div>
-              )}
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button type="button" onClick={openKickPopup} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.55rem 0', background: 'transparent', border: '1px solid rgba(83,252,24,0.3)', color: '#53fc18', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-                  Reconectar
-                </button>
-                <button type="button" disabled={kickDisconnecting} onClick={handleKickDisconnect} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.55rem 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', opacity: kickDisconnecting ? 0.6 : 1 }}>
-                  {kickDisconnecting ? 'Desconectando...' : 'Desconectar'}
-                </button>
+                {(tokenStatus.kick_username || tokenStatus.kick_channel_id) && (
+                  <div style={{ fontSize: '0.74rem', color: C.dim, padding: '0.45rem 0.65rem', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: '6px', fontFamily: 'monospace' }}>
+                    Canal detectado: <span style={{ color: C.muted }}>{tokenStatus.kick_username || tokenStatus.kick_channel_id}</span>
+                  </div>
+                )}
               </div>
+              <button type="button" disabled={kickDisconnecting} onClick={handleKickDisconnect} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.55rem 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', opacity: kickDisconnecting ? 0.6 : 1, width: '100%' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                {kickDisconnecting ? 'Desconectando...' : 'Desconectar'}
+              </button>
             </div>
           ) : (
             <button type="button" onClick={openKickPopup} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.55rem 0', background: 'transparent', border: '1px solid rgba(83,252,24,0.4)', color: '#53fc18', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', width: '100%' }}

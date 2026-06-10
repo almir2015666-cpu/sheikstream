@@ -233,7 +233,7 @@ export default function AdminPage() {
   const [bannerSaving, setBannerSaving] = useState(false)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerSaved, setBannerSaved] = useState(false)
-  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean; spotify_connected: boolean; youtube_connected: boolean; is_live: boolean; twitch_url: string | null }
+  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean; spotify_connected: boolean; youtube_connected: boolean; kick_connected: boolean; is_live: boolean; twitch_url: string | null }
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
   type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; target_username: string | null; duration_seconds?: number }
@@ -1859,7 +1859,13 @@ export default function AdminPage() {
                                 YouTube
                               </span>
                             )}
-                            {(!isOn || (!u.twitch_connected && !u.livepix_connected && !u.spotify_connected && !u.youtube_connected)) && (
+                            {isOn && u.kick_connected && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(83,252,24,0.08)', border: '1px solid rgba(83,252,24,0.2)', color: '#53fc18' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="#53fc18"><path d="M2 2h4v8l6-8h5l-7 9 7 11h-5l-6-9v9H2z"/></svg>
+                                Kick
+                              </span>
+                            )}
+                            {(!isOn || (!u.twitch_connected && !u.livepix_connected && !u.spotify_connected && !u.youtube_connected && !u.kick_connected)) && (
                               <span style={{ fontSize: '0.63rem', color: C.vdim }}>nenhuma plataforma conectada</span>
                             )}
                           </div>

@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   // Kick columns may not exist yet — query separately to avoid breaking everything
   const { data: kickData } = await getSupabaseAdmin()
     .from('user_tokens')
-    .select('kick_token, kick_username')
+    .select('kick_token, kick_username, kick_channel_id')
     .eq('user_id', user.id)
     .maybeSingle()
     .then(r => r.error ? { data: null } : r)
@@ -30,5 +30,6 @@ export async function GET(req: NextRequest) {
     spotify_username: baseData?.spotify_username ?? null,
     kick:             !!kickData?.kick_token,
     kick_username:    kickData?.kick_username ?? null,
+    kick_channel_id:  kickData?.kick_channel_id ?? null,
   })
 }
