@@ -1057,6 +1057,35 @@ export default function ComandosPage() {
         }
       } catch {}
 
+      // One-time migration: copy Sub Twitch overlay config to all other events that have no config yet
+      try {
+        if (!localStorage.getItem('sk-overlay-cfg-copy-v1')) {
+          const meRes = await fetch('/api/me')
+          const me = meRes.ok ? await meRes.json() : null
+          if (me?.id) {
+            const subCfgRes = await fetch(`/api/overlay-config/alert-twitch-sub?uid=${me.id}`)
+            const subCfg = subCfgRes.ok ? await subCfgRes.json() : null
+            if (subCfg?.style) {
+              const base = subCfg.style
+              const uniqueSlugs = [...new Set(Object.values(TRIGGER_TO_SLUG))].filter(s => s !== 'twitch-sub')
+              await Promise.all(uniqueSlugs.map(async slug => {
+                const existRes = await fetch(`/api/overlay-config/alert-${slug}?uid=${me.id}`)
+                const existCfg = existRes.ok ? await existRes.json() : null
+                if (!existCfg?.style) {
+                  const preset = SLUG_PRESETS[slug] ?? {}
+                  await fetch(`/api/overlay-config/alert-${slug}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ style: { ...base, ...preset } }),
+                  }).catch(() => {})
+                }
+              }))
+            }
+          }
+          localStorage.setItem('sk-overlay-cfg-copy-v1', '1')
+        }
+      } catch {}
+
       for (const s of seeded) { if (s) dbByTrigger.set(s.trigger, s) }
       applyDbRows(rows.concat(seeded.filter((s): s is DbRow => s !== null && !dbEvents.some(e => e.trigger === s.trigger))), dbByTrigger)
     }
