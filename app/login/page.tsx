@@ -146,6 +146,13 @@ export default function LoginPage() {
         </div>
       )}
 
+      {reason === 'terms_declined' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(180,30,30,0.05)', border: `1px solid ${isDark ? 'rgba(239,68,68,0.25)' : 'rgba(180,30,30,0.18)'}`, borderRadius: '10px', padding: '0.75rem 1rem', maxWidth: '360px', width: '100%', marginBottom: '0.75rem', fontSize: '0.82rem', color: isDark ? '#fca5a5' : '#b91c1c', lineHeight: 1.5 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          Você precisa aceitar os termos de uso para acessar a plataforma.
+        </div>
+      )}
+
       {/* Card */}
       <div className="sk-card" style={{
         background: C.card,

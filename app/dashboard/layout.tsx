@@ -195,13 +195,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const notifLoadedRef = useRef<boolean>(false)
   // Session inactivity timeout (30 min)
   const lastActivityRef = useRef<number>(Date.now())
-  // Terms acceptance modal
-  const [showTerms, setShowTerms] = useState(false)
-  const [termsChecked, setTermsChecked] = useState(false)
-  const [privacyChecked, setPrivacyChecked] = useState(false)
-  const [marketingChecked, setMarketingChecked] = useState(false)
-  const [termsSaving, setTermsSaving] = useState(false)
-  const termsCheckedRef = useRef(false)
 
   const S = theme === 'dark' ? DARK_S : LIGHT_S
   const isDark = theme === 'dark'
@@ -322,13 +315,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user])
 
-  // Check terms acceptance after user is loaded
+  // Redirect to /termos if terms not accepted
   useEffect(() => {
-    if (!user || termsCheckedRef.current) return
-    termsCheckedRef.current = true
+    if (!user) return
     fetch('/api/user/terms')
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.needs_acceptance) setShowTerms(true) })
+      .then(d => { if (d?.needs_acceptance) router.push('/termos') })
       .catch(() => {})
   }, [user])
 
@@ -811,54 +803,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </>
       )}
 
-      {/* Terms acceptance modal */}
-      {showTerms && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: isDark ? '#111219' : '#ffffff', border: `1px solid ${S.borderP}`, borderRadius: '20px', padding: '2rem', maxWidth: '460px', width: '100%', boxShadow: '0 0 60px rgba(155,48,255,0.15), 0 24px 48px rgba(0,0,0,0.8)', position: 'relative' }}>
-            <div style={{ textAlign: 'center', marginBottom: '0.35rem' }}>
-              <div style={{ width: 52, height: 52, borderRadius: '12px', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-              </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: S.text, marginBottom: '0.35rem' }}>Antes de continuar</div>
-              <div style={{ fontSize: '0.82rem', color: S.muted }}>Para usar a plataforma, você precisa aceitar os termos abaixo.</div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', margin: '1.5rem 0 1.25rem' }}>
-              {[
-                { key: 'terms',     label: 'Li e concordo com os', link: '/termos-e-condicoes', linkText: 'Termos de Uso', sub: 'da SheikSTREAM', required: true,  checked: termsChecked,     set: setTermsChecked },
-                { key: 'privacy',   label: 'Li e concordo com a',  link: '/privacidade',        linkText: 'Política de Privacidade', sub: 'da SheikSTREAM', required: true, checked: privacyChecked, set: setPrivacyChecked },
-                { key: 'marketing', label: 'Aceito receber novidades, dicas e promoções da SheikSTREAM', link: null, linkText: null, sub: null, required: false, checked: marketingChecked, set: setMarketingChecked },
-              ].map(item => (
-                <label key={item.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={item.checked} onChange={e => item.set(e.target.checked)}
-                    style={{ width: 18, height: 18, marginTop: 2, accentColor: '#9b30ff', flexShrink: 0, cursor: 'pointer' }} />
-                  <span style={{ fontSize: '0.82rem', color: S.muted, lineHeight: 1.5 }}>
-                    {item.label}{' '}
-                    {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ color: S.primary, fontWeight: 600, textDecoration: 'underline' }}>{item.linkText}</a>}
-                    {item.sub && ` ${item.sub}`}
-                    {item.required && <span style={{ color: '#ef4444', marginLeft: '0.2rem' }}>*</span>}
-                  </span>
-                </label>
-              ))}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: S.vdim, marginBottom: '1.1rem' }}>* campos obrigatórios</div>
-            <button
-              disabled={!termsChecked || !privacyChecked || termsSaving}
-              onClick={async () => {
-                setTermsSaving(true)
-                try {
-                  await fetch('/api/user/terms', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ terms: termsChecked, privacy: privacyChecked, marketing: marketingChecked }),
-                  })
-                  setShowTerms(false)
-                } catch {} finally { setTermsSaving(false) }
-              }}
-              style={{ width: '100%', padding: '0.8rem', background: termsChecked && privacyChecked ? 'linear-gradient(135deg,#9b30ff,#6b1fc2)' : isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '12px', color: termsChecked && privacyChecked ? '#fff' : S.vdim, fontWeight: 800, fontSize: '0.95rem', cursor: termsChecked && privacyChecked ? 'pointer' : 'not-allowed', transition: 'all 0.15s' }}>
-              {termsSaving ? 'Salvando...' : 'Continuar'}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -10,7 +10,20 @@
       "PowerShell(git add app/api/twitch/eventsub/route.ts app/dashboard/plataformas/twitch/page.tsx)",
       "PowerShell(git add app/api/twitch/eventsub/route.ts app/api/twitch/channel-stats/route.ts app/dashboard/plataformas/twitch/page.tsx)",
       "PowerShell(git add app/dashboard/plataformas/twitch/page.tsx app/api/dashboard/stats/route.ts)",
-      "PowerShell(git add app/dashboard/plataformas/twitch/page.tsx app/api/twitch/channel-stats/route.ts)"
+      "PowerShell(git add app/dashboard/plataformas/twitch/page.tsx app/api/twitch/channel-stats/route.ts)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const lines=fs.readFileSync\\('app/dashboard/comandos/page.tsx','utf8'\\).split\\('\\\\n'\\);console.log\\('LINE 130:',lines[129]\\);console.log\\('LINE 131:',lines[130]\\);console.log\\('LINE 399:',lines[398]\\);console.log\\('LINE 400:',lines[399]\\);console.log\\('LINE 401:',lines[400]\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(findstr \"openai\\\\|anthropic\\\\|replicate\")",
+      "Bash(curl -s -A \"Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://www.myinstants.com/pt/instant/twitch-bits-59359/\")",
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\josec\\\\sheikstream\\\\public\\\\sounds\")",
+      "Bash(Write-Host \"dir ok\")",
+      "Bash(curl -sL -A \"Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://www.myinstants.com/media/sounds/twitch-bits-donation-sound-effect-sfx.mp3\" -o /c/Users/josec/sheikstream/public/sounds/twitch-bits.mp3)",
+      "Bash(git revert *)",
+      "Bash(git checkout *)",
+      "Bash(git restore *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\josec\\\\sheikstream\" -Filter \".env*\" -Force)",
+      "Bash(Select-Object Name, FullName)"
     ]
   }
 }

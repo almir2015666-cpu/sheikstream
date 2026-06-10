@@ -146,9 +146,22 @@ export async function GET(req: NextRequest) {
     console.error('[twitch/callback] user_tokens upsert exception:', e)
   }
 
+  // Check if user already accepted terms — redirect to /termos if not
+  let needsTerms = true
+  if (!isPopup) {
+    try {
+      const { data: uRow } = await getSupabaseAdmin()
+        .from('users')
+        .select('terms_accepted_at,privacy_accepted_at')
+        .eq('id', tw.id)
+        .maybeSingle()
+      needsTerms = !uRow?.terms_accepted_at || !uRow?.privacy_accepted_at
+    } catch {}
+  }
+
   const res = isPopup
     ? new NextResponse(makePopupHtml(!upsertErrMsg, upsertErrMsg), { headers: { 'Content-Type': 'text/html' } })
-    : NextResponse.redirect(`${BASE}/dashboard`)
+    : NextResponse.redirect(`${BASE}${needsTerms ? '/termos' : '/dashboard'}`)
   res.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: true,

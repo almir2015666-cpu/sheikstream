@@ -49,6 +49,16 @@ export default function KickPlataformaPage() {
   const [tiersSaving, setTiersSaving] = useState(false)
   const [tiersHasWarning, setTiersHasWarning] = useState(false)
 
+  // Add sub modal
+  const [showAddSub, setShowAddSub] = useState(false)
+  const [addSubUsername, setAddSubUsername] = useState('')
+  const [addSubTier, setAddSubTier] = useState('tier1')
+  const [addSubGift, setAddSubGift] = useState(false)
+  const [addSubTickets, setAddSubTickets] = useState(1)
+  const [addSubDate, setAddSubDate] = useState('')
+  const [addSubSaving, setAddSubSaving] = useState(false)
+  const [addSubError, setAddSubError] = useState('')
+
   const USD_RATE = stats?.usd_rate ?? 5.70
   const PAYMENT_GOAL_USD = 100
 
@@ -207,7 +217,7 @@ export default function KickPlataformaPage() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
               Verificar Kick
             </button>
-            <button style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={() => { setShowAddSub(true); setAddSubError('') }} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
               + Adicionar Sub
             </button>
           </div>
@@ -428,6 +438,99 @@ export default function KickPlataformaPage() {
                 {tiersSaving ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Adicionar Sub modal */}
+      {showAddSub && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: '#1a1c2a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '1.75rem', width: '100%', maxWidth: '420px', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.4rem' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 800, color: C.text }}>Adicionar Sub Kick</div>
+              <button onClick={() => setShowAddSub(false)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: '0.1rem 0.3rem' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ gridColumn: '1' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem' }}>Usuário que assinou <span style={{ color: '#ef4444' }}>*</span></div>
+                <input
+                  type="text" placeholder="@usuario_kick" value={addSubUsername} onChange={e => setAddSubUsername(e.target.value)}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: C.text, fontSize: '0.85rem', padding: '0.6rem 0.8rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem' }}>Tier</div>
+                <select value={addSubTier} onChange={e => setAddSubTier(e.target.value)}
+                  style={{ width: '100%', background: '#1a1c2a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: C.text, fontSize: '0.85rem', padding: '0.6rem 0.8rem', outline: 'none', cursor: 'pointer' }}>
+                  <option value="tier1">Tier 1</option>
+                  <option value="tier2">Tier 2</option>
+                  <option value="tier3">Tier 3</option>
+                </select>
+              </div>
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', marginBottom: '1rem' }}>
+              <input type="checkbox" checked={addSubGift} onChange={e => setAddSubGift(e.target.checked)} style={{ width: 16, height: 16, accentColor: C.primary, cursor: 'pointer' }} />
+              <span style={{ fontSize: '0.84rem', color: C.muted }}>É um gift sub?</span>
+            </label>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem' }}>Tickets a conceder</div>
+              <input
+                type="number" min={1} max={100} value={addSubTickets} onChange={e => setAddSubTickets(Math.max(1, parseInt(e.target.value) || 1))}
+                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: C.text, fontSize: '0.85rem', padding: '0.6rem 0.8rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1.2rem' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem' }}>Data do sub</div>
+              <input
+                type="datetime-local" value={addSubDate} onChange={e => setAddSubDate(e.target.value)}
+                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: C.text, fontSize: '0.85rem', padding: '0.6rem 0.8rem', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ background: 'rgba(83,252,24,0.07)', border: '1px solid rgba(83,252,24,0.2)', borderRadius: '8px', padding: '0.7rem 0.9rem', fontSize: '0.78rem', color: C.primary, lineHeight: 1.5, marginBottom: '1.2rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '0.1rem' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Streamers Kick conectados terão seus subs registrados automaticamente via webhook. Use este formulário para registros manuais.
+            </div>
+
+            {addSubError && (
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '8px', padding: '0.55rem 0.75rem', fontSize: '0.78rem', color: '#fca5a5', marginBottom: '0.9rem' }}>
+                {addSubError}
+              </div>
+            )}
+
+            <button
+              disabled={!addSubUsername.trim() || addSubSaving}
+              onClick={async () => {
+                if (!addSubUsername.trim()) return
+                setAddSubSaving(true); setAddSubError('')
+                try {
+                  const res = await fetch('/api/kick/add-sub', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      username: addSubUsername.trim().replace(/^@/, ''),
+                      tier: addSubTier,
+                      is_gift: addSubGift,
+                      tickets: addSubTickets,
+                      date: addSubDate || new Date().toISOString(),
+                    }),
+                  })
+                  if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Erro ao adicionar') }
+                  setShowAddSub(false)
+                  setAddSubUsername(''); setAddSubTier('tier1'); setAddSubGift(false); setAddSubTickets(1); setAddSubDate('')
+                  const { from, to } = periodDates()
+                  fetch(`/api/kick/subs?from=${from}&to=${to}`).then(r => r.ok ? r.json() : null).then(d => { if (Array.isArray(d)) setSubs(d) })
+                } catch (e: unknown) {
+                  setAddSubError(e instanceof Error ? e.message : 'Erro ao adicionar sub')
+                } finally { setAddSubSaving(false) }
+              }}
+              style={{ width: '100%', padding: '0.75rem', background: addSubUsername.trim() ? 'linear-gradient(135deg,#4f8aff,#2563eb)' : 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '10px', color: addSubUsername.trim() ? '#fff' : C.vdim, fontWeight: 800, fontSize: '0.9rem', cursor: addSubUsername.trim() && !addSubSaving ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              {addSubSaving ? 'Adicionando...' : 'Adicionar sub'}
+            </button>
           </div>
         </div>
       )}
