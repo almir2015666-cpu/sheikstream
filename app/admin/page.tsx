@@ -1571,7 +1571,7 @@ export default function AdminPage() {
                               <button onClick={() => setShowPw(p => ({ ...p, [pw.id]: !p[pw.id] }))} style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '0.75rem', padding: '0.1rem 0.3rem' }}>
                                 {showPw[pw.id] ? '🙈' : '👁'}
                               </button>
-                              {pw.expires_at && <span style={{ fontSize: '0.72rem', color: C.dim }}>Expira: {new Date(pw.expires_at).toLocaleDateString('pt-BR')}</span>}
+                              {pw.expires_at && <span style={{ fontSize: '0.72rem', color: C.dim }}>Expira: {new Date(pw.expires_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>}
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
