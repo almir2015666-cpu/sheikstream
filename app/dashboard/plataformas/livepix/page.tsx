@@ -109,7 +109,7 @@ export default function LivepixDonorsPage() {
   }
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '2rem 3rem', maxWidth: '1440px', margin: '0 auto', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
@@ -153,7 +153,7 @@ export default function LivepixDonorsPage() {
           { label: 'Arrecadado', value: fmt(totalAmount) },
           { label: 'Maior doador', value: maxDonor ? `${maxDonor.username}` : '—' },
         ].map(s => (
-          <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '10px', padding: '1rem 1.1rem' }}>
+          <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1rem 1.1rem' }}>
             <div style={{ fontSize: '0.72rem', color: C.dim, marginBottom: '0.3rem' }}>{s.label}</div>
             <div style={{ fontSize: '1.2rem', fontWeight: 800, color: C.text }}>{s.value}</div>
             {s.label === 'Maior doador' && maxDonor && (
@@ -164,7 +164,7 @@ export default function LivepixDonorsPage() {
       </div>
 
       {/* Estimativa de Receita */}
-      <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.2rem', marginBottom: '1rem' }}>
+      <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.4rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 700, fontSize: '0.9rem' }}>
             <span style={{ color: C.primary }}>$</span>
@@ -238,12 +238,12 @@ export default function LivepixDonorsPage() {
               </div>
               <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.4rem' }}>Nenhum doador encontrado</div>
               <div style={{ fontSize: '0.82rem', color: C.dim, marginBottom: '1.5rem' }}>Os doadores aparecem automaticamente após doações via Livepix</div>
-              <button onClick={() => setActiveTab('add')} style={{ padding: '0.65rem 1.4rem', background: C.blue, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={() => setActiveTab('add')} style={{ padding: '0.65rem 1.4rem', background: C.blue, color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}>
                 + Adicionar Doador
               </button>
             </div>
           ) : (
-            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', overflow: 'hidden' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', overflow: 'hidden' }}>
               {filtered.map((d, i) => (
                 <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem 1.2rem', borderBottom: i < filtered.length - 1 ? `1px solid ${C.cardB}` : 'none' }}>
                   <div style={{ width: 38, height: 38, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: C.primary, flexShrink: 0, fontSize: '0.9rem' }}>
@@ -309,10 +309,10 @@ export default function LivepixDonorsPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '0.6rem' }}>
-                <button onClick={addDonor} disabled={saving || !form.username.trim() || !form.amount} style={{ flex: 1, padding: '0.75rem', background: form.username.trim() && form.amount ? C.blue : 'rgba(59,130,246,0.3)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 700, cursor: form.username.trim() && form.amount ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1 }}>
+                <button onClick={addDonor} disabled={saving || !form.username.trim() || !form.amount} style={{ flex: 1, padding: '0.75rem', background: form.username.trim() && form.amount ? C.blue : 'rgba(59,130,246,0.3)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 700, cursor: form.username.trim() && form.amount ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1 }}>
                   {saving ? 'Adicionando...' : '+ Adicionar Doador'}
                 </button>
-                <button onClick={() => setActiveTab('list')} style={{ padding: '0.75rem 1.2rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: '10px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                <button onClick={() => setActiveTab('list')} style={{ padding: '0.75rem 1.2rem', background: 'transparent', border: `1px solid ${C.cardB}`, color: C.dim, borderRadius: '12px', fontSize: '0.9rem', cursor: 'pointer' }}>
                   Cancelar
                 </button>
               </div>

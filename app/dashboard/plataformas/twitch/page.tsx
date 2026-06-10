@@ -267,7 +267,7 @@ export default function TwitchSubsPage() {
   const nextPayStr = nextPayDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '2rem 3rem', maxWidth: '1440px', margin: '0 auto', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
@@ -319,7 +319,7 @@ export default function TwitchSubsPage() {
 
       {/* Ajustar níveis panel */}
       {showNiveis && (
-        <div style={{ background: C.card, border: `1px solid ${C.primaryB}`, borderRadius: '12px', padding: '1.3rem', marginBottom: '1.25rem' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.primaryB}`, borderRadius: '16px', padding: '1.3rem', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 700, color: C.text }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
@@ -337,7 +337,7 @@ export default function TwitchSubsPage() {
             const nameKey = `${t}_name` as keyof TierConfig
             const valKey = `${t}_value` as keyof TierConfig
             return (
-              <div key={t} style={{ background: '#0b0d1a', borderRadius: '10px', padding: '1rem', marginBottom: i < 2 ? '0.75rem' : 0 }}>
+              <div key={t} style={{ background: '#0b0d1a', borderRadius: '12px', padding: '1rem', marginBottom: i < 2 ? '0.75rem' : 0 }}>
                 <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.65rem' }}>Tier {i + 1}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
@@ -357,7 +357,7 @@ export default function TwitchSubsPage() {
 
       {/* Diagnóstico EventSub */}
       {showDiag && (
-        <div style={{ background: C.card, border: '1px solid rgba(239,68,68,0.25)', borderRadius: '12px', padding: '1.3rem', marginBottom: '1.25rem' }}>
+        <div style={{ background: C.card, border: '1px solid rgba(239,68,68,0.25)', borderRadius: '16px', padding: '1.3rem', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.9rem' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -374,7 +374,7 @@ export default function TwitchSubsPage() {
           </div>
           {resyncing && <div style={{ color: C.dim, fontSize: '0.82rem', marginBottom: '0.75rem' }}>⏳ Removendo inscrições com problemas e recriando... aguarde ~5s</div>}
           {resyncResult && (
-            <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '0.75rem' }}>
+            <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '0.85rem 1rem', marginBottom: '0.75rem' }}>
               <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Resultado do último resync</div>
               {Object.entries(resyncResult).map(([type, result]) => {
                 const ok = result === 'registered' || result === 'already_exists'
@@ -404,7 +404,7 @@ export default function TwitchSubsPage() {
             return (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 {/* Token status */}
-                <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '0.85rem 1rem' }}>
                   <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Token Twitch</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.78rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -433,7 +433,7 @@ export default function TwitchSubsPage() {
                 </div>
 
                 {/* EventSub subscriptions */}
-                <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '0.85rem 1rem' }}>
                   <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
                     EventSub ({subs.length} inscrições)
                   </div>
@@ -459,7 +459,7 @@ export default function TwitchSubsPage() {
                 </div>
 
                 {/* Event commands */}
-                <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '0.85rem 1rem' }}>
                   <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Comandos de evento no banco</div>
                   {cmds.length === 0
                     ? <div style={{ fontSize: '0.75rem', color: '#ef4444' }}>Nenhum comando encontrado — clique em "Forçar Resync"</div>
@@ -473,7 +473,7 @@ export default function TwitchSubsPage() {
                 </div>
 
                 {/* DB tables + webhook log */}
-                <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '0.85rem 1rem' }}>
                   <div style={{ fontSize: '0.67rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Tabelas do banco</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.76rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -529,7 +529,7 @@ export default function TwitchSubsPage() {
           { label: 'Total bruto', value: fmt(totalBruto), sub: 'pago pelos subs' },
           { label: 'Total líquido', value: fmt(totalLiquid), sub: null, extra: true },
         ].map(s => (
-          <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '10px', padding: '1rem 1.1rem' }}>
+          <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1rem 1.1rem' }}>
             <div style={{ fontSize: '0.72rem', color: C.dim, marginBottom: '0.3rem' }}>{s.label}</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: C.text, marginBottom: s.sub ? '0.2rem' : 0 }}>{s.value}</div>
             {s.sub && <div style={{ fontSize: '0.7rem', color: C.vdim }}>{s.sub}</div>}
@@ -546,7 +546,7 @@ export default function TwitchSubsPage() {
       </div>
 
       {/* Bits */}
-      <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem', marginBottom: '1rem' }}>
+      <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.1rem 1.3rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 700, fontSize: '0.9rem' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -555,21 +555,21 @@ export default function TwitchSubsPage() {
           <span style={{ fontSize: '0.7rem', color: C.dim }}>período selecionado</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-          <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+          <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '0.85rem 1rem' }}>
             <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Total bits</div>
             <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f59e0b' }}>{totalBits.toLocaleString('pt-BR')}</div>
           </div>
-          <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+          <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '0.85rem 1rem' }}>
             <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Valor estimado</div>
             <div style={{ fontSize: '1.35rem', fontWeight: 800, color: C.accent }}>{fmt(bitsBRL)}</div>
             <div style={{ fontSize: '0.65rem', color: C.vdim, marginTop: '0.15rem' }}>{fmtUSD(bitsUSD)} aprox.</div>
           </div>
-          <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+          <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '0.85rem 1rem' }}>
             <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Cheers</div>
             <div style={{ fontSize: '1.35rem', fontWeight: 800, color: C.text }}>{cheers.length}</div>
             <div style={{ fontSize: '0.65rem', color: C.vdim, marginTop: '0.15rem' }}>{uniqueCheerers} únicos</div>
           </div>
-          <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+          <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '0.85rem 1rem' }}>
             <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.35rem' }}>Top cheerers</div>
             {topCheerers.length === 0
               ? <div style={{ fontSize: '0.8rem', color: C.vdim }}>Nenhum ainda</div>
@@ -592,7 +592,7 @@ export default function TwitchSubsPage() {
       {/* Streamer + Repasse */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
         {/* Streamer card */}
-        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.2rem' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.4rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}>
             {user?.image
               ? <img src={user.image} alt="" style={{ width: 44, height: 44, borderRadius: '50%', border: `2px solid ${C.primaryB}` }} />
@@ -624,7 +624,7 @@ export default function TwitchSubsPage() {
         </div>
 
         {/* Repasse card */}
-        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.2rem' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.4rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.88rem' }}>
               <span style={{ color: C.accent }}>$</span>
@@ -664,7 +664,7 @@ export default function TwitchSubsPage() {
       </div>
 
       {/* Tabs + list */}
-      <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', overflow: 'hidden' }}>
+      <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', borderBottom: `1px solid ${C.cardB}` }}>
           {(['subs', 'transmissoes'] as const).map(t => (
             <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '0.85rem 1.3rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.88rem', fontWeight: activeTab === t ? 700 : 400, color: activeTab === t ? C.text : C.dim, borderBottom: activeTab === t ? `2px solid ${C.primary}` : '2px solid transparent' }}>
@@ -779,7 +779,7 @@ export default function TwitchSubsPage() {
             </div>
             <div style={{ padding: '1.2rem 1.4rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Info */}
-              <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '1rem' }}>
+              <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.82rem', marginBottom: '0.85rem' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   Informações do sub
@@ -813,7 +813,7 @@ export default function TwitchSubsPage() {
               </div>
 
               {/* Gift sub */}
-              <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '1rem' }}>
+              <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: form.is_gift ? '0.75rem' : 0 }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>Gift sub</div>
@@ -833,7 +833,7 @@ export default function TwitchSubsPage() {
               </div>
 
               {/* Sorteio */}
-              <div style={{ background: '#0b0d1a', borderRadius: '10px', padding: '1rem' }}>
+              <div style={{ background: '#0b0d1a', borderRadius: '12px', padding: '1rem' }}>
                 <label style={lbl}>Sorteio vinculado</label>
                 <select value={form.sorteio_id} onChange={e => setForm(p => ({ ...p, sorteio_id: e.target.value }))} style={{ ...inp, appearance: 'auto' }}>
                   <option value="">— Nenhum sorteio —</option>
@@ -844,7 +844,7 @@ export default function TwitchSubsPage() {
                 )}
               </div>
 
-              <button onClick={submitSub} disabled={saving || !form.username.trim()} style={{ padding: '0.85rem', background: form.username.trim() ? C.blue : 'rgba(59,130,246,0.3)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 700, cursor: form.username.trim() ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1 }}>
+              <button onClick={submitSub} disabled={saving || !form.username.trim()} style={{ padding: '0.85rem', background: form.username.trim() ? C.blue : 'rgba(59,130,246,0.3)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 700, cursor: form.username.trim() ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Salvando...' : editSub ? 'Salvar alterações' : 'Adicionar Sub'}
               </button>
             </div>

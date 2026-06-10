@@ -153,7 +153,7 @@ export default function KickPlataformaPage() {
 
   if (!connected) {
     return (
-      <div style={{ background: C.bg, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+      <div style={{ background: C.bg, minHeight: '100vh', padding: '2rem 3rem', maxWidth: '1440px', margin: '0 auto', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
           <Link href="/dashboard/plataformas" style={{ color: C.dim, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -167,7 +167,7 @@ export default function KickPlataformaPage() {
             <div style={{ width: 64, height: 64, borderRadius: '16px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem', fontSize: '2rem', fontWeight: 900, color: C.primary }}>K</div>
             <div style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Conectar Kick</div>
             <div style={{ fontSize: '0.84rem', color: C.dim, marginBottom: '1.8rem', lineHeight: 1.6 }}>Integre sua conta Kick para capturar subs, gifted subs e follows em tempo real durante suas lives.</div>
-            <button onClick={openKickPopup} style={{ padding: '0.65rem 2rem', background: C.primary, color: '#000', border: 'none', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' }}>
+            <button onClick={openKickPopup} style={{ padding: '0.65rem 2rem', background: C.primary, color: '#000', border: 'none', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' }}>
               Conectar com Kick
             </button>
           </div>
@@ -232,7 +232,7 @@ export default function KickPlataformaPage() {
             { label: 'Total bruto',      value: statsLoading ? '...' : fmtBRL(bruto),                       sub: 'pago pelos subs',  green: true },
             { label: 'Total líquido',    value: statsLoading ? '...' : fmtBRL(liquido),                     sub: `≈ U$ ${(liquido / USD_RATE).toFixed(2)}`, green: true },
           ].map(s => (
-            <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '10px', padding: '0.9rem 1rem' }}>
+            <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '0.9rem 1rem' }}>
               <div style={{ fontSize: '0.68rem', color: C.muted, marginBottom: '0.4rem' }}>{s.label}</div>
               <div style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px', color: (s as {green?: boolean}).green ? C.primary : C.text }}>{s.value}</div>
               <div style={{ fontSize: '0.65rem', color: C.vdim, marginTop: '0.12rem' }}>{s.sub}</div>
@@ -244,9 +244,9 @@ export default function KickPlataformaPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
 
           {/* Channel */}
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.2rem 1.3rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.2rem 1.3rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}>
-              <div style={{ width: 44, height: 44, borderRadius: '10px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', color: C.primary, flexShrink: 0 }}>
+              <div style={{ width: 44, height: 44, borderRadius: '12px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', color: C.primary, flexShrink: 0 }}>
                 {username ? username.slice(0, 2).toUpperCase() : 'K'}
               </div>
               <div>
@@ -280,7 +280,7 @@ export default function KickPlataformaPage() {
           </div>
 
           {/* Repasse */}
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.2rem 1.3rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.2rem 1.3rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '1rem' }}>
               <span style={{ color: C.primary }}>$</span>
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: C.text }}>Estimativa de Repasse Kick</span>
@@ -320,7 +320,7 @@ export default function KickPlataformaPage() {
         </div>
 
         {/* Subs table */}
-        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.1rem 1.3rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div style={{ fontSize: '0.75rem', color: C.dim, fontWeight: 600 }}>
               Subs no período: {period === '7d' ? '7d' : period === '90d' ? '90d' : period === 'custom' ? 'custom' : '30d'} · <span style={{ color: C.vdim }}>{filteredSubs.length} resultado{filteredSubs.length !== 1 ? 's' : ''}</span>
@@ -370,18 +370,18 @@ export default function KickPlataformaPage() {
             <div style={{ fontWeight: 800, fontSize: '1.1rem', color: C.text, marginBottom: '0.35rem' }}>Kick sincronizado!</div>
             <div style={{ fontSize: '0.84rem', color: C.dim, marginBottom: '1.75rem' }}>{syncSubCount} sub{syncSubCount !== 1 ? 's' : ''} encontrado{syncSubCount !== 1 ? 's' : ''}</div>
             <button onClick={() => { setShowSync(false); setShowTiers(true) }}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem', background: 'rgba(83,252,24,0.06)', border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', marginBottom: '0.6rem' }}>
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem', background: 'rgba(83,252,24,0.06)', border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '12px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', marginBottom: '0.6rem' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
               Configurar Níveis de Assinatura
             </button>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => { setShowSync(false); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }) }}
-                style={{ flex: 1, padding: '0.6rem', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '10px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                style={{ flex: 1, padding: '0.6rem', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '12px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 Ver inscrições Kick
               </button>
               <button onClick={() => setShowSync(false)}
-                style={{ flex: 1, padding: '0.6rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: C.muted, borderRadius: '10px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
+                style={{ flex: 1, padding: '0.6rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: C.muted, borderRadius: '12px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
                 Fechar
               </button>
             </div>
@@ -403,7 +403,7 @@ export default function KickPlataformaPage() {
             </div>
             <div style={{ marginTop: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {([['tier1', 'TIER 1'], ['tier2', 'TIER 2'], ['tier3', 'TIER 3']] as [string, string][]).map(([key, label]) => (
-                <div key={key} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '1rem' }}>
+                <div key={key} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '1rem' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, letterSpacing: '0.5px', marginBottom: '0.75rem' }}>{label}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div>
@@ -451,7 +451,7 @@ export default function KickPlataformaPage() {
               <button onClick={() => setShowAddSub(false)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: '0.1rem 0.3rem' }}>✕</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.1rem', marginBottom: '1.1rem' }}>
               <div style={{ gridColumn: '1' }}>
                 <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem' }}>Usuário que assinou <span style={{ color: '#ef4444' }}>*</span></div>
                 <input
@@ -527,7 +527,7 @@ export default function KickPlataformaPage() {
                   setAddSubError(e instanceof Error ? e.message : 'Erro ao adicionar sub')
                 } finally { setAddSubSaving(false) }
               }}
-              style={{ width: '100%', padding: '0.75rem', background: addSubUsername.trim() ? 'linear-gradient(135deg,#4f8aff,#2563eb)' : 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '10px', color: addSubUsername.trim() ? '#fff' : C.vdim, fontWeight: 800, fontSize: '0.9rem', cursor: addSubUsername.trim() && !addSubSaving ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              style={{ width: '100%', padding: '0.75rem', background: addSubUsername.trim() ? 'linear-gradient(135deg,#4f8aff,#2563eb)' : 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '12px', color: addSubUsername.trim() ? '#fff' : C.vdim, fontWeight: 800, fontSize: '0.9rem', cursor: addSubUsername.trim() && !addSubSaving ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
               {addSubSaving ? 'Adicionando...' : 'Adicionar sub'}
             </button>
