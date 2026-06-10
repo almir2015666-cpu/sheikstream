@@ -47,7 +47,6 @@ type PlatCfg = {
 const PLATFORMS: PlatCfg[] = [
   { id: 'twitch',  label: 'Twitch',  color: '#9147ff', bg: 'rgba(145,71,255,0.12)', badge: 'ATUALIZADO', badgeColor: '#39ff14', features: ['Inscrições (subs)', 'Seguidores', 'Metas do canal'] },
   { id: 'youtube', label: 'YouTube', color: '#ff4444', bg: 'rgba(255,68,68,0.10)',   badge: 'ATUALIZADO', badgeColor: '#39ff14', features: ['Membros', 'Inscritos', 'Dados do canal'] },
-  { id: 'kick',    label: 'Kick',    color: '#53fc18', bg: 'rgba(83,252,24,0.08)',   features: ['Inscrições (subs)', 'Seguidores', 'Chat do canal'] },
   { id: 'tiktok',  label: 'TikTok',  color: '#69c9d0', bg: 'rgba(105,201,208,0.08)', features: ['Conta do streamer', 'Subs TikTok', 'Sorteios'] },
   { id: 'paypal',  label: 'PayPal',  color: '#009cde', bg: 'rgba(0,156,222,0.08)',   features: ['Doações recebidas', 'Histórico de transações', 'Sorteios'] },
 ]
