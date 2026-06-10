@@ -15,13 +15,13 @@ const C_DARK = {
   editIcon: 'rgba(232,230,248,0.28)', deleteIcon: 'rgba(255,100,100,0.45)',
 }
 const C_LIGHT = {
-  page: '#f0effe', card: '#ffffff', border: 'rgba(0,0,0,0.1)',
-  text: '#0f0e24', muted: 'rgba(15,14,36,0.82)', dim: 'rgba(15,14,36,0.78)',
+  page: '#f0effe', card: '#ffffff', border: 'rgba(0,0,0,0.18)',
+  text: '#0a0918', muted: '#2a2840', dim: '#3a3860',
   vdim: 'rgba(15,14,36,0.55)', primary: '#7b2eff',
   blue: '#2563eb', blueBg: 'rgba(37,99,235,0.08)', cyan: '#0891b2', green: '#059669',
-  rowBorder: 'rgba(0,0,0,0.07)', rowHover: 'rgba(0,0,0,0.04)',
-  toggleOff: 'rgba(0,0,0,0.13)', toggleBorder: '1.5px solid rgba(0,0,0,0.2)',
-  editIcon: 'rgba(15,14,36,0.55)', deleteIcon: 'rgba(200,30,30,0.6)',
+  rowBorder: 'rgba(0,0,0,0.16)', rowHover: 'rgba(0,0,0,0.05)',
+  toggleOff: '#c8c5e8', toggleBorder: '2px solid rgba(0,0,0,0.3)',
+  editIcon: '#3a3860', deleteIcon: 'rgba(180,20,20,0.75)',
 }
 
 const inp: React.CSSProperties = {
@@ -41,7 +41,7 @@ function Toggle({ on, onChange, size = 'md', isDark: dark = true }: { on: boolea
       border: on ? 'none' : tc.toggleBorder,
       cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0,
     }}>
-      <span style={{ position: 'absolute', top: bOff, left: on ? bOn : bOff, width: b, height: b, borderRadius: '50%', background: dark || on ? '#fff' : '#444', transition: 'left 0.2s', display: 'block' }} />
+      <span style={{ position: 'absolute', top: bOff, left: on ? bOn : bOff, width: b, height: b, borderRadius: '50%', background: dark || on ? '#fff' : '#5a587a', transition: 'left 0.2s', display: 'block' }} />
     </button>
   )
 }

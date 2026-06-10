@@ -15,9 +15,9 @@ const DARK_S = {
   topbar: '#0d0e1c', iconActive: '#c084fc',
 }
 const LIGHT_S = {
-  bg: '#f0effe', bar: '#ffffff', card: '#ffffff', text: '#0f0e24',
-  muted: 'rgba(15,14,36,0.7)', dim: 'rgba(15,14,36,0.6)',
-  vdim: 'rgba(15,14,36,0.4)', primary: '#7b2eff',
+  bg: '#f0effe', bar: '#ffffff', card: '#ffffff', text: '#0a0918',
+  muted: '#2a2840', dim: '#3a3860',
+  vdim: 'rgba(15,14,36,0.55)', primary: '#7b2eff',
   primaryBg: 'rgba(123,46,255,0.08)', accent: '#059669',
   border: 'rgba(0,0,0,0.07)', borderP: 'rgba(123,46,255,0.18)',
   topbar: '#ffffff', iconActive: '#9b30ff',
