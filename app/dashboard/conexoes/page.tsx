@@ -663,7 +663,7 @@ export default function ConexoesPage() {
               <div style={{ padding: '0.5rem 0.7rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: '8px', fontSize: '0.75rem', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <span>⚠</span> OAuth do Kick em beta limitado — endpoint indisponível no momento.
               </div>
-              <button type="button" onClick={openKickPopup} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.55rem 0', background: 'transparent', border: '1px solid rgba(83,252,24,0.25)', color: 'rgba(83,252,24,0.5)', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'not-allowed', width: '100%', opacity: 0.5 }}>
+              <button type="button" disabled style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.55rem 0', background: 'transparent', border: '1px solid rgba(83,252,24,0.25)', color: 'rgba(83,252,24,0.5)', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'not-allowed', width: '100%', opacity: 0.5 }}>
                 <PlatIcon id="kick" color="#53fc18" />
                 Conectar Kick
               </button>
