@@ -45,6 +45,9 @@ export async function GET(req: NextRequest) {
         code,
         grant_type: 'authorization_code',
         redirect_uri: REDIRECT_URI,
+        ...(req.cookies.get('kick_verifier')?.value
+          ? { code_verifier: req.cookies.get('kick_verifier')!.value }
+          : {}),
       }),
     })
     if (!tokenRes.ok) {
