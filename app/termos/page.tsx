@@ -1,6 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 const C = {
   bg: '#08090d', card: '#111219', border: 'rgba(255,255,255,0.07)',
@@ -10,73 +9,29 @@ const C = {
 }
 
 export default function TermosPage() {
-  const router = useRouter()
   const [termsChecked, setTermsChecked] = useState(false)
   const [privacyChecked, setPrivacyChecked] = useState(false)
   const [marketingChecked, setMarketingChecked] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  // null = checking, true = logged in (save to DB), false = not logged in (use cookie)
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
 
-  useEffect(() => {
-    fetch('/api/user/terms')
-      .then(r => {
-        if (r.status === 401) { setIsLoggedIn(false); return null }
-        return r.json()
-      })
-      .then(d => {
-        if (!d) return
-        setIsLoggedIn(true)
-        if (!d.needs_acceptance) router.replace('/dashboard')
-      })
-      .catch(() => setIsLoggedIn(false))
-  }, [router])
-
-  async function handleAccept() {
+  function handleAccept() {
+    if (!termsChecked || !privacyChecked || saving) return
     setSaving(true)
-    setError('')
-    try {
-      if (isLoggedIn) {
-        // Already authenticated — save directly to DB
-        const res = await fetch('/api/user/terms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ terms: termsChecked, privacy: privacyChecked, marketing: marketingChecked }),
-        })
-        if (!res.ok) throw new Error('Erro ao salvar')
-        router.replace('/dashboard')
-      } else {
-        // Not yet authenticated — store acceptance in a short-lived cookie, then start Twitch OAuth
-        const flags = [
-          termsChecked ? 'terms' : '',
-          privacyChecked ? 'privacy' : '',
-          marketingChecked ? 'marketing' : '',
-        ].filter(Boolean).join(',')
-        document.cookie = `sk-tpending=${encodeURIComponent(flags)}; path=/; max-age=600; SameSite=Lax`
-        window.location.href = '/api/auth/twitch'
-      }
-    } catch {
-      setError('Erro ao salvar. Tente novamente.')
-      setSaving(false)
-    }
+    // Store acceptance flags in a short-lived cookie, then start Twitch OAuth
+    const flags = ['terms', privacyChecked ? 'privacy' : '', marketingChecked ? 'marketing' : '']
+      .filter(Boolean).join(',')
+    document.cookie = `sk-tpending=${encodeURIComponent(flags)}; path=/; max-age=600; SameSite=Lax`
+    window.location.href = '/api/auth/twitch'
   }
 
   function handleDecline() {
-    router.push('/login')
-  }
-
-  if (isLoggedIn === null) {
-    return (
-      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: C.vdim, fontSize: '0.85rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif" }}>Carregando...</div>
-      </div>
-    )
+    window.location.href = '/login'
   }
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
       <div style={{ background: C.card, border: `1px solid ${C.borderP}`, borderRadius: '20px', padding: '2.5rem 2rem', maxWidth: '480px', width: '100%', boxShadow: '0 0 60px rgba(155,48,255,0.12), 0 24px 48px rgba(0,0,0,0.7)' }}>
+
         {/* Icon */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <div style={{ width: 56, height: 56, borderRadius: '14px', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.1rem' }}>
@@ -89,31 +44,16 @@ export default function TermosPage() {
           </div>
           <div style={{ fontSize: '1.25rem', fontWeight: 800, color: C.text, marginBottom: '0.4rem' }}>Antes de continuar</div>
           <div style={{ fontSize: '0.84rem', color: C.muted, lineHeight: 1.5 }}>
-            {isLoggedIn
-              ? 'Para usar a plataforma SheikSTREAM, você precisa aceitar os termos abaixo.'
-              : 'Para criar sua conta e entrar com a Twitch, você precisa aceitar os termos abaixo.'}
+            Para criar sua conta e entrar com a Twitch, aceite os termos abaixo.
           </div>
         </div>
 
         {/* Checkboxes */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
           {[
-            {
-              key: 'terms', checked: termsChecked, set: setTermsChecked, required: true,
-              label: 'Li e concordo com os',
-              link: '/terms', linkText: 'Termos de Uso', after: 'da SheikSTREAM',
-            },
-            {
-              key: 'privacy', checked: privacyChecked, set: setPrivacyChecked, required: true,
-              label: 'Li e concordo com a',
-              link: '/privacidade', linkText: 'Política de Privacidade', after: 'da SheikSTREAM',
-
-            },
-            {
-              key: 'marketing', checked: marketingChecked, set: setMarketingChecked, required: false,
-              label: 'Aceito receber novidades, dicas e promoções da SheikSTREAM',
-              link: null, linkText: null, after: null,
-            },
+            { key: 'terms',     checked: termsChecked,     set: setTermsChecked,     required: true,  label: 'Li e concordo com os', link: '/terms',      linkText: 'Termos de Uso',           after: 'da SheikSTREAM' },
+            { key: 'privacy',   checked: privacyChecked,   set: setPrivacyChecked,   required: true,  label: 'Li e concordo com a',  link: '/privacidade', linkText: 'Política de Privacidade', after: 'da SheikSTREAM' },
+            { key: 'marketing', checked: marketingChecked, set: setMarketingChecked, required: false, label: 'Aceito receber novidades, dicas e promoções da SheikSTREAM', link: null, linkText: null, after: null },
           ].map(item => (
             <label key={item.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
               <input
@@ -138,13 +78,7 @@ export default function TermosPage() {
 
         <div style={{ fontSize: '0.72rem', color: C.vdim, marginBottom: '1.25rem' }}>* campos obrigatórios</div>
 
-        {error && (
-          <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '0.6rem 0.85rem', fontSize: '0.8rem', color: '#fca5a5', marginBottom: '1rem' }}>
-            {error}
-          </div>
-        )}
-
-        {/* Aceitar */}
+        {/* Aceitar → Twitch OAuth */}
         <button
           disabled={!termsChecked || !privacyChecked || saving}
           onClick={handleAccept}
@@ -155,11 +89,19 @@ export default function TermosPage() {
             fontWeight: 800, fontSize: '0.95rem',
             cursor: termsChecked && privacyChecked && !saving ? 'pointer' : 'not-allowed',
             transition: 'all 0.15s', marginBottom: '0.65rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
           }}
         >
-          {saving
-            ? (isLoggedIn ? 'Salvando...' : 'Redirecionando para Twitch...')
-            : (isLoggedIn ? 'Aceitar e continuar' : 'Aceitar e entrar com Twitch')}
+          {saving ? (
+            'Redirecionando...'
+          ) : (
+            <>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" opacity="0.9">
+                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
+              </svg>
+              Aceitar e entrar com Twitch
+            </>
+          )}
         </button>
 
         {/* Recusar */}
@@ -173,6 +115,10 @@ export default function TermosPage() {
         >
           Não aceitar — voltar ao início
         </button>
+
+        <div style={{ marginTop: '1.1rem', fontSize: '0.73rem', color: C.vdim, textAlign: 'center', lineHeight: 1.5 }}>
+          Após aceitar, você será redirecionado para autenticar com sua conta Twitch.
+        </div>
       </div>
     </div>
   )

@@ -315,14 +315,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user])
 
-  // Redirect to /termos if terms not accepted
-  useEffect(() => {
-    if (!user) return
-    fetch('/api/user/terms')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.needs_acceptance) router.push('/termos') })
-      .catch(() => {})
-  }, [user])
 
   useEffect(() => {
     if (!user) return
