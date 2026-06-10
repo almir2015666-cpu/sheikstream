@@ -253,6 +253,7 @@ export default function ConexoesPage() {
     const err = params.get('error')
     if (err) setUrlError(err)
     if (params.get('spotify') === 'connected') setSpotifySuccess(true)
+    if (err || params.get('spotify')) window.history.replaceState({}, '', window.location.pathname)
     fetch('/api/me')
       .then(r => r.ok ? r.json() : null)
       .then(u => { if (u) setConnectedUser(u.name) })
