@@ -252,14 +252,14 @@ export default function ConexoesPage() {
     const params = new URLSearchParams(window.location.search)
     const err = params.get('error')
     if (err) setUrlError(err)
+    if (params.get('spotify') === 'connected') setSpotifySuccess(true)
     fetch('/api/me')
       .then(r => r.ok ? r.json() : null)
       .then(u => { if (u) setConnectedUser(u.name) })
       .catch(() => {})
-    fetch('/api/tokens/status')
-      .then(r => r.json())
-      .then(s => setTokenStatus(s))
-      .catch(() => {})
+    const refreshStatus = () => fetch('/api/tokens/status').then(r => r.json()).then(s => setTokenStatus(s)).catch(() => {})
+    refreshStatus()
+    if (params.get('spotify') === 'connected') setTimeout(refreshStatus, 1500)
   }, [])
 
   async function handleLivepixConnect(e: React.FormEvent) {
