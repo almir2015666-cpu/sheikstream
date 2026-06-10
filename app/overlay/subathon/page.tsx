@@ -454,8 +454,11 @@ export default function SubathonOverlayPage() {
           padding: 0 !important;
           overflow: hidden !important;
         }
+        @keyframes sk-keep-awake{from{opacity:0.001}to{opacity:0.002}}
         ${EFFECT_KEYFRAMES}
       `}</style>
+      {/* keep-awake: keeps GPU compositor active in OBS */}
+      <div style={{ position: 'fixed', width: 1, height: 1, opacity: 0.001, pointerEvents: 'none', animation: 'sk-keep-awake 1s linear infinite' }} />
       <div style={{ padding: '12px', display: 'inline-block' }}>
         <Suspense fallback={null}>
           <SubathonOverlayContent />

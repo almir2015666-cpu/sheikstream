@@ -68,7 +68,12 @@ function MetaOverlayContent() {
 export default function MetaOverlayPage() {
   return (
     <>
-      <style>{`html,body{margin:0;padding:0;background:transparent!important;}`}</style>
+      <style>{`
+        html,body{margin:0;padding:0;background:transparent!important;}
+        @keyframes sk-keep-awake{from{opacity:0.001}to{opacity:0.002}}
+      `}</style>
+      {/* keep-awake: keeps GPU compositor active in OBS */}
+      <div style={{ position: 'fixed', width: 1, height: 1, opacity: 0.001, pointerEvents: 'none', animation: 'sk-keep-awake 1s linear infinite' }} />
       <div style={{ padding: '12px' }}>
         <Suspense fallback={null}>
           <MetaOverlayContent />
