@@ -456,10 +456,10 @@ export default function DashboardPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: '0.65rem', color: raw > 0 ? C.dim : C.vdim, flexShrink: 0 }}>{fmtUSD(usdNet)}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ height: '3px', background: 'rgba(255,255,255,0.07)', borderRadius: '2px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${pctOfThreshold * 100}%`, background: r.color, opacity: usdNet > 0 ? 0.85 : 0.2, transition: 'width 0.4s ease', borderRadius: '2px' }} />
+                          <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${Math.max(pctOfThreshold * 100, usdNet > 0 ? 1.5 : 0)}%`, background: r.color, opacity: usdNet > 0 ? 1 : 0, transition: 'width 0.5s ease', borderRadius: '4px', boxShadow: usdNet > 0 ? `0 0 6px ${r.color}88` : 'none' }} />
                           </div>
-                          <div style={{ fontSize: '0.58rem', color: C.vdim, marginTop: '1px', textAlign: 'right' }}>{pctLabel}</div>
+                          <div style={{ fontSize: '0.6rem', color: C.vdim, marginTop: '3px', textAlign: 'right' }}>{pctLabel}</div>
                         </div>
                       </div>
                     )}
