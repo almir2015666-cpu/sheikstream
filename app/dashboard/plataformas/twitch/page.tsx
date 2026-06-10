@@ -526,8 +526,8 @@ export default function TwitchSubsPage() {
           { label: 'Total subs', value: String(totalSubs), sub: null },
           { label: 'Gift subs', value: String(giftSubs), sub: 'total geral' },
           { label: 'Tickets gerados', value: String(totalTickets), sub: 'total geral' },
-          { label: 'Total bruto', value: fmt(totalBruto), sub: 'pago pelos subs' },
-          { label: 'Total líquido', value: fmt(totalLiquid), sub: null, extra: true },
+          { label: 'Total bruto', value: fmt(totalBruto + bitsBRL), sub: `subs + ${totalBits.toLocaleString('pt-BR')} bits` },
+          { label: 'Total líquido', value: fmt(totalLiquidAll), sub: null, extra: true },
         ].map(s => (
           <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1rem 1.1rem' }}>
             <div style={{ fontSize: '0.72rem', color: C.dim, marginBottom: '0.3rem' }}>{s.label}</div>

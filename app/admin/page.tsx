@@ -111,6 +111,16 @@ function makeCSS(C: typeof DARK) {
   .sk-card { animation: sk-pop-in 0.12s ease both; }
   @keyframes sk-spin { to { transform: rotate(360deg); } }
   .sk-spin { animation: sk-spin 0.8s linear infinite; }
+  .sk-sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: ${C.navBg}; border-right: 1px solid ${C.border}; display: flex; flex-direction: column; z-index: 300; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); transition: transform 0.22s cubic-bezier(.4,0,.2,1); overflow: hidden; }
+  .sk-sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 250; }
+  .sk-nav-item { display: flex; align-items: center; gap: 0.55rem; padding: 0.52rem 1.1rem; width: 100%; text-align: left; background: transparent; border: none; cursor: pointer; font-size: 0.82rem; font-weight: 500; color: ${C.muted}; transition: background 0.1s, color 0.1s; border-left: 2px solid transparent; }
+  .sk-nav-item:hover { background: ${C.primaryBg}; color: ${C.text}; }
+  .sk-nav-item.sk-nav-active { background: ${C.primaryBg}; color: ${C.primary}; font-weight: 700; border-left-color: ${C.primary}; }
+  .sk-nav-badge { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; background: ${C.primary}; color: #fff; border-radius: 999px; font-size: 0.6rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .sk-nav-group-label { padding: 0.8rem 1.1rem 0.3rem; font-size: 0.58rem; font-weight: 800; color: ${C.vdim}; text-transform: uppercase; letter-spacing: 0.1em; }
+  .sk-stat-card { background: ${C.cardBg}; border: 1px solid ${C.border}; border-radius: 14px; padding: 1.1rem 1.3rem; transition: border-color 0.15s, box-shadow 0.15s; }
+  .sk-stat-card:hover { border-color: ${C.borderStrong}; box-shadow: 0 4px 24px ${C.primaryBg}; }
+  @keyframes sk-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
   `
 }
 
@@ -259,8 +269,24 @@ export default function AdminPage() {
   ]
   const [navOrder, setNavOrder] = useState<string[]>(NAV_ITEMS_LIST.map(i => i.id))
 
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
+
+  function navigateTo(v: typeof view) {
+    setView(v)
+    if (isMobile) setSidebarOpen(false)
+    if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) }
+    else if (v === 'banner') fetchBanner(storedPw)
+    else if (v === 'passwords') fetchPasswords(storedPw)
+    else if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) }
+    else if (v === 'tickets') fetchTickets(storedPw)
+    else if (v === 'online') fetchOnlineUsers(storedPw)
+    else if (v === 'notify') { fetchNotifications(storedPw); if (users.length === 0) fetchUsers(storedPw) }
+    else if (v === 'invites') fetchAdminInvites(storedPw)
+    else if (v === 'iaimagens') fetchAiCfg(storedPw)
+  }
 
   const fetchUsers = useCallback(async (pw: string) => {
     setUsersLoading(true)
@@ -791,34 +817,106 @@ export default function AdminPage() {
     )
   }
 
+  const SUN = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  const MOON = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+
+  const SIDEBAR_GROUPS = [
+    { label: 'Usuários', items: [
+      { v: 'users'   as const, icon: '👥', label: 'Usuários',    badge: counts.pending },
+      { v: 'online'  as const, icon: '🟢', label: 'Online Agora' },
+      { v: 'roles'   as const, icon: '🏷', label: 'Funções' },
+      { v: 'tickets' as const, icon: '🎫', label: 'Suporte',     badge: tickets.filter(t => t.status === 'open').length },
+      { v: 'notify'  as const, icon: '📣', label: 'Avisos',      badge: notifyList.length },
+      { v: 'invites' as const, icon: '✉️', label: 'Convites' },
+    ]},
+    { label: 'Sistema', items: [
+      { v: 'logs'      as const, icon: '📋', label: 'Logs' },
+      { v: 'banner'    as const, icon: '🎗', label: 'Banner' },
+      { v: 'passwords' as const, icon: '🔑', label: 'Senhas Admin' },
+      { v: 'navorder'  as const, icon: '⠿', label: 'Ordem do Menu' },
+      { v: 'iaimagens' as const, icon: '🎨', label: 'IA de Imagens' },
+    ]},
+  ]
+
+  const VIEW_LABELS: Record<string, string> = {
+    users: 'Usuários', online: 'Online Agora', roles: 'Funções', tickets: 'Suporte',
+    notify: 'Avisos', invites: 'Convites', logs: 'Logs', banner: 'Banner',
+    passwords: 'Senhas Admin', navorder: 'Ordem do Menu', iaimagens: 'IA de Imagens',
+  }
+
   return (
-    <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text }}>
+    <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text, display: 'flex' }}>
       <style>{makeCSS(C)}</style>
 
-      <nav className="sk-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0.75rem 1rem' : '1rem 2rem', borderBottom: `1px solid ${C.border}`, background: C.navBg, position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <a href="/" style={{ fontSize: '1.4rem', fontWeight: 900, letterSpacing: '0.5px', color: C.text, textDecoration: 'none' }}>
-            Sheik<span style={{ color: C.accent }}>STREAM</span>
-          </a>
-          <span style={{ fontSize: '0.68rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.2rem 0.7rem', borderRadius: '999px', fontWeight: 700, letterSpacing: '0.5px' }}>
-            ADMIN
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {authed && (
-            <button onClick={() => { setAuthed(false); setUsers([]); sessionStorage.removeItem('sk-admin-pw'); setStoredPw('') }}
-              style={{ background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.35rem 0.9rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
-              Sair
-            </button>
+      {/* Sidebar */}
+      {authed && (
+        <>
+          {isMobile && sidebarOpen && <div className="sk-sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+          <aside className="sk-sidebar" style={{ transform: isMobile ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)') : 'translateX(0)' }}>
+            {/* Logo */}
+            <div style={{ padding: '1.1rem 1.2rem 1rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div>
+                <a href="/" style={{ fontSize: '1.05rem', fontWeight: 900, color: C.text, textDecoration: 'none', letterSpacing: '0.3px', display: 'block' }}>
+                  Sheik<span style={{ color: C.accent }}>STREAM</span>
+                </a>
+                <span style={{ fontSize: '0.58rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.1rem 0.5rem', borderRadius: '999px', fontWeight: 800, letterSpacing: '0.6px' }}>ADMIN</span>
+              </div>
+              {isMobile && <button onClick={() => setSidebarOpen(false)} style={{ background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem', lineHeight: 1 }}>✕</button>}
+            </div>
+
+            {/* Nav */}
+            <nav style={{ flex: 1, overflowY: 'auto', paddingBottom: '0.5rem' }}>
+              {SIDEBAR_GROUPS.map(group => (
+                <div key={group.label}>
+                  <div className="sk-nav-group-label">{group.label}</div>
+                  {group.items.map(item => (
+                    <button key={item.v} onClick={() => navigateTo(item.v)} className={`sk-nav-item${view === item.v ? ' sk-nav-active' : ''}`}>
+                      <span style={{ fontSize: '0.92rem', lineHeight: 1, flexShrink: 0 }}>{item.icon}</span>
+                      <span>{item.label}</span>
+                      {'badge' in item && (item.badge ?? 0) > 0 && <span className="sk-nav-badge">{item.badge}</span>}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </nav>
+
+            {/* Bottom actions */}
+            <div style={{ padding: '0.75rem 1rem', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+              <button onClick={toggleTheme} className="sk-theme-btn" style={{ color: C.muted, flexShrink: 0 }}>{isDark ? SUN : MOON}</button>
+              <button onClick={() => { setAuthed(false); setUsers([]); sessionStorage.removeItem('sk-admin-pw'); setStoredPw('') }}
+                style={{ flex: 1, background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, padding: '0.38rem 0.7rem', borderRadius: '7px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
+                Sair
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* Main content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, marginLeft: authed && !isMobile ? 240 : 0, transition: 'margin-left 0.22s' }}>
+
+        {/* Top bar */}
+        <header style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: isMobile ? '0.75rem 1rem' : '0.85rem 2rem', borderBottom: `1px solid ${C.border}`, background: C.navBg, position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(16px)', flexShrink: 0 }}>
+          {authed && isMobile && (
+            <button onClick={() => setSidebarOpen(true)} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.38rem 0.55rem', borderRadius: '7px', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>☰</button>
           )}
-          <button onClick={toggleTheme} className="sk-theme-btn" style={{ color: C.muted }}>
-            {isDark
-              ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-              : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            }
-          </button>
-        </div>
-      </nav>
+          {!authed && (
+            <a href="/" style={{ fontSize: '1.1rem', fontWeight: 900, color: C.text, textDecoration: 'none' }}>
+              Sheik<span style={{ color: C.accent }}>STREAM</span>
+            </a>
+          )}
+          {authed && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: '0.72rem', color: C.vdim }}>/</span>
+              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{VIEW_LABELS[view] ?? view}</span>
+            </div>
+          )}
+          {!authed && (
+            <div style={{ marginLeft: 'auto' }}>
+              <button onClick={toggleTheme} className="sk-theme-btn" style={{ color: C.muted }}>{isDark ? SUN : MOON}</button>
+            </div>
+          )}
+        </header>
 
       {!authed ? (
         /* ── Login gate ── */
@@ -866,74 +964,7 @@ export default function AdminPage() {
         </div>
       ) : (
         /* ── Admin dashboard ── */
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2.5rem 2rem' }}>
-          {/* View switcher: full when on main views, compact back-button otherwise */}
-          {(view === 'users' || view === 'banner' || view === 'notify' || view === 'invites') ? (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center' }}>
-                <div style={{ position: 'relative', flex: 1, maxWidth: 280 }}>
-                  <svg style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: C.dim, pointerEvents: 'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  <input value={navSearch} onChange={e => setNavSearch(e.target.value)} placeholder="Buscar seção..." style={{ width: '100%', padding: '0.45rem 0.6rem 0.45rem 2rem', background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '0.82rem', outline: 'none' }} />
-                  {navSearch && <button onClick={() => setNavSearch('')} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: C.dim, fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>✕</button>}
-                </div>
-              </div>
-              {([
-                { group: 'Usuários', items: [
-                  { v: 'users',   label: '👥 Usuários' },
-                  { v: 'online',  label: '🟢 Online Agora' },
-                  { v: 'roles',   label: '🏷 Funções' },
-                  { v: 'tickets', label: '🎫 Tickets' },
-                  { v: 'notify',  label: '📣 Avisos' },
-                  { v: 'invites', label: '✉️ Convites' },
-                ]},
-                { group: 'Sistema', items: [
-                  { v: 'logs',      label: '📋 Logs' },
-                  { v: 'banner',    label: '🎗 Banner' },
-                  { v: 'passwords', label: '🔑 Senhas Admin' },
-                  { v: 'navorder',  label: '⠿ Ordem do Menu' },
-                  { v: 'iaimagens', label: '🎨 IA Imagens' },
-                ]},
-              ] as { group: string; items: { v: 'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens'; label: string }[] }[]).map(({ group, items }) => {
-                const visible = navSearch
-                  ? items.filter(i => i.label.toLowerCase().includes(navSearch.toLowerCase()))
-                  : items
-                if (!visible.length) return null
-                return (
-                  <div key={group} style={{ marginBottom: '0.5rem' }}>
-                    {!navSearch && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem', paddingLeft: '0.25rem' }}>{group}</div>}
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      {visible.map(({ v, label }) => (
-                        <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'banner') fetchBanner(storedPw); if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw); if (v === 'online') fetchOnlineUsers(storedPw); if (v === 'notify') { fetchNotifications(storedPw); if (users.length === 0) fetchUsers(storedPw) } if (v === 'invites') fetchAdminInvites(storedPw); if (v === 'iaimagens') fetchAiCfg(storedPw) }}
-                          className={`sk-tab${view === v ? ' active' : ''}`}
-                          style={{ color: view === v ? C.primary : C.muted }}>
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.5rem' }}>
-              <button onClick={() => setView('users')} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: C.vvdim, border: `1px solid ${C.border}`, color: C.muted, borderRadius: '8px', padding: '0.42rem 0.9rem', fontSize: '0.82rem', cursor: 'pointer', fontWeight: 600 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                Voltar
-              </button>
-              <span style={{ fontSize: '0.72rem', color: C.vdim }}>·</span>
-              <span style={{ fontSize: '0.92rem', fontWeight: 700, color: C.text }}>
-                {({ roles: '🏷 Funções', tickets: '🎫 Tickets', logs: '📋 Logs', passwords: '🔑 Senhas Admin', online: '🟢 Online Agora' } as Record<string, string>)[view]}
-              </span>
-              <div style={{ display: 'flex', gap: '0.35rem', marginLeft: 'auto' }}>
-                {(['roles', 'tickets', 'logs', 'passwords'] as const).map(v => (
-                  <button key={v} onClick={() => { setView(v); if (v === 'logs') { setLogTab('logins'); fetchLoginLogs(storedPw) } if (v === 'passwords') fetchPasswords(storedPw); if (v === 'roles') { fetchRoles(storedPw); fetchUsers(storedPw) } if (v === 'tickets') fetchTickets(storedPw) }}
-                    style={{ fontSize: '0.72rem', padding: '0.28rem 0.7rem', borderRadius: '6px', border: `1px solid ${view === v ? C.primary + '50' : C.border}`, background: view === v ? C.primaryBg : 'transparent', color: view === v ? C.primary : C.dim, cursor: 'pointer', fontWeight: view === v ? 700 : 400 }}>
-                    {({ roles: 'Funções', tickets: 'Tickets', logs: 'Logs', passwords: 'Senhas' } as Record<string, string>)[v]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem 2rem' }}>
 
           {/* DB error banner */}
           {dbError && (
@@ -2399,6 +2430,7 @@ export default function AdminPage() {
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }
