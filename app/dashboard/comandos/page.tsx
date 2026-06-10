@@ -4,12 +4,18 @@ import { notify } from '@/app/lib/notify'
 import { playAlertSound } from '@/app/lib/sound'
 import Link from 'next/link'
 
-const C = {
+const C_DARK = {
   page: '#08090d', card: '#0d0f18', border: 'rgba(255,255,255,0.07)',
   text: '#e8e6f8', muted: 'rgba(232,230,248,0.55)', dim: 'rgba(232,230,248,0.28)',
   vdim: 'rgba(232,230,248,0.12)', primary: '#9b30ff',
   blue: '#3b82f6', blueBg: 'rgba(59,130,246,0.12)',
   cyan: '#22d3ee', green: '#22c55e',
+}
+const C_LIGHT = {
+  page: '#f0effe', card: '#ffffff', border: 'rgba(0,0,0,0.08)',
+  text: '#0f0e24', muted: 'rgba(15,14,36,0.7)', dim: 'rgba(15,14,36,0.6)',
+  vdim: 'rgba(15,14,36,0.4)', primary: '#7b2eff',
+  blue: '#2563eb', blueBg: 'rgba(37,99,235,0.08)', cyan: '#0891b2', green: '#059669',
 }
 
 const inp: React.CSSProperties = {
@@ -24,7 +30,7 @@ function Toggle({ on, onChange, size = 'md' }: { on: boolean; onChange: (v: bool
   return (
     <button type="button" onClick={() => onChange(!on)} style={{
       width: w, height: h, borderRadius: h / 2,
-      background: on ? C.green : 'rgba(255,255,255,0.12)',
+      background: on ? C_DARK.green : 'rgba(255,255,255,0.12)',
       border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0,
     }}>
       <span style={{ position: 'absolute', top: bOff, left: on ? bOn : bOff, width: b, height: b, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
@@ -568,7 +574,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
         <div>
           <div style={{ display:'flex',gap:'0.2rem',background:'#08090d',border:`1px solid ${BD}`,borderRadius:7,padding:'0.18rem',marginBottom:'0.6rem' }}>
             {TABS.map(t => (
-              <button type="button" key={t.id} onClick={() => setTab(t.id)} style={{ flex:1,padding:'0.32rem 0.15rem',background:tab===t.id?C.card:'transparent',border:`1px solid ${tab===t.id?BD:'transparent'}`,borderRadius:5,color:tab===t.id?TXT:DIM,cursor:'pointer',fontSize:'0.68rem',fontWeight:tab===t.id?700:400,transition:'all 0.12s',whiteSpace:'nowrap' }}>
+              <button type="button" key={t.id} onClick={() => setTab(t.id)} style={{ flex:1,padding:'0.32rem 0.15rem',background:tab===t.id?C_DARK.card:'transparent',border:`1px solid ${tab===t.id?BD:'transparent'}`,borderRadius:5,color:tab===t.id?TXT:DIM,cursor:'pointer',fontSize:'0.68rem',fontWeight:tab===t.id?700:400,transition:'all 0.12s',whiteSpace:'nowrap' }}>
                 {t.label}
               </button>
             ))}
@@ -954,6 +960,10 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
 }
 
 export default function ComandosPage() {
+  const [isDark, setIsDark] = useState(true)
+  useEffect(() => { try { setIsDark(localStorage.getItem('sk-theme') !== 'light') } catch {} }, [])
+  const C = isDark ? C_DARK : C_LIGHT
+
   const [cmds, setCmds]           = useState<Cmd[]>(DEFAULTS)
   const [creating, setCreating]   = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
