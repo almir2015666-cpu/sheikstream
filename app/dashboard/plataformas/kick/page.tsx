@@ -49,6 +49,10 @@ export default function KickPlataformaPage() {
   const [tiersSaving, setTiersSaving] = useState(false)
   const [tiersHasWarning, setTiersHasWarning] = useState(false)
 
+  // Toast
+  const [toast, setToast] = useState<string | null>(null)
+  const [verifying, setVerifying] = useState(false)
+
   // Add sub modal
   const [showAddSub, setShowAddSub] = useState(false)
   const [addSubUsername, setAddSubUsername] = useState('')
@@ -136,6 +140,23 @@ export default function KickPlataformaPage() {
     } finally { setDisconnecting(false) }
   }
 
+  async function handleVerificar() {
+    setVerifying(true)
+    try {
+      const { from, to } = periodDates()
+      const d = await fetch(`/api/kick/stats?from=${from}&to=${to}`).then(r => r.ok ? r.json() : null)
+      const count = d?.total_subs ?? 0
+      setToast(`Kick verificado: ${count} sub${count !== 1 ? 's' : ''} registrado${count !== 1 ? 's' : ''}`)
+      setTimeout(() => setToast(null), 4000)
+      if (d) setStats(d)
+    } catch {
+      setToast('Erro ao verificar Kick')
+      setTimeout(() => setToast(null), 4000)
+    } finally {
+      setVerifying(false)
+    }
+  }
+
   async function saveTiers() {
     setTiersSaving(true)
     try {
@@ -193,8 +214,7 @@ export default function KickPlataformaPage() {
   const progressPct = Math.min(100, (liquido / goalBRL) * 100)
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
-      <div style={{ padding: '1.2rem 2rem' }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '2rem 3rem', maxWidth: '1440px', margin: '0 auto', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.2rem' }}>
@@ -223,9 +243,9 @@ export default function KickPlataformaPage() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
               Ajustar níveis {tiersHasWarning && <span style={{ background: '#fbbf24', color: '#000', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900 }}>!</span>}
             </button>
-            <button onClick={openKickPopup} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: 'rgba(83,252,24,0.06)', border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
-              Verificar Kick
+            <button onClick={handleVerificar} disabled={verifying} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: 'rgba(83,252,24,0.06)', border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: verifying ? 'default' : 'pointer', opacity: verifying ? 0.7 : 1 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={verifying ? { animation: 'spin 1s linear infinite' } : {}}><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
+              {verifying ? 'Verificando...' : 'Verificar Kick'}
             </button>
             <button onClick={() => { setShowAddSub(true); setAddSubError('') }} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
               + Adicionar Sub
@@ -367,7 +387,6 @@ export default function KickPlataformaPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Kick sync success modal */}
       {showSync && (
@@ -542,6 +561,14 @@ export default function KickPlataformaPage() {
               {addSubSaving ? 'Adicionando...' : 'Adicionar sub'}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Toast notification */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 2000, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.7rem 1.1rem', background: '#111219', border: `1px solid ${C.primaryB}`, borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontSize: '0.84rem', fontWeight: 600, color: C.text, animation: 'fadeInUp 0.2s ease' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#53fc18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          {toast}
         </div>
       )}
     </div>
