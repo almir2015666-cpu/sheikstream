@@ -11,7 +11,8 @@ function makePopupHtml(ok: boolean, errMsg?: string) {
   const postMsg = ok
     ? `{type:'spotify_connected'}`
     : `{type:'spotify_error',error:${JSON.stringify(errMsg ?? '')}}`
-  return `<!DOCTYPE html><html><body style="background:#0f172a;color:${color};font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><p style="max-width:300px">${msg}</p><script>try{window.opener&&window.opener.postMessage(${postMsg},'*')}catch(e){}setTimeout(()=>window.close(),400)</script></body></html>`
+  const closeScript = ok ? `setTimeout(()=>window.close(),400)` : `setTimeout(()=>window.close(),8000)`
+  return `<!DOCTYPE html><html><body style="background:#0f172a;color:${color};font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><p style="max-width:300px;font-size:1.1rem">${msg}</p><script>try{window.opener&&window.opener.postMessage(${postMsg},'*')}catch(e){}${closeScript}</script></body></html>`
 }
 
 export async function GET(req: NextRequest) {
