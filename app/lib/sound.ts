@@ -23,6 +23,13 @@ export const SLUG_SOUNDS: Record<string, Note[]> = {
 
 const FALLBACK: Note[] = [{ f:659, t:0, d:0.14, v:0.28 }, { f:784, t:0.16, d:0.30, v:0.30 }]
 
+// Default audio files hosted in /public/sounds — override the synthesized fallback per slug
+const DEFAULT_SLUG_URLS: Record<string, string> = {
+  'twitch-bits': '/sounds/twitch-bits.mp3',
+}
+
+const _urlCache: Map<string, AudioBuffer> = new Map()
+
 let _ctx: AudioContext | null = null
 
 function getCtx(): AudioContext | null {
@@ -67,15 +74,32 @@ export async function playAlertSound(
   try {
     if (ctx.state !== 'running') await ctx.resume()
 
-    if (cfg.soundDataUrl) {
-      const buf = dataUrlToBuffer(cfg.soundDataUrl)
-      const decoded = await ctx.decodeAudioData(buf)
+    const playBuffer = (decoded: AudioBuffer) => {
       const src = ctx.createBufferSource()
       const gain = ctx.createGain()
       gain.gain.value = vol
       src.buffer = decoded
       src.connect(gain); gain.connect(ctx.destination)
       src.start(0)
+    }
+
+    if (cfg.soundDataUrl) {
+      const buf = dataUrlToBuffer(cfg.soundDataUrl)
+      playBuffer(await ctx.decodeAudioData(buf))
+      return
+    }
+
+    // URL-based sound (custom or built-in default)
+    const url = cfg.soundUrl ?? (slug ? DEFAULT_SLUG_URLS[slug] : undefined)
+    if (url) {
+      if (_urlCache.has(url)) {
+        playBuffer(_urlCache.get(url)!)
+      } else {
+        const res = await fetch(url)
+        const decoded = await ctx.decodeAudioData(await res.arrayBuffer())
+        _urlCache.set(url, decoded)
+        playBuffer(decoded)
+      }
       return
     }
 
