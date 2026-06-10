@@ -120,6 +120,7 @@ export default function ConexoesPage() {
   const [spotifyDisconnecting, setSpotifyDisconnecting] = useState(false)
   const [spotifySuccess, setSpotifySuccess] = useState(false)
   const [kickDisconnecting, setKickDisconnecting] = useState(false)
+  const [urlError, setUrlError] = useState<string | null>(null)
 
   async function handleDisconnect(platform: string) {
     setDisconnecting(true)
@@ -276,6 +277,9 @@ export default function ConexoesPage() {
   }
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const err = params.get('error')
+    if (err) setUrlError(err)
     fetch('/api/me')
       .then(r => r.ok ? r.json() : null)
       .then(u => { if (u) setConnectedUser(u.name) })
@@ -410,6 +414,13 @@ export default function ConexoesPage() {
 
   return (
     <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+
+      {urlError && (
+        <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1rem', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>Erro ao conectar: <code style={{ background: 'rgba(239,68,68,0.15)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>{urlError}</code></span>
+          <button onClick={() => setUrlError(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>✕</button>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
