@@ -58,8 +58,10 @@ export async function POST(req: NextRequest) {
       const { count } = await db.from('ai_image_generations')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId).gte('created_at', startOfDay.toISOString())
-      if ((count ?? 0) >= cfg.max_per_day)
-        return NextResponse.json({ error: `Limite diário de ${cfg.max_per_day} imagens atingido` }, { status: 429 })
+      const roleLimits: Record<string, number> = (cfg as Record<string, unknown>).role_limits as Record<string, number> ?? {}
+      const userMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
+      if ((count ?? 0) >= userMaxPerDay)
+        return NextResponse.json({ error: `Limite diário de ${userMaxPerDay} imagens atingido` }, { status: 429 })
     } catch {}
   }
 
@@ -68,7 +70,9 @@ export async function POST(req: NextRequest) {
   if (!prompt) return NextResponse.json({ error: 'Prompt obrigatório' }, { status: 400 })
   const size: Size = ALLOWED_SIZES.includes(body.size) ? body.size : '1792x1024'
   const quality: 'standard' | 'hd' = body.quality === 'hd' ? 'hd' : 'standard'
-  const referenceImage: string | undefined = body.referenceImage
+  // Support both single referenceImage (legacy) and multiple referenceImages
+  const refImgs: string[] = body.referenceImages ?? (body.referenceImage ? [body.referenceImage] : [])
+  const referenceImage: string | undefined = refImgs[0]
 
   // gpt-image-1 uses different size names and quality values
   const SIZE_MAP: Record<Size, string> = {
@@ -83,19 +87,21 @@ export async function POST(req: NextRequest) {
   let imageUrl = ''
   let revisedPrompt = prompt
   try {
-    if (referenceImage) {
-      // Image edits mode: use reference image as visual context
-      const b64Data = referenceImage.includes(',') ? referenceImage.split(',')[1] : referenceImage
-      const mimeType = referenceImage.startsWith('data:') ? (referenceImage.split(';')[0].split(':')[1] ?? 'image/png') : 'image/png'
-      const imageBytes = Buffer.from(b64Data, 'base64')
-      const imageBlob = new Blob([imageBytes], { type: mimeType })
+    if (refImgs.length > 0) {
+      // Image edits mode: use reference images as visual context
       const fd = new FormData()
       fd.append('model', 'gpt-image-1')
       fd.append('prompt', prompt)
       fd.append('n', '1')
       fd.append('size', SIZE_MAP[size])
       fd.append('quality', quality === 'hd' ? 'high' : 'medium')
-      fd.append('image[]', imageBlob, 'reference.png')
+      for (let i = 0; i < refImgs.length; i++) {
+        const img = refImgs[i]
+        const b64Data = img.includes(',') ? img.split(',')[1] : img
+        const mimeType = img.startsWith('data:') ? (img.split(';')[0].split(':')[1] ?? 'image/png') : 'image/png'
+        const imageBlob = new Blob([Buffer.from(b64Data, 'base64')], { type: mimeType })
+        fd.append('image[]', imageBlob, `reference_${i}.png`)
+      }
       const res = await fetch('https://api.openai.com/v1/images/edits', {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}` },

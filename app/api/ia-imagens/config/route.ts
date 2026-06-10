@@ -51,5 +51,7 @@ export async function GET(req: NextRequest) {
     } catch {}
   }
 
-  return NextResponse.json({ config: cfg, userRole, cooldownRemaining, usedToday })
+  const roleLimits: Record<string, number> = (cfg as Record<string, unknown>).role_limits as Record<string, number> ?? {}
+  const effectiveMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
+  return NextResponse.json({ config: { ...cfg, effective_max_per_day: effectiveMaxPerDay }, userRole, cooldownRemaining, usedToday })
 }

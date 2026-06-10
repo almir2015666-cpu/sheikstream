@@ -35,6 +35,7 @@ export async function PUT(req: NextRequest) {
     cooldown_seconds: Number(body.cooldown_seconds ?? 300),
     max_per_day: Number(body.max_per_day ?? 10),
     allowed_roles: body.allowed_roles ?? ['admin', 'moderador', 'vip'],
+    role_limits: body.role_limits ?? {},
     updated_at: new Date().toISOString(),
   }
 

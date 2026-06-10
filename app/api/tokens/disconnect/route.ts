@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     twitch:  'twitch_token',
     youtube: 'youtube_token',
     spotify: 'spotify_token',
+    kick:    'kick_token',
   }
 
   if (!field[platform]) {

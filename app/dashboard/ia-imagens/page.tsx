@@ -31,7 +31,7 @@ const PROMPT_EXAMPLES = [
 ]
 
 type CfgData = {
-  config: { enabled: boolean; cooldown_seconds: number; max_per_day: number; allowed_roles: string[] } | null
+  config: { enabled: boolean; cooldown_seconds: number; max_per_day: number; effective_max_per_day?: number; allowed_roles: string[] } | null
   userRole: string | null
   cooldownRemaining: number
   usedToday: number
@@ -57,7 +57,7 @@ export default function IAImagensPage() {
   const [error, setError] = useState('')
   const [cooldown, setCooldown] = useState(0)
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [refImage, setRefImage] = useState<string | null>(null)
+  const [refImages, setRefImages] = useState<string[]>([])
   const refInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function IAImagensPage() {
           const file = item.getAsFile()
           if (!file) continue
           const reader = new FileReader()
-          reader.onload = () => setRefImage(reader.result as string)
+          reader.onload = () => setRefImages(prev => [...prev, reader.result as string])
           reader.readAsDataURL(file)
           e.preventDefault()
           break
@@ -115,7 +115,7 @@ export default function IAImagensPage() {
     setResult(null)
     try {
       const body: Record<string, unknown> = { prompt, size: format.size, quality }
-      if (refImage) body.referenceImage = refImage
+      if (refImages.length > 0) body.referenceImages = refImages
       const res = await fetch('/api/ia-imagens/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -160,7 +160,7 @@ export default function IAImagensPage() {
     </div>
   )
 
-  const maxPerDay = cfg?.config?.max_per_day ?? 10
+  const maxPerDay = cfg?.config?.effective_max_per_day ?? cfg?.config?.max_per_day ?? 10
   const usedToday = cfg?.usedToday ?? 0
   const canGenerate = cooldown === 0 && !generating && usedToday < maxPerDay && prompt.trim().length > 0
 
@@ -283,33 +283,58 @@ export default function IAImagensPage() {
               </div>
             </div>
 
-            {/* Reference image */}
+            {/* Reference images — multiple */}
             <div style={{ marginTop: '0.75rem', borderTop: `1px solid ${C.border}`, paddingTop: '0.75rem' }}>
-              <div style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.4rem' }}>
-                Print de referência (opcional)
-              </div>
-              {refImage ? (
-                <div style={{ position: 'relative' }}>
-                  <img src={refImage} alt="Referência" style={{ width: '100%', maxHeight: 110, objectFit: 'cover', borderRadius: 7, border: `1px solid ${C.border}`, display: 'block' }} />
-                  <button onClick={() => { setRefImage(null); if (refInputRef.current) refInputRef.current.value = '' }}
-                    style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.75)', border: 'none', borderRadius: 4, color: '#fff', fontSize: '0.7rem', padding: '0.15rem 0.45rem', cursor: 'pointer' }}>
-                    ✕
-                  </button>
-                  <div style={{ fontSize: '0.62rem', color: C.dim, marginTop: '0.3rem' }}>A IA vai usar este print como referência visual</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                <div style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                  Prints de referência (opcional)
                 </div>
-              ) : (
+                {refImages.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.65rem', color: C.dim }}>{refImages.length} imagem{refImages.length !== 1 ? 's' : ''}</span>
+                    <button onClick={() => { setRefImages([]); if (refInputRef.current) refInputRef.current.value = '' }}
+                      style={{ fontSize: '0.65rem', color: C.red, background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.1rem 0.3rem' }}>
+                      Limpar todas
+                    </button>
+                  </div>
+                )}
+              </div>
+              {refImages.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                  {refImages.map((img, i) => (
+                    <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 6, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+                      <img src={img} alt={`Ref ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <button onClick={() => setRefImages(prev => prev.filter((_, idx) => idx !== i))}
+                        style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.75)', border: 'none', borderRadius: 3, color: '#fff', fontSize: '0.6rem', padding: '0.1rem 0.35rem', cursor: 'pointer', lineHeight: 1 }}>
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  {/* Add more button */}
+                  <button onClick={() => refInputRef.current?.click()}
+                    style={{ aspectRatio: '1', background: 'rgba(255,255,255,0.03)', border: `1px dashed ${C.border}`, borderRadius: 6, color: C.dim, fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    +
+                  </button>
+                </div>
+              )}
+              {refImages.length === 0 && (
                 <button onClick={() => refInputRef.current?.click()} style={{ width: '100%', padding: '0.6rem 0.5rem', background: 'rgba(255,255,255,0.03)', border: `1px dashed ${C.border}`, borderRadius: 7, color: C.dim, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
-                  <span>📸 Selecionar imagem</span>
-                  <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>ou cole com Ctrl+V</span>
+                  <span>📸 Selecionar imagens</span>
+                  <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>ou cole com Ctrl+V · múltiplas imagens</span>
                 </button>
               )}
-              <input ref={refInputRef} type="file" accept="image/*" onChange={e => {
-                const file = e.target.files?.[0]
-                if (!file) return
-                const reader = new FileReader()
-                reader.onload = () => setRefImage(reader.result as string)
-                reader.readAsDataURL(file)
+              <input ref={refInputRef} type="file" accept="image/*" multiple onChange={e => {
+                const files = Array.from(e.target.files ?? [])
+                files.forEach(file => {
+                  const reader = new FileReader()
+                  reader.onload = () => setRefImages(prev => [...prev, reader.result as string])
+                  reader.readAsDataURL(file)
+                })
+                if (refInputRef.current) refInputRef.current.value = ''
               }} style={{ display: 'none' }} />
+              {refImages.length > 0 && (
+                <div style={{ fontSize: '0.62rem', color: C.dim, marginTop: '0.3rem' }}>A IA vai usar {refImages.length > 1 ? 'todas as imagens' : 'este print'} como referência visual</div>
+              )}
             </div>
           </div>
 

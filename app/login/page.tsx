@@ -51,12 +51,15 @@ export default function LoginPage() {
   const router = useRouter()
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [loading, setLoading] = useState('')
+  const [reason, setReason] = useState('')
   const isDark = theme === 'dark'
   const C = isDark ? DARK : LIGHT
 
   useEffect(() => {
     const saved = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
     if (saved) setTheme(saved)
+    const params = new URLSearchParams(window.location.search)
+    setReason(params.get('reason') ?? '')
   }, [])
 
   function toggleTheme() {
@@ -135,6 +138,13 @@ export default function LoginPage() {
           Acesso streamer
         </div>
       </div>
+
+      {reason === 'inactivity' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: isDark ? 'rgba(251,191,36,0.08)' : 'rgba(180,120,0,0.06)', border: `1px solid ${isDark ? 'rgba(251,191,36,0.25)' : 'rgba(180,120,0,0.2)'}`, borderRadius: '10px', padding: '0.75rem 1rem', maxWidth: '360px', width: '100%', marginBottom: '0.75rem', fontSize: '0.82rem', color: isDark ? '#fbbf24' : '#92600a', lineHeight: 1.5 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Sessão encerrada por inatividade. Faça login novamente para continuar.
+        </div>
+      )}
 
       {/* Card */}
       <div className="sk-card" style={{

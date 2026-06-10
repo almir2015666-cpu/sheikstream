@@ -55,7 +55,7 @@ type Stats = {
   livepix_total: number; livepix_donors: number; livepix_unique: number
   twitch_subs: number; twitch_tickets: number; twitch_total: number; tickets_total: number; participants: number
 }
-type DonorRow = { id: string; username: string; amount: number; message: string | null; date: string; created_at: string }
+type Activity = { id: string; platform: string; type: string; username: string; amount?: number; created_at: string }
 type ChannelStats = {
   broadcaster_name: string; title: string; game_name: string
   is_live: boolean; viewer_count: number; started_at: string | null
@@ -75,7 +75,7 @@ export default function DashboardPage() {
   const [channel, setChannel] = useState<ChannelStats | null>(null)
   const [channelErr, setChannelErr] = useState('')
   const [refreshTick, setRefreshTick] = useState(0)
-  const [donors, setDonors] = useState<DonorRow[] | null>(null)
+  const [activities, setActivities] = useState<Activity[] | null>(null)
   const periodLabel = PERIODS.find(([p]) => p === period)?.[1] ?? '30 dias'
 
   function periodDates() {
@@ -104,12 +104,9 @@ export default function DashboardPage() {
       .then(d => { if (d) setStats(d) })
       .catch(() => {})
       .finally(() => setStatsLoading(false))
-    const days = period === '7d' ? 7 : period === '90d' ? 90 : period === 'custom'
-      ? Math.max(1, Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / 86400000) + 1)
-      : 30
-    fetch(`/api/livepix/donors?days=${days}`)
+    fetch(`/api/dashboard/activity?from=${from}&to=${to}`)
       .then(r => r.ok ? r.json() : null)
-      .then((d: DonorRow[] | null) => { if (d) setDonors(d) })
+      .then((d: Activity[] | null) => { if (d) setActivities(d) })
       .catch(() => {})
   }, [period, customFrom, customTo, refreshTick])
 
@@ -387,84 +384,103 @@ export default function DashboardPage() {
         </div>
 
         {/* Arrecadação no período */}
-        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem', marginBottom: '0.8rem' }}>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ color: C.primary }}>↗</span> Arrecadação no período
-          </div>
-          {!donors || donors.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: C.vdim, fontSize: '0.82rem' }}>
-              Nenhuma arrecadação no período
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: '200px', overflowY: 'auto' }}>
-              {[...donors].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(d => (
-                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.32rem 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 600, color: C.text, flex: 1 }}>{d.username}</span>
-                  <span style={{ fontSize: '0.72rem', color: C.vdim }}>{d.date}</span>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#ff69b4' }}>{fmtBRL(d.amount)}</span>
+        {(() => {
+          const PLAT_COLOR: Record<string, string> = { livepix: '#ff69b4', twitch: '#9147ff', kick: '#53fc18', paypal: '#009cde' }
+          const TYPE_LABEL: Record<string, string> = { donation: 'doou', sub: 'se inscreveu', resub: 'reinscreveu', giftsub: 'presenteou', bits: 'enviou bits', follow: 'seguiu' }
+          const monetary = (activities ?? []).filter(a => a.amount && a.amount > 0)
+          return (
+            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem', marginBottom: '0.8rem' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ color: C.primary }}>↗</span> Arrecadação no período
+              </div>
+              {monetary.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: C.vdim, fontSize: '0.82rem' }}>Nenhuma arrecadação no período</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', maxHeight: '200px', overflowY: 'auto' }}>
+                  {monetary.map(a => (
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.32rem 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: PLAT_COLOR[a.platform] ?? C.vdim, flexShrink: 0, display: 'inline-block' }} />
+                      <span style={{ fontSize: '0.76rem', fontWeight: 600, color: C.text, flex: 1 }}>{a.username}</span>
+                      <span style={{ fontSize: '0.68rem', color: C.vdim }}>{a.created_at.slice(0, 10)}</span>
+                      <span style={{ fontSize: '0.76rem', fontWeight: 700, color: PLAT_COLOR[a.platform] ?? C.text }}>{fmtBRL(a.amount!)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
+          )
+        })()}
 
         {/* Sorteios ativos + Atividade recente */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sorteios ativos</div>
-              <Link href="/dashboard/sorteios/novo" style={{ fontSize: '0.75rem', color: C.primary, textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                + Criar sorteio
-              </Link>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ fontSize: '0.8rem', color: C.vdim }}>Nenhum sorteio ativo</div>
-              <Link href="/dashboard/sorteios/novo" style={{ fontSize: '0.78rem', color: C.primary, textDecoration: 'none', background: C.primaryBg, padding: '0.35rem 1rem', borderRadius: '6px', fontWeight: 600 }}>
-                Criar primeiro sorteio
-              </Link>
-            </div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>Atividade recente</div>
-            {!donors || donors.length === 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: C.vdim, fontSize: '0.82rem' }}>
-                Nenhuma atividade registrada
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {donors.slice(0, 6).map(d => (
-                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff69b4', flexShrink: 0, display: 'inline-block' }} />
-                    <span style={{ fontSize: '0.76rem', color: C.muted, flex: 1 }}><strong style={{ color: C.text }}>{d.username}</strong> doou</span>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#ff69b4' }}>{fmtBRL(d.amount)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Top doadores */}
-        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            🏆 Top doadores
-          </div>
-          {!donors || donors.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px', color: C.vdim, fontSize: '0.82rem' }}>
-              Nenhum doador registrado no período
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-              {[...donors].sort((a, b) => b.amount - a.amount).slice(0, 5).map((d, i) => (
-                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, width: '20px', flexShrink: 0, color: i === 0 ? '#fbbf24' : i === 1 ? 'rgba(192,192,192,0.8)' : i === 2 ? '#b45309' : C.vdim }}>#{i + 1}</span>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: C.text, flex: 1 }}>{d.username}</span>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ff69b4' }}>{fmtBRL(d.amount)}</span>
+        {(() => {
+          const PLAT_COLOR: Record<string, string> = { livepix: '#ff69b4', twitch: '#9147ff', kick: '#53fc18', paypal: '#009cde' }
+          const TYPE_LABEL: Record<string, string> = { donation: 'doou', sub: 'se inscreveu', resub: 'reinscreveu', giftsub: 'presenteou', bits: 'enviou bits', follow: 'seguiu' }
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
+              <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sorteios ativos</div>
+                  <Link href="/dashboard/sorteios/novo" style={{ fontSize: '0.75rem', color: C.primary, textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>+ Criar sorteio</Link>
                 </div>
-              ))}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: C.vdim }}>Nenhum sorteio ativo</div>
+                  <Link href="/dashboard/sorteios/novo" style={{ fontSize: '0.78rem', color: C.primary, textDecoration: 'none', background: C.primaryBg, padding: '0.35rem 1rem', borderRadius: '6px', fontWeight: 600 }}>Criar primeiro sorteio</Link>
+                </div>
+              </div>
+              <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>Atividade recente</div>
+                {!activities || activities.length === 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: C.vdim, fontSize: '0.82rem' }}>Nenhuma atividade registrada</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {activities.slice(0, 6).map(a => (
+                      <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: PLAT_COLOR[a.platform] ?? C.vdim, flexShrink: 0, display: 'inline-block' }} />
+                        <span style={{ fontSize: '0.76rem', color: C.muted, flex: 1 }}>
+                          <strong style={{ color: C.text }}>{a.username}</strong> {TYPE_LABEL[a.type] ?? a.type}
+                        </span>
+                        {a.amount ? <span style={{ fontSize: '0.76rem', fontWeight: 700, color: PLAT_COLOR[a.platform] ?? C.text }}>{fmtBRL(a.amount)}</span> : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          )
+        })()}
+
+        {/* Top contribuidores */}
+        {(() => {
+          const PLAT_COLOR: Record<string, string> = { livepix: '#ff69b4', twitch: '#9147ff', kick: '#53fc18', paypal: '#009cde' }
+          const totals: Record<string, { username: string; total: number; platform: string }> = {}
+          ;(activities ?? []).filter(a => a.amount && a.amount > 0).forEach(a => {
+            const k = a.username.toLowerCase()
+            if (!totals[k]) totals[k] = { username: a.username, total: 0, platform: a.platform }
+            totals[k].total += a.amount!
+          })
+          const ranked = Object.values(totals).sort((a, b) => b.total - a.total).slice(0, 5)
+          return (
+            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                🏆 Top contribuidores
+              </div>
+              {ranked.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px', color: C.vdim, fontSize: '0.82rem' }}>Nenhum contribuidor no período</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  {ranked.map((d, i) => (
+                    <div key={d.username} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, width: '20px', flexShrink: 0, color: i === 0 ? '#fbbf24' : i === 1 ? 'rgba(192,192,192,0.8)' : i === 2 ? '#b45309' : C.vdim }}>#{i + 1}</span>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: PLAT_COLOR[d.platform] ?? C.vdim, flexShrink: 0, display: 'inline-block' }} />
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: C.text, flex: 1 }}>{d.username}</span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: PLAT_COLOR[d.platform] ?? C.text }}>{fmtBRL(d.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
       </div>
     </div>

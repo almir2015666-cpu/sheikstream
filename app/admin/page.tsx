@@ -148,9 +148,9 @@ export default function AdminPage() {
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
   const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens'>('users')
-  type AiImgCfg = { enabled: boolean; cooldown_seconds: number; max_per_day: number; allowed_roles: string[] }
+  type AiImgCfg = { enabled: boolean; cooldown_seconds: number; max_per_day: number; allowed_roles: string[]; role_limits: Record<string, number> }
   type AiGen = { id: string; user_name: string; user_role: string; prompt: string; status: string; created_at: string }
-  const [aiCfg, setAiCfg] = useState<AiImgCfg>({ enabled: true, cooldown_seconds: 300, max_per_day: 10, allowed_roles: ['admin', 'moderador', 'vip'] })
+  const [aiCfg, setAiCfg] = useState<AiImgCfg>({ enabled: true, cooldown_seconds: 300, max_per_day: 10, allowed_roles: ['admin', 'moderador', 'vip'], role_limits: {} })
   const [aiRecent, setAiRecent] = useState<AiGen[]>([])
   const [aiImgExpanded, setAiImgExpanded] = useState<Record<string, string | null>>({})
   const [aiImgLoading, setAiImgLoading] = useState<string | null>(null)
@@ -161,7 +161,7 @@ export default function AdminPage() {
     setAiLoading(true)
     const res = await fetch('/api/admin/ia-imagens/config', { headers: { 'x-admin-password': pw } })
     const d = await res.json()
-    if (d.config) setAiCfg(d.config)
+    if (d.config) setAiCfg({ ...d.config, role_limits: d.config.role_limits ?? {} })
     setAiRecent(d.recent ?? [])
     setAiImgExpanded({})
     setAiLoading(false)
@@ -2282,14 +2282,47 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Max per day */}
+                      {/* Per-group limits */}
                       <div style={{ padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.65rem' }}>Máximo de imagens por dia (por usuário)</div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.2rem' }}>Limite diário por grupo</div>
+                        <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.75rem' }}>Configure quantas imagens cada grupo pode gerar por dia. Padrão global é o fallback.</div>
+                        {/* Global default */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.8rem', paddingBottom: '0.75rem', borderBottom: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '0.78rem', color: C.muted, width: 80, flexShrink: 0, fontWeight: 600 }}>Padrão:</span>
                           {[3,5,10,20,50].map(n => (
-                            <button key={n} onClick={() => setAiCfg(p => ({ ...p, max_per_day: n }))} style={{ padding: '0.4rem 0.85rem', borderRadius: 8, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', background: aiCfg.max_per_day === n ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.max_per_day === n ? C.borderStrong : C.border}`, color: aiCfg.max_per_day === n ? C.primary : C.muted }}>{n}</button>
+                            <button key={n} onClick={() => setAiCfg(p => ({ ...p, max_per_day: n }))} style={{ padding: '0.38rem 0.75rem', borderRadius: 7, fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', background: aiCfg.max_per_day === n ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.max_per_day === n ? C.borderStrong : C.border}`, color: aiCfg.max_per_day === n ? C.primary : C.muted }}>{n}</button>
                           ))}
-                          <input type="number" min={1} value={aiCfg.max_per_day} onChange={e => setAiCfg(p => ({ ...p, max_per_day: Number(e.target.value) }))} style={{ width: 75, padding: '0.4rem 0.6rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 8, color: C.text, fontSize: '0.82rem', outline: 'none' }} />
+                          <input type="number" min={1} value={aiCfg.max_per_day} onChange={e => setAiCfg(p => ({ ...p, max_per_day: Number(e.target.value) }))} style={{ width: 70, padding: '0.38rem 0.6rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 7, color: C.text, fontSize: '0.82rem', outline: 'none' }} />
+                        </div>
+                        {/* Per-role overrides */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {['todos','admin','moderador','vip','streamer'].map(role => {
+                            const hasOverride = aiCfg.role_limits?.[role] !== undefined
+                            const val = hasOverride ? aiCfg.role_limits[role] : aiCfg.max_per_day
+                            return (
+                              <div key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                <span style={{ fontSize: '0.78rem', fontWeight: 700, width: 80, flexShrink: 0, color: hasOverride ? C.primary : C.muted }}>
+                                  {role === 'todos' ? '🌐 todos' : role}
+                                </span>
+                                <input type="number" min={0} value={val}
+                                  onChange={e => setAiCfg(p => ({ ...p, role_limits: { ...(p.role_limits ?? {}), [role]: Number(e.target.value) } }))}
+                                  style={{ width: 65, padding: '0.35rem 0.55rem', background: hasOverride ? C.inputBg : 'rgba(255,255,255,0.03)', border: `1px solid ${hasOverride ? C.borderStrong : C.border}`, borderRadius: 7, color: hasOverride ? C.text : C.dim, fontSize: '0.82rem', outline: 'none' }} />
+                                <span style={{ fontSize: '0.68rem', color: C.dim }}>img/dia</span>
+                                {hasOverride && (
+                                  <button onClick={() => setAiCfg(p => { const rl = { ...(p.role_limits ?? {}) }; delete rl[role]; return { ...p, role_limits: rl } })}
+                                    style={{ fontSize: '0.68rem', color: C.danger ?? '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.1rem 0.35rem' }}>
+                                    ✕ padrão
+                                  </button>
+                                )}
+                                {!hasOverride && (
+                                  <button onClick={() => setAiCfg(p => ({ ...p, role_limits: { ...(p.role_limits ?? {}), [role]: aiCfg.max_per_day } }))}
+                                    style={{ fontSize: '0.68rem', color: C.primary, background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.1rem 0.35rem' }}>
+                                    + override
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
 
