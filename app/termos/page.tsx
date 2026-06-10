@@ -15,55 +15,61 @@ export default function TermosPage() {
   const [privacyChecked, setPrivacyChecked] = useState(false)
   const [marketingChecked, setMarketingChecked] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [declining, setDeclining] = useState(false)
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
+  // null = checking, true = logged in (save to DB), false = not logged in (use cookie)
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
 
   useEffect(() => {
-    // If already accepted, redirect to dashboard
     fetch('/api/user/terms')
       .then(r => {
-        if (r.status === 401) { router.replace('/login'); return null }
+        if (r.status === 401) { setIsLoggedIn(false); return null }
         return r.json()
       })
       .then(d => {
         if (!d) return
-        if (!d.needs_acceptance) { router.replace('/dashboard'); return }
-        setLoading(false)
+        setIsLoggedIn(true)
+        if (!d.needs_acceptance) router.replace('/dashboard')
       })
-      .catch(() => setLoading(false))
+      .catch(() => setIsLoggedIn(false))
   }, [router])
 
   async function handleAccept() {
     setSaving(true)
     setError('')
     try {
-      const res = await fetch('/api/user/terms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ terms: termsChecked, privacy: privacyChecked, marketing: marketingChecked }),
-      })
-      if (!res.ok) throw new Error('Erro ao salvar')
-      router.replace('/dashboard')
+      if (isLoggedIn) {
+        // Already authenticated — save directly to DB
+        const res = await fetch('/api/user/terms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ terms: termsChecked, privacy: privacyChecked, marketing: marketingChecked }),
+        })
+        if (!res.ok) throw new Error('Erro ao salvar')
+        router.replace('/dashboard')
+      } else {
+        // Not yet authenticated — store acceptance in a short-lived cookie, then start Twitch OAuth
+        const flags = [
+          termsChecked ? 'terms' : '',
+          privacyChecked ? 'privacy' : '',
+          marketingChecked ? 'marketing' : '',
+        ].filter(Boolean).join(',')
+        document.cookie = `sk-tpending=${encodeURIComponent(flags)}; path=/; max-age=600; SameSite=Lax`
+        window.location.href = '/api/auth/twitch'
+      }
     } catch {
       setError('Erro ao salvar. Tente novamente.')
-    } finally {
       setSaving(false)
     }
   }
 
-  async function handleDecline() {
-    setDeclining(true)
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-    } catch {}
-    router.replace('/login?reason=terms_declined')
+  function handleDecline() {
+    router.push('/login')
   }
 
-  if (loading) {
+  if (isLoggedIn === null) {
     return (
       <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: C.vdim, fontSize: '0.85rem' }}>Carregando...</div>
+        <div style={{ color: C.vdim, fontSize: '0.85rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif" }}>Carregando...</div>
       </div>
     )
   }
@@ -79,12 +85,13 @@ export default function TermosPage() {
               <polyline points="14 2 14 8 20 8"/>
               <line x1="16" y1="13" x2="8" y2="13"/>
               <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
             </svg>
           </div>
           <div style={{ fontSize: '1.25rem', fontWeight: 800, color: C.text, marginBottom: '0.4rem' }}>Antes de continuar</div>
           <div style={{ fontSize: '0.84rem', color: C.muted, lineHeight: 1.5 }}>
-            Para usar a plataforma SheikSTREAM, você precisa aceitar os termos abaixo.
+            {isLoggedIn
+              ? 'Para usar a plataforma SheikSTREAM, você precisa aceitar os termos abaixo.'
+              : 'Para criar sua conta e entrar com a Twitch, você precisa aceitar os termos abaixo.'}
           </div>
         </div>
 
@@ -149,25 +156,22 @@ export default function TermosPage() {
             transition: 'all 0.15s', marginBottom: '0.65rem',
           }}
         >
-          {saving ? 'Salvando...' : 'Aceitar e continuar'}
+          {saving
+            ? (isLoggedIn ? 'Salvando...' : 'Redirecionando para Twitch...')
+            : (isLoggedIn ? 'Aceitar e continuar' : 'Aceitar e entrar com Twitch')}
         </button>
 
         {/* Recusar */}
         <button
-          disabled={declining}
           onClick={handleDecline}
           style={{
             width: '100%', padding: '0.7rem', border: `1px solid ${C.border}`, borderRadius: '12px',
             background: 'transparent', color: C.dim, fontWeight: 600, fontSize: '0.85rem',
-            cursor: declining ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+            cursor: 'pointer', transition: 'all 0.15s',
           }}
         >
-          {declining ? 'Saindo...' : 'Não aceitar — sair da plataforma'}
+          Não aceitar — voltar ao início
         </button>
-
-        <div style={{ marginTop: '1.1rem', fontSize: '0.73rem', color: C.vdim, textAlign: 'center', lineHeight: 1.5 }}>
-          Ao recusar, sua sessão será encerrada e você não poderá acessar o dashboard.
-        </div>
       </div>
     </div>
   )

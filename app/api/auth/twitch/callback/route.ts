@@ -146,9 +146,33 @@ export async function GET(req: NextRequest) {
     console.error('[twitch/callback] user_tokens upsert exception:', e)
   }
 
-  // Check if user already accepted terms — redirect to /termos if not
-  let needsTerms = true
-  if (!isPopup) {
+  // Read sk-tpending cookie — set by /termos before OAuth to pre-accept terms
+  const tpending = req.cookies.get('sk-tpending')?.value ?? ''
+  const flags = tpending ? decodeURIComponent(tpending).split(',') : []
+  const termsFromCookie  = flags.includes('terms')
+  const privacyFromCookie = flags.includes('privacy')
+  const marketingFromCookie = flags.includes('marketing')
+
+  if (!isPopup && (termsFromCookie || privacyFromCookie)) {
+    // Save terms acceptance to DB
+    try {
+      const now = new Date().toISOString()
+      await getSupabaseAdmin()
+        .from('users')
+        .upsert({
+          id: tw.id,
+          ...(termsFromCookie   ? { terms_accepted_at:   now } : {}),
+          ...(privacyFromCookie ? { privacy_accepted_at: now } : {}),
+          marketing_emails: marketingFromCookie,
+        }, { onConflict: 'id' })
+    } catch (e) {
+      console.error('[twitch/callback] terms upsert error:', e)
+    }
+  }
+
+  // If no pending cookie, check if terms were already accepted in DB
+  let needsTerms = false
+  if (!isPopup && !termsFromCookie && !privacyFromCookie) {
     try {
       const { data: uRow } = await getSupabaseAdmin()
         .from('users')
@@ -169,6 +193,10 @@ export async function GET(req: NextRequest) {
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
   })
+  // Clear the terms-pending cookie if it was used
+  if (tpending) {
+    res.cookies.set('sk-tpending', '', { maxAge: 0, path: '/' })
+  }
   await logActivity('auth', 'login', tw.display_name, 'Twitch')
   await logSystem('auth.login', `Login Twitch: ${tw.display_name}`, tw.id, { platform: 'Twitch', username: tw.display_name, is_popup: isPopup })
 

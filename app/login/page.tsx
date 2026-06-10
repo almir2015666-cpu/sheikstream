@@ -72,7 +72,7 @@ export default function LoginPage() {
     if (loading) return
     setLoading(platform)
     if (platform === 'Twitch') {
-      window.location.href = '/api/auth/twitch'
+      router.push('/termos')
       return
     }
     if (platform === 'YouTube') {
