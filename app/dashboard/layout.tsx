@@ -16,8 +16,8 @@ const DARK_S = {
 }
 const LIGHT_S = {
   bg: '#f0effe', bar: '#ffffff', card: '#ffffff', text: '#0f0e24',
-  muted: 'rgba(15,14,36,0.65)', dim: 'rgba(15,14,36,0.45)',
-  vdim: 'rgba(15,14,36,0.25)', primary: '#7b2eff',
+  muted: 'rgba(15,14,36,0.7)', dim: 'rgba(15,14,36,0.6)',
+  vdim: 'rgba(15,14,36,0.4)', primary: '#7b2eff',
   primaryBg: 'rgba(123,46,255,0.08)', accent: '#059669',
   border: 'rgba(0,0,0,0.07)', borderP: 'rgba(123,46,255,0.18)',
   topbar: '#ffffff', iconActive: '#9b30ff',
@@ -488,6 +488,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     main [style*="color: rgb(15, 14, 36)"]{color:${S.text}!important;}
     main [style*="border-color: rgba(255,255,255"]{border-color:rgba(0,0,0,0.12)!important;}
     main [style*="border: 1px solid rgba(255,255,255"]{border-color:rgba(0,0,0,0.12)!important;}
+    main [style*="rgba(255, 255, 255, 0.02)"]{background:rgba(0,0,0,0.04)!important;}
+    main [style*="rgba(255, 255, 255, 0.03)"]{background:rgba(0,0,0,0.04)!important;}
+    main [style*="rgba(255, 255, 255, 0.04)"]{background:rgba(0,0,0,0.05)!important;}
+    main [style*="rgba(255, 255, 255, 0.05)"]{background:rgba(0,0,0,0.06)!important;}
+    main [style*="rgba(255, 255, 255, 0.08)"]{background:rgba(0,0,0,0.05)!important;}
+    main [style*="rgba(255, 255, 255, 0.12)"]:not([style*="color"]){background:rgba(0,0,0,0.08)!important;}
     main input,main select,main textarea{background:rgba(0,0,0,0.05)!important;color:${S.text}!important;border-color:rgba(0,0,0,0.15)!important;}
     ` : ''}
   `
