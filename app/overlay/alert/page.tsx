@@ -111,11 +111,18 @@ function getAnimTransition(animIn: string, animSpeed = 5): string {
   return transitions[animIn] ?? `transform ${d}s cubic-bezier(.22,.68,0,1.2), opacity ${d6}s ease`
 }
 
-function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () => void }) {
+function AlertCard({ ev, cfg, onDone, debug }: { ev: AlertEvent; cfg: Cfg; onDone: () => void; debug?: boolean }) {
   const [visible, setVisible] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
+  const [dbgLog, setDbgLog] = useState<string[]>([])
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
+
+  const stamp = () => new Date().toISOString().slice(11, 23)
+  const dbg = (msg: string) => {
+    if (!debug) return
+    setDbgLog(prev => [...prev.slice(-12), `${stamp()} ${msg}`])
+  }
 
   const meta = EVENT_META[ev.type] ?? EVENT_META.command
   const accent = cfg.timerColor !== '#9146FF' ? cfg.timerColor : (cfg.accentColor !== '#9146FF' ? cfg.accentColor : meta.color)
@@ -126,12 +133,13 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
   const exitDurMs = Math.max(400, (11 - (cfg.animSpeed ?? 5)) * 200)
 
   useEffect(() => {
+    dbg(`MOUNT animOut=${animOut} dur=${cfg.duration}s exitMs=${exitDurMs}`)
     // Entrance: set visible after 50ms so CSS transition has a "from" state to diff against
-    const t1 = setTimeout(() => setVisible(true), 50)
+    const t1 = setTimeout(() => { setVisible(true); dbg('visible=true (entrance start)') }, 50)
     // Exit: switch to isExiting — CSS keyframe on inner div fires on compositor thread (no rAF needed)
-    const t2 = setTimeout(() => setIsExiting(true), cfg.duration * 1000)
+    const t2 = setTimeout(() => { setIsExiting(true); dbg(`isExiting=true anim=sk-out-${animOut}`) }, cfg.duration * 1000)
     // Unmount: after exit animation completes
-    const t3 = setTimeout(() => onDoneRef.current(), cfg.duration * 1000 + exitDurMs + 50)
+    const t3 = setTimeout(() => { dbg('onDone → unmount'); onDoneRef.current() }, cfg.duration * 1000 + exitDurMs + 50)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -305,6 +313,18 @@ function AlertCard({ ev, cfg, onDone }: { ev: AlertEvent; cfg: Cfg; onDone: () =
       </div>
       </div>
       </div>
+      {debug && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0,
+          background: 'rgba(0,0,0,0.85)', color: '#0f0', fontFamily: 'monospace',
+          fontSize: 11, padding: '6px 10px', zIndex: 9999, lineHeight: 1.5,
+          pointerEvents: 'none',
+        }}>
+          <div><b>visible:</b> {String(visible)} | <b>isExiting:</b> {String(isExiting)} | <b>animOut:</b> {animOut} | <b>exitMs:</b> {exitDurMs}</div>
+          <div><b>wrapStyle:</b> {JSON.stringify(isExiting ? (animOut === 'none' ? {opacity:0} : {animation:`sk-out-${animOut} ${exitDurMs}ms ease forwards`}) : {visible})}</div>
+          {dbgLog.map((l, i) => <div key={i} style={{ color: '#aaffaa' }}>{l}</div>)}
+        </div>
+      )}
     </>
   )
 }
@@ -313,6 +333,7 @@ function AlertOverlayContent() {
   const sp = useSearchParams()
   const uid = sp.get('uid') ?? ''
   const eventSlug = sp.get('event') ?? ''
+  const debug = sp.get('debug') === '1'
 
   // cfgMap holds one config per event slug (+ '' for the generic fallback)
   const cfgMapRef = useRef<Record<string, Cfg>>({})
@@ -420,6 +441,7 @@ function AlertOverlayContent() {
       ev={current}
       cfg={getCfg(current)}
       onDone={() => setCurrent(null)}
+      debug={debug}
     />
   )
 }
