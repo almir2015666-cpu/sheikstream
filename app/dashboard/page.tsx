@@ -3,10 +3,11 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 const C = {
-  card: '#111219', cardB: 'rgba(255,255,255,0.05)',
+  card: '#111219', cardB: 'rgba(255,255,255,0.06)',
   text: '#e8e6f8', muted: 'rgba(232,230,248,0.48)', dim: 'rgba(232,230,248,0.28)',
   vdim: 'rgba(232,230,248,0.15)',
   primary: '#9b30ff', primaryBg: 'rgba(155,48,255,0.1)',
+  rad: '16px', radSm: '12px',
 }
 
 const PLAT_COLOR: Record<string, string> = {
@@ -272,7 +273,7 @@ export default function DashboardPage() {
     <div style={{ background: '#08090d', minHeight: '100vh', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
       {/* Welcome banner */}
-      <div style={{ background: 'linear-gradient(90deg,rgba(59,130,246,0.12),rgba(99,102,241,0.06))', borderBottom: '1px solid rgba(59,130,246,0.15)', padding: isMobile ? '0.6rem 1rem' : '0.6rem 2rem', display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap' }}>
+      <div style={{ background: 'linear-gradient(90deg,rgba(59,130,246,0.12),rgba(99,102,241,0.06))', borderBottom: '1px solid rgba(59,130,246,0.15)', padding: isMobile ? '0.65rem 1.25rem' : '0.65rem 3rem', display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '1rem' }}>🚀</span>
         <span style={{ fontSize: '0.81rem', color: '#93c5fd', fontWeight: 700 }}>Bem-vindo ao Beta!</span>
         <span style={{ fontSize: '0.81rem', color: C.dim }}>
@@ -284,11 +285,11 @@ export default function DashboardPage() {
         </span>
       </div>
 
-      <div style={{ padding: isMobile ? '1rem' : '1.4rem 2rem' }}>
+      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: isMobile ? '1.25rem 1.25rem' : '2rem 3rem' }}>
 
         {/* Canal Twitch */}
         {(channel || !channelErr) && (
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '0.9rem 1.2rem', marginBottom: '0.8rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: C.rad, padding: '1.1rem 1.5rem', marginBottom: '0.8rem' }}>
             {channelErr ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem', color: C.muted }}>
                 <span style={{ fontSize: '1rem' }}>📡</span>
@@ -367,7 +368,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Total arrecadado */}
-        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1rem 1.4rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: C.rad, padding: '1rem 1.4rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>
             <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <span style={{ color: C.primary, fontSize: '0.8rem' }}>↗</span> Total arrecadado — todas as plataformas
@@ -401,9 +402,9 @@ export default function DashboardPage() {
             { label: 'Subs TikTok',        value: '0',                                       sub: 'no período' },
           ]
           return (
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.65rem', marginBottom: '0.65rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '1rem', marginBottom: '1rem' }}>
               {statCards.map(s => (
-                <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '10px', padding: '0.9rem 1rem' }}>
+                <div key={s.label} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: C.radSm, padding: '1.1rem 1.2rem' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                     <div style={{ fontSize: '0.7rem', color: C.muted, lineHeight: 1.3 }}>{s.label}</div>
                     {s.badge && <span style={{ fontSize: '0.5rem', fontWeight: 700, padding: '0.08rem 0.38rem', background: 'rgba(59,130,246,0.16)', color: '#60a5fa', borderRadius: '999px', flexShrink: 0 }}>NOVO</span>}
@@ -424,10 +425,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Estimativa de repasse + Receita líquida */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
 
           {/* Estimativa de repasse */}
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: C.rad, padding: '1.3rem 1.5rem' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>Estimativa de repasse</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
               {REPASSE.map(r => {
@@ -469,7 +470,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Receita líquida */}
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: C.rad, padding: '1.3rem 1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span style={{ color: C.primary }}>↗</span> Receita líquida por plataforma
@@ -527,7 +528,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Arrecadação no período — bar chart */}
-        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem', marginBottom: '0.8rem' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: C.rad, padding: '1.3rem 1.5rem', marginBottom: '0.8rem' }}>
           <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Arrecadação no período
@@ -540,8 +541,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Sorteios ativos + Atividade recente */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: C.rad, padding: '1.3rem 1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
@@ -555,7 +556,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: C.rad, padding: '1.3rem 1.5rem' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
               Atividade recente
@@ -601,7 +602,7 @@ export default function DashboardPage() {
           })
           const ranked = Object.values(totals).sort((a, b) => b.total - a.total).slice(0, 5)
           return (
-            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.1rem 1.3rem' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: C.rad, padding: '1.3rem 1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>

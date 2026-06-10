@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       .lte('created_at', `${to}T23:59:59Z`)
       .order('created_at', { ascending: false }).limit(500),
     db.from('twitch_subs')
-      .select('id,tier,date,username')
+      .select('id,tier,date')
       .eq('broadcaster_id', user.id)
       .gte('date', from).lte('date', to)
       .order('date', { ascending: false }).limit(500),
@@ -126,9 +126,9 @@ export async function GET(req: NextRequest) {
     id: `ts-${s.id}`,
     platform: 'twitch',
     type: 'sub',
-    username: (s.username as string | null) ?? 'Inscrito',
+    username: 'Inscrito',
     amount: twitchSubValByName(s.tier as string | null),
-    created_at: `${s.date}T12:00:00Z`,
+    created_at: `${s.date as string}T12:00:00Z`,
   }))
 
   const all = [...livepixItems, ...eventItems, ...legacySubItems]
