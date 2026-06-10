@@ -502,6 +502,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const overlayUrl = uid ? `${origin}/overlay/alert?uid=${uid}${slug ? `&event=${slug}` : ''}` : '...'
+  const unifiedUrl = uid ? `${origin}/overlay/alert?uid=${uid}` : '...'
   function up<K extends keyof OvCfg>(k: K, v: OvCfg[K]) { setCfg(p => ({ ...p, [k]: v })) }
 
   async function saveCfg() {
@@ -567,13 +568,30 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
     <div style={{ marginTop: '1rem' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;800&family=Poppins:wght@400;700&family=Rajdhani:wght@600;700&display=swap');`}</style>
 
-      {/* URL bar */}
-      <div style={{ display:'flex',alignItems:'center',gap:'0.5rem',background:'#08090d',border:`1px solid ${PB}`,borderRadius:8,padding:'0.45rem 0.7rem',marginBottom:'0.85rem' }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        <span style={{ flex:1,fontSize:'0.7rem',color:MUT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace' }}>{overlayUrl}</span>
-        <button type="button" onClick={copyUrl} style={{ flexShrink:0,padding:'0.22rem 0.6rem',background:copied?'rgba(34,197,94,0.1)':PBg,border:`1px solid ${copied?'rgba(34,197,94,0.3)':PB}`,borderRadius:5,color:copied?GR:P,fontSize:'0.7rem',fontWeight:700,cursor:'pointer' }}>
-          {copied ? '✓ Copiado' : 'Copiar'}
-        </button>
+      {/* URL bar — unified (recommended for OBS) */}
+      <div style={{ marginBottom:'0.5rem' }}>
+        <div style={{ fontSize:'0.65rem',color:GR,fontWeight:700,marginBottom:'0.2rem',textTransform:'uppercase',letterSpacing:'0.5px' }}>
+          ✅ URL para o OBS (todos os eventos)
+        </div>
+        <div style={{ display:'flex',alignItems:'center',gap:'0.5rem',background:'#08090d',border:`1px solid rgba(34,197,94,0.35)`,borderRadius:8,padding:'0.45rem 0.7rem' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={GR} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <span style={{ flex:1,fontSize:'0.7rem',color:'rgba(34,197,94,0.9)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace' }}>{unifiedUrl}</span>
+          <button type="button" onClick={() => { navigator.clipboard.writeText(unifiedUrl).catch(()=>{}); setCopied(true); notify('URL copiada!','success'); setTimeout(()=>setCopied(false),2000) }} style={{ flexShrink:0,padding:'0.22rem 0.6rem',background:copied?'rgba(34,197,94,0.15)':'rgba(34,197,94,0.08)',border:`1px solid rgba(34,197,94,0.3)`,borderRadius:5,color:GR,fontSize:'0.7rem',fontWeight:700,cursor:'pointer' }}>
+            {copied ? '✓ Copiado' : 'Copiar'}
+          </button>
+        </div>
+        <div style={{ fontSize:'0.62rem',color:DIM,marginTop:'0.2rem' }}>Use esta URL no OBS — mostra alertas de todos os eventos em uma única fonte.</div>
+      </div>
+
+      {/* URL bar — this event only */}
+      <div style={{ marginBottom:'0.85rem' }}>
+        <div style={{ fontSize:'0.65rem',color:DIM,fontWeight:600,marginBottom:'0.2rem',textTransform:'uppercase',letterSpacing:'0.5px' }}>
+          Somente este evento
+        </div>
+        <div style={{ display:'flex',alignItems:'center',gap:'0.5rem',background:'#08090d',border:`1px solid ${PB}`,borderRadius:8,padding:'0.45rem 0.7rem' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <span style={{ flex:1,fontSize:'0.7rem',color:MUT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace' }}>{overlayUrl}</span>
+        </div>
       </div>
 
       {/* Grid: config | preview */}
@@ -1037,22 +1055,21 @@ export default function ComandosPage() {
         fetch('/api/comandos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trigger: def.trigger, resposta: def.resposta, cooldown_s: def.cooldown, habilitado: false, permissao: 'todos', platform: def.platform, notif_overlay: true }),
+          body: JSON.stringify({ trigger: def.trigger, resposta: def.resposta, cooldown_s: def.cooldown, habilitado: true, permissao: 'todos', platform: def.platform, notif_overlay: true }),
         }).then(r => r.ok ? r.json() as Promise<DbRow> : null).catch(() => null)
       ))
 
-      // One-time migration: enable notif_overlay for all existing event rows
+      // One-time migration: enable notif_overlay AND habilitado for all existing event rows
       try {
         if (!localStorage.getItem('sk-notif-overlay-v1')) {
-          const toEnable = dbEvents.filter(r => !r.notif_overlay)
-          await Promise.all(toEnable.map(r =>
+          await Promise.all(dbEvents.map(r =>
             fetch(`/api/comandos?id=${r.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ notif_overlay: true }),
+              body: JSON.stringify({ notif_overlay: true, habilitado: true }),
             }).catch(() => {})
           ))
-          toEnable.forEach(r => { r.notif_overlay = true })
+          dbEvents.forEach(r => { r.notif_overlay = true; r.habilitado = true })
           localStorage.setItem('sk-notif-overlay-v1', '1')
         }
       } catch {}
