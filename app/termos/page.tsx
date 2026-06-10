@@ -107,6 +107,7 @@ export default function TermosPage() {
               key: 'privacy', checked: privacyChecked, set: setPrivacyChecked, required: true,
               label: 'Li e concordo com a',
               link: '/privacidade', linkText: 'Política de Privacidade', after: 'da SheikSTREAM',
+
             },
             {
               key: 'marketing', checked: marketingChecked, set: setMarketingChecked, required: false,
