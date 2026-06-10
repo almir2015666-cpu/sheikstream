@@ -89,10 +89,11 @@ export async function GET(req: NextRequest) {
 
   async function fetchChannelSlug(slug: string) {
     // Try with auth first, then without (public endpoint)
-    for (const headers of [
+    const headerOptions: Record<string, string>[] = [
       { Authorization: `Bearer ${token}`, 'Client-Id': clientId },
       { 'Client-Id': clientId },
-    ]) {
+    ]
+    for (const headers of headerOptions) {
       try {
         const res = await fetch(`https://api.kick.com/public/v1/channels/${slug}`, { headers })
         if (res.ok) return res
