@@ -92,14 +92,22 @@ function mapEventType(eventType: string): string {
   if (eventType === 'channel.follow') return 'follow'
   if (eventType === 'channel.cheer') return 'bits'
   if (eventType === 'livepix.donation') return 'donation'
-  if (eventType === 'channel.channel_points_custom_reward_redemption.add') return 'command'
+  if (eventType === 'paypal.donation') return 'donation'
+  if (eventType === 'kick.subscribe') return 'sub'
+  if (eventType === 'kick.follow') return 'follow'
+  if (eventType === 'kick.subscription.gift') return 'giftsub'
+  if (eventType === 'youtube.member') return 'member'
+  if (eventType === 'youtube.giftmember') return 'giftsub'
   return 'command'
 }
 
 function extractAmount(eventType: string, d: Record<string, unknown>): number | undefined {
   if (eventType === 'channel.cheer') return Number(d.bits ?? 0)
   if (eventType === 'livepix.donation') return Number(d.amount ?? 0)
+  if (eventType === 'paypal.donation') return Number(d.amount ?? 0)
   if (eventType === 'channel.subscription.gift') return Number(d.total ?? 1)
+  if (eventType === 'kick.subscription.gift') return Number(d.total ?? d.gifted_count ?? 1)
+  if (eventType === 'youtube.giftmember') return Number(d.count ?? d.total ?? 1)
   return undefined
 }
 

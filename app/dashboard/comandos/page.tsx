@@ -1037,9 +1037,26 @@ export default function ComandosPage() {
         fetch('/api/comandos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trigger: def.trigger, resposta: def.resposta, cooldown_s: def.cooldown, habilitado: false, permissao: 'todos', platform: def.platform }),
+          body: JSON.stringify({ trigger: def.trigger, resposta: def.resposta, cooldown_s: def.cooldown, habilitado: false, permissao: 'todos', platform: def.platform, notif_overlay: true }),
         }).then(r => r.ok ? r.json() as Promise<DbRow> : null).catch(() => null)
       ))
+
+      // One-time migration: enable notif_overlay for all existing event rows
+      try {
+        if (!localStorage.getItem('sk-notif-overlay-v1')) {
+          const toEnable = dbEvents.filter(r => !r.notif_overlay)
+          await Promise.all(toEnable.map(r =>
+            fetch(`/api/comandos?id=${r.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ notif_overlay: true }),
+            }).catch(() => {})
+          ))
+          toEnable.forEach(r => { r.notif_overlay = true })
+          localStorage.setItem('sk-notif-overlay-v1', '1')
+        }
+      } catch {}
+
       for (const s of seeded) { if (s) dbByTrigger.set(s.trigger, s) }
       applyDbRows(rows.concat(seeded.filter((s): s is DbRow => s !== null && !dbEvents.some(e => e.trigger === s.trigger))), dbByTrigger)
     }
