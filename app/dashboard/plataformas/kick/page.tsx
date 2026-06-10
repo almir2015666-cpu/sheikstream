@@ -162,14 +162,24 @@ export default function KickPlataformaPage() {
           <span style={{ color: C.vdim }}>/</span>
           <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Kick</h2>
         </div>
-        <div style={{ maxWidth: '540px' }}>
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '14px', padding: '2.5rem 2rem', textAlign: 'center' }}>
-            <div style={{ width: 64, height: 64, borderRadius: '16px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem', fontSize: '2rem', fontWeight: 900, color: C.primary }}>K</div>
-            <div style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Conectar Kick</div>
-            <div style={{ fontSize: '0.84rem', color: C.dim, marginBottom: '1.8rem', lineHeight: 1.6 }}>Integre sua conta Kick para capturar subs, gifted subs e follows em tempo real durante suas lives.</div>
-            <button onClick={openKickPopup} style={{ padding: '0.65rem 2rem', background: C.primary, color: '#000', border: 'none', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer' }}>
-              Conectar com Kick
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <div style={{ width: '100%', maxWidth: '480px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.primaryB}`, borderRadius: '20px', padding: '2.8rem 2.2rem', textAlign: 'center' }}>
+              <div style={{ width: 72, height: 72, borderRadius: '18px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.4rem', fontSize: '2.2rem', fontWeight: 900, color: C.primary, boxShadow: `0 0 24px ${C.primary}22` }}>K</div>
+              <div style={{ fontWeight: 800, fontSize: '1.15rem', marginBottom: '0.55rem' }}>Conectar Kick</div>
+              <div style={{ fontSize: '0.84rem', color: C.dim, marginBottom: '2rem', lineHeight: 1.65, maxWidth: 340, margin: '0 auto 2rem' }}>Integre sua conta Kick para capturar subs, gifted subs e follows em tempo real durante suas lives.</div>
+              <button onClick={openKickPopup} style={{ padding: '0.75rem 2.5rem', background: C.primary, color: '#000', border: 'none', borderRadius: '12px', fontSize: '0.92rem', fontWeight: 800, cursor: 'pointer', boxShadow: `0 4px 20px ${C.primary}44` }}>
+                Conectar com Kick
+              </button>
+              <div style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                {[['Subs em tempo real', '⚡'], ['Gifted subs', '🎁'], ['Estimativa de repasse', '💰']].map(([label, icon]) => (
+                  <div key={label} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '0.75rem 0.5rem', fontSize: '0.7rem', color: C.dim }}>
+                    <div style={{ fontSize: '1.2rem', marginBottom: '0.3rem' }}>{icon}</div>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -86,7 +86,13 @@ export async function GET(req: NextRequest) {
     created_at: d.created_at as string,
   }))
 
-  const eventItems = (eventsRes.data ?? []).map(e => {
+  // Twitch sub events (subscribe/resub/giftsub) come exclusively from twitch_subs table below.
+  // twitch_events is used only for cheers, follows, kick, livepix, paypal.
+  const TWITCH_SUB_EVENTS = new Set(['channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift'])
+
+  const eventItems = (eventsRes.data ?? [])
+    .filter(e => !TWITCH_SUB_EVENTS.has(e.event_type))
+    .map(e => {
     const d = (e.event_data ?? {}) as Record<string, unknown>
     const platform = e.event_type.startsWith('kick.') ? 'kick'
       : e.event_type.startsWith('livepix.') ? 'livepix'
@@ -95,14 +101,12 @@ export async function GET(req: NextRequest) {
     const username = extractUsername(et, d)
     let type = 'event'; let amount: number | undefined
 
-    if (et === 'channel.subscribe' || et === 'kick.subscribe') {
-      type = 'sub'; amount = platform === 'kick' ? kickTiers.tier1 : twitchSubVal(d)
-    } else if (et === 'channel.subscription.message') {
-      type = 'resub'; amount = twitchSubVal(d)
-    } else if (et === 'channel.subscription.gift' || et === 'kick.subscription.gift') {
+    if (et === 'kick.subscribe') {
+      type = 'sub'; amount = kickTiers.tier1
+    } else if (et === 'kick.subscription.gift') {
       type = 'giftsub'
       const cnt = Number(d.total ?? d.gifted_count ?? 1)
-      amount = (platform === 'kick' ? kickTiers.tier1 : twitchSubVal(d)) * cnt
+      amount = kickTiers.tier1 * cnt
     } else if (et === 'channel.cheer') {
       type = 'bits'; amount = Number(d.bits ?? 0) * 0.01 * 5.70
     } else if (et === 'channel.follow' || et === 'kick.follow') {
@@ -114,15 +118,9 @@ export async function GET(req: NextRequest) {
     return { id: `ev-${e.id}`, platform, type, username, amount, created_at: e.created_at as string }
   })
 
-  // Only include twitch_subs legacy entries if twitch_events has no sub events for this period
-  // (avoids double-counting when both tables have the same subs)
-  const hasEventSubSubs = (eventsRes.data ?? []).some(e =>
-    e.event_type === 'channel.subscribe' ||
-    e.event_type === 'channel.subscription.message' ||
-    e.event_type === 'channel.subscription.gift'
-  )
-
-  const legacySubItems = hasEventSubSubs ? [] : (twitchSubsRes.data ?? []).map(s => ({
+  // Always use twitch_subs as the authoritative source for Twitch sub amounts.
+  // This keeps the dashboard bar chart, totals, and platform page all consistent.
+  const legacySubItems = (twitchSubsRes.data ?? []).map(s => ({
     id: `ts-${s.id}`,
     platform: 'twitch',
     type: 'sub',

@@ -255,10 +255,11 @@ export default function DashboardPage() {
     actTotals[a.platform] = (actTotals[a.platform] ?? 0) + a.amount!
   })
 
-  // Display totals: prefer stats API for Livepix/Twitch (reads from dedicated tables)
+  // Display totals: all derived from activities (same source as bar chart) for consistency.
+  // Livepix falls back to stats API when activities haven't loaded yet.
   const displayTotals: Record<string, number> = {
     livepix: stats?.livepix_total ?? actTotals['livepix'] ?? 0,
-    twitch:  stats?.twitch_total  ?? actTotals['twitch']  ?? 0,
+    twitch:  actTotals['twitch']  ?? stats?.twitch_total  ?? 0,
     kick:    actTotals['kick']    ?? 0,
     paypal:  actTotals['paypal']  ?? 0,
     youtube: 0,
@@ -511,11 +512,12 @@ export default function DashboardPage() {
                       const v = (displayTotals[r2.key] ?? 0) * r2.pct / 100
                       const pct = total > 0 ? Math.round(v / total * 100) : 0
                       return (
-                        <div key={r2.label} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <div key={r2.label} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <PlatIcon p={r2.key} size={11} />
-                          <span style={{ fontSize: '0.75rem', color: v > 0 ? C.muted : C.vdim, flex: 1 }}>{r2.label}</span>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: v > 0 ? C.text : C.vdim }}>{fmtBRL(v)}</span>
-                          {v > 0 && <span style={{ fontSize: '0.68rem', color: C.vdim, minWidth: 38, textAlign: 'right' }}>({pct}%)</span>}
+                          <span style={{ fontSize: '0.75rem', color: v > 0 ? C.muted : C.vdim, whiteSpace: 'nowrap' }}>{r2.label}</span>
+                          <span style={{ flex: 1, borderBottom: '1px dotted rgba(232,230,248,0.13)', marginBottom: '1px', minWidth: '10px' }} />
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: v > 0 ? C.text : C.vdim, whiteSpace: 'nowrap' }}>{fmtBRL(v)}</span>
+                          {v > 0 && <span style={{ fontSize: '0.68rem', color: C.vdim, minWidth: 36, textAlign: 'right' }}>({pct}%)</span>}
                         </div>
                       )
                     })}
