@@ -252,6 +252,7 @@ export default function AdminPage() {
     { id: 'metas',       label: 'Metas' },
     { id: 'overlays',    label: 'Overlays' },
     { id: 'banners',     label: 'Banners' },
+    { id: 'ia-imagens',  label: 'IA de Imagens' },
     { id: 'conexoes',    label: 'Conexões' },
     { id: 'convites',    label: 'Convites' },
     { id: 'perfil',      label: 'Meu Perfil' },
