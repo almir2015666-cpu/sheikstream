@@ -31,6 +31,14 @@ export default function KickPlataformaPage() {
   const [channelId, setChannelId] = useState<string | null>(null)
   const [tokenLoading, setTokenLoading] = useState(true)
 
+  // Live channel info
+  const [followers, setFollowers] = useState<number | null>(null)
+  const [isLive, setIsLive] = useState(false)
+  const [streamTitle, setStreamTitle] = useState<string | null>(null)
+  const [viewerCount, setViewerCount] = useState<number | null>(null)
+  const [tokenValid, setTokenValid] = useState(true)
+  const [channelLoading, setChannelLoading] = useState(false)
+
   const [stats, setStats] = useState<KickStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
 
@@ -101,6 +109,25 @@ export default function KickPlataformaPage() {
       .catch(() => {})
       .finally(() => setSubsLoading(false))
   }, [connected, period, customFrom, customTo])
+
+  useEffect(() => {
+    if (!connected) return
+    setChannelLoading(true)
+    fetch('/api/kick/channel')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return
+        if (d.username)    setUsername(d.username)
+        if (d.channel_id)  setChannelId(d.channel_id)
+        setFollowers(d.followers ?? null)
+        setIsLive(!!d.is_live)
+        setStreamTitle(d.stream_title ?? null)
+        setViewerCount(d.viewer_count ?? null)
+        setTokenValid(d.token_valid !== false)
+      })
+      .catch(() => {})
+      .finally(() => setChannelLoading(false))
+  }, [connected])
 
   function openKickPopup() {
     const w = 500, h = 700
@@ -275,40 +302,62 @@ export default function KickPlataformaPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
 
           {/* Channel */}
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.2rem 1.3rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.2rem 1.3rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div style={{ width: 44, height: 44, borderRadius: '12px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', color: C.primary, flexShrink: 0 }}>KI</div>
+              <div style={{ width: 44, height: 44, borderRadius: '12px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', color: C.primary, flexShrink: 0, boxShadow: `0 0 12px ${C.primary}22` }}>KI</div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 800, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {username || 'Canal Kick'}
+                  {channelLoading ? '...' : (username || 'Canal Kick')}
                 </div>
-                {(channelId || username) && (
-                  <div style={{ fontSize: '0.7rem', color: C.dim, marginTop: '0.1rem' }}>
-                    {channelId ? `ID: ${channelId}` : username}
-                  </div>
-                )}
+                {channelId && <div style={{ fontSize: '0.68rem', color: C.dim, marginTop: '0.1rem' }}>ID: {channelId}</div>}
               </div>
             </div>
+
+            {/* Token warning */}
+            {!tokenValid && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.65rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '7px', fontSize: '0.7rem', color: '#fbbf24', fontWeight: 600 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                token expirado — reconecte em Conexões
+              </div>
+            )}
+
+            {/* Stats */}
             <div style={{ display: 'flex', gap: '1.5rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: C.dim, marginBottom: '0.25rem' }}>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   Seguidores
                 </div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>—</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>
+                  {channelLoading ? '...' : (followers !== null ? followers.toLocaleString('pt-BR') : '—')}
+                </div>
               </div>
               <div>
                 <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
                   Status
                 </div>
-                <div style={{ fontSize: '0.75rem', color: C.vdim }}>Canal offline no momento</div>
+                {isLive ? (
+                  <div>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+                      AO VIVO
+                    </span>
+                    {viewerCount !== null && <div style={{ fontSize: '0.65rem', color: C.vdim, marginTop: '0.1rem' }}>{viewerCount.toLocaleString('pt-BR')} espectadores</div>}
+                    {streamTitle && <div style={{ fontSize: '0.65rem', color: C.dim, marginTop: '0.1rem', maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{streamTitle}</div>}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.75rem', color: C.vdim }}>Canal offline</div>
+                )}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-              <button onClick={openKickPopup} style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.8rem', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '7px', cursor: 'pointer', fontWeight: 700 }}>Reconectar</button>
-              <button disabled={disconnecting} onClick={handleDisconnect} style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.8rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: C.red, borderRadius: '7px', cursor: 'pointer', fontWeight: 700, opacity: disconnecting ? 0.6 : 1 }}>
-                {disconnecting ? 'Desconectando...' : 'Desconectar'}
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '0.45rem', marginTop: 'auto', paddingTop: '0.25rem', borderTop: `1px solid ${C.border}` }}>
+              <button onClick={openKickPopup} style={{ flex: 1, fontSize: '0.72rem', padding: '0.38rem 0', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}>Reconectar</button>
+              <button disabled={disconnecting} onClick={handleDisconnect} style={{ flex: 1, fontSize: '0.72rem', padding: '0.38rem 0', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', color: C.red, borderRadius: '6px', cursor: 'pointer', fontWeight: 700, opacity: disconnecting ? 0.6 : 1 }}>
+                {disconnecting ? '...' : 'Desconectar'}
               </button>
             </div>
           </div>
