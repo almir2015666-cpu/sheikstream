@@ -157,7 +157,7 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens' | 'notas'>('users')
   type AiImgCfg = { enabled: boolean; cooldown_seconds: number; max_per_day: number; allowed_roles: string[]; role_limits: Record<string, number>; role_delays: Record<string, number> }
   type AiGen = { id: string; user_name: string; user_role: string; prompt: string; status: string; created_at: string }
   const [aiCfg, setAiCfg] = useState<AiImgCfg>({ enabled: true, cooldown_seconds: 300, max_per_day: 10, allowed_roles: ['admin', 'moderador', 'vip'], role_limits: {}, role_delays: {} })
@@ -876,6 +876,8 @@ export default function AdminPage() {
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg> },
       { v: 'iaimagens' as const, label: 'IA de Imagens',
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
+      { v: 'notas' as const, label: 'Notas',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
     ]},
   ]
 
@@ -883,6 +885,7 @@ export default function AdminPage() {
     users: 'Usuários', online: 'Online Agora', roles: 'Funções', tickets: 'Suporte',
     notify: 'Avisos', invites: 'Convites', logs: 'Logs', banner: 'Banner',
     passwords: 'Senhas Admin', navorder: 'Ordem do Menu', iaimagens: 'IA de Imagens',
+    notas: 'Notas',
   }
 
   return (
@@ -2600,8 +2603,168 @@ export default function AdminPage() {
               )}
             </div>
           )}
+
+          {view === 'notas' && (
+            <AdminNotepad C={C} LS="sk_admin_notas_v1" mkNote={() => ({ id: crypto.randomUUID(), title: '', content: '', updatedAt: new Date().toISOString() })} />
+          )}
         </div>
       )}
+      </div>
+    </div>
+  )
+}
+
+type AdminTheme = { cardBg: string; cardBgAlt: string; border: string; borderStrong: string; text: string; muted: string; dim: string; vdim: string; primary: string; primaryBg: string; primaryBgMed: string; danger: string; dangerBg: string; dangerBorder: string }
+function AdminNotepad({ C, LS, mkNote }: {
+  C: AdminTheme
+  LS: string
+  mkNote: () => { id: string; title: string; content: string; updatedAt: string }
+}) {
+  type Note = { id: string; title: string; content: string; updatedAt: string }
+  const [notes, setNotes] = React.useState<Note[]>([])
+  const [activeId, setActiveId] = React.useState<string | null>(null)
+  const [status, setStatus] = React.useState<'saved' | 'saving' | 'error'>('saved')
+  const [loaded, setLoaded] = React.useState(false)
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const taRef = React.useRef<HTMLTextAreaElement>(null)
+  const active = notes.find(n => n.id === activeId) ?? null
+
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS)
+      const list: Note[] = raw ? JSON.parse(raw) : []
+      const ns = list.length ? list : [mkNote()]
+      setNotes(ns); setActiveId(ns[0].id)
+    } catch { const n = mkNote(); setNotes([n]); setActiveId(n.id) }
+    setLoaded(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const persist = React.useCallback((list: Note[]) => {
+    setStatus('saving')
+    setTimeout(() => {
+      try { localStorage.setItem(LS, JSON.stringify(list)); setStatus('saved') }
+      catch { setStatus('error') }
+    }, 350)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [LS])
+
+  const schedule = React.useCallback((list: Note[]) => {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => persist(list), 1200)
+  }, [persist])
+
+  const update = (id: string, patch: Partial<Note>) => {
+    const next = notes.map(n => n.id === id ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n)
+    setNotes(next); schedule(next)
+  }
+  const addNote = () => {
+    const n = mkNote(); const next = [n, ...notes]
+    setNotes(next); setActiveId(n.id); schedule(next)
+    setTimeout(() => taRef.current?.focus(), 50)
+  }
+  const deleteNote = (id: string) => {
+    const next = notes.filter(n => n.id !== id)
+    const list = next.length ? next : [mkNote()]
+    setNotes(list); if (activeId === id) setActiveId(list[0].id); schedule(list)
+  }
+  const fmtDate = (iso: string) => {
+    const d = new Date(iso); const diff = Date.now() - d.getTime()
+    if (diff < 60000) return 'agora'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}min atrás`
+    if (d.toDateString() === new Date().toDateString()) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  }
+
+  if (!loaded) return <div style={{ color: C.dim, fontSize: '0.85rem', padding: '2rem' }}>Carregando...</div>
+
+  return (
+    <div style={{ display: 'flex', height: 'calc(100vh - 57px)', margin: '-1.5rem', overflow: 'hidden' }}>
+      <style>{`
+        .adm-nota-item { cursor: pointer; border-radius: 9px; padding: .5rem .7rem; transition: background .12s; border: 1px solid transparent; }
+        .adm-nota-item:hover { background: ${C.primaryBg}; }
+        .adm-nota-item.active { background: ${C.primaryBgMed}; border-color: ${C.borderStrong}; }
+        .adm-nota-del { opacity: 0; transition: opacity .15s; background: transparent; border: none; cursor: pointer; padding: 2px 5px; border-radius: 4px; color: ${C.dim}; font-size: .72rem; }
+        .adm-nota-item:hover .adm-nota-del { opacity: 1; }
+        .adm-nota-del:hover { background: ${C.dangerBg}; color: ${C.danger}; }
+        .adm-nota-ta { background: transparent; border: none; outline: none; resize: none; width: 100%; font-family: inherit; color: ${C.text}; }
+        .adm-nota-ta::placeholder { color: ${C.vdim}; }
+        .adm-nota-scroll::-webkit-scrollbar { width: 4px; }
+        .adm-nota-scroll::-webkit-scrollbar-track { background: transparent; }
+        .adm-nota-scroll::-webkit-scrollbar-thumb { background: ${C.primaryBg}; border-radius: 4px; }
+      `}</style>
+
+      {/* Sidebar */}
+      <div style={{ width: 220, flexShrink: 0, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '.8rem .9rem .55rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: '.7rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '.08em' }}>Notas ({notes.length})</span>
+          <button onClick={addNote} title="Nova nota"
+            style={{ width: 24, height: 24, borderRadius: 6, background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, cursor: 'pointer', fontSize: '1rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+            +
+          </button>
+        </div>
+        <div className="adm-nota-scroll" style={{ flex: 1, overflowY: 'auto', padding: '.4rem .5rem .5rem' }}>
+          {notes.map(n => (
+            <div key={n.id} className={`adm-nota-item${n.id === activeId ? ' active' : ''}`} onClick={() => setActiveId(n.id)}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '.2rem' }}>
+                <div style={{ fontSize: '.8rem', fontWeight: n.id === activeId ? 700 : 500, color: n.id === activeId ? C.primary : C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  {n.title || <span style={{ opacity: .4 }}>Sem título</span>}
+                </div>
+                <button className="adm-nota-del" onClick={e => { e.stopPropagation(); deleteNote(n.id) }}>✕</button>
+              </div>
+              <div style={{ fontSize: '.65rem', color: C.dim, marginTop: '.12rem' }}>
+                {fmtDate(n.updatedAt)}
+                {n.content && <span style={{ opacity: .5 }}> · {n.content.slice(0, 25).replace(/\n/g, ' ')}{n.content.length > 25 ? '…' : ''}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Editor */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        {active ? (
+          <>
+            <div style={{ padding: '.7rem 1.25rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <input
+                value={active.title}
+                onChange={e => update(active.id, { title: e.target.value })}
+                placeholder="Título da nota..."
+                style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '.95rem', fontWeight: 700, color: C.text, flex: 1, fontFamily: 'inherit' }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem', flexShrink: 0, marginLeft: '.85rem' }}>
+                <span style={{ fontSize: '.65rem', color: status === 'error' ? C.danger : C.dim, fontStyle: 'italic' }}>
+                  {status === 'saving' ? 'salvando...' : status === 'error' ? 'erro' : `✓ salvo`}
+                </span>
+                <button onClick={() => persist(notes)} disabled={status === 'saving'}
+                  style={{ display: 'flex', alignItems: 'center', gap: '.28rem', padding: '.28rem .7rem', borderRadius: 6, background: status === 'saving' ? C.primaryBg : C.primaryBgMed, border: `1px solid ${C.borderStrong}`, color: C.primary, cursor: status === 'saving' ? 'default' : 'pointer', fontSize: '.7rem', fontWeight: 700, opacity: status === 'saving' ? .7 : 1 }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  Salvar
+                </button>
+                <button onClick={addNote} style={{ padding: '.28rem .6rem', borderRadius: 6, background: C.primaryBg, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer', fontSize: '.7rem', fontWeight: 700 }}>+ Nova</button>
+              </div>
+            </div>
+            <textarea
+              ref={taRef}
+              className="adm-nota-ta adm-nota-scroll"
+              value={active.content}
+              onChange={e => update(active.id, { content: e.target.value })}
+              placeholder="Escreva sua nota aqui..."
+              style={{ flex: 1, padding: '1.1rem 1.25rem', fontSize: '.88rem', lineHeight: 1.75, color: C.muted, overflowY: 'auto' }}
+            />
+            <div style={{ padding: '.38rem 1.25rem', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: '.62rem', color: C.dim }}>
+                {active.content.length} chars · {active.content.split(/\s+/).filter(Boolean).length} palavras
+              </span>
+            </div>
+          </>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '.75rem', opacity: .4 }}>
+            <div style={{ fontSize: '2.5rem' }}>📝</div>
+            <div style={{ fontSize: '.85rem', color: C.muted }}>Selecione ou crie uma nota</div>
+            <button onClick={addNote} style={{ padding: '.45rem 1rem', borderRadius: 8, background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, cursor: 'pointer', fontWeight: 700, fontSize: '.8rem' }}>+ Nova nota</button>
+          </div>
+        )}
       </div>
     </div>
   )
