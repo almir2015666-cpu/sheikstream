@@ -23,7 +23,14 @@
       "Bash(git checkout *)",
       "Bash(git restore *)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\josec\\\\sheikstream\" -Filter \".env*\" -Force)",
-      "Bash(Select-Object Name, FullName)"
+      "Bash(Select-Object Name, FullName)",
+      "Bash(cat > *)",
+      "WebFetch(domain:www.myinstants.com)",
+      "Bash(curl -L -A \"Mozilla/5.0\" \"https://www.myinstants.com/pt/instant/twitch-default-alert-85958/\")",
+      "Bash(curl -L -A \"Mozilla/5.0\" \"https://www.myinstants.com/media/sounds/default_eKkIk7O.mp3\" -o \"c:/Users/josec/sheikstream/public/sounds/twitch-default-alert.mp3\")"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }

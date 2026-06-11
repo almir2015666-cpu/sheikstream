@@ -55,7 +55,7 @@ const NAV_GROUPS: Group[] = [
   { label: 'AO VIVO', items: [
     { id: 'subathon', label: 'Subathon', href: '/dashboard/subathon', icon: I.suba, badge: 'NOVO' },
     { id: 'timers',   label: 'Timers',   href: '/dashboard/timers',   icon: I.time },
-    { id: 'comandos', label: 'Comandos', href: '/dashboard/comandos', icon: I.cmd  },
+    { id: 'comandos', label: 'Eventos/Comandos', href: '/dashboard/comandos', icon: I.cmd  },
   ]},
   { label: 'SORTEIO', items: [
     { id: 'sorteios', label: 'Sorteios', href: '/dashboard/sorteios', icon: I.sort,
@@ -99,7 +99,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/banners': 'Banners',
   '/dashboard/banners/novo': 'Novo Banner',
   '/dashboard/metas': 'Metas',
-  '/dashboard/comandos': 'Comandos',
+  '/dashboard/comandos': 'Eventos/Comandos',
   '/dashboard/timers': 'Timers',
   '/dashboard/overlays': 'Overlays',
   '/dashboard/conexoes': 'Conexões',

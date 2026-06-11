@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   if (!await isAdminPassword(pw)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = getSupabaseAdmin()
-  const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+  const fifteenMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
   const sevenDaysAgo  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   const [

@@ -844,19 +844,30 @@ export default function AdminPage() {
 
   const SIDEBAR_GROUPS = [
     { label: 'Usuários', items: [
-      { v: 'users'   as const, icon: '👥', label: 'Usuários',    badge: counts.pending },
-      { v: 'online'  as const, icon: '🟢', label: 'Online Agora' },
-      { v: 'roles'   as const, icon: '🏷', label: 'Funções' },
-      { v: 'tickets' as const, icon: '🎫', label: 'Suporte',     badge: tickets.filter(t => t.status === 'open').length },
-      { v: 'notify'  as const, icon: '📣', label: 'Avisos',      badge: notifyList.length },
-      { v: 'invites' as const, icon: '✉️', label: 'Convites' },
+      { v: 'users'   as const, label: 'Usuários',    badge: counts.pending,
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+      { v: 'online'  as const, label: 'Online Agora',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg> },
+      { v: 'roles'   as const, label: 'Funções',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> },
+      { v: 'tickets' as const, label: 'Suporte',     badge: tickets.filter(t => t.status === 'open').length,
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+      { v: 'notify'  as const, label: 'Avisos',      badge: notifyList.length,
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
+      { v: 'invites' as const, label: 'Convites',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> },
     ]},
     { label: 'Sistema', items: [
-      { v: 'logs'      as const, icon: '📋', label: 'Logs' },
-      { v: 'banner'    as const, icon: '🎗', label: 'Banner' },
-      { v: 'passwords' as const, icon: '🔑', label: 'Senhas Admin' },
-      { v: 'navorder'  as const, icon: '⠿', label: 'Ordem do Menu' },
-      { v: 'iaimagens' as const, icon: '🎨', label: 'IA de Imagens' },
+      { v: 'logs'      as const, label: 'Logs',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+      { v: 'banner'    as const, label: 'Banner',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> },
+      { v: 'passwords' as const, label: 'Senhas Admin',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> },
+      { v: 'navorder'  as const, label: 'Ordem do Menu',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg> },
+      { v: 'iaimagens' as const, label: 'IA de Imagens',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
     ]},
   ]
 
@@ -893,7 +904,7 @@ export default function AdminPage() {
                   <div className="sk-nav-group-label">{group.label}</div>
                   {group.items.map(item => (
                     <button key={item.v} onClick={() => navigateTo(item.v)} className={`sk-nav-item${view === item.v ? ' sk-nav-active' : ''}`}>
-                      <span style={{ fontSize: '0.92rem', lineHeight: 1, flexShrink: 0 }}>{item.icon}</span>
+                      <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', opacity: view === item.v ? 1 : 0.55 }}>{item.icon}</span>
                       <span>{item.label}</span>
                       {'badge' in item && (item.badge ?? 0) > 0 && <span className="sk-nav-badge">{item.badge}</span>}
                     </button>
@@ -1641,98 +1652,139 @@ export default function AdminPage() {
               </div>
             </div>
           )}
-          {view === 'tickets' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px' }}>
-                <div style={{ padding: '1.2rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '16px 16px 0 0', overflow: 'hidden' }}>
+          {view === 'tickets' && (() => {
+            const SC: Record<string, { bg: string; color: string; border: string; label: string }> = {
+              open:        { bg: C.accentBg,               color: C.accent,   border: C.accentBorder,         label: 'Aberto' },
+              in_progress: { bg: 'rgba(251,191,36,.1)',    color: '#fbbf24',  border: 'rgba(251,191,36,.3)',   label: 'Em andamento' },
+              resolved:    { bg: C.primaryBg,              color: C.primary,  border: C.borderStrong,         label: 'Resolvido' },
+              closed:      { bg: C.vvdim,                  color: C.dim,      border: C.border,               label: 'Fechado' },
+              archived:    { bg: 'rgba(148,163,184,.1)',   color: '#94a3b8',  border: 'rgba(148,163,184,.28)', label: 'Arquivado' },
+            }
+            const STATUS_ORDER: (keyof typeof SC)[] = ['open','in_progress','resolved','closed','archived']
+            const [ticketFilter, setTicketFilter] = React.useState<string>('all')
+            const counts2: Record<string, number> = { all: tickets.length, ...Object.fromEntries(Object.keys(SC).map(s => [s, tickets.filter(t => t.status === s).length])) }
+            const visible = ticketFilter === 'all' ? tickets : tickets.filter(t => t.status === ticketFilter)
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                {/* ── Header ── */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: C.text }}>Tickets de suporte</h3>
-                    <div style={{ fontSize: '0.78rem', color: C.muted, marginTop: '0.2rem' }}>Enviados via formulário na landing page</div>
+                    <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: 800, color: C.text }}>Tickets de Suporte</h3>
+                    <div style={{ fontSize: '0.72rem', color: C.muted }}>Mensagens enviadas pelo formulário da landing page</div>
                   </div>
-                  <button onClick={() => fetchTickets(storedPw)} disabled={ticketsLoading} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>
-                    {ticketsLoading ? 'Carregando...' : '↻ Atualizar'}
+                  <button onClick={() => fetchTickets(storedPw)} disabled={ticketsLoading}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 1rem', borderRadius: '8px', background: C.cardBgAlt, border: `1px solid ${C.border}`, color: C.muted, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                    <svg className={ticketsLoading ? 'sk-spin' : ''} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    Atualizar
                   </button>
                 </div>
+
+                {/* ── Stat + filter tabs ── */}
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  {[{ k:'all', label:`Todos`, count: counts2.all, color: C.primary, bg: C.primaryBg, border: C.border },
+                    { k:'open', label:'Abertos', count: counts2['open'] ?? 0, color: C.accent, bg: C.accentBg, border: C.accentBorder },
+                    { k:'in_progress', label:'Andamento', count: counts2['in_progress'] ?? 0, color: '#fbbf24', bg: 'rgba(251,191,36,.1)', border: 'rgba(251,191,36,.3)' },
+                    { k:'resolved', label:'Resolvidos', count: counts2['resolved'] ?? 0, color: C.primary, bg: C.primaryBg, border: C.borderStrong },
+                    { k:'closed', label:'Fechados', count: counts2['closed'] ?? 0, color: C.dim, bg: C.cardBgAlt, border: C.border },
+                  ].map(f => (
+                    <button key={f.k} onClick={() => setTicketFilter(f.k)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.38rem 0.85rem', borderRadius: '8px', background: ticketFilter === f.k ? f.bg : 'transparent', border: `1px solid ${ticketFilter === f.k ? f.border : C.border}`, color: ticketFilter === f.k ? f.color : C.dim, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: 'all .15s' }}>
+                      {f.label}
+                      {f.count > 0 && <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: '99px', background: ticketFilter === f.k ? f.color : C.vdim, color: ticketFilter === f.k ? (isDark ? '#08090d' : '#fff') : C.dim, fontSize: '0.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{f.count}</span>}
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── List ── */}
                 {ticketsLoading ? (
-                  <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Carregando...</div>
-                ) : tickets.length === 0 ? (
-                  <div style={{ padding: '4rem', textAlign: 'center', color: C.dim, fontSize: '0.9rem' }}>Nenhum ticket ainda.</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, color: C.muted, fontSize: '0.85rem', background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}` }}>Carregando...</div>
+                ) : visible.length === 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 140, gap: '0.5rem', color: C.vdim, background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}` }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity:.3 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span style={{ fontSize: '0.82rem' }}>Nenhum ticket</span>
+                  </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {tickets.map(t => {
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {visible.map(t => {
                       const isExpanded = expandedTicket === t.id
-                      const statusColors: Record<string, { bg: string; color: string; border: string }> = {
-                        open:        { bg: C.accentBg,            color: C.accent,   border: C.accentBorder },
-                        in_progress: { bg: 'rgba(251,191,36,0.1)', color: '#fbbf24',  border: 'rgba(251,191,36,0.3)' },
-                        resolved:    { bg: C.primaryBg,           color: C.primary,  border: C.borderStrong },
-                        closed:      { bg: C.vvdim,               color: C.dim,      border: C.border },
-                      }
-                      const sc = statusColors[t.status] ?? statusColors.open
+                      const sc = SC[t.status] ?? SC.open
+                      const isBug = t.subject?.toLowerCase().includes('bug') || t.subject?.toLowerCase().includes('erro')
                       return (
-                        <div key={t.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                          <div className="sk-user-row" onClick={() => setExpandedTicket(isExpanded ? null : t.id)} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem 1.5rem', cursor: 'pointer', background: 'transparent' }}>
+                        <div key={t.id} style={{ background: C.cardBg, border: `1px solid ${isExpanded ? C.borderStrong : C.border}`, borderRadius: '14px', overflow: 'hidden', transition: 'border-color .15s' }}>
+                          {/* Row header */}
+                          <div className="sk-user-row" onClick={() => setExpandedTicket(isExpanded ? null : t.id)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.9rem 1.25rem', cursor: 'pointer' }}>
+                            {/* Type icon */}
+                            <div style={{ width: 36, height: 36, borderRadius: '10px', background: isBug ? C.dangerBg : C.primaryBg, border: `1px solid ${isBug ? C.dangerBorder : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {isBug
+                                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.danger} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                              }
+                            </div>
+                            {/* Info */}
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.subject}</div>
-                              <div style={{ fontSize: '0.72rem', color: C.dim, marginTop: '0.1rem', display: 'flex', gap: '0.75rem' }}>
-                                <span>{t.username || '—'}</span>
-                                {t.reply_email && <span style={{ color: C.muted }}>{t.reply_email}</span>}
-                                <span>{new Date(t.created_at).toLocaleString('pt-BR')}</span>
+                              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '0.18rem' }}>{t.subject}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '0.7rem', color: C.muted, fontWeight: 600 }}>{t.username || '—'}</span>
+                                {t.reply_email && <span style={{ fontSize: '0.7rem', color: C.dim }}>{t.reply_email}</span>}
+                                <span style={{ fontSize: '0.65rem', color: C.vdim }}>{new Date(t.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
                               </div>
                             </div>
-                            <span style={{ ...sc, padding: '0.18rem 0.65rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>{t.status}</span>
-                            <span style={{ color: C.dim, fontSize: '0.85rem' }}>{isExpanded ? '▲' : '▼'}</span>
+                            {/* Status */}
+                            <span style={{ padding: '0.2rem 0.7rem', borderRadius: '99px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, fontSize: '0.65rem', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>{sc.label}</span>
+                            {/* Chevron */}
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: C.dim, flexShrink: 0, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><polyline points="6 9 12 15 18 9"/></svg>
                           </div>
+
+                          {/* Expanded */}
                           {isExpanded && (
-                            <div style={{ borderTop: `1px solid ${C.vdim}`, background: C.cardBgAlt, display: 'flex', flexDirection: 'column', maxHeight: '520px' }}>
-                              {/* Status bar */}
-                              <div style={{ padding: '0.65rem 1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${C.vdim}`, flexShrink: 0 }}>
-                                {(['open','in_progress','resolved','closed','archived'] as const).map(s => {
-                                  const extra: Record<string, { bg: string; color: string; border: string }> = {
-                                    archived: { bg: 'rgba(148,163,184,0.12)', color: '#94a3b8', border: 'rgba(148,163,184,0.28)' },
-                                  }
-                                  const sc2 = extra[s] ?? statusColors[s] ?? statusColors.open
+                            <div style={{ borderTop: `1px solid ${C.border}`, background: C.cardBgAlt, display: 'flex', flexDirection: 'column' }}>
+                              {/* Status actions */}
+                              <div style={{ padding: '0.7rem 1.25rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${C.vdim}` }}>
+                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.07em', marginRight: '0.25rem' }}>Status:</span>
+                                {STATUS_ORDER.map(s => {
+                                  const sc2 = SC[s]
+                                  const active = t.status === s
                                   return (
-                                    <button key={s} disabled={t.status === s || ticketUpdating === t.id}
+                                    <button key={s} disabled={active || ticketUpdating === t.id}
                                       onClick={() => updateTicket(t.id, { status: s })}
-                                      style={{ padding: '0.22rem 0.65rem', background: t.status === s ? sc2.bg : 'transparent', border: `1px solid ${sc2.border}`, color: t.status === s ? sc2.color : C.dim, borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: t.status === s ? 'default' : 'pointer' }}>
-                                      {s === 'archived' ? '🗃 Arquivar' : s}
+                                      style={{ padding: '0.22rem 0.7rem', background: active ? sc2.bg : 'transparent', border: `1px solid ${active ? sc2.border : C.border}`, color: active ? sc2.color : C.dim, borderRadius: '7px', fontSize: '0.68rem', fontWeight: 700, cursor: active ? 'default' : 'pointer', transition: 'all .12s' }}>
+                                      {sc2.label}
                                     </button>
                                   )
                                 })}
                                 <button disabled={ticketUpdating === t.id}
                                   onClick={() => { if (confirm('Excluir este ticket permanentemente?')) deleteTicket(t.id) }}
-                                  style={{ marginLeft: 'auto', padding: '0.22rem 0.65rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}>
-                                  🗑 Excluir
+                                  style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.22rem 0.7rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '7px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                  Excluir
                                 </button>
                               </div>
 
-                              {/* Chat thread */}
-                              <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', minHeight: '100px', flex: 1, overflowY: 'auto' }}>
-                                {/* User message — left bubble */}
-                                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
-                                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
+                              {/* Thread */}
+                              <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.9rem', maxHeight: 400, overflowY: 'auto' }}>
+                                {/* User message */}
+                                <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start' }}>
+                                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
                                     {(t.username ?? '?')[0].toUpperCase()}
                                   </div>
-                                  <div style={{ maxWidth: '78%' }}>
-                                    <div style={{ fontSize: '0.62rem', color: C.dim, marginBottom: '0.25rem' }}>
-                                      {t.username || 'Usuário'} · {new Date(t.created_at).toLocaleString('pt-BR')}
+                                  <div style={{ maxWidth: '80%' }}>
+                                    <div style={{ fontSize: '0.63rem', color: C.dim, marginBottom: '0.22rem', fontWeight: 600 }}>
+                                      {t.username || 'Usuário'} · {new Date(t.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                                     </div>
-                                    <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '0 10px 10px 10px', padding: '0.65rem 0.9rem', fontSize: '0.82rem', color: C.text, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
+                                    <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '4px 12px 12px 12px', padding: '0.7rem 1rem', fontSize: '0.83rem', color: C.text, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
                                       {t.message}
                                     </div>
-                                    {t.reply_email && (
-                                      <div style={{ fontSize: '0.62rem', color: C.vdim, marginTop: '0.2rem' }}>✉ {t.reply_email}</div>
-                                    )}
+                                    {t.reply_email && <div style={{ fontSize: '0.62rem', color: C.vdim, marginTop: '0.2rem' }}>✉ {t.reply_email}</div>}
                                   </div>
                                 </div>
 
-                                {/* Admin replies — multiple bubbles parsed from history */}
+                                {/* Admin replies */}
                                 {t.admin_reply && (() => {
-                                  // Parse history: entries split by \n\n---[ISO]---\n
                                   const raw = t.admin_reply
                                   const parts: { text: string; ts?: string }[] = []
                                   const segments = raw.split(/\n\n---\[([^\]]+)\]---\n/)
-                                  // segments: [text0, ts1, text1, ts2, text2, ...]
                                   parts.push({ text: segments[0].trim() })
                                   for (let i = 1; i < segments.length; i += 2) {
                                     const ts = segments[i]
@@ -1740,38 +1792,37 @@ export default function AdminPage() {
                                     if (txt) parts.push({ text: txt, ts })
                                   }
                                   return parts.filter(p => p.text).map((p, pi) => (
-                                    <div key={pi} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
-                                      <div style={{ maxWidth: '78%' }}>
-                                        <div style={{ fontSize: '0.62rem', color: C.dim, marginBottom: '0.25rem', textAlign: 'right' }}>
-                                          Admin {p.ts ? '· ' + new Date(p.ts).toLocaleString('pt-BR') : pi === parts.length - 1 && t.updated_at ? '· ' + new Date(t.updated_at).toLocaleString('pt-BR') : ''}
+                                    <div key={pi} style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+                                      <div style={{ maxWidth: '80%' }}>
+                                        <div style={{ fontSize: '0.63rem', color: C.dim, marginBottom: '0.22rem', textAlign: 'right', fontWeight: 600 }}>
+                                          Admin {p.ts ? '· ' + new Date(p.ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : ''}
                                         </div>
-                                        <div style={{ background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: '10px 0 10px 10px', padding: '0.65rem 0.9rem', fontSize: '0.82rem', color: C.primary, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
+                                        <div style={{ background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: '12px 4px 12px 12px', padding: '0.7rem 1rem', fontSize: '0.83rem', color: C.primary, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
                                           {p.text}
                                         </div>
                                       </div>
-                                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
-                                        A
-                                      </div>
+                                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>A</div>
                                     </div>
                                   ))
                                 })()}
                               </div>
 
-                              {/* Reply input */}
-                              <div style={{ padding: '0 1.5rem 0.85rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', borderTop: `1px solid ${C.vdim}`, flexShrink: 0 }}>
+                              {/* Reply box */}
+                              <div style={{ padding: '0.75rem 1.25rem', borderTop: `1px solid ${C.vdim}`, display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
                                 <textarea
                                   value={adminReply[t.id] ?? ''}
                                   onChange={e => setAdminReply(p => ({ ...p, [t.id]: e.target.value }))}
                                   onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && adminReply[t.id]?.trim()) { e.preventDefault(); updateTicket(t.id, { admin_reply: adminReply[t.id].trim() }) } }}
-                                  placeholder={t.admin_reply ? 'Adicionar nova resposta... (Ctrl+Enter para enviar)' : 'Escreva uma resposta... (Ctrl+Enter para enviar)'}
+                                  placeholder={t.admin_reply ? 'Adicionar nova resposta... (Ctrl+Enter)' : 'Escreva uma resposta... (Ctrl+Enter)'}
                                   rows={2}
-                                  style={{ flex: 1, marginTop: '0.65rem', padding: '0.5rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                                  style={{ flex: 1, padding: '0.6rem 0.85rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '10px', color: C.text, fontSize: '0.83rem', outline: 'none', resize: 'none', fontFamily: 'inherit', lineHeight: 1.55 }}
                                 />
                                 <button
                                   disabled={ticketUpdating === t.id || !adminReply[t.id]?.trim()}
                                   onClick={() => updateTicket(t.id, { admin_reply: adminReply[t.id]!.trim() })}
-                                  style={{ marginTop: '0.65rem', padding: '0.5rem 1rem', background: adminReply[t.id]?.trim() ? C.primaryBg : C.vvdim, border: `1px solid ${adminReply[t.id]?.trim() ? C.borderStrong : C.border}`, color: adminReply[t.id]?.trim() ? C.primary : C.dim, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: adminReply[t.id]?.trim() ? 'pointer' : 'not-allowed', alignSelf: 'flex-end', whiteSpace: 'nowrap' as const }}>
-                                  {ticketUpdating === t.id ? '...' : '➤ Responder'}
+                                  style={{ padding: '0.6rem 1.1rem', background: adminReply[t.id]?.trim() ? 'linear-gradient(135deg,#9b30ff,#7b20df)' : C.vvdim, border: 'none', color: adminReply[t.id]?.trim() ? '#fff' : C.dim, borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, cursor: adminReply[t.id]?.trim() ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap' as const, display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                  {ticketUpdating === t.id ? 'Enviando...' : 'Responder'}
                                 </button>
                               </div>
                             </div>
@@ -1782,128 +1833,137 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
-            </div>
-          )}
-          {view === 'online' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                <div>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, marginBottom: '0.2rem' }}>
-                    Usuários na plataforma
-                  </div>
-                  <div style={{ fontSize: '0.74rem', color: C.muted }}>
-                    Online = ativo nos últimos 15 min · Atualiza a cada 30s
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: C.muted }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                    {onlineUsers.filter(u => u.is_online).length} online
+            )
+          })()}
+          {view === 'online' && (() => {
+            const nOn   = onlineUsers.filter(u => u.is_online).length
+            const nLive = onlineUsers.filter(u => u.is_live).length
+            const avatarGrad = (name: string) => {
+              const grads = ['linear-gradient(135deg,#9b30ff,#6b1fc2)','linear-gradient(135deg,#3b82f6,#1d4ed8)','linear-gradient(135deg,#22c55e,#15803d)','linear-gradient(135deg,#f59e0b,#b45309)','linear-gradient(135deg,#ec4899,#9d174d)','linear-gradient(135deg,#06b6d4,#0369a1)']
+              return grads[(name.charCodeAt(0) ?? 0) % grads.length]
+            }
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                {/* ── Stats + controls ── */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Total', value: onlineUsers.length, color: C.primary, bg: C.primaryBg, border: `rgba(155,48,255,.2)` },
+                      { label: 'Online', value: nOn, color: '#22c55e', bg: 'rgba(34,197,94,.1)', border: 'rgba(34,197,94,.25)' },
+                      { label: 'Offline', value: onlineUsers.length - nOn, color: C.dim, bg: C.cardBgAlt, border: C.border },
+                      ...(nLive > 0 ? [{ label: 'Ao vivo', value: nLive, color: '#f87171', bg: 'rgba(239,68,68,.1)', border: 'rgba(239,68,68,.25)' }] : []),
+                    ].map(s => (
+                      <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.38rem 0.8rem', borderRadius: '8px', background: s.bg, border: `1px solid ${s.border}` }}>
+                        <span style={{ fontSize: '1rem', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</span>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 600, color: s.color, opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</span>
+                      </div>
+                    ))}
+                    <span style={{ fontSize: '0.68rem', color: C.vdim }}>· atualiza a cada 30s</span>
                   </div>
                   <button onClick={() => fetchOnlineUsers(storedPw)} disabled={onlineLoading}
-                    style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.35rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <svg className={onlineLoading ? 'sk-spin' : ''} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 1rem', borderRadius: '8px', background: C.cardBgAlt, border: `1px solid ${C.border}`, color: C.muted, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                    <svg className={onlineLoading ? 'sk-spin' : ''} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                     Atualizar
                   </button>
                 </div>
+
+                {/* ── List ── */}
+                {onlineLoading && onlineUsers.length === 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, color: C.muted, fontSize: '0.85rem', background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}` }}>Carregando...</div>
+                ) : onlineUsers.length === 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 160, gap: '0.5rem', color: C.vdim, fontSize: '0.85rem', background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}` }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.3 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Nenhum usuário aprovado
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {onlineUsers.map(u => {
+                      const isOn = u.is_online
+                      const lastSeen = u.last_seen_at ? new Date(u.last_seen_at) : null
+                      const minAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : null
+                      const timeLabel = isOn
+                        ? (minAgo !== null && minAgo < 1 ? 'agora mesmo' : `há ${minAgo}min`)
+                        : lastSeen ? (minAgo! < 60 ? `há ${minAgo}min` : minAgo! < 1440 ? `há ${Math.floor(minAgo!/60)}h` : `há ${Math.floor(minAgo!/1440)}d`) : 'nunca'
+                      const joinDate = new Date(u.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                      const platforms = [
+                        u.twitch_connected  && { label:'Twitch',  color:'#9147ff', bg:'rgba(145,71,255,.1)',  border:'rgba(145,71,255,.22)', icon:<svg width="9" height="9" viewBox="0 0 24 28" fill="#9147ff"><path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/></svg> },
+                        u.livepix_connected  && { label:'Livepix',  color:'#ff69b4', bg:'rgba(255,105,180,.1)', border:'rgba(255,105,180,.22)', icon:<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#ff69b4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg> },
+                        u.spotify_connected  && { label:'Spotify',  color:'#1ed760', bg:'rgba(30,215,96,.1)',  border:'rgba(30,215,96,.22)',  icon:<svg width="9" height="9" viewBox="0 0 24 24" fill="#1ed760"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg> },
+                        u.youtube_connected  && { label:'YouTube',  color:'#ff4444', bg:'rgba(255,0,0,.08)',   border:'rgba(255,0,0,.2)',     icon:<svg width="9" height="9" viewBox="0 0 24 24" fill="#ff4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg> },
+                        u.kick_connected     && { label:'Kick',     color:'#53fc18', bg:'rgba(83,252,24,.08)', border:'rgba(83,252,24,.2)',   icon:<svg width="9" height="9" viewBox="0 0 24 24" fill="#53fc18"><path d="M2 2h4v8l6-8h5l-7 9 7 11h-5l-6-9v9H2z"/></svg> },
+                      ].filter(Boolean) as { label:string; color:string; bg:string; border:string; icon:React.ReactNode }[]
+
+                      return (
+                        <div key={u.id} style={{ background: C.cardBg, border: `1px solid ${u.is_live ? 'rgba(239,68,68,.3)' : isOn ? 'rgba(34,197,94,.2)' : C.border}`, borderRadius: '14px', padding: '1rem 1.25rem 1rem 1.1rem', display: 'flex', alignItems: 'center', gap: '1rem', position: 'relative', overflow: 'hidden', transition: 'border-color .2s' }}>
+                          {/* accent bar */}
+                          <div style={{ position: 'absolute', left: 0, top: '12%', bottom: '12%', width: '3px', borderRadius: '0 3px 3px 0', background: u.is_live ? 'linear-gradient(180deg,#ef4444,#f97316)' : isOn ? '#22c55e' : 'transparent' }} />
+
+                          {/* Avatar */}
+                          <div style={{ width: 46, height: 46, borderRadius: '50%', background: avatarGrad(u.username ?? 'U'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.15rem', color: '#fff', flexShrink: 0, boxShadow: isOn ? '0 0 0 2px rgba(34,197,94,.35)' : u.is_live ? '0 0 0 2px rgba(239,68,68,.4)' : 'none', letterSpacing: '-0.5px' }}>
+                            {(u.username ?? '?')[0].toUpperCase()}
+                          </div>
+
+                          {/* Main */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {/* Row 1: name + badges */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
+                              {u.twitch_url
+                                ? <a href={u.twitch_url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, fontSize: '0.92rem', color: u.is_live ? '#c084fc' : C.text, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.28rem' }}>
+                                    {u.username ?? '—'}
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                  </a>
+                                : <span style={{ fontWeight: 700, fontSize: '0.92rem', color: C.text }}>{u.username ?? '—'}</span>
+                              }
+                              {/* live badge */}
+                              {u.is_live && (
+                                <a href={u.twitch_url!} target="_blank" rel="noopener noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:'0.25rem', fontSize:'0.6rem', fontWeight:800, padding:'0.15rem 0.5rem', borderRadius:'99px', background:'rgba(239,68,68,.18)', border:'1px solid rgba(239,68,68,.45)', color:'#f87171', textDecoration:'none', letterSpacing:'0.06em', animation:'sk-pulse 2s ease-in-out infinite' }}>
+                                  <span style={{ width:5, height:5, borderRadius:'50%', background:'#ef4444', display:'inline-block' }} /> AO VIVO
+                                </a>
+                              )}
+                              {/* online/offline badge */}
+                              <span style={{ display:'inline-flex', alignItems:'center', gap:'0.25rem', fontSize:'0.62rem', fontWeight:600, padding:'0.12rem 0.48rem', borderRadius:'99px', background: isOn ? 'rgba(34,197,94,.1)' : 'rgba(255,255,255,.04)', border:`1px solid ${isOn ? 'rgba(34,197,94,.25)' : 'rgba(255,255,255,.07)'}`, color: isOn ? '#22c55e' : C.vdim }}>
+                                <span style={{ width:5, height:5, borderRadius:'50%', background: isOn ? '#22c55e' : C.vdim, display:'inline-block', ...(isOn ? { animation:'sk-pulse 1.8s ease-in-out infinite' } : {}) }} />
+                                {isOn ? 'online' : 'offline'}
+                              </span>
+                              <span style={{ fontSize:'0.65rem', color:C.vdim }}>{timeLabel}</span>
+                            </div>
+                            {/* Row 2: email */}
+                            <div style={{ fontSize:'0.72rem', color:C.dim, marginBottom:'0.4rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.email ?? '—'}</div>
+                            {/* Row 3: platform chips */}
+                            <div style={{ display:'flex', alignItems:'center', gap:'0.3rem', flexWrap:'wrap' }}>
+                              {platforms.length > 0
+                                ? platforms.map(p => (
+                                  <span key={p.label} style={{ display:'inline-flex', alignItems:'center', gap:'0.28rem', fontSize:'0.63rem', fontWeight:600, padding:'0.13rem 0.5rem', borderRadius:'5px', background:p.bg, border:`1px solid ${p.border}`, color:p.color }}>
+                                    {p.icon}{p.label}
+                                  </span>
+                                ))
+                                : <span style={{ fontSize:'0.62rem', color:C.vdim, opacity:.6, fontStyle:'italic' }}>nenhuma plataforma conectada</span>
+                              }
+                            </div>
+                          </div>
+
+                          {/* Right stats */}
+                          <div style={{ flexShrink:0, textAlign:'right', display:'flex', flexDirection:'column', gap:'0.3rem', paddingLeft:'0.5rem' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', justifyContent:'flex-end' }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color:C.vdim }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                              <span style={{ fontSize:'0.7rem', color:C.dim }}>{joinDate}</span>
+                            </div>
+                            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', justifyContent:'flex-end' }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color:C.vdim }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                              <span style={{ fontSize:'0.7rem', color: u.access_count > 0 ? C.muted : C.vdim, fontWeight: u.access_count > 20 ? 700 : 400 }}>
+                                {u.access_count > 0 ? `${u.access_count} acessos` : 'sem atividade'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-              {onlineLoading && onlineUsers.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '120px', color: C.muted, fontSize: '0.85rem' }}>Carregando...</div>
-              ) : onlineUsers.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '120px', color: C.vdim, fontSize: '0.85rem' }}>Nenhum usuário aprovado encontrado</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  {onlineUsers.map(u => {
-                    const isOn = u.is_online
-                    const lastSeen = u.last_seen_at ? new Date(u.last_seen_at) : null
-                    const minAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : null
-                    const timeLabel = isOn
-                      ? minAgo !== null && minAgo < 1 ? 'agora mesmo' : `há ${minAgo} min`
-                      : lastSeen
-                        ? minAgo! < 60 ? `há ${minAgo} min` : minAgo! < 1440 ? `há ${Math.floor(minAgo! / 60)}h` : `há ${Math.floor(minAgo! / 1440)}d`
-                        : 'nunca'
-                    const joinDate = new Date(u.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                    return (
-                      <div key={u.id} style={{ background: C.cardBg, border: `1px solid ${u.is_live ? 'rgba(239,68,68,0.35)' : isOn ? 'rgba(34,197,94,0.3)' : C.border}`, borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: u.is_live ? '#ef4444' : isOn ? '#22c55e' : 'transparent', borderRadius: '3px 0 0 3px' }} />
-                        {/* Avatar */}
-                        <div style={{ width: 42, height: 42, borderRadius: '50%', background: isOn ? 'rgba(34,197,94,0.12)' : C.primaryBg, border: `2px solid ${isOn ? 'rgba(34,197,94,0.35)' : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.05rem', color: isOn ? '#22c55e' : C.primary, flexShrink: 0 }}>
-                          {(u.username ?? '?')[0].toUpperCase()}
-                        </div>
-                        {/* Main info */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.22rem' }}>
-                            {u.twitch_url ? (
-                              <a href={u.twitch_url} target="_blank" rel="noopener noreferrer"
-                                style={{ fontWeight: 700, fontSize: '0.9rem', color: u.is_live ? '#bf94ff' : C.text, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                {u.username ?? '—'}
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.45 }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                              </a>
-                            ) : (
-                              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: C.text }}>{u.username ?? '—'}</span>
-                            )}
-                            {u.is_live && (
-                              <a href={u.twitch_url!} target="_blank" rel="noopener noreferrer"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.28rem', fontSize: '0.66rem', fontWeight: 800, padding: '0.14rem 0.55rem', borderRadius: '999px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171', textDecoration: 'none', animation: 'sk-pulse 2s ease-in-out infinite' }}>
-                                🔴 AO VIVO
-                              </a>
-                            )}
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.28rem', fontSize: '0.66rem', fontWeight: 700, padding: '0.12rem 0.5rem', borderRadius: '999px', background: isOn ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${isOn ? 'rgba(34,197,94,0.28)' : 'rgba(255,255,255,0.08)'}`, color: isOn ? '#22c55e' : C.dim }}>
-                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: isOn ? '#22c55e' : C.dim, display: 'inline-block', ...(isOn ? { animation: 'sk-pulse 1.8s ease-in-out infinite' } : {}) }} />
-                              {isOn ? 'online' : 'offline'}
-                            </span>
-                            <span style={{ fontSize: '0.66rem', color: C.vdim }}>{timeLabel}</span>
-                          </div>
-                          <div style={{ fontSize: '0.74rem', color: C.muted, marginBottom: '0.45rem' }}>{u.email ?? '—'}</div>
-                          {/* Platform chips — only show for online users (offline = no active connection) */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                            {isOn && u.twitch_connected && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(145,71,255,0.12)', border: '1px solid rgba(145,71,255,0.25)', color: '#9147ff' }}>
-                                <svg width="10" height="10" viewBox="0 0 24 28" fill="#9147ff"><path d="M2.149 0L0 5.573V23.33h5.996V28l4.998-4.67H14.8L24 14.497V0H2.149zm19.851 13.63l-3.996 3.734h-4.998L9.008 21.1v-3.736H4.01V2.8h18v10.83zm-3.996-6.994H16v6.23h2.004v-6.23zm-5.998 0H10v6.23h2.006v-6.23z"/></svg>
-                                Twitch
-                              </span>
-                            )}
-                            {isOn && u.livepix_connected && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(255,105,180,0.1)', border: '1px solid rgba(255,105,180,0.2)', color: '#ff69b4' }}>
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ff69b4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
-                                Livepix
-                              </span>
-                            )}
-                            {isOn && u.spotify_connected && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(30,215,96,0.1)', border: '1px solid rgba(30,215,96,0.2)', color: '#1ed760' }}>
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="#1ed760"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
-                                Spotify
-                              </span>
-                            )}
-                            {isOn && u.youtube_connected && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(255,0,0,0.08)', border: '1px solid rgba(255,0,0,0.2)', color: '#ff4444' }}>
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="#ff4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                                YouTube
-                              </span>
-                            )}
-                            {isOn && u.kick_connected && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.66rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '5px', background: 'rgba(83,252,24,0.08)', border: '1px solid rgba(83,252,24,0.2)', color: '#53fc18' }}>
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="#53fc18"><path d="M2 2h4v8l6-8h5l-7 9 7 11h-5l-6-9v9H2z"/></svg>
-                                Kick
-                              </span>
-                            )}
-                            {(!isOn || (!u.twitch_connected && !u.livepix_connected && !u.spotify_connected && !u.youtube_connected && !u.kick_connected)) && (
-                              <span style={{ fontSize: '0.63rem', color: C.vdim }}>nenhuma plataforma conectada</span>
-                            )}
-                          </div>
-                        </div>
-                        {/* Right info */}
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontSize: '0.72rem', color: C.dim, marginBottom: '0.2rem' }}>Entrou em {joinDate}</div>
-                          <div style={{ fontSize: '0.7rem', color: C.vdim }}>{u.access_count > 0 ? `${u.access_count} acessos (7d)` : 'sem atividade'}</div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+            )
+          })()}
 
           {view === 'notify' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -2085,60 +2145,96 @@ export default function AdminPage() {
 
           {view === 'roles' && (() => {
             const ROLES = ['admin', 'moderador', 'vip', 'streamer', 'parceiro', 'editor']
-            const ROLE_COLORS: Record<string, string> = { admin: '#ff4444', moderador: '#9147ff', vip: '#fbbf24', streamer: '#39ff14', parceiro: '#3b82f6', editor: '#f97316' }
+            const RC: Record<string, { color: string; bg: string; border: string }> = {
+              admin:     { color: '#ff4444', bg: 'rgba(255,68,68,.1)',   border: 'rgba(255,68,68,.28)' },
+              moderador: { color: '#9147ff', bg: 'rgba(145,71,255,.1)',  border: 'rgba(145,71,255,.28)' },
+              vip:       { color: '#fbbf24', bg: 'rgba(251,191,36,.1)',  border: 'rgba(251,191,36,.28)' },
+              streamer:  { color: '#39ff14', bg: 'rgba(57,255,20,.08)',  border: 'rgba(57,255,20,.25)' },
+              parceiro:  { color: '#3b82f6', bg: 'rgba(59,130,246,.1)',  border: 'rgba(59,130,246,.28)' },
+              editor:    { color: '#f97316', bg: 'rgba(249,115,22,.1)',  border: 'rgba(249,115,22,.28)' },
+            }
             const roleMap = Object.fromEntries(roles.map(r => [r.user_id, r]))
             const allUsers = users.filter(u => u.status === 'approved')
+            const roleCount = Object.fromEntries(ROLES.map(r => [r, roles.filter(x => x.role === r).length]))
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
-                  <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>Funções dos usuários</h3>
-                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.8rem', color: C.muted }}>Selecione um usuário aprovado e atribua uma função. A função aparece no perfil do usuário.</p>
-                  {rolesLoading ? (
-                    <div style={{ color: C.muted, fontSize: '0.85rem' }}>Carregando...</div>
-                  ) : allUsers.length === 0 ? (
-                    <div style={{ color: C.muted, fontSize: '0.85rem' }}>Nenhum usuário aprovado encontrado.</div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {allUsers.map(u => {
-                        const uname = u.platform_username || u.email || u.id.slice(0, 8)
-                        const currentRole = roleMap[u.id]?.role
-                        const isSaving = rolesSaving === u.id
-                        return (
-                          <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 1rem', background: C.cardBgAlt, borderRadius: '10px', border: `1px solid ${C.border}`, flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 140 }}>
-                              {u.image_url ? (
-                                <img src={u.image_url} alt={uname} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${PLATFORM_COLORS[u.platform] || C.border}` }} />
-                              ) : (
-                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: PLATFORM_COLORS[u.platform] || C.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-                                  {uname.slice(0, 2).toUpperCase()}
-                                </div>
-                              )}
-                              <div>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text }}>{uname}</div>
-                                <div style={{ fontSize: '0.68rem', color: C.muted }}>{u.platform}</div>
-                              </div>
+
+                {/* ── Header ── */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: 800, color: C.text }}>Funções dos Usuários</h3>
+                    <div style={{ fontSize: '0.72rem', color: C.muted }}>Atribua funções para controlar o acesso a recursos da plataforma</div>
+                  </div>
+                </div>
+
+                {/* ── Role legend ── */}
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {ROLES.map(r => {
+                    const rc = RC[r]
+                    return (
+                      <div key={r} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.85rem', borderRadius: '99px', background: rc.bg, border: `1px solid ${rc.border}` }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: rc.color, display: 'inline-block', flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: rc.color }}>{r}</span>
+                        {roleCount[r] > 0 && <span style={{ fontSize: '0.62rem', color: rc.color, opacity: 0.7 }}>{roleCount[r]}</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* ── User list ── */}
+                {rolesLoading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140, color: C.muted, fontSize: '0.85rem', background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}` }}>Carregando...</div>
+                ) : allUsers.length === 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140, color: C.vdim, fontSize: '0.85rem', background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}` }}>Nenhum usuário aprovado</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    {allUsers.map(u => {
+                      const uname = u.platform_username || u.email || u.id.slice(0, 8)
+                      const currentRole = roleMap[u.id]?.role
+                      const isSaving = rolesSaving === u.id
+                      const rc = currentRole ? RC[currentRole] : null
+                      const pcol = PLATFORM_COLORS[u.platform] || C.primary
+                      return (
+                        <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem 1.15rem', background: C.cardBg, borderRadius: '12px', border: `1px solid ${rc ? rc.border : C.border}`, transition: 'border-color .15s', flexWrap: 'wrap' }}>
+                          {/* Avatar */}
+                          {u.image_url
+                            ? <img src={u.image_url} alt={uname} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${pcol}40` }} />
+                            : <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${pcol}20`, border: `2px solid ${pcol}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 800, color: pcol, flexShrink: 0 }}>{uname[0].toUpperCase()}</div>
+                          }
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 120 }}>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, marginBottom: '0.1rem' }}>{uname}</div>
+                            <div style={{ fontSize: '0.68rem', color: C.dim, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: pcol, display: 'inline-block' }} />
+                              {u.platform}
                             </div>
-                            {currentRole && (
-                              <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.7rem', borderRadius: '999px', background: `${ROLE_COLORS[currentRole] ?? C.primaryBg}22`, color: ROLE_COLORS[currentRole] ?? C.primary, border: `1px solid ${ROLE_COLORS[currentRole] ?? C.primary}44` }}>
-                                {currentRole}
-                              </span>
-                            )}
+                          </div>
+                          {/* Current role badge */}
+                          {currentRole && rc && (
+                            <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.22rem 0.75rem', borderRadius: '99px', background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`, flexShrink: 0 }}>
+                              {currentRole}
+                            </span>
+                          )}
+                          {/* Role selector */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                             <select
                               value={currentRole ?? ''}
                               disabled={isSaving}
                               onChange={e => { if (e.target.value) assignRole(u.id, e.target.value); else removeRole(u.id) }}
-                              style={{ background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: '7px', padding: '0.3rem 0.6rem', fontSize: '0.8rem', cursor: 'pointer', outline: 'none' }}
+                              style={{ background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: '8px', padding: '0.38rem 0.75rem', fontSize: '0.78rem', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}
                             >
                               <option value="">— sem função —</option>
                               {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                             </select>
-                            {isSaving && <span style={{ fontSize: '0.75rem', color: C.muted }}>Salvando...</span>}
+                            {isSaving && (
+                              <svg className="sk-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                            )}
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )
           })()}

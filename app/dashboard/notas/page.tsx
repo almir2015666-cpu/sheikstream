@@ -145,12 +145,17 @@ export default function NotasPage() {
                 placeholder="Título da nota..."
                 style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '1rem', fontWeight: 700, color: 'rgba(232,230,248,.9)', flex: 1, fontFamily: 'inherit' }}
               />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', flexShrink: 0, marginLeft: '1rem' }}>
-                <span style={{ fontSize: '.67rem', color: 'rgba(232,230,248,.25)', fontStyle: 'italic' }}>
-                  {status === 'saving' ? '💾 salvando...' : status === 'error' ? '⚠️ erro ao salvar' : `✓ salvo · ${fmtDate(active.updatedAt)}`}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', flexShrink: 0, marginLeft: '1rem' }}>
+                <span style={{ fontSize: '.67rem', color: status === 'error' ? '#ef4444' : 'rgba(232,230,248,.25)', fontStyle: 'italic' }}>
+                  {status === 'saving' ? 'salvando...' : status === 'error' ? 'erro ao salvar' : `✓ salvo · ${fmtDate(active.updatedAt)}`}
                 </span>
+                <button onClick={() => persist(notes)} disabled={status === 'saving'}
+                  style={{ display: 'flex', alignItems: 'center', gap: '.3rem', padding: '.3rem .75rem', borderRadius: 7, background: 'rgba(155,48,255,.15)', border: '1px solid rgba(155,48,255,.35)', color: '#9b30ff', cursor: 'pointer', fontSize: '.72rem', fontWeight: 700 }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  Salvar
+                </button>
                 <button onClick={addNote}
-                  style={{ padding: '.3rem .7rem', borderRadius: 7, background: 'rgba(155,48,255,.1)', border: '1px solid rgba(155,48,255,.25)', color: '#9b30ff', cursor: 'pointer', fontSize: '.72rem', fontWeight: 700 }}>
+                  style={{ padding: '.3rem .7rem', borderRadius: 7, background: 'rgba(155,48,255,.08)', border: '1px solid rgba(155,48,255,.2)', color: 'rgba(155,48,255,.8)', cursor: 'pointer', fontSize: '.72rem', fontWeight: 700 }}>
                   + Nova
                 </button>
               </div>
