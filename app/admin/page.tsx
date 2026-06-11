@@ -172,8 +172,8 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/ia-imagens/config', { headers: { 'x-admin-password': pw } })
     const d = await res.json()
     if (d.config) {
-      const maxDay = d.config.max_per_day ?? 10
-      const defCd = d.config.cooldown_seconds ?? 300
+      const maxDay = d.config.max_per_day || 10
+      const defCd = d.config.cooldown_seconds || 300
       const rl: Record<string, number> = {}
       const rd: Record<string, number> = {}
       const groups = ['todos', 'admin', 'moderador', 'vip', 'streamer']

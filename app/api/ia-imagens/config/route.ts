@@ -48,8 +48,8 @@ export async function GET(req: NextRequest) {
       roleDelays = parsed.delays ?? {}
     } catch {}
   }
-  const effectiveMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
-  const effectiveCooldown  = roleDelays[userRole ?? ''] ?? cfg.cooldown_seconds
+  const effectiveMaxPerDay = roleLimits[userRole ?? ''] || cfg.max_per_day || DEFAULT_CFG.max_per_day
+  const effectiveCooldown  = roleDelays[userRole ?? ''] || cfg.cooldown_seconds || DEFAULT_CFG.cooldown_seconds
 
   if (cfgRes.data && !cfgRes.error) {
     try {

@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
 
   if (cfgRes.data) {
     try {
-      const userMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
-      const userCooldown  = roleDelays[userRole ?? ''] ?? cfg.cooldown_seconds
+      const userMaxPerDay = roleLimits[userRole ?? ''] || cfg.max_per_day || DEFAULT_CFG.max_per_day
+      const userCooldown  = roleDelays[userRole ?? ''] || cfg.cooldown_seconds || DEFAULT_CFG.cooldown_seconds
 
       const since = new Date(Date.now() - userCooldown * 1000).toISOString()
       const { data: recent } = await db.from('ai_image_generations')
