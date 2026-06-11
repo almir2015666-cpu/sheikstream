@@ -9,6 +9,7 @@ export type IaVozConfig = {
   cooldown: number
   minWords: number
   ttsEnabled: boolean
+  ttsRate: number
   sendChat: boolean
   emojiEnabled: boolean
   ignoreWords: string

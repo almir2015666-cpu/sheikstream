@@ -46,6 +46,7 @@ export default function IaVozPage() {
   const [noSupport, setNoSupport]   = useState(false)
   const [saving, setSaving]         = useState(false)
   const [saved, setSaved]           = useState(false)
+  const [isBrave, setIsBrave]       = useState(false)
 
   // Settings
   const [lang, setLang]             = useState('pt-BR')
@@ -54,6 +55,7 @@ export default function IaVozPage() {
   const [cooldown, setCooldown]     = useState(5)
   const [minWords, setMinWords]     = useState(1)
   const [ttsEnabled, setTtsEnabled] = useState(false)
+  const [ttsRate, setTtsRate]       = useState(1.0)
   const [sendChat, setSendChat]     = useState(true)
   const [emojiEnabled, setEmojiEnabled] = useState(true)
   const [ignoreWords, setIgnoreWords] = useState('')
@@ -68,6 +70,7 @@ export default function IaVozPage() {
   const cooldownRef    = useRef(5)
   const minWordsRef    = useRef(1)
   const ttsRef         = useRef(false)
+  const ttsRateRef     = useRef(1.0)
   const sendChatRef    = useRef(true)
   const emojiEnabledRef = useRef(true)
   const ignoreWordsRef = useRef('')
@@ -81,6 +84,7 @@ export default function IaVozPage() {
   useEffect(() => { cooldownRef.current = cooldown }, [cooldown])
   useEffect(() => { minWordsRef.current = minWords }, [minWords])
   useEffect(() => { ttsRef.current = ttsEnabled }, [ttsEnabled])
+  useEffect(() => { ttsRateRef.current = ttsRate }, [ttsRate])
   useEffect(() => { sendChatRef.current = sendChat }, [sendChat])
   useEffect(() => { emojiEnabledRef.current = emojiEnabled }, [emojiEnabled])
   useEffect(() => { ignoreWordsRef.current = ignoreWords }, [ignoreWords])
@@ -97,6 +101,7 @@ export default function IaVozPage() {
       window.speechSynthesis?.cancel()
       const u = new SpeechSynthesisUtterance(text)
       u.lang = langRef.current
+      u.rate = ttsRateRef.current
       window.speechSynthesis.speak(u)
     } catch { /* ignore */ }
   }
@@ -232,6 +237,11 @@ export default function IaVozPage() {
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) setNoSupport(true)
+    // Brave detection
+    const nav = navigator as any
+    if (nav.brave?.isBrave) {
+      nav.brave.isBrave().then((b: boolean) => { if (b) setIsBrave(true) }).catch(() => {})
+    }
   }, [])
 
   // Load saved config on mount
@@ -245,6 +255,7 @@ export default function IaVozPage() {
       if (c.cooldown !== undefined)    setCooldown(c.cooldown)
       if (c.minWords !== undefined)    setMinWords(c.minWords)
       if (c.ttsEnabled !== undefined)  setTtsEnabled(c.ttsEnabled)
+      if (c.ttsRate !== undefined)     setTtsRate(c.ttsRate)
       if (c.sendChat !== undefined)    setSendChat(c.sendChat)
       if (c.emojiEnabled !== undefined) setEmojiEnabled(c.emojiEnabled)
       if (c.ignoreWords !== undefined) setIgnoreWords(c.ignoreWords)
@@ -256,7 +267,7 @@ export default function IaVozPage() {
     await fetch('/api/ia-chat/voice/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cfg: { lang, wakeEnabled, wakeWord, cooldown, minWords, ttsEnabled, sendChat, emojiEnabled, ignoreWords } }),
+      body: JSON.stringify({ cfg: { lang, wakeEnabled, wakeWord, cooldown, minWords, ttsEnabled, ttsRate, sendChat, emojiEnabled, ignoreWords } }),
     })
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -310,6 +321,22 @@ export default function IaVozPage() {
           <div style={{ fontSize:'.72rem', color: DIM, marginTop:'.3rem' }}>{on ? 'Clique para desativar' : 'Clique para ativar'}</div>
         </div>
       </div>
+
+      {/* Brave warning */}
+      {isBrave && (
+        <div style={{ background:'rgba(251,140,0,.08)', border:'1px solid rgba(251,140,0,.3)', borderRadius:12, padding:'.85rem 1rem', marginBottom:'1rem' }}>
+          <div style={{ fontSize:'.8rem', fontWeight:700, color:'#fb8c00', marginBottom:'.3rem' }}>⚠ Brave Browser detectado</div>
+          <div style={{ fontSize:'.73rem', color:'rgba(251,140,0,.8)', lineHeight:1.65, marginBottom:'.5rem' }}>
+            O reconhecimento de voz usa os servidores do Google e pode ser bloqueado pelo Brave. Para ativar:
+          </div>
+          <ol style={{ margin:0, paddingLeft:'1.2rem', fontSize:'.73rem', color:'rgba(251,140,0,.75)', lineHeight:1.9 }}>
+            <li>Abra <strong style={{color:'#fb8c00'}}>brave://settings/privacy</strong></li>
+            <li>Ative <strong style={{color:'#fb8c00'}}>"Usar serviços do Google para funcionalidades do Brave"</strong></li>
+            <li>Recarregue esta página e tente novamente</li>
+          </ol>
+          <div style={{ fontSize:'.7rem', color:'rgba(251,140,0,.55)', marginTop:'.5rem' }}>Alternativa: use Chrome ou Edge para compatibilidade total.</div>
+        </div>
+      )}
 
       {transcript && <div style={{ background:'rgba(57,255,20,.04)', border:'1px solid rgba(57,255,20,.15)', borderRadius:10, padding:'.65rem 1rem', marginBottom:'1rem', fontSize:'.88rem', color:'rgba(232,230,248,.75)', fontStyle:'italic' }}>&ldquo;{transcript}&rdquo;</div>}
       {apiErr && <div style={{ background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'.6rem 1rem', marginBottom:'1rem', fontSize:'.8rem', color:'#ef4444' }}>⚠ {apiErr}</div>}
@@ -390,6 +417,23 @@ export default function IaVozPage() {
         {/* TTS */}
         <div style={SEP}>
           <Row label="Ler resposta em voz alta (TTS)" desc="O navegador fala a resposta da IA em voz alta" on={ttsEnabled} onChange={() => setTtsEnabled(v => !v)} />
+          {ttsEnabled && (
+            <div style={{ marginTop:'.6rem' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.35rem' }}>
+                <div style={{ fontSize:'.75rem', color:'rgba(232,230,248,.45)' }}>Velocidade de leitura</div>
+                <span style={{ fontSize:'.82rem', fontWeight:800, color: P, minWidth:36, textAlign:'right' }}>{ttsRate.toFixed(1)}×</span>
+              </div>
+              <input type="range" min={0.5} max={2.5} step={0.1} value={ttsRate} onChange={e => setTtsRate(+e.target.value)} style={{ width:'100%', accentColor: P, background:`linear-gradient(to right, ${P} ${(ttsRate-0.5)/2*100}%, rgba(255,255,255,.1) ${(ttsRate-0.5)/2*100}%)` }} />
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:'.65rem', color:'rgba(232,230,248,.3)', marginTop:'.2rem' }}>
+                <span>0.5× Lento</span><span>1.0× Normal</span><span>2.5× Rápido</span>
+              </div>
+              <div style={{ display:'flex', gap:'.35rem', marginTop:'.45rem', flexWrap:'wrap' }}>
+                {[0.75, 1.0, 1.25, 1.5, 1.75, 2.0].map(r => (
+                  <button key={r} onClick={() => setTtsRate(r)} style={{ padding:'.2rem .55rem', borderRadius:6, border:`1px solid ${ttsRate === r ? 'rgba(155,48,255,.5)' : 'rgba(255,255,255,.1)'}`, background: ttsRate === r ? 'rgba(155,48,255,.2)' : 'transparent', color: ttsRate === r ? P : 'rgba(232,230,248,.4)', fontSize:'.68rem', fontWeight:700, cursor:'pointer' }}>{r.toFixed(2)}×</button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
