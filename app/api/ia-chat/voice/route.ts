@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   const text: string = (body.text ?? '').trim()
+  const sendToChat: boolean = body.sendToChat !== false
   if (!text) return NextResponse.json({ error: 'text required' }, { status: 400 })
 
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'No API key' }, { status: 500 })
@@ -109,6 +110,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (!reply) return NextResponse.json({ error: 'Empty response' }, { status: 500 })
+
+  if (!sendToChat) return NextResponse.json({ reply })
 
   // Send to Twitch chat
   const { data: tok } = await db.from('user_tokens').select('twitch_token').eq('user_id', user.id).single()

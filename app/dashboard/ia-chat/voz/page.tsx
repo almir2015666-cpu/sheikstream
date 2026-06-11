@@ -10,48 +10,121 @@ const CSS = `
 @keyframes voz-bar { 0%,100%{height:5px;opacity:.4} 50%{height:24px;opacity:1} }
 .voz-bar{animation:voz-bar .6s ease-in-out infinite;width:4px;background:#39ff14;border-radius:2px;display:inline-block}
 .voz-scroll::-webkit-scrollbar{width:3px}.voz-scroll::-webkit-scrollbar-thumb{background:rgba(155,48,255,.3);border-radius:3px}
+input[type=range]{-webkit-appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#9b30ff;cursor:pointer}
 `
 
+function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+  const P = '#9b30ff'
+  return (
+    <button onClick={onChange} style={{ flexShrink:0, width:40, height:22, borderRadius:11, border:'none', cursor:'pointer', background: on ? P : 'rgba(255,255,255,.1)', transition:'background .2s', position:'relative' }}>
+      <span style={{ position:'absolute', top:3, left: on ? 21 : 3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', display:'block' }} />
+    </button>
+  )
+}
+
+function Row({ label, desc, on, onChange }: { label: string; desc?: string; on: boolean; onChange: () => void }) {
+  const TXT = '#e8e6f8', DIM = 'rgba(232,230,248,.35)'
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'1rem' }}>
+      <div>
+        <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT }}>{label}</div>
+        {desc && <div style={{ fontSize:'.7rem', color: DIM, marginTop:'.1rem' }}>{desc}</div>}
+      </div>
+      <Toggle on={on} onChange={onChange} />
+    </div>
+  )
+}
+
 export default function IaVozPage() {
-  const [status, setStatus]       = useState<Status>('idle')
-  const [on, setOn]               = useState(false)
+  const [status, setStatus]         = useState<Status>('idle')
+  const [on, setOn]                 = useState(false)
   const [transcript, setTranscript] = useState('')
-  const [history, setHistory]     = useState<Entry[]>([])
-  const [lang, setLang]           = useState('pt-BR')
-  const [apiErr, setApiErr]       = useState('')
-  const [log, setLog]             = useState<string[]>([])
-  const [noSupport, setNoSupport] = useState(false)
+  const [history, setHistory]       = useState<Entry[]>([])
+  const [apiErr, setApiErr]         = useState('')
+  const [log, setLog]               = useState<string[]>([])
+  const [noSupport, setNoSupport]   = useState(false)
 
+  // Settings
+  const [lang, setLang]             = useState('pt-BR')
   const [wakeEnabled, setWakeEnabled] = useState(false)
-  const [wakeWord, setWakeWord]       = useState('')
+  const [wakeWord, setWakeWord]     = useState('')
+  const [cooldown, setCooldown]     = useState(5)
+  const [minWords, setMinWords]     = useState(1)
+  const [ttsEnabled, setTtsEnabled] = useState(false)
+  const [sendChat, setSendChat]     = useState(true)
+  const [ignoreWords, setIgnoreWords] = useState('')
 
-  // All mutable state lives in refs so closures always see fresh values
-  const onRef         = useRef(false)
-  const busyRef       = useRef(false)
-  const recRef        = useRef<any>(null)
-  const langRef       = useRef('pt-BR')
+  // Refs — always fresh inside closures
+  const onRef          = useRef(false)
+  const busyRef        = useRef(false)
+  const recRef         = useRef<any>(null)
+  const langRef        = useRef('pt-BR')
   const wakeEnabledRef = useRef(false)
-  const wakeWordRef   = useRef('')
-  const histRef       = useRef<HTMLDivElement>(null)
+  const wakeWordRef    = useRef('')
+  const cooldownRef    = useRef(5)
+  const minWordsRef    = useRef(1)
+  const ttsRef         = useRef(false)
+  const sendChatRef    = useRef(true)
+  const ignoreWordsRef = useRef('')
+  const lastSentRef    = useRef(0)
+  const histRef        = useRef<HTMLDivElement>(null)
+
+  // Sync refs
+  useEffect(() => { langRef.current = lang }, [lang])
+  useEffect(() => { wakeEnabledRef.current = wakeEnabled }, [wakeEnabled])
+  useEffect(() => { wakeWordRef.current = wakeWord }, [wakeWord])
+  useEffect(() => { cooldownRef.current = cooldown }, [cooldown])
+  useEffect(() => { minWordsRef.current = minWords }, [minWords])
+  useEffect(() => { ttsRef.current = ttsEnabled }, [ttsEnabled])
+  useEffect(() => { sendChatRef.current = sendChat }, [sendChat])
+  useEffect(() => { ignoreWordsRef.current = ignoreWords }, [ignoreWords])
 
   const lg = (msg: string) => {
     const ts = new Date().toLocaleTimeString('pt-BR')
-    setLog(l => [`${ts} — ${msg}`, ...l.slice(0, 14)])
+    setLog(l => [`${ts} — ${msg}`, ...l.slice(0, 19)])
     console.log('[ia-voz]', msg)
   }
 
-  // Send text to API
+  const speak = (text: string) => {
+    if (!ttsRef.current || !text) return
+    try {
+      window.speechSynthesis?.cancel()
+      const u = new SpeechSynthesisUtterance(text)
+      u.lang = langRef.current
+      window.speechSynthesis.speak(u)
+    } catch { /* ignore */ }
+  }
+
   const sendText = async (text: string) => {
     const t = text.trim()
-    if (!t) { lg('Sem texto para enviar'); return }
-    if (busyRef.current) { lg('Já processando, aguarde'); return }
+    if (!t) { lg('Sem texto'); return }
+    if (busyRef.current) { lg('Aguarde...'); return }
+
+    // Cooldown check
+    const elapsed = (Date.now() - lastSentRef.current) / 1000
+    if (elapsed < cooldownRef.current) {
+      lg(`Cooldown: aguarde ${(cooldownRef.current - elapsed).toFixed(0)}s`)
+      return
+    }
+
+    // Ignored words filter
+    const ignored = ignoreWordsRef.current.split(',').map(w => w.trim().toLowerCase()).filter(Boolean)
+    if (ignored.some(w => t.toLowerCase().includes(w))) {
+      lg(`Ignorado (palavra filtrada)`)
+      return
+    }
+
     busyRef.current = true
+    lastSentRef.current = Date.now()
     setStatus('processing')
     lg(`→ Enviando: "${t.slice(0, 60)}"`)
+
     try {
       const r = await fetch('/api/ia-chat/voice', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: t }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: t, sendToChat: sendChatRef.current }),
       })
       const d = await r.json()
       if (!r.ok) throw new Error(`${r.status}: ${d.error ?? 'erro'}`)
@@ -61,20 +134,19 @@ export default function IaVozPage() {
       lg(`← Resposta: "${reply.slice(0, 60)}"`)
       setHistory(h => [{ id: crypto.randomUUID(), spoken: t, reply }, ...h])
       setStatus('sent')
-      setTimeout(() => { setStatus(onRef.current ? 'listening' : 'idle') }, 1500)
+      speak(reply)
+      setTimeout(() => setStatus(onRef.current ? 'listening' : 'idle'), 1500)
     } catch (e: any) {
       setApiErr(e.message)
       lg(`Erro API: ${e.message}`)
       setStatus('error')
-      setTimeout(() => { setStatus(onRef.current ? 'listening' : 'idle') }, 2000)
+      setTimeout(() => setStatus(onRef.current ? 'listening' : 'idle'), 2000)
     }
     busyRef.current = false
   }
 
-  // Start one recognition cycle
   const startCycle = () => {
     if (!onRef.current || busyRef.current) return
-
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) { setNoSupport(true); return }
 
@@ -86,7 +158,7 @@ export default function IaVozPage() {
 
     let captured = ''
 
-    rec.onstart = () => { lg('Mic ativo'); setStatus('listening') }
+    rec.onstart  = () => { lg('Mic ativo'); setStatus('listening') }
 
     rec.onresult = (e: any) => {
       let interim = '', final = ''
@@ -100,7 +172,7 @@ export default function IaVozPage() {
     }
 
     rec.onerror = (e: any) => {
-      if (e.error === 'no-speech') { lg('Silêncio — reiniciando...') }
+      if (e.error === 'no-speech') lg('Silêncio — reiniciando...')
       else if (e.error === 'not-allowed') { lg('Permissão negada!'); onRef.current = false; setOn(false); setStatus('error') }
       else lg(`Erro mic: ${e.error}`)
     }
@@ -108,15 +180,23 @@ export default function IaVozPage() {
     rec.onend = () => {
       lg('Ciclo encerrado')
       if (captured) {
+        // Min words filter
+        const wordCount = captured.trim().split(/\s+/).length
+        if (wordCount < minWordsRef.current) {
+          lg(`Muito curto (${wordCount} palavra${wordCount>1?'s':''}) — ignorando`)
+          if (onRef.current && !busyRef.current) setTimeout(startCycle, 200)
+          return
+        }
+        // Wake word filter
         const word = wakeWordRef.current.trim().toLowerCase()
         if (wakeEnabledRef.current && word && !captured.toLowerCase().includes(word)) {
           lg(`Apelido não mencionado — ignorando`)
           if (onRef.current && !busyRef.current) setTimeout(startCycle, 200)
-        } else {
-          sendText(captured).then(() => {
-            if (onRef.current) setTimeout(startCycle, 400)
-          })
+          return
         }
+        sendText(captured).then(() => {
+          if (onRef.current) setTimeout(startCycle, 400)
+        })
       } else {
         if (onRef.current && !busyRef.current) setTimeout(startCycle, 200)
       }
@@ -130,6 +210,7 @@ export default function IaVozPage() {
     if (on) {
       onRef.current = false; setOn(false); setStatus('idle'); setTranscript('')
       try { recRef.current?.stop() } catch { /* ignore */ }
+      window.speechSynthesis?.cancel()
       lg('Desativado')
     } else {
       onRef.current = true; setOn(true); busyRef.current = false
@@ -138,16 +219,9 @@ export default function IaVozPage() {
     }
   }
 
-  // Sync refs with state
-  useEffect(() => { wakeEnabledRef.current = wakeEnabled }, [wakeEnabled])
-  useEffect(() => { wakeWordRef.current = wakeWord }, [wakeWord])
-
-  // Update langRef when lang changes, restart if active
+  // Restart when lang changes while active
   useEffect(() => {
-    langRef.current = lang
-    if (on && !busyRef.current) {
-      try { recRef.current?.stop() } catch { /* ignore */ }
-    }
+    if (on && !busyRef.current) { try { recRef.current?.stop() } catch { /* ignore */ } }
   }, [lang, on])
 
   useEffect(() => {
@@ -155,14 +229,14 @@ export default function IaVozPage() {
     if (!SR) setNoSupport(true)
   }, [])
 
-  useEffect(() => {
-    if (histRef.current) histRef.current.scrollTop = 0
-  }, [history])
+  useEffect(() => { if (histRef.current) histRef.current.scrollTop = 0 }, [history])
 
   const P = '#9b30ff', TXT = '#e8e6f8', DIM = 'rgba(232,230,248,.35)', G = '#39ff14'
+  const CARD = { background:'#0d0f18', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'.9rem 1rem', marginBottom:'1rem' }
+  const SEP  = { borderTop:'1px solid rgba(255,255,255,.05)', paddingTop:'.75rem', marginTop:'.75rem' }
 
   if (noSupport) return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'60vh', gap:'1rem', color: DIM, textAlign:'center' }}>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'60vh', color: DIM, textAlign:'center' }}>
       <style>{CSS}</style>
       <div style={{ fontSize:'.9rem', color:'rgba(239,68,68,.8)' }}>Não suportado — use Chrome ou Edge</div>
     </div>
@@ -177,9 +251,8 @@ export default function IaVozPage() {
         <p style={{ margin:'.2rem 0 0', fontSize:'.76rem', color: DIM }}>Fale e a IA responde automaticamente no chat do Twitch</p>
       </div>
 
-      {/* Main card */}
+      {/* Main toggle card */}
       <div style={{ background: on ? 'rgba(57,255,20,.05)' : '#0d0f18', border:`1.5px solid ${on ? 'rgba(57,255,20,.3)' : 'rgba(255,255,255,.08)'}`, borderRadius:16, padding:'1.5rem', marginBottom:'1.25rem', display:'flex', flexDirection:'column', alignItems:'center', gap:'1.25rem', transition:'all .25s' }}>
-
         <div style={{ height:28, display:'flex', alignItems:'center', gap:4, opacity: status === 'listening' ? 1 : 0, transition:'opacity .3s' }}>
           {[...Array(11)].map((_,i) => <div key={i} className="voz-bar" style={{ animationDelay:`${i*.07}s`, animationPlayState: status==='listening'?'running':'paused' }} />)}
         </div>
@@ -208,43 +281,83 @@ export default function IaVozPage() {
       {transcript && <div style={{ background:'rgba(57,255,20,.04)', border:'1px solid rgba(57,255,20,.15)', borderRadius:10, padding:'.65rem 1rem', marginBottom:'1rem', fontSize:'.88rem', color:'rgba(232,230,248,.75)', fontStyle:'italic' }}>&ldquo;{transcript}&rdquo;</div>}
       {apiErr && <div style={{ background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'.6rem 1rem', marginBottom:'1rem', fontSize:'.8rem', color:'#ef4444' }}>⚠ {apiErr}</div>}
 
-      {/* Settings */}
-      <div style={{ background:'#0d0f18', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'.9rem 1rem', marginBottom:'1.25rem', display:'flex', flexDirection:'column', gap:'.75rem' }}>
+      {/* ── Configurações ── */}
+      <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.5rem' }}>Configurações</div>
+
+      {/* Idioma */}
+      <div style={CARD}>
         <div style={{ display:'flex', alignItems:'center', gap:'.5rem' }}>
-          <label style={{ fontSize:'.78rem', color: DIM, fontWeight:600 }}>Idioma:</label>
+          <label style={{ fontSize:'.78rem', color: DIM, fontWeight:600 }}>Idioma do reconhecimento:</label>
           <select value={lang} onChange={e => setLang(e.target.value)} style={{ background:'rgba(0,0,0,.3)', border:'1px solid rgba(255,255,255,.1)', borderRadius:7, color: TXT, fontSize:'.78rem', padding:'.3rem .6rem', outline:'none', cursor:'pointer' }}>
             <option value="pt-BR">Português (BR)</option>
             <option value="en-US">English (US)</option>
             <option value="es-ES">Español</option>
           </select>
         </div>
+      </div>
 
-        {/* Wake word row */}
-        <div style={{ borderTop:'1px solid rgba(255,255,255,.05)', paddingTop:'.7rem' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: wakeEnabled ? '.6rem' : 0 }}>
+      {/* Filtros de ativação */}
+      <div style={CARD}>
+        <div style={{ fontSize:'.65rem', fontWeight:800, color: P, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.6rem' }}>Filtros de ativação</div>
+
+        {/* Wake word */}
+        <Row label="Responder só quando chamar pelo apelido" desc="Ignora falas que não mencionem o apelido definido" on={wakeEnabled} onChange={() => setWakeEnabled(v => !v)} />
+        {wakeEnabled && (
+          <input type="text" value={wakeWord} onChange={e => setWakeWord(e.target.value)} placeholder="Ex: Sheik, Bot, IA..." style={{ marginTop:'.55rem', width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:`1px solid ${wakeWord.trim() ? 'rgba(155,48,255,.4)' : 'rgba(255,255,255,.1)'}`, borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none' }} />
+        )}
+
+        {/* Min words */}
+        <div style={SEP}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.4rem' }}>
             <div>
-              <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT }}>Responder só quando chamar pelo apelido</div>
-              <div style={{ fontSize:'.7rem', color: DIM, marginTop:'.15rem' }}>Ignora o que for dito a menos que mencione o apelido definido</div>
+              <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT }}>Mínimo de palavras para responder</div>
+              <div style={{ fontSize:'.7rem', color: DIM }}>Ignora frases muito curtas ou ruídos</div>
             </div>
-            <button onClick={() => setWakeEnabled(v => !v)} style={{ flexShrink:0, width:40, height:22, borderRadius:11, border:'none', cursor:'pointer', background: wakeEnabled ? P : 'rgba(255,255,255,.1)', transition:'background .2s', position:'relative' }}>
-              <span style={{ position:'absolute', top:3, left: wakeEnabled ? 21 : 3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', display:'block' }} />
-            </button>
+            <span style={{ fontSize:'.85rem', fontWeight:800, color: P, minWidth:28, textAlign:'right' }}>{minWords}</span>
           </div>
-          {wakeEnabled && (
-            <input
-              type="text"
-              value={wakeWord}
-              onChange={e => setWakeWord(e.target.value)}
-              placeholder="Ex: Sheik, Bot, IA..."
-              style={{ width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:`1px solid ${wakeWord.trim() ? 'rgba(155,48,255,.4)' : 'rgba(255,255,255,.1)'}`, borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none' }}
-            />
-          )}
+          <input type="range" min={1} max={10} value={minWords} onChange={e => setMinWords(+e.target.value)} style={{ width:'100%', accentColor: P, background:`linear-gradient(to right, ${P} ${(minWords-1)/9*100}%, rgba(255,255,255,.1) ${(minWords-1)/9*100}%)` }} />
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:'.65rem', color: DIM, marginTop:'.2rem' }}><span>1 palavra</span><span>10 palavras</span></div>
+        </div>
+
+        {/* Ignored words */}
+        <div style={SEP}>
+          <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT, marginBottom:'.25rem' }}>Palavras/frases a ignorar</div>
+          <div style={{ fontSize:'.7rem', color: DIM, marginBottom:'.4rem' }}>Separadas por vírgula — se a fala contiver qualquer uma, não responde</div>
+          <input type="text" value={ignoreWords} onChange={e => setIgnoreWords(e.target.value)} placeholder="Ex: teste, ok, sim, não..." style={{ width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none' }} />
+        </div>
+      </div>
+
+      {/* Cooldown e saída */}
+      <div style={CARD}>
+        <div style={{ fontSize:'.65rem', fontWeight:800, color: P, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.6rem' }}>Cooldown e saída</div>
+
+        {/* Cooldown */}
+        <div>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.4rem' }}>
+            <div>
+              <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT }}>Cooldown entre respostas</div>
+              <div style={{ fontSize:'.7rem', color: DIM }}>Tempo mínimo antes de responder novamente</div>
+            </div>
+            <span style={{ fontSize:'.85rem', fontWeight:800, color: P, minWidth:44, textAlign:'right' }}>{cooldown}s</span>
+          </div>
+          <input type="range" min={0} max={60} value={cooldown} onChange={e => setCooldown(+e.target.value)} style={{ width:'100%', accentColor: P, background:`linear-gradient(to right, ${P} ${cooldown/60*100}%, rgba(255,255,255,.1) ${cooldown/60*100}%)` }} />
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:'.65rem', color: DIM, marginTop:'.2rem' }}><span>Sem cooldown</span><span>60s</span></div>
+        </div>
+
+        {/* Send to chat */}
+        <div style={SEP}>
+          <Row label="Enviar resposta no chat do Twitch" desc="Desative para ver a resposta apenas aqui sem postar no chat" on={sendChat} onChange={() => setSendChat(v => !v)} />
+        </div>
+
+        {/* TTS */}
+        <div style={SEP}>
+          <Row label="Ler resposta em voz alta (TTS)" desc="O navegador fala a resposta da IA em voz alta" on={ttsEnabled} onChange={() => setTtsEnabled(v => !v)} />
         </div>
       </div>
 
       {/* Log */}
       {log.length > 0 && (
-        <div style={{ background:'#0a0b12', border:'1px solid rgba(255,255,255,.06)', borderRadius:10, padding:'.7rem .9rem', marginBottom:'1.25rem' }}>
+        <div style={{ background:'#0a0b12', border:'1px solid rgba(255,255,255,.06)', borderRadius:10, padding:'.7rem .9rem', marginBottom:'1rem' }}>
           <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.4rem' }}>Log</div>
           {log.map((l,i) => <div key={i} style={{ fontSize:'.72rem', color:'rgba(232,230,248,.45)', fontFamily:'monospace', lineHeight:1.65 }}>{l}</div>)}
         </div>
