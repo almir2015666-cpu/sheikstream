@@ -22,12 +22,17 @@ export default function IaVozPage() {
   const [log, setLog]             = useState<string[]>([])
   const [noSupport, setNoSupport] = useState(false)
 
+  const [wakeEnabled, setWakeEnabled] = useState(false)
+  const [wakeWord, setWakeWord]       = useState('')
+
   // All mutable state lives in refs so closures always see fresh values
-  const onRef   = useRef(false)
-  const busyRef = useRef(false)
-  const recRef  = useRef<any>(null)
-  const langRef = useRef('pt-BR')
-  const histRef = useRef<HTMLDivElement>(null)
+  const onRef         = useRef(false)
+  const busyRef       = useRef(false)
+  const recRef        = useRef<any>(null)
+  const langRef       = useRef('pt-BR')
+  const wakeEnabledRef = useRef(false)
+  const wakeWordRef   = useRef('')
+  const histRef       = useRef<HTMLDivElement>(null)
 
   const lg = (msg: string) => {
     const ts = new Date().toLocaleTimeString('pt-BR')
@@ -103,9 +108,15 @@ export default function IaVozPage() {
     rec.onend = () => {
       lg('Ciclo encerrado')
       if (captured) {
-        sendText(captured).then(() => {
-          if (onRef.current) setTimeout(startCycle, 400)
-        })
+        const word = wakeWordRef.current.trim().toLowerCase()
+        if (wakeEnabledRef.current && word && !captured.toLowerCase().includes(word)) {
+          lg(`Apelido não mencionado — ignorando`)
+          if (onRef.current && !busyRef.current) setTimeout(startCycle, 200)
+        } else {
+          sendText(captured).then(() => {
+            if (onRef.current) setTimeout(startCycle, 400)
+          })
+        }
       } else {
         if (onRef.current && !busyRef.current) setTimeout(startCycle, 200)
       }
@@ -126,6 +137,10 @@ export default function IaVozPage() {
       startCycle()
     }
   }
+
+  // Sync refs with state
+  useEffect(() => { wakeEnabledRef.current = wakeEnabled }, [wakeEnabled])
+  useEffect(() => { wakeWordRef.current = wakeWord }, [wakeWord])
 
   // Update langRef when lang changes, restart if active
   useEffect(() => {
@@ -193,14 +208,38 @@ export default function IaVozPage() {
       {transcript && <div style={{ background:'rgba(57,255,20,.04)', border:'1px solid rgba(57,255,20,.15)', borderRadius:10, padding:'.65rem 1rem', marginBottom:'1rem', fontSize:'.88rem', color:'rgba(232,230,248,.75)', fontStyle:'italic' }}>&ldquo;{transcript}&rdquo;</div>}
       {apiErr && <div style={{ background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'.6rem 1rem', marginBottom:'1rem', fontSize:'.8rem', color:'#ef4444' }}>⚠ {apiErr}</div>}
 
-      {/* Lang */}
-      <div style={{ background:'#0d0f18', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'.8rem 1rem', marginBottom:'1.25rem', display:'flex', alignItems:'center', gap:'.5rem' }}>
-        <label style={{ fontSize:'.78rem', color: DIM, fontWeight:600 }}>Idioma:</label>
-        <select value={lang} onChange={e => setLang(e.target.value)} style={{ background:'rgba(0,0,0,.3)', border:'1px solid rgba(255,255,255,.1)', borderRadius:7, color: TXT, fontSize:'.78rem', padding:'.3rem .6rem', outline:'none', cursor:'pointer' }}>
-          <option value="pt-BR">Português (BR)</option>
-          <option value="en-US">English (US)</option>
-          <option value="es-ES">Español</option>
-        </select>
+      {/* Settings */}
+      <div style={{ background:'#0d0f18', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'.9rem 1rem', marginBottom:'1.25rem', display:'flex', flexDirection:'column', gap:'.75rem' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'.5rem' }}>
+          <label style={{ fontSize:'.78rem', color: DIM, fontWeight:600 }}>Idioma:</label>
+          <select value={lang} onChange={e => setLang(e.target.value)} style={{ background:'rgba(0,0,0,.3)', border:'1px solid rgba(255,255,255,.1)', borderRadius:7, color: TXT, fontSize:'.78rem', padding:'.3rem .6rem', outline:'none', cursor:'pointer' }}>
+            <option value="pt-BR">Português (BR)</option>
+            <option value="en-US">English (US)</option>
+            <option value="es-ES">Español</option>
+          </select>
+        </div>
+
+        {/* Wake word row */}
+        <div style={{ borderTop:'1px solid rgba(255,255,255,.05)', paddingTop:'.7rem' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: wakeEnabled ? '.6rem' : 0 }}>
+            <div>
+              <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT }}>Responder só quando chamar pelo apelido</div>
+              <div style={{ fontSize:'.7rem', color: DIM, marginTop:'.15rem' }}>Ignora o que for dito a menos que mencione o apelido definido</div>
+            </div>
+            <button onClick={() => setWakeEnabled(v => !v)} style={{ flexShrink:0, width:40, height:22, borderRadius:11, border:'none', cursor:'pointer', background: wakeEnabled ? P : 'rgba(255,255,255,.1)', transition:'background .2s', position:'relative' }}>
+              <span style={{ position:'absolute', top:3, left: wakeEnabled ? 21 : 3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', display:'block' }} />
+            </button>
+          </div>
+          {wakeEnabled && (
+            <input
+              type="text"
+              value={wakeWord}
+              onChange={e => setWakeWord(e.target.value)}
+              placeholder="Ex: Sheik, Bot, IA..."
+              style={{ width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:`1px solid ${wakeWord.trim() ? 'rgba(155,48,255,.4)' : 'rgba(255,255,255,.1)'}`, borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none' }}
+            />
+          )}
+        </div>
       </div>
 
       {/* Log */}
