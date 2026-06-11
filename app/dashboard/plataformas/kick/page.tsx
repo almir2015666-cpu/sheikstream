@@ -135,13 +135,28 @@ export default function KickPlataformaPage() {
       .finally(() => setChannelLoading(false))
   }, [connected, channelKey])
 
-  // Kick blocks server-side requests for followers_count — fetch client-side from browser
+  // Kick blocks server-side requests — fetch client-side for followers + live status (v2 API)
   useEffect(() => {
     if (!username) return
     const slug = username.toLowerCase()
     fetch(`https://kick.com/api/v2/channels/${slug}`)
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.followers_count != null) setFollowers(d.followers_count) })
+      .then(d => {
+        if (!d) return
+        if (d.followers_count != null) setFollowers(d.followers_count)
+        // v2 livestream is null when offline, object when live
+        const live = !!d.livestream
+        setIsLive(live)
+        if (live) {
+          setViewerCount(d.livestream.viewer_count ?? null)
+          setStreamTitle(d.livestream.session_title ?? null)
+          const cats = d.livestream.categories
+          if (cats?.length) setCategory(cats[0].name ?? null)
+        } else {
+          setViewerCount(null)
+          setStreamTitle(null)
+        }
+      })
       .catch(() => {})
   }, [username])
 
