@@ -172,50 +172,80 @@ async function handleIaChat(
   rawText: string,
   chatter: string,
 ): Promise<void> {
-  if (!process.env.ANTHROPIC_API_KEY) return
+  console.log('[ia-chat] start — broadcaster:', broadcasterId, 'chatter:', chatter, 'text:', rawText.slice(0, 60))
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.log('[ia-chat] skip: no ANTHROPIC_API_KEY')
+    return
+  }
 
   const db = getSupabaseAdmin()
 
   // Load IA config
-  const { data: cfgRow } = await db
+  const { data: cfgRow, error: cfgErr } = await db
     .from('overlay_configs')
     .select('config')
     .eq('broadcaster_id', broadcasterId)
     .eq('type', 'ia-chat')
     .maybeSingle()
 
-  if (!cfgRow?.config?.cfg) return
+  if (cfgErr) console.log('[ia-chat] db error:', cfgErr.message)
+  if (!cfgRow?.config?.cfg) {
+    console.log('[ia-chat] skip: no config found. raw:', JSON.stringify(cfgRow?.config).slice(0, 100))
+    return
+  }
   const cfg = cfgRow.config.cfg as IaChatCfg
-  if (!cfg.enabled) return
+  if (!cfg.enabled) {
+    console.log('[ia-chat] skip: disabled')
+    return
+  }
 
   // Ignore commands (!, /, ?)
-  if (cfg.ignore_commands && /^[!/?]/.test(rawText)) return
+  if (cfg.ignore_commands && /^[!/?]/.test(rawText)) {
+    console.log('[ia-chat] skip: ignore_commands')
+    return
+  }
 
   // Skip streamer's own messages unless configured
   const broadcasterLogin = ((event.broadcaster_user_login) as string) ?? ''
-  if (!cfg.reply_to_streamer && chatter.toLowerCase() === broadcasterLogin.toLowerCase()) return
+  if (!cfg.reply_to_streamer && chatter.toLowerCase() === broadcasterLogin.toLowerCase()) {
+    console.log('[ia-chat] skip: streamer msg, reply_to_streamer=false')
+    return
+  }
 
   // Blacklist
   if (cfg.blacklist) {
     const bl = cfg.blacklist.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-    if (bl.includes(chatter.toLowerCase())) return
+    if (bl.includes(chatter.toLowerCase())) {
+      console.log('[ia-chat] skip: blacklisted')
+      return
+    }
   }
 
   // Whitelist — if populated, only respond to those users
   const wlEntries = (cfg.whitelist ?? '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
   const hasWhitelist = wlEntries.length > 0
-  if (hasWhitelist && !wlEntries.includes(chatter.toLowerCase())) return
+  if (hasWhitelist && !wlEntries.includes(chatter.toLowerCase())) {
+    console.log('[ia-chat] skip: not in whitelist')
+    return
+  }
 
   // Words to ignore
   if (cfg.words_to_ignore) {
     const words = cfg.words_to_ignore.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-    if (words.some(w => rawText.toLowerCase().includes(w))) return
+    if (words.some(w => rawText.toLowerCase().includes(w))) {
+      console.log('[ia-chat] skip: ignored word')
+      return
+    }
   }
 
   // Lurk mode — only respond if bot name is mentioned
   if (cfg.lurk_mode) {
     const botName = (cfg.bot_name ?? '').trim().toLowerCase()
-    if (botName && !rawText.toLowerCase().includes(botName)) return
+    if (botName && !rawText.toLowerCase().includes(botName)) {
+      console.log('[ia-chat] skip: lurk_mode')
+      return
+    }
   }
 
   // Cooldown check
@@ -232,17 +262,25 @@ async function handleIaChat(
     const lastAt = state.user_cooldowns?.[chatter]
     if (lastAt) {
       const elapsed = (Date.now() - new Date(lastAt).getTime()) / 1000
-      if (elapsed < cooldown) return
+      if (elapsed < cooldown) {
+        console.log('[ia-chat] skip: cooldown', elapsed.toFixed(1), '/', cooldown)
+        return
+      }
     }
   }
 
   // Response chance (whitelist users always get a response)
   if (!hasWhitelist) {
     const chance = (cfg.response_chance ?? 40) / 100
-    if (Math.random() > chance) return
+    const roll = Math.random()
+    if (roll > chance) {
+      console.log('[ia-chat] skip: chance', roll.toFixed(2), '>', chance)
+      return
+    }
   }
 
   // Call Claude
+  console.log('[ia-chat] calling Claude...')
   const maxTokens = cfg.response_size === 'long' ? 300 : cfg.response_size === 'medium' ? 150 : 80
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -257,6 +295,8 @@ async function handleIaChat(
   if (block.type !== 'text') return
   const reply = block.text.trim()
   if (!reply) return
+
+  console.log('[ia-chat] reply:', reply.slice(0, 80))
 
   // Persist cooldown state
   await db.from('overlay_configs').upsert(
@@ -273,6 +313,7 @@ async function handleIaChat(
   if (delay > 0) await new Promise(r => setTimeout(r, delay * 1000))
 
   await sendChat(broadcasterId, reply)
+  console.log('[ia-chat] sent!')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
