@@ -17,7 +17,13 @@ export async function GET(req: NextRequest) {
       .limit(100),
   ])
 
-  return NextResponse.json({ config: cfg, recent: recent ?? [] })
+  // role_delays stored inside role_limits._delays to avoid needing a new DB column
+  const rawLimits = (cfg?.role_limits ?? {}) as Record<string, unknown>
+  const { _delays: roleDelays, ...pureLimits } = rawLimits
+  return NextResponse.json({
+    config: cfg ? { ...cfg, role_limits: pureLimits, role_delays: (roleDelays ?? {}) as Record<string, number> } : cfg,
+    recent: recent ?? [],
+  })
 }
 
 export async function PUT(req: NextRequest) {
@@ -29,14 +35,16 @@ export async function PUT(req: NextRequest) {
 
   const { data: existing } = await db.from('ai_image_config').select('id').maybeSingle()
 
+  // Store role_delays inside role_limits._delays — no extra DB column needed
+  const roleLimits = { ...(body.role_limits ?? {}), _delays: body.role_delays ?? {} }
+
   const payload = {
     ...(existing?.id ? { id: existing.id } : {}),
     enabled: body.enabled ?? true,
     cooldown_seconds: Number(body.cooldown_seconds ?? 300),
     max_per_day: Number(body.max_per_day ?? 10),
     allowed_roles: body.allowed_roles ?? ['admin', 'moderador', 'vip'],
-    role_limits: body.role_limits ?? {},
-    role_delays: body.role_delays ?? {},
+    role_limits: roleLimits,
     updated_at: new Date().toISOString(),
   }
 

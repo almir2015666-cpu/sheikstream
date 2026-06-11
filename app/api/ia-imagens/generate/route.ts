@@ -43,10 +43,13 @@ export async function POST(req: NextRequest) {
 
   if (cfgRes.data) {
     try {
-      const roleLimits: Record<string, number> = (cfg as Record<string, unknown>).role_limits as Record<string, number> ?? {}
-      const roleDelays: Record<string, number>  = (cfg as Record<string, unknown>).role_delays  as Record<string, number>  ?? {}
-      const userMaxPerDay  = roleLimits[userRole ?? ''] ?? cfg.max_per_day
-      const userCooldown   = roleDelays[userRole ?? '']  ?? cfg.cooldown_seconds
+      const rawLimits  = ((cfg as Record<string, unknown>).role_limits ?? {}) as Record<string, unknown>
+      const roleDelays: Record<string, number> = (rawLimits._delays ?? {}) as Record<string, number>
+      const roleLimits: Record<string, number> = Object.fromEntries(
+        Object.entries(rawLimits).filter(([k]) => k !== '_delays').map(([k, v]) => [k, Number(v)])
+      )
+      const userMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
+      const userCooldown  = roleDelays[userRole ?? ''] ?? cfg.cooldown_seconds
 
       const since = new Date(Date.now() - userCooldown * 1000).toISOString()
       const { data: recent } = await db.from('ai_image_generations')

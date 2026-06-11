@@ -195,8 +195,16 @@ export default function AdminPage() {
   }
   const saveAiCfg = async () => {
     setAiSaving(true)
-    await fetch('/api/admin/ia-imagens/config', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify(aiCfg) })
-    setAiSaving(false); setAiSaved(true); setTimeout(() => setAiSaved(false), 2500)
+    try {
+      const res = await fetch('/api/admin/ia-imagens/config', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify(aiCfg) })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        alert(`Erro ao salvar: ${d.error ?? `HTTP ${res.status}`}`)
+      } else {
+        setAiSaved(true); setTimeout(() => setAiSaved(false), 2500)
+      }
+    } catch { alert('Erro de conexão ao salvar') }
+    setAiSaving(false)
   }
   const [userSearch, setUserSearch] = useState('')
   const [navSearch, setNavSearch] = useState('')

@@ -36,10 +36,13 @@ export async function GET(req: NextRequest) {
   // Cooldown remaining (skip if tables don't exist yet)
   let cooldownRemaining = 0
   let usedToday = 0
-  const roleLimits: Record<string, number>  = (cfg as Record<string, unknown>).role_limits  as Record<string, number>  ?? {}
-  const roleDelays: Record<string, number>  = (cfg as Record<string, unknown>).role_delays  as Record<string, number>  ?? {}
-  const effectiveMaxPerDay     = roleLimits[userRole ?? ''] ?? cfg.max_per_day
-  const effectiveCooldown      = roleDelays[userRole ?? ''] ?? cfg.cooldown_seconds
+  const rawLimits  = ((cfg as Record<string, unknown>).role_limits ?? {}) as Record<string, unknown>
+  const roleDelays: Record<string, number> = (rawLimits._delays ?? {}) as Record<string, number>
+  const roleLimits: Record<string, number> = Object.fromEntries(
+    Object.entries(rawLimits).filter(([k]) => k !== '_delays').map(([k, v]) => [k, Number(v)])
+  )
+  const effectiveMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
+  const effectiveCooldown  = roleDelays[userRole ?? ''] ?? cfg.cooldown_seconds
 
   if (cfgRes.data && !cfgRes.error) {
     try {
