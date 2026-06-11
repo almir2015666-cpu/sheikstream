@@ -111,10 +111,10 @@ export async function GET(req: NextRequest) {
 
   // Persist updated info if we found something
   if ((displayName && displayName !== row.kick_username) || (resolvedChannelId && resolvedChannelId !== row.kick_channel_id)) {
-    await db.from('user_tokens').update({
+    db.from('user_tokens').update({
       kick_username:   displayName || null,
       kick_channel_id: resolvedChannelId || null,
-    }).eq('user_id', user.id).catch(() => {})
+    }).eq('user_id', user.id).then(() => {})
   }
 
   // Fetch channel stats (followers, live status)
