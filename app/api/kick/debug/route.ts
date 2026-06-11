@@ -30,47 +30,39 @@ export async function GET(req: NextRequest) {
   // Decode JWT payload (no verification — just to see claims)
   const jwtClaims = decodeJwt(token)
 
-  // Try /users/me
-  let usersMe: unknown = null
-  let usersMeStatus = 0
-  try {
-    const r = await fetch('https://api.kick.com/public/v1/users/me', {
-      headers: { Authorization: `Bearer ${token}`, 'Client-Id': clientId },
-    })
-    usersMeStatus = r.status
-    usersMe = r.ok ? await r.json() : await r.text()
-  } catch (e) { usersMe = String(e) }
+  const h = { Authorization: `Bearer ${token}`, 'Client-Id': clientId }
+  const hNoClient = { Authorization: `Bearer ${token}` }
 
-  // Try /channels with broadcaster_user_id if we have it
-  let channelsByBid: unknown = null
-  if (row.kick_channel_id) {
+  async function probe(label: string, url: string, headers: Record<string, string> = h) {
     try {
-      const r = await fetch(`https://api.kick.com/public/v1/channels?broadcaster_user_id=${row.kick_channel_id}`, {
-        headers: { Authorization: `Bearer ${token}`, 'Client-Id': clientId },
-      })
-      channelsByBid = r.ok ? await r.json() : `${r.status}: ${await r.text()}`
-    } catch (e) { channelsByBid = String(e) }
+      const r = await fetch(url, { headers })
+      const body = r.ok ? await r.json() : await r.text()
+      return { label, status: r.status, body }
+    } catch (e) { return { label, status: -1, body: String(e) } }
   }
 
-  // Try legacy API lookup by channel_id
-  let legacyUser: unknown = null
-  if (row.kick_channel_id) {
-    try {
-      const r = await fetch(`https://kick.com/api/v2/users/${row.kick_channel_id}`)
-      legacyUser = r.ok ? await r.json() : `${r.status}: ${await r.text()}`
-    } catch (e) { legacyUser = String(e) }
-  }
+  const results = await Promise.all([
+    // OIDC userinfo (standard endpoint for OAuth 2.0 providers)
+    probe('oidc_userinfo',       'https://id.kick.com/oauth/userinfo', hNoClient),
+    probe('oidc_userinfo_cid',   'https://id.kick.com/oauth/userinfo'),
+    // Kick public v1 variants
+    probe('v1_users_me',         'https://api.kick.com/public/v1/users/me'),
+    probe('v1_user_me',          'https://api.kick.com/public/v1/user/me'),
+    probe('v1_users',            'https://api.kick.com/public/v1/users'),
+    probe('v1_channels_authed',  'https://api.kick.com/public/v1/channels'),
+    probe('v1_channels_me',      'https://api.kick.com/public/v1/channels/me'),
+    // Token introspect
+    probe('introspect',          'https://id.kick.com/oauth/introspect', hNoClient),
+  ])
 
   return NextResponse.json({
     db: {
-      kick_username: row.kick_username,
+      kick_username:  row.kick_username,
       kick_channel_id: row.kick_channel_id,
-      token_prefix: token.slice(0, 20) + '...',
-      is_jwt: token.split('.').length === 3,
+      token_prefix:   token.slice(0, 20) + '...',
+      is_jwt:         token.split('.').length === 3,
     },
     jwt_claims: jwtClaims,
-    users_me: { status: usersMeStatus, body: usersMe },
-    channels_by_bid: channelsByBid,
-    legacy_user: legacyUser,
+    probes: results,
   })
 }
