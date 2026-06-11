@@ -100,7 +100,7 @@ type IaChatCfg = {
   generated_prompt: string
 }
 
-type IaState = { user_cooldowns?: Record<string, string> }
+type IaState = { user_cooldowns?: Record<string, string>; global_last_at?: string }
 
 const IA_LANGS: Record<string, string> = {
   'pt-BR': 'Português (BR)',
@@ -250,15 +250,25 @@ async function handleIaChat(
 
   // Cooldown check
   const cooldown = cfg.cooldown_user ?? 30
-  if (cooldown > 0) {
-    const { data: stateRow } = await db
-      .from('overlay_configs')
-      .select('config')
-      .eq('broadcaster_id', broadcasterId)
-      .eq('type', 'ia-chat-state')
-      .maybeSingle()
+  const { data: stateRow } = await db
+    .from('overlay_configs')
+    .select('config')
+    .eq('broadcaster_id', broadcasterId)
+    .eq('type', 'ia-chat-state')
+    .maybeSingle()
 
-    const state = (stateRow?.config ?? {}) as IaState
+  const state = (stateRow?.config ?? {}) as IaState
+
+  // Global cooldown — prevent bot from responding multiple times in rapid succession (anti-loop)
+  if (state.global_last_at) {
+    const elapsed = (Date.now() - new Date(state.global_last_at).getTime()) / 1000
+    if (elapsed < Math.max(cooldown, 5)) {
+      console.log('[ia-chat] skip: global cooldown', elapsed.toFixed(1))
+      return
+    }
+  }
+
+  if (cooldown > 0) {
     const lastAt = state.user_cooldowns?.[chatter]
     if (lastAt) {
       const elapsed = (Date.now() - new Date(lastAt).getTime()) / 1000
@@ -298,13 +308,14 @@ async function handleIaChat(
 
   console.log('[ia-chat] reply:', reply.slice(0, 80))
 
-  // Persist cooldown state
+  // Persist cooldown state (merge with existing cooldowns)
+  const now = new Date().toISOString()
+  const newState: IaState = {
+    global_last_at: now,
+    user_cooldowns: { ...(state.user_cooldowns ?? {}), [chatter]: now },
+  }
   await db.from('overlay_configs').upsert(
-    {
-      broadcaster_id: broadcasterId,
-      type: 'ia-chat-state',
-      config: { user_cooldowns: { [chatter]: new Date().toISOString() } } satisfies IaState,
-    },
+    { broadcaster_id: broadcasterId, type: 'ia-chat-state', config: newState },
     { onConflict: 'broadcaster_id,type' }
   )
 

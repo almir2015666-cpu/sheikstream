@@ -339,7 +339,7 @@ export default function IaChatPage() {
             { key: 'mention_user'      as const, label: 'Mencionar o usuário',      desc: 'Inclui o @nome de quem a IA está respondendo' },
             { key: 'ignore_commands'   as const, label: 'Ignorar comandos (!, /, ?)', desc: 'Não responde a mensagens que parecem comandos de bot' },
             { key: 'reply_to_streamer' as const, label: 'Responder ao streamer',    desc: 'Permite que a IA responda o próprio dono do canal' },
-            { key: 'lurk_mode'         as const, label: 'Modo lurk',                desc: 'Fica em silêncio mas "observa" — responde só se for mencionada', badge: true },
+            { key: 'lurk_mode'         as const, label: 'Responder só quando chamado pelo nome', desc: 'Ignora todas as mensagens e só responde quando alguém mencionar o nome/apelido da IA', badge: false },
             { key: 'react_emotes'      as const, label: 'Reagir a emotes',          desc: 'Inclui emotes e reações nas respostas quando adequado' },
             { key: 'memory'            as const, label: 'Memória de conversa',       desc: 'Lembra das últimas mensagens para contextualizar respostas' },
           ].map(item => (
