@@ -91,22 +91,30 @@ export async function GET(req: NextRequest) {
     console.warn('[kick/channel] users/me status:', profileRes.status)
   }
 
-  // If still no username, try looking up by broadcaster_user_id via public v1 API
+  // If still no username, try multiple lookup strategies by ID
   if (!displayName && resolvedChannelId) {
-    try {
-      const res = await fetch(`https://api.kick.com/public/v1/channels?broadcaster_user_id=${resolvedChannelId}`, {
-        headers: authHeaders(),
-      })
-      if (res.ok) {
+    const idLookups = [
+      // Kick public v1: query by broadcaster_user_id
+      () => fetch(`https://api.kick.com/public/v1/channels?broadcaster_user_id=${resolvedChannelId}`, { headers: authHeaders() }),
+      // Kick legacy v2: look up user by numeric ID (no auth needed)
+      () => fetch(`https://kick.com/api/v2/users/${resolvedChannelId}`),
+      // Kick legacy v2: channel by numeric ID (might work as slug)
+      () => fetch(`https://kick.com/api/v2/channels/${resolvedChannelId}`),
+    ]
+    for (const lookup of idLookups) {
+      if (displayName) break
+      try {
+        const res = await lookup()
+        if (!res.ok) continue
         const d = await res.json()
         const raw = d?.data ?? d
         const item = Array.isArray(raw) ? raw[0] : raw
         if (item) {
-          displayName = String(item.slug ?? item.channel_name ?? item.username ?? item.name ?? '') || displayName
-          console.log('[kick/channel] channels-by-id:', JSON.stringify(item).slice(0, 200))
+          const found = String(item.slug ?? item.username ?? item.channel?.slug ?? item.name ?? '') || ''
+          if (found) { displayName = found; console.log('[kick/channel] id-lookup found:', found) }
         }
-      }
-    } catch { /* ignore */ }
+      } catch { /* ignore */ }
+    }
   }
 
   // Persist updated info if we found something

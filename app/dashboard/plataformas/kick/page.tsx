@@ -302,92 +302,101 @@ export default function KickPlataformaPage() {
         </div>
 
         {/* Channel card + Repasse */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.8rem', marginBottom: '0.8rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '0.8rem', marginBottom: '0.8rem', alignItems: 'start' }}>
 
           {/* Channel */}
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.2rem 1.3rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.3rem 1.4rem' }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div style={{ width: 44, height: 44, borderRadius: '12px', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', color: C.primary, flexShrink: 0, boxShadow: `0 0 12px ${C.primary}22` }}>KI</div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {channelLoading ? '...' : (username || 'Canal Kick')}
-                </div>
-                {channelId && <div style={{ fontSize: '0.68rem', color: C.dim, marginTop: '0.1rem' }}>ID: {channelId}</div>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.1rem' }}>
+              <div style={{ width: 42, height: 42, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.95rem', color: C.primary, flexShrink: 0 }}>KI</div>
+              <div style={{ fontWeight: 800, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {channelLoading ? '...' : (username || 'Canal Kick')}
               </div>
             </div>
 
             {/* Token warning */}
             {!tokenValid && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.65rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '7px', fontSize: '0.7rem', color: '#fbbf24', fontWeight: 600 }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                token expirado — reconecte em Conexões
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.65rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '7px', fontSize: '0.7rem', color: '#fbbf24', fontWeight: 600, marginBottom: '0.9rem' }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                token expirado — <a href="/dashboard/conexoes" style={{ color: '#fbbf24', textDecoration: 'underline' }}>reconectar</a>
               </div>
             )}
 
-            {/* Stats */}
-            <div style={{ display: 'flex', gap: '1.5rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: C.dim, marginBottom: '0.25rem' }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  Seguidores
+            {/* Stats row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              {/* Followers */}
+              <div style={{ background: 'rgba(255,255,255,0.025)', borderRadius: '10px', padding: '0.75rem 0.9rem' }}>
+                <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.4rem', fontWeight: 600 }}>Seguidores</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1 }}>
+                  {channelLoading ? '...' : (followers !== null ? followers.toLocaleString('pt-BR') : '0')}
                 </div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>
-                  {channelLoading ? '...' : (followers !== null ? followers.toLocaleString('pt-BR') : '—')}
+                <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.25rem' }}>
+                  {stats?.total_subs ?? 0}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
-                  Status
-                </div>
+
+              {/* Live status */}
+              <div style={{ background: 'rgba(255,255,255,0.025)', borderRadius: '10px', padding: '0.75rem 0.9rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.35rem' }}>
                 {isLive ? (
-                  <div>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                      AO VIVO
-                    </span>
-                    {viewerCount !== null && <div style={{ fontSize: '0.65rem', color: C.vdim, marginTop: '0.1rem' }}>{viewerCount.toLocaleString('pt-BR')} espectadores</div>}
-                    {streamTitle && <div style={{ fontSize: '0.65rem', color: C.dim, marginTop: '0.1rem', maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{streamTitle}</div>}
-                  </div>
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block', boxShadow: '0 0 6px #ef4444' }} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>AO VIVO</span>
+                    </div>
+                    {viewerCount !== null && <div style={{ fontSize: '0.68rem', color: C.vdim }}>{viewerCount.toLocaleString('pt-BR')} espectadores</div>}
+                    {streamTitle && <div style={{ fontSize: '0.68rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{streamTitle}</div>}
+                  </>
                 ) : (
-                  <div style={{ fontSize: '0.75rem', color: C.vdim }}>Canal offline</div>
+                  <>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.vdim} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                    <div style={{ fontSize: '0.72rem', color: C.vdim }}>Canal offline no momento</div>
+                  </>
                 )}
               </div>
             </div>
-
           </div>
 
           {/* Repasse */}
-          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.2rem 1.3rem' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.3rem 1.4rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '1rem' }}>
-              <span style={{ color: C.primary }}>$</span>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: C.text }}>Estimativa de Repasse Kick</span>
-              <span style={{ marginLeft: 'auto', fontSize: '0.67rem', color: C.dim }}>estimativa</span>
+              <span style={{ color: C.primary, fontWeight: 700 }}>$</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>Estimativa de Repasse Kick</span>
+              <span style={{ marginLeft: 'auto', fontSize: '0.67rem', color: C.dim, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                estimativa
+              </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1.1rem' }}>
               {[
-                { label: 'Arrecadado bruto', value: fmtBRL(bruto),   sub: 'pago pelos subs' },
-                { label: 'Repasse líquido',  value: fmtBRL(liquido), sub: '50% do bruto',     green: true },
+                { label: 'Arrecadado bruto',  value: fmtBRL(bruto),   sub: 'pago pelos subs' },
+                { label: 'Repasse líquido',   value: fmtBRL(liquido), sub: '50% do bruto',   green: true },
                 { label: 'Equivalente em U$', value: `U$ ${(liquido / USD_RATE).toFixed(2)}`, sub: `cotação R$ ${USD_RATE.toFixed(2)}` },
               ].map(r => (
-                <div key={r.label} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '8px', padding: '0.65rem' }}>
-                  <div style={{ fontSize: '0.65rem', color: C.dim, marginBottom: '0.25rem' }}>{r.label}</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: (r as {green?: boolean}).green ? C.primary : C.text }}>{r.value}</div>
-                  <div style={{ fontSize: '0.63rem', color: C.vdim }}>{r.sub}</div>
+                <div key={r.label} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '8px', padding: '0.7rem 0.8rem' }}>
+                  <div style={{ fontSize: '0.65rem', color: C.dim, marginBottom: '0.3rem' }}>{r.label}</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: (r as {green?: boolean}).green ? C.primary : C.text }}>{r.value}</div>
+                  <div style={{ fontSize: '0.63rem', color: C.vdim, marginTop: '0.1rem' }}>{r.sub}</div>
                 </div>
               ))}
             </div>
-            <div style={{ marginBottom: '0.4rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: C.dim, marginBottom: '0.35rem' }}>
-                <span>Meta de pagamento Kick <strong style={{ color: C.text }}>U${PAYMENT_GOAL_USD} · {fmtBRL(goalBRL)}</strong></span>
+            {/* Progress */}
+            <div style={{ marginBottom: '0.6rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: C.dim, marginBottom: '0.3rem' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                  Meta de pagamento Kick <strong style={{ color: C.text }}>U${PAYMENT_GOAL_USD} · {fmtBRL(goalBRL)}</strong>
+                </span>
                 <span>faltam <strong style={{ color: C.text }}>U${Math.max(0, PAYMENT_GOAL_USD - liquido / USD_RATE).toFixed(2)} ({fmtBRL(Math.max(0, goalBRL - liquido))})</strong> <span style={{ color: C.primary }}>{progressPct.toFixed(1)}%</span></span>
               </div>
-              <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: '0.3rem' }}>
                 <div style={{ height: '100%', background: C.primary, borderRadius: 3, width: `${progressPct}%`, transition: 'width 0.4s', boxShadow: `0 0 8px ${C.primary}80` }} />
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: C.vdim }}>
+                <span style={{ color: C.primary }}>U$ {(liquido / USD_RATE).toFixed(2)}</span>
+                <span>U$ {PAYMENT_GOAL_USD.toFixed(2)}</span>
+              </div>
             </div>
-            <div style={{ fontSize: '0.7rem', color: C.dim, marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ fontSize: '0.7rem', color: C.dim, display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.4rem', borderTop: `1px solid ${C.border}` }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               Próximo pagamento estimado: <strong style={{ color: C.text }}>15 de julho de 2026</strong> — se meta for atingida
               <a href="https://kick.com" target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', color: C.primary, fontSize: '0.68rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
