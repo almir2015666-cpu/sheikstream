@@ -44,6 +44,8 @@ export default function IaVozPage() {
   const [apiErr, setApiErr]         = useState('')
   const [log, setLog]               = useState<string[]>([])
   const [noSupport, setNoSupport]   = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [saved, setSaved]           = useState(false)
 
   // Settings
   const [lang, setLang]             = useState('pt-BR')
@@ -229,6 +231,33 @@ export default function IaVozPage() {
     if (!SR) setNoSupport(true)
   }, [])
 
+  // Load saved config on mount
+  useEffect(() => {
+    fetch('/api/ia-chat/voice/config').then(r => r.json()).then(d => {
+      if (!d.cfg) return
+      const c = d.cfg
+      if (c.lang)         setLang(c.lang)
+      if (c.wakeEnabled !== undefined) setWakeEnabled(c.wakeEnabled)
+      if (c.wakeWord !== undefined)    setWakeWord(c.wakeWord)
+      if (c.cooldown !== undefined)    setCooldown(c.cooldown)
+      if (c.minWords !== undefined)    setMinWords(c.minWords)
+      if (c.ttsEnabled !== undefined)  setTtsEnabled(c.ttsEnabled)
+      if (c.sendChat !== undefined)    setSendChat(c.sendChat)
+      if (c.ignoreWords !== undefined) setIgnoreWords(c.ignoreWords)
+    }).catch(() => {/* ignore */})
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    await fetch('/api/ia-chat/voice/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cfg: { lang, wakeEnabled, wakeWord, cooldown, minWords, ttsEnabled, sendChat, ignoreWords } }),
+    })
+    setSaving(false); setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
   useEffect(() => { if (histRef.current) histRef.current.scrollTop = 0 }, [history])
 
   const P = '#9b30ff', TXT = '#e8e6f8', DIM = 'rgba(232,230,248,.35)', G = '#39ff14'
@@ -354,6 +383,11 @@ export default function IaVozPage() {
           <Row label="Ler resposta em voz alta (TTS)" desc="O navegador fala a resposta da IA em voz alta" on={ttsEnabled} onChange={() => setTtsEnabled(v => !v)} />
         </div>
       </div>
+
+      {/* Save button */}
+      <button onClick={save} disabled={saving || saved} style={{ width:'100%', padding:'.7rem', borderRadius:10, cursor: saving||saved ? 'default' : 'pointer', background: saved ? 'rgba(34,197,94,.15)' : 'rgba(155,48,255,.15)', color: saved ? '#22c55e' : P, fontSize:'.85rem', fontWeight:700, marginBottom:'1.25rem', transition:'all .2s', border: `1px solid ${saved ? 'rgba(34,197,94,.3)' : 'rgba(155,48,255,.3)'}` }}>
+        {saving ? 'Salvando...' : saved ? '✓ Configurações salvas' : 'Salvar configurações'}
+      </button>
 
       {/* Log */}
       {log.length > 0 && (
