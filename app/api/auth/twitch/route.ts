@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     client_id: process.env.TWITCH_CLIENT_ID!,
     redirect_uri: REDIRECT_URI,
     response_type: 'code',
-    scope: 'user:read:email user:read:chat user:write:chat chat:edit channel:read:subscriptions channel:read:goals moderator:read:followers bits:read',
+    scope: 'user:read:email user:read:chat user:write:chat user:bot chat:edit channel:read:subscriptions channel:read:goals moderator:read:followers bits:read channel:bot',
     force_verify: 'true',
     state: popup ? 'popup' : 'normal',
   })
