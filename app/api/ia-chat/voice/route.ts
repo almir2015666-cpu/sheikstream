@@ -112,16 +112,25 @@ export async function POST(req: NextRequest) {
 
   // Send to Twitch chat
   const { data: tok } = await db.from('user_tokens').select('twitch_token').eq('user_id', user.id).single()
-  if (tok?.twitch_token) {
-    await fetch('https://api.twitch.tv/helix/chat/messages', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${tok.twitch_token}`,
-        'Client-Id': process.env.TWITCH_CLIENT_ID!,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ broadcaster_id: user.id, sender_id: user.id, message: reply }),
-    }).catch(e => console.error('[ia-voz] sendChat error:', e))
+  if (!tok?.twitch_token) {
+    console.error('[ia-voz] no twitch_token for user', user.id)
+    return NextResponse.json({ reply, warn: 'no twitch token' })
+  }
+
+  const chatRes = await fetch('https://api.twitch.tv/helix/chat/messages', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tok.twitch_token}`,
+      'Client-Id': process.env.TWITCH_CLIENT_ID!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ broadcaster_id: user.id, sender_id: user.id, message: reply }),
+  })
+
+  if (!chatRes.ok) {
+    const errBody = await chatRes.text()
+    console.error('[ia-voz] sendChat failed:', chatRes.status, errBody)
+    return NextResponse.json({ reply, warn: `chat error ${chatRes.status}: ${errBody}` })
   }
 
   return NextResponse.json({ reply })
