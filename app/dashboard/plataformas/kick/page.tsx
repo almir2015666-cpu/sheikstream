@@ -33,9 +33,12 @@ export default function KickPlataformaPage() {
 
   // Live channel info
   const [followers, setFollowers] = useState<number | null>(null)
+  const [activeSubs, setActiveSubs] = useState<number>(0)
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
   const [isLive, setIsLive] = useState(false)
   const [streamTitle, setStreamTitle] = useState<string | null>(null)
   const [viewerCount, setViewerCount] = useState<number | null>(null)
+  const [category, setCategory] = useState<string | null>(null)
   const [tokenValid, setTokenValid] = useState(true)
   const [channelLoading, setChannelLoading] = useState(false)
   const [channelKey, setChannelKey] = useState(0)
@@ -118,12 +121,15 @@ export default function KickPlataformaPage() {
       .then(r => r.ok ? r.json() : r.status === 404 ? { token_valid: false } : null)
       .then(d => {
         if (!d) return
-        if (d.username)    setUsername(d.username)
-        if (d.channel_id)  setChannelId(d.channel_id)
+        if (d.username)         setUsername(d.username)
+        if (d.channel_id)       setChannelId(d.channel_id)
+        if (d.profile_picture)  setProfilePicture(d.profile_picture)
         setFollowers(d.followers ?? null)
+        setActiveSubs(d.active_subs ?? 0)
         setIsLive(!!d.is_live)
         setStreamTitle(d.stream_title ?? null)
         setViewerCount(d.viewer_count ?? null)
+        setCategory(d.category ?? null)
         setTokenValid(d.token_valid !== false)
       })
       .catch(() => {})
@@ -308,9 +314,16 @@ export default function KickPlataformaPage() {
           <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '16px', padding: '1.3rem 1.4rem' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.1rem' }}>
-              <div style={{ width: 42, height: 42, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.95rem', color: C.primary, flexShrink: 0 }}>KI</div>
-              <div style={{ fontWeight: 800, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {channelLoading ? '...' : (username || 'Canal Kick')}
+              {profilePicture ? (
+                <img src={profilePicture} alt="" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: `1px solid ${C.primaryB}`, flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 42, height: 42, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.primaryB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.95rem', color: C.primary, flexShrink: 0 }}>KI</div>
+              )}
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {channelLoading ? '...' : (username || 'Canal Kick')}
+                </div>
+                {username && <div style={{ fontSize: '0.68rem', color: C.dim, marginTop: '0.1rem' }}>kick.com/{username.toLowerCase()}</div>}
               </div>
             </div>
 
@@ -322,21 +335,21 @@ export default function KickPlataformaPage() {
               </div>
             )}
 
-            {/* Stats row */}
+            {/* Stats grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
               {/* Followers */}
               <div style={{ background: 'rgba(255,255,255,0.025)', borderRadius: '10px', padding: '0.75rem 0.9rem' }}>
-                <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.4rem', fontWeight: 600 }}>Seguidores</div>
+                <div style={{ fontSize: '0.65rem', color: C.dim, marginBottom: '0.35rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Seguidores</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1 }}>
-                  {channelLoading ? '...' : (followers !== null ? followers.toLocaleString('pt-BR') : '0')}
+                  {channelLoading ? '...' : (followers !== null ? followers.toLocaleString('pt-BR') : '—')}
                 </div>
-                <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.25rem' }}>
-                  {stats?.total_subs ?? 0}
+                <div style={{ fontSize: '0.65rem', color: C.vdim, marginTop: '0.25rem' }}>
+                  {activeSubs} sub{activeSubs !== 1 ? 's' : ''} ativo{activeSubs !== 1 ? 's' : ''}
                 </div>
               </div>
 
               {/* Live status */}
-              <div style={{ background: 'rgba(255,255,255,0.025)', borderRadius: '10px', padding: '0.75rem 0.9rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.35rem' }}>
+              <div style={{ background: 'rgba(255,255,255,0.025)', borderRadius: '10px', padding: '0.75rem 0.9rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.3rem' }}>
                 {isLive ? (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -344,11 +357,12 @@ export default function KickPlataformaPage() {
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>AO VIVO</span>
                     </div>
                     {viewerCount !== null && <div style={{ fontSize: '0.68rem', color: C.vdim }}>{viewerCount.toLocaleString('pt-BR')} espectadores</div>}
-                    {streamTitle && <div style={{ fontSize: '0.68rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{streamTitle}</div>}
+                    {streamTitle && <div style={{ fontSize: '0.65rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{streamTitle}</div>}
+                    {category && <div style={{ fontSize: '0.63rem', color: C.primary, fontWeight: 600 }}>{category}</div>}
                   </>
                 ) : (
                   <>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.vdim} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.vdim} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
                     <div style={{ fontSize: '0.72rem', color: C.vdim }}>Canal offline no momento</div>
                   </>
                 )}
