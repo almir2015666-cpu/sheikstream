@@ -46,10 +46,16 @@ export async function PATCH(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     // Send email reply if there's a reply and a destination email
+    let emailSent = false
+    let emailError: string | null = null
     if (admin_reply?.trim() && ticket?.reply_email) {
       const key = process.env.RESEND_API_KEY
-      const from = process.env.RESEND_FROM_EMAIL || 'SheikSTREAM <onboarding@resend.dev>'
-      if (key) {
+      const from = process.env.RESEND_FROM_EMAIL
+      if (!key) {
+        emailError = 'RESEND_API_KEY não configurada'
+      } else if (!from) {
+        emailError = 'RESEND_FROM_EMAIL não configurada'
+      } else {
         const html = `
           <div style="font-family:-apple-system,sans-serif;max-width:580px;margin:0 auto;padding:32px;background:#08090d;border-radius:16px;color:#e8e6f8">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
@@ -62,15 +68,25 @@ export async function PATCH(req: NextRequest) {
             <p style="font-size:0.78rem;color:rgba(232,230,248,0.3);margin-top:28px">Para responder ou abrir novo ticket, acesse nossa plataforma.</p>
           </div>
         `
-        fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from, to: [ticket.reply_email], subject: `Re: ${ticket.subject ?? 'Ticket de suporte'} — SheikSTREAM`, html }),
-        }).catch(() => {})
+        try {
+          const res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from, to: [ticket.reply_email], subject: `Re: ${ticket.subject ?? 'Ticket de suporte'} — SheikSTREAM`, html }),
+          })
+          if (res.ok) {
+            emailSent = true
+          } else {
+            const d = await res.json().catch(() => ({}))
+            emailError = d?.message ?? d?.name ?? `Resend HTTP ${res.status}`
+          }
+        } catch (e) {
+          emailError = String(e)
+        }
       }
     }
 
-    return NextResponse.json({ ok: true, email_sent: !!(admin_reply?.trim() && ticket?.reply_email && process.env.RESEND_API_KEY) })
+    return NextResponse.json({ ok: true, email_sent: emailSent, email_error: emailError })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }

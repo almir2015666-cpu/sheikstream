@@ -362,10 +362,16 @@ export default function IAImagensPage() {
           </div>
 
           {/* Cooldown */}
-          {cfg?.config?.cooldown_seconds && (
+          {cdTotal > 0 && (
             <div style={{ background: '#0d0f18', border: `1px solid ${cd > 0 ? 'rgba(251,191,36,.25)' : 'rgba(255,255,255,.07)'}`, borderRadius: 10, padding: '.55rem .9rem', minWidth: 120, transition: 'border-color .3s' }}>
               <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'rgba(232,230,248,.3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: '.35rem' }}>Cooldown</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: cd > 0 ? '#fbbf24' : '#22c55e' }}>{cd > 0 ? fmtTime(cd) : 'Livre'}</div>
+              {cd > 0
+                ? <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fbbf24' }}>{fmtTime(cd)}</div>
+                : <>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#22c55e' }}>Livre</div>
+                    <div style={{ fontSize: '.6rem', color: 'rgba(232,230,248,.3)', marginTop: '.15rem' }}>{fmtTime(cdTotal)} após gerar</div>
+                  </>
+              }
               {cd > 0 && (
                 <div className="ia-prog-bar" style={{ marginTop: '.4rem' }}>
                   <div className="ia-prog-fill" style={{ width: `${cdPct}%`, background: 'linear-gradient(90deg,#fbbf24,#f59e0b)' }} />

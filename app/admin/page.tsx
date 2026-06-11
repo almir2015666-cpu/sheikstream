@@ -476,7 +476,10 @@ export default function AdminPage() {
   async function updateTicket(id: string, updates: { status?: string; admin_reply?: string }) {
     setTicketUpdating(id)
     try {
-      await fetch('/api/admin/tickets', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify({ id, ...updates }) })
+      const res = await fetch('/api/admin/tickets', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify({ id, ...updates }) })
+      const d = await res.json().catch(() => ({}))
+      if (updates.admin_reply && d.email_error) alert(`Resposta salva, mas e-mail falhou: ${d.email_error}`)
+      else if (updates.admin_reply && d.email_sent) alert('✓ Resposta salva e e-mail enviado!')
       const now = new Date().toISOString()
       setTickets(prev => prev.map(t => {
         if (t.id !== id) return t
