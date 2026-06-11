@@ -79,9 +79,16 @@ export async function GET(req: NextRequest) {
     })
     if (userRes.ok) {
       const data = await userRes.json()
-      const u = data?.data ?? data
-      kickChannelId = String(u.id ?? u.user_id ?? u.channel_id ?? '')
-      kickUsername = String(u.username ?? u.name ?? u.slug ?? '')
+      const raw = data?.data ?? data
+      const u = (Array.isArray(raw) ? raw[0] : raw) ?? {}
+      console.log('[kick/callback] users/me raw:', JSON.stringify(u).slice(0, 500))
+      // Check top-level and nested channel object
+      const ch = (u.channel ?? {}) as Record<string, unknown>
+      kickChannelId = String(u.id ?? u.user_id ?? u.channel_id ?? u.broadcaster_user_id ?? ch.id ?? '')
+      kickUsername  = String(u.username ?? u.slug ?? u.login ?? ch.slug ?? ch.name ?? u.name ?? u.display_name ?? '')
+      console.log('[kick/callback] extracted — id:', kickChannelId, 'username:', kickUsername)
+    } else {
+      console.warn('[kick/callback] users/me failed:', userRes.status, await userRes.text())
     }
   } catch (e) {
     console.warn('[kick/callback] user fetch failed (non-fatal):', e)
