@@ -1908,116 +1908,136 @@ export default function AdminPage() {
           {view === 'notify' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Compose notification */}
-              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
-                <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>Enviar aviso aos usuários</h3>
-                <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>O aviso aparece no dashboard de todos os usuários ativos até ser removido.</p>
-
-                {/* Icon picker */}
-                <div style={{ marginBottom: '0.85rem' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>Ícone</div>
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {['📢','⚠️','🔔','✅','❌','🚀','🎉','💡','🔧','📅','🌐','🎮','💬','🏆','⭐'].map(ico => (
-                      <button key={ico} onClick={() => setNotifyForm(p => ({ ...p, icon: ico }))}
-                        style={{ width: 38, height: 38, fontSize: '1.3rem', borderRadius: '8px', border: `2px solid ${notifyForm.icon === ico ? C.primary : C.border}`, background: notifyForm.icon === ico ? C.primaryBg : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {ico}
-                      </button>
-                    ))}
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                {/* Card header */}
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(155,48,255,.12)', border: '1px solid rgba(155,48,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>📣</div>
+                  <div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>Enviar aviso aos usuários</div>
+                    <div style={{ fontSize: '0.72rem', color: C.dim, marginTop: '0.1rem' }}>Aparece no dashboard de todos os usuários ativos até ser removido</div>
                   </div>
                 </div>
 
-                {/* Color picker */}
-                <div style={{ marginBottom: '0.85rem' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>Cor</div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                    {['#9b30ff','#3b82f6','#22c55e','#f59e0b','#ef4444','#ec4899','#06b6d4','#f97316','#ffffff'].map(col => (
-                      <button key={col} onClick={() => setNotifyForm(p => ({ ...p, color: col }))}
-                        style={{ width: 28, height: 28, borderRadius: '50%', background: col, border: `3px solid ${notifyForm.color === col ? C.text : 'transparent'}`, cursor: 'pointer', outline: 'none', boxShadow: notifyForm.color === col ? `0 0 0 1px ${col}` : 'none' }} />
-                    ))}
-                    <input type="color" value={notifyForm.color} onChange={e => setNotifyForm(p => ({ ...p, color: e.target.value }))}
-                      style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', cursor: 'pointer', padding: 0, background: 'transparent' }} title="Cor personalizada" />
-                  </div>
-                </div>
+                <div style={{ padding: '1.25rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                  {/* Left column */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-                {/* Destinatário */}
-                <div style={{ marginBottom: '0.85rem' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>Destinatário</div>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={() => setNotifyForm(p => ({ ...p, target_username: '' }))}
-                      style={{ padding: '0.35rem 0.9rem', borderRadius: '7px', border: `1px solid ${!notifyForm.target_username ? C.primary + '60' : C.border}`, background: !notifyForm.target_username ? C.primaryBg : 'transparent', color: !notifyForm.target_username ? C.primary : C.muted, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-                      👥 Todos os usuários
-                    </button>
-                    <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
-                      <select
-                        value={notifyForm.target_username}
-                        onChange={e => setNotifyForm(p => ({ ...p, target_username: e.target.value }))}
-                        style={{ width: '100%', padding: '0.38rem 0.75rem', background: C.inputBg, border: `1px solid ${notifyForm.target_username ? C.primary + '60' : C.inputBorder}`, borderRadius: '7px', color: notifyForm.target_username ? C.text : C.dim, fontSize: '0.82rem', outline: 'none', appearance: 'auto' }}>
-                        <option value="">— Selecionar usuário específico —</option>
-                        {users.filter(u => u.status === 'approved').map(u => (
-                          <option key={u.id} value={u.platform_username ?? u.email ?? ''}>
-                            {u.platform_username || u.email || u.id.slice(0, 8)} ({u.platform})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  {notifyForm.target_username && (
-                    <div style={{ fontSize: '0.72rem', color: C.primary, marginTop: '0.35rem' }}>
-                      ↳ Aviso visível apenas para <strong>{notifyForm.target_username}</strong>
-                    </div>
-                  )}
-                </div>
-
-                {/* Quantas vezes */}
-                <div style={{ marginBottom: '0.85rem' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>Quantas vezes exibir</div>
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {[
-                      { label: 'Ilimitado', value: 0 },
-                      { label: '1×', value: 1 },
-                      { label: '2×', value: 2 },
-                      { label: '3×', value: 3 },
-                      { label: '5×', value: 5 },
-                    ].map(opt => (
-                      <button key={opt.value} onClick={() => setNotifyForm(p => ({ ...p, max_views: opt.value }))}
-                        style={{ padding: '0.35rem 0.85rem', borderRadius: '7px', border: `1px solid ${notifyForm.max_views === opt.value ? C.primary + '60' : C.border}`, background: notifyForm.max_views === opt.value ? C.primaryBg : 'transparent', color: notifyForm.max_views === opt.value ? C.primary : C.muted, fontSize: '0.8rem', fontWeight: notifyForm.max_views === opt.value ? 700 : 500, cursor: 'pointer' }}>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.3rem' }}>
-                    {notifyForm.max_views === 0 ? 'Aviso permanece até ser removido manualmente.' : `Aviso desaparece automaticamente após aparecer ${notifyForm.max_views}× para cada usuário.`}
-                  </div>
-                </div>
-
-                {/* Title (optional) */}
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Título (opcional)</div>
-                  <input value={notifyForm.title} onChange={e => setNotifyForm(p => ({ ...p, title: e.target.value }))} placeholder="Ex: Atualização da plataforma"
-                    style={{ width: '100%', padding: '0.55rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-
-                {/* Message */}
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Mensagem *</div>
-                  <textarea value={notifyForm.message} onChange={e => setNotifyForm(p => ({ ...p, message: e.target.value }))} placeholder="Escreva a mensagem para os usuários..." rows={3}
-                    style={{ width: '100%', padding: '0.55rem 0.75rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.85rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-                </div>
-
-                {/* Preview */}
-                {(notifyForm.message || notifyForm.title) && (
-                  <div style={{ background: `${notifyForm.color}15`, border: `1px solid ${notifyForm.color}40`, borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
-                    <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{notifyForm.icon}</span>
+                    {/* Destinatário */}
                     <div>
-                      {notifyForm.title && <div style={{ fontWeight: 700, fontSize: '0.84rem', color: notifyForm.color, marginBottom: '0.2rem' }}>{notifyForm.title}</div>}
-                      <div style={{ fontSize: '0.8rem', color: C.muted }}>{notifyForm.message}</div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Destinatário</div>
+                      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                        <button onClick={() => setNotifyForm(p => ({ ...p, target_username: '' }))}
+                          style={{ flex: 1, padding: '0.45rem 0.6rem', borderRadius: '8px', border: `1px solid ${!notifyForm.target_username ? C.primary + '60' : C.border}`, background: !notifyForm.target_username ? C.primaryBg : C.cardBgAlt, color: !notifyForm.target_username ? C.primary : C.muted, fontSize: '0.78rem', fontWeight: !notifyForm.target_username ? 700 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                          <span>👥</span> Todos
+                        </button>
+                        <button onClick={() => setNotifyForm(p => ({ ...p, target_username: p.target_username || (users.find(u => u.status === 'approved')?.platform_username ?? '') }))}
+                          style={{ flex: 1, padding: '0.45rem 0.6rem', borderRadius: '8px', border: `1px solid ${notifyForm.target_username ? C.primary + '60' : C.border}`, background: notifyForm.target_username ? C.primaryBg : C.cardBgAlt, color: notifyForm.target_username ? C.primary : C.muted, fontSize: '0.78rem', fontWeight: notifyForm.target_username ? 700 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                          <span>👤</span> Específico
+                        </button>
+                      </div>
+                      {notifyForm.target_username !== undefined && (
+                        <select value={notifyForm.target_username} onChange={e => setNotifyForm(p => ({ ...p, target_username: e.target.value }))}
+                          style={{ width: '100%', padding: '0.42rem 0.65rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: notifyForm.target_username ? C.text : C.dim, fontSize: '0.78rem', outline: 'none' }}>
+                          <option value="">— Selecionar usuário —</option>
+                          {users.filter(u => u.status === 'approved').map(u => (
+                            <option key={u.id} value={u.platform_username ?? u.email ?? ''}>
+                              {u.platform_username || u.email || u.id.slice(0, 8)} ({u.platform})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    {/* Exibições */}
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Exibições</div>
+                      <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        {[{ label: '∞', value: 0 }, { label: '1×', value: 1 }, { label: '2×', value: 2 }, { label: '3×', value: 3 }, { label: '5×', value: 5 }].map(opt => (
+                          <button key={opt.value} onClick={() => setNotifyForm(p => ({ ...p, max_views: opt.value }))}
+                            style={{ flex: 1, padding: '0.42rem 0', borderRadius: '8px', border: `1px solid ${notifyForm.max_views === opt.value ? C.primary + '60' : C.border}`, background: notifyForm.max_views === opt.value ? C.primaryBg : C.cardBgAlt, color: notifyForm.max_views === opt.value ? C.primary : C.muted, fontSize: '0.78rem', fontWeight: notifyForm.max_views === opt.value ? 700 : 500, cursor: 'pointer' }}>
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: '0.67rem', color: C.vdim, marginTop: '0.3rem' }}>
+                        {notifyForm.max_views === 0 ? 'Permanece até ser removido manualmente' : `Some após ${notifyForm.max_views}× para cada usuário`}
+                      </div>
+                    </div>
+
+                    {/* Título */}
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Título <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span></div>
+                      <input value={notifyForm.title} onChange={e => setNotifyForm(p => ({ ...p, title: e.target.value }))} placeholder="Ex: Atualização da plataforma"
+                        style={{ width: '100%', padding: '0.5rem 0.7rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.83rem', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+
+                    {/* Mensagem */}
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Mensagem <span style={{ color: C.primary }}>*</span></div>
+                      <textarea value={notifyForm.message} onChange={e => setNotifyForm(p => ({ ...p, message: e.target.value }))} placeholder="Escreva a mensagem..." rows={4}
+                        style={{ width: '100%', padding: '0.5rem 0.7rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.83rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', lineHeight: 1.6 }} />
                     </div>
                   </div>
-                )}
 
-                <button onClick={sendNotification} disabled={notifySaving || !notifyForm.message.trim()}
-                  style={{ padding: '0.6rem 1.4rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: notifyForm.message.trim() ? 'pointer' : 'not-allowed', opacity: notifyForm.message.trim() ? 1 : 0.5 }}>
-                  {notifySaving ? 'Enviando...' : '📣 Enviar aviso'}
-                </button>
+                  {/* Right column — style + preview */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+                    {/* Ícone */}
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Ícone</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.35rem' }}>
+                        {['📢','⚠️','🔔','✅','❌','🚀','🎉','💡','🔧','📅','🌐','🎮','💬','🏆','⭐'].map(ico => (
+                          <button key={ico} onClick={() => setNotifyForm(p => ({ ...p, icon: ico }))}
+                            style={{ aspectRatio: '1', fontSize: '1.2rem', borderRadius: '9px', border: `1.5px solid ${notifyForm.icon === ico ? C.primary : C.border}`, background: notifyForm.icon === ico ? C.primaryBg : C.cardBgAlt, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s' }}>
+                            {ico}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Cor */}
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Cor de destaque</div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {['#9b30ff','#3b82f6','#22c55e','#f59e0b','#ef4444','#ec4899','#06b6d4','#f97316','#e8e6f8'].map(col => (
+                          <button key={col} onClick={() => setNotifyForm(p => ({ ...p, color: col }))}
+                            style={{ width: 32, height: 32, borderRadius: '50%', background: col, border: `3px solid ${notifyForm.color === col ? C.text : 'transparent'}`, cursor: 'pointer', outline: 'none', boxShadow: notifyForm.color === col ? `0 0 0 2px ${col}55` : 'none', transition: 'all .15s' }} />
+                        ))}
+                        <input type="color" value={notifyForm.color} onChange={e => setNotifyForm(p => ({ ...p, color: e.target.value }))}
+                          style={{ width: 32, height: 32, borderRadius: '50%', border: `3px solid ${C.border}`, cursor: 'pointer', padding: 0, background: 'transparent' }} title="Cor personalizada" />
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Pré-visualização</div>
+                      <div style={{ background: `${notifyForm.color}12`, border: `1px solid ${notifyForm.color}35`, borderRadius: '12px', padding: '0.85rem 1rem', borderLeft: `3px solid ${notifyForm.color}`, minHeight: 70, display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                        <span style={{ fontSize: '1.3rem', flexShrink: 0, lineHeight: 1.3 }}>{notifyForm.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {notifyForm.title
+                            ? <div style={{ fontWeight: 700, fontSize: '0.83rem', color: notifyForm.color, marginBottom: '0.2rem' }}>{notifyForm.title}</div>
+                            : <div style={{ fontWeight: 700, fontSize: '0.83rem', color: `${notifyForm.color}60`, marginBottom: '0.2rem', fontStyle: 'italic' }}>Título aparece aqui</div>}
+                          {notifyForm.message
+                            ? <div style={{ fontSize: '0.78rem', color: C.muted, lineHeight: 1.5 }}>{notifyForm.message}</div>
+                            : <div style={{ fontSize: '0.78rem', color: C.vdim, fontStyle: 'italic' }}>Mensagem aparece aqui...</div>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer / send */}
+                <div style={{ padding: '1rem 1.5rem', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                  {notifyForm.target_username && (
+                    <span style={{ fontSize: '0.72rem', color: C.primary, flex: 1 }}>
+                      ↳ Apenas para <strong>{notifyForm.target_username}</strong>
+                    </span>
+                  )}
+                  <button onClick={sendNotification} disabled={notifySaving || !notifyForm.message.trim()}
+                    style={{ padding: '0.6rem 1.6rem', background: notifyForm.message.trim() ? `linear-gradient(135deg, ${C.primary}, #6b1fc2)` : C.cardBgAlt, border: `1px solid ${notifyForm.message.trim() ? C.primary + '60' : C.border}`, color: notifyForm.message.trim() ? '#fff' : C.vdim, borderRadius: '9px', fontSize: '0.85rem', fontWeight: 700, cursor: notifyForm.message.trim() ? 'pointer' : 'not-allowed', transition: 'all .2s', boxShadow: notifyForm.message.trim() ? `0 4px 14px ${C.primary}30` : 'none' }}>
+                    {notifySaving ? 'Enviando...' : '📣 Enviar aviso'}
+                  </button>
+                </div>
               </div>
 
               {/* Active notifications list */}
