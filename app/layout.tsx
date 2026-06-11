@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers"
-import { ToastProvider } from "./components/Toast";
+import { ToastProvider } from "./components/Toast"
+import { LangProvider } from "@/lib/i18n"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -62,7 +63,7 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><Providers><ToastProvider>{children}</ToastProvider></Providers></body>
+      <body className="min-h-full flex flex-col"><LangProvider><Providers><ToastProvider>{children}</ToastProvider></Providers></LangProvider></body>
     </html>
   );
 }

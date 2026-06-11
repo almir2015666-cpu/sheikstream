@@ -27,7 +27,10 @@
       "Bash(cat > *)",
       "WebFetch(domain:www.myinstants.com)",
       "Bash(curl -L -A \"Mozilla/5.0\" \"https://www.myinstants.com/pt/instant/twitch-default-alert-85958/\")",
-      "Bash(curl -L -A \"Mozilla/5.0\" \"https://www.myinstants.com/media/sounds/default_eKkIk7O.mp3\" -o \"c:/Users/josec/sheikstream/public/sounds/twitch-default-alert.mp3\")"
+      "Bash(curl -L -A \"Mozilla/5.0\" \"https://www.myinstants.com/media/sounds/default_eKkIk7O.mp3\" -o \"c:/Users/josec/sheikstream/public/sounds/twitch-default-alert.mp3\")",
+      "Bash(Get-ChildItem -Recurse c:\\\\Users\\\\josec\\\\sheikstream\\\\app\\\\dashboard -Filter \"*.tsx\")",
+      "Bash(Format-Table)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\josec\\\\sheikstream\\\\app\" -Recurse -Directory | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"C:\\\\Users\\\\josec\\\\sheikstream\\\\app\"\\), \"app\" } | Sort-Object)"
     ],
     "additionalDirectories": [
       "\\tmp"

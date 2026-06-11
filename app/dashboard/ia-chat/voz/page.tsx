@@ -55,6 +55,7 @@ export default function IaVozPage() {
   const [minWords, setMinWords]     = useState(1)
   const [ttsEnabled, setTtsEnabled] = useState(false)
   const [sendChat, setSendChat]     = useState(true)
+  const [emojiEnabled, setEmojiEnabled] = useState(true)
   const [ignoreWords, setIgnoreWords] = useState('')
 
   // Refs — always fresh inside closures
@@ -68,6 +69,7 @@ export default function IaVozPage() {
   const minWordsRef    = useRef(1)
   const ttsRef         = useRef(false)
   const sendChatRef    = useRef(true)
+  const emojiEnabledRef = useRef(true)
   const ignoreWordsRef = useRef('')
   const lastSentRef    = useRef(0)
   const histRef        = useRef<HTMLDivElement>(null)
@@ -80,6 +82,7 @@ export default function IaVozPage() {
   useEffect(() => { minWordsRef.current = minWords }, [minWords])
   useEffect(() => { ttsRef.current = ttsEnabled }, [ttsEnabled])
   useEffect(() => { sendChatRef.current = sendChat }, [sendChat])
+  useEffect(() => { emojiEnabledRef.current = emojiEnabled }, [emojiEnabled])
   useEffect(() => { ignoreWordsRef.current = ignoreWords }, [ignoreWords])
 
   const lg = (msg: string) => {
@@ -126,7 +129,7 @@ export default function IaVozPage() {
       const r = await fetch('/api/ia-chat/voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: t, sendToChat: sendChatRef.current }),
+        body: JSON.stringify({ text: t, sendToChat: sendChatRef.current, emojiEnabled: emojiEnabledRef.current }),
       })
       const d = await r.json()
       if (!r.ok) throw new Error(`${r.status}: ${d.error ?? 'erro'}`)
@@ -243,6 +246,7 @@ export default function IaVozPage() {
       if (c.minWords !== undefined)    setMinWords(c.minWords)
       if (c.ttsEnabled !== undefined)  setTtsEnabled(c.ttsEnabled)
       if (c.sendChat !== undefined)    setSendChat(c.sendChat)
+      if (c.emojiEnabled !== undefined) setEmojiEnabled(c.emojiEnabled)
       if (c.ignoreWords !== undefined) setIgnoreWords(c.ignoreWords)
     }).catch(() => {/* ignore */})
   }, [])
@@ -252,7 +256,7 @@ export default function IaVozPage() {
     await fetch('/api/ia-chat/voice/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cfg: { lang, wakeEnabled, wakeWord, cooldown, minWords, ttsEnabled, sendChat, ignoreWords } }),
+      body: JSON.stringify({ cfg: { lang, wakeEnabled, wakeWord, cooldown, minWords, ttsEnabled, sendChat, emojiEnabled, ignoreWords } }),
     })
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -376,6 +380,11 @@ export default function IaVozPage() {
         {/* Send to chat */}
         <div style={SEP}>
           <Row label="Enviar resposta no chat do Twitch" desc="Desative para ver a resposta apenas aqui sem postar no chat" on={sendChat} onChange={() => setSendChat(v => !v)} />
+        </div>
+
+        {/* Emoji */}
+        <div style={SEP}>
+          <Row label="Usar emojis nas respostas" desc="A IA pode usar emojis e reações no texto" on={emojiEnabled} onChange={() => setEmojiEnabled(v => !v)} />
         </div>
 
         {/* TTS */}

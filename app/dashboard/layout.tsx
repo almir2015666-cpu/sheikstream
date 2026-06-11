@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ToastProvider } from '@/app/components/Toast'
+import { useLang } from '@/lib/i18n'
+import type { TKey } from '@/lib/i18n/translations'
+import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
 
 const SW = 240
 
@@ -203,6 +206,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const S = theme === 'dark' ? DARK_S : LIGHT_S
   const isDark = theme === 'dark'
+  const { t } = useLang()
+
+  const ITEM_KEY: Partial<Record<string, TKey>> = {
+    dashboard: 'nav_dashboard', subathon: 'nav_subathon', timers: 'nav_timers',
+    comandos: 'nav_commands', 'ia-chat': 'nav_ia_chat', 'ia-voz': 'nav_ia_voice',
+    sorteios: 'nav_raffles', 's-criar': 'nav_raffle_create', 's-tickets': 'nav_raffle_tickets',
+    plataformas: 'nav_platforms', metas: 'nav_goals', overlays: 'nav_overlays_item',
+    banners: 'nav_banners', 'ia-imagens': 'nav_ia_images', notas: 'nav_notes',
+    conexoes: 'nav_connections', convites: 'nav_invites', perfil: 'nav_profile',
+  }
+  const PAGE_TITLE_KEYS: Record<string, TKey> = {
+    '/dashboard': 'pt_dashboard', '/dashboard/plataformas': 'pt_platforms',
+    '/dashboard/sorteios': 'pt_raffles', '/dashboard/sorteios/novo': 'pt_raffle_new',
+    '/dashboard/sorteios/tickets': 'pt_raffle_tickets', '/dashboard/subathon': 'pt_subathon',
+    '/dashboard/banners': 'pt_banners', '/dashboard/banners/novo': 'pt_banner_new',
+    '/dashboard/metas': 'pt_goals', '/dashboard/comandos': 'pt_commands',
+    '/dashboard/timers': 'pt_timers', '/dashboard/overlays': 'pt_overlays',
+    '/dashboard/conexoes': 'pt_connections', '/dashboard/perfil': 'pt_profile',
+    '/dashboard/convites': 'pt_invites', '/dashboard/ia-imagens': 'pt_ia_images',
+    '/dashboard/ia-chat': 'pt_ia_chat', '/dashboard/ia-chat/voz': 'pt_ia_voice',
+  }
+  const tItem = (id: string, fallback: string) => { const k = ITEM_KEY[id]; return k ? t(k) : fallback }
+  const pageTitle = PAGE_TITLE_KEYS[pathname] ? t(PAGE_TITLE_KEYS[pathname]) : (PAGE_TITLES[pathname] ?? 'Dashboard')
 
   useEffect(() => {
     try {
@@ -438,8 +464,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setOpen(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
 
-  const pageTitle = PAGE_TITLES[pathname] ?? 'Dashboard'
-
   const css = `
     *{box-sizing:border-box;-webkit-font-smoothing:antialiased;transition:background-color 0.25s ease,color 0.22s ease,border-color 0.22s ease,box-shadow 0.22s ease;}
     a,button,svg,img,input,select,textarea,span[style*="border-radius"],div[style*="animation"]{transition:none!important;}
@@ -551,7 +575,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <input
             value={navSearch}
             onChange={e => setNavSearch(e.target.value)}
-            placeholder="Pesquisar..."
+            placeholder={t('search_placeholder')}
             style={{ width: '100%', padding: '0.45rem 0.6rem 0.45rem 2rem', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${S.border}`, borderRadius: '8px', color: S.text, fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }}
           />
           {navSearch && (
@@ -567,7 +591,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           (() => {
             const hits = matchSearch(navSearch)
             if (!hits.length) return (
-              <div style={{ padding: '1.5rem 0.75rem', textAlign: 'center', color: S.vdim, fontSize: '0.78rem' }}>Nenhum resultado</div>
+              <div style={{ padding: '1.5rem 0.75rem', textAlign: 'center', color: S.vdim, fontSize: '0.78rem' }}>{t('search_no_results')}</div>
             )
             return hits.map(({ item, child }) => {
               const href = child ? child.href : item.href
@@ -581,7 +605,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className={isAct ? 'sk-nl-act' : 'sk-nl'}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 0.75rem', borderRadius: '9px', marginBottom: '2px', color: isAct ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.85rem', fontWeight: isAct ? 600 : 400, background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent', border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent' }}>
                   {!child && <span style={{ color: isAct ? S.iconActive : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>}
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tItem(id, label)}</span>
                   {badge && !seenBadges.has(id) && <Chip type={badge} />}
                 </Link>
               )
@@ -602,7 +626,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: `0.6rem 0.75rem`, borderRadius: '9px', marginBottom: '2px', color: isAct ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.9rem', fontWeight: isAct ? 600 : 400, background: isAct ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.35),rgba(109,40,217,0.3)' : 'rgba(123,46,255,0.15),rgba(90,30,200,0.1)'})` : 'transparent', border: isAct ? `1px solid ${isDark ? 'rgba(155,48,255,0.3)' : 'rgba(123,46,255,0.25)'}` : '1px solid transparent', cursor: 'pointer', letterSpacing: '-0.1px' }}
                 >
                   <span style={{ color: isAct ? S.iconActive : S.dim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tItem(item.id, item.label)}</span>
                   {item.badge && !seenBadges.has(item.id) && <Chip type={item.badge} />}
                   {hasCh && !isAct && <span style={{ color: S.dim, flexShrink: 0, display: 'flex', transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>{I.chev}</span>}
                   {isAct && <span style={{ color: S.iconActive, flexShrink: 0, display: 'flex' }}>{I.arr}</span>}
@@ -615,7 +639,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className={ca ? 'sk-nl-act' : 'sk-nl'}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.48rem 0.75rem 0.48rem 2.8rem', borderRadius: '9px', marginBottom: '2px', color: ca ? '#fff' : S.muted, textDecoration: 'none', fontSize: '0.84rem', fontWeight: ca ? 600 : 400, background: ca ? `linear-gradient(135deg,${isDark ? 'rgba(155,48,255,0.28),rgba(109,40,217,0.22)' : 'rgba(123,46,255,0.12),rgba(90,30,200,0.08)'})` : 'transparent', border: ca ? `1px solid ${isDark ? 'rgba(155,48,255,0.25)' : 'rgba(123,46,255,0.2)'}` : '1px solid transparent' }}>
                       {ch.icon && <span style={{ display: 'flex', flexShrink: 0, color: ca ? S.iconActive : S.dim }}>{ch.icon}</span>}
-                      <span style={{ flex: 1 }}>{ch.label}</span>
+                      <span style={{ flex: 1 }}>{tItem(ch.id, ch.label)}</span>
                       {ch.badge && !seenBadges.has(ch.id) && <Chip type={ch.badge} />}
                       {ca && <span style={{ color: S.iconActive, display: 'flex' }}>{I.arr}</span>}
                     </Link>
@@ -633,13 +657,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           className="sk-nl"
           style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.45rem 0.75rem', borderRadius: '9px', background: 'transparent', border: `1px solid ${S.border}`, color: S.muted, fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', letterSpacing: '0.1px', textAlign: 'left' }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Sugestão / Bug
+          {t('suggestion_bug')}
         </button>
         <Link href="/admin" onClick={() => setMobileOpen(false)}
           className="sk-nl"
           style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.45rem 0.75rem', borderRadius: '9px', background: 'rgba(255,68,68,0.07)', border: '1px solid rgba(255,68,68,0.18)', textDecoration: 'none', color: '#ff6b6b', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.1px' }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Painel Admin
+          {t('admin_panel')}
         </Link>
       </div>
 
@@ -653,9 +677,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '0.82rem', fontWeight: 600, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name || 'Usuário'}</div>
-          <div style={{ fontSize: '0.68rem', color: S.muted }}>Streamer Beta</div>
+          <div style={{ fontSize: '0.68rem', color: S.muted }}>{t('streamer_beta')}</div>
         </div>
-        <button onClick={() => { window.location.href = '/api/logout' }} title="Sair" className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.25rem', flexShrink: 0, opacity: 0.7 }}>{I.out}</button>
+        <button onClick={() => { window.location.href = '/api/logout' }} title={t('logout')} className="sk-signout" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: S.dim, display: 'flex', alignItems: 'center', padding: '0.25rem', flexShrink: 0, opacity: 0.7 }}>{I.out}</button>
       </div>
     </>
   )
@@ -698,8 +722,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{ fontSize: '0.78rem', color: S.muted, display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500 }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: S.accent, display: 'inline-block', animation: 'sk-pulse 2s ease-in-out infinite', flexShrink: 0 }} />
-              {!isMobile && 'Beta fechado'}
+              {!isMobile && t('beta_closed')}
             </div>
+            <LanguageSwitcher color={S.dim} hoverBg={S.primaryBg} activeBg={isDark ? 'rgba(155,48,255,0.2)' : 'rgba(123,46,255,0.1)'} activeColor={S.iconActive} />
             <button onClick={toggleTheme} className="sk-theme-btn" title={isDark ? 'Modo claro' : 'Modo escuro'}>
               {isDark ? I.sun : I.moon}
             </button>
@@ -731,7 +756,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div style={{ fontSize: '0.92rem', color: S.muted, lineHeight: 1.7, marginBottom: '1.75rem', whiteSpace: 'pre-wrap' }}>{activeNotif.message}</div>
             <button onClick={() => dismissNotif(activeNotif.id)}
               style={{ padding: '0.72rem 2.5rem', background: `${activeNotif.color}18`, border: `1px solid ${activeNotif.color}50`, borderRadius: '12px', color: activeNotif.color, fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>
-              Entendi ✓
+              {t('got_it')}
             </button>
           </div>
         </div>
@@ -746,8 +771,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div style={{ background: isDark ? '#111219' : '#ffffff', border: `1px solid ${S.borderP}`, borderRadius: '20px', padding: '2rem', maxWidth: '460px', width: '100%', boxShadow: '0 0 60px rgba(155,48,255,0.15), 0 20px 40px rgba(0,0,0,0.7)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                   <div>
-                    <div style={{ fontSize: '1rem', fontWeight: 800, color: S.text }}>Enviar feedback</div>
-                    <div style={{ fontSize: '0.74rem', color: S.muted, marginTop: '0.15rem' }}>Sugestões e bugs vão direto para o admin</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: S.text }}>{t('send_feedback')}</div>
+                    <div style={{ fontSize: '0.74rem', color: S.muted, marginTop: '0.15rem' }}>{t('feedback_goes_admin')}</div>
                   </div>
                   <button onClick={() => setShowSugg(false)} style={{ background: 'transparent', border: 'none', color: S.muted, cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem', lineHeight: 1 }}>✕</button>
                 </div>
@@ -755,27 +780,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {suggSent ? (
                   <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
                     <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✅</div>
-                    <div style={{ fontSize: '0.92rem', fontWeight: 700, color: S.text, marginBottom: '0.4rem' }}>Obrigado pelo feedback!</div>
-                    <div style={{ fontSize: '0.78rem', color: S.muted, marginBottom: '1.5rem' }}>Sua mensagem foi enviada ao admin.</div>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 700, color: S.text, marginBottom: '0.4rem' }}>{t('thank_you')}</div>
+                    <div style={{ fontSize: '0.78rem', color: S.muted, marginBottom: '1.5rem' }}>{t('feedback_goes_admin')}</div>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                      <button onClick={() => setSuggSent(false)} style={{ padding: '0.6rem 1.2rem', background: 'rgba(155,48,255,0.1)', border: '1px solid rgba(155,48,255,0.3)', borderRadius: '10px', color: S.primary, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>Enviar outro</button>
-                      <button onClick={() => setShowSugg(false)} style={{ padding: '0.6rem 1.2rem', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', border: `1px solid ${S.border}`, borderRadius: '10px', color: S.muted, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Fechar</button>
+                      <button onClick={() => setSuggSent(false)} style={{ padding: '0.6rem 1.2rem', background: 'rgba(155,48,255,0.1)', border: '1px solid rgba(155,48,255,0.3)', borderRadius: '10px', color: S.primary, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>{t('send_another')}</button>
+                      <button onClick={() => setShowSugg(false)} style={{ padding: '0.6rem 1.2rem', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', border: `1px solid ${S.border}`, borderRadius: '10px', color: S.muted, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>{t('close')}</button>
                     </div>
                   </div>
                 ) : (
                   <>
                     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                      {(['suggestion', 'bug'] as const).map(t => (
-                        <button key={t} onClick={() => setSuggType(t)}
-                          style={{ flex: 1, padding: '0.55rem', borderRadius: '10px', border: `1px solid ${suggType === t ? `${S.primary}70` : S.border}`, background: suggType === t ? S.primaryBg : 'transparent', color: suggType === t ? S.primary : S.muted, fontWeight: suggType === t ? 700 : 500, fontSize: '0.85rem', cursor: 'pointer' }}>
-                          {t === 'suggestion' ? '💡 Sugestão' : '🐛 Bug'}
+                      {(['suggestion', 'bug'] as const).map(type => (
+                        <button key={type} onClick={() => setSuggType(type)}
+                          style={{ flex: 1, padding: '0.55rem', borderRadius: '10px', border: `1px solid ${suggType === type ? `${S.primary}70` : S.border}`, background: suggType === type ? S.primaryBg : 'transparent', color: suggType === type ? S.primary : S.muted, fontWeight: suggType === type ? 700 : 500, fontSize: '0.85rem', cursor: 'pointer' }}>
+                          {type === 'suggestion' ? t('suggestion_emoji') : t('bug_emoji')}
                         </button>
                       ))}
                     </div>
                     <textarea
                       value={suggMsg}
                       onChange={e => setSuggMsg(e.target.value)}
-                      placeholder={suggType === 'suggestion' ? 'Descreva sua sugestão de melhoria...' : 'Descreva o bug encontrado (como reproduzir, o que era esperado)...'}
+                      placeholder={t('feedback_placeholder')}
                       rows={5}
                       style={{ width: '100%', padding: '0.75rem', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', border: `1px solid ${S.borderP}`, borderRadius: '10px', color: S.text, fontSize: '0.85rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', lineHeight: 1.6 }}
                     />
@@ -790,7 +815,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         } catch { /* ignore */ } finally { setSuggSending(false) }
                       }}
                       style={{ marginTop: '0.75rem', width: '100%', padding: '0.75rem', background: suggMsg.trim() ? 'linear-gradient(135deg,#9b30ff,#6b1fc2)' : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', border: `1px solid ${suggMsg.trim() ? 'rgba(155,48,255,0.5)' : S.border}`, borderRadius: '10px', color: suggMsg.trim() ? '#fff' : S.vdim, fontWeight: 700, fontSize: '0.9rem', cursor: suggMsg.trim() ? 'pointer' : 'not-allowed' }}>
-                      {suggSending ? 'Enviando...' : '➤ Enviar'}
+                      {suggSending ? t('sending') : `➤ ${t('send')}`}
                     </button>
                   </>
                 )}

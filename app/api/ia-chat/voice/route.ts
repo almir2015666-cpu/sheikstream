@@ -18,7 +18,7 @@ const IA_LANGS: Record<string, string> = {
   'pt-BR': 'Português (BR)', 'en-US': 'English (US)', 'es': 'Español',
 }
 
-function buildSystemPrompt(cfg: IaChatCfg): string {
+function buildSystemPrompt(cfg: IaChatCfg, emojiEnabled = true): string {
   const lines: string[] = []
   const name = (cfg.bot_name ?? '').trim() || 'Assistente'
   lines.push(`Você é ${name}, um assistente de chat ao vivo para streamers.`)
@@ -40,7 +40,8 @@ function buildSystemPrompt(cfg: IaChatCfg): string {
   const sizeLbl = cfg.response_size === 'short' ? '1 linha' : cfg.response_size === 'medium' ? '2-4 linhas' : '5+ linhas'
   lines.push(`- Mantenha respostas com ${sizeLbl}`)
   lines.push(`- Responda em ${IA_LANGS[cfg.language] ?? 'Português (BR)'}`)
-  if (cfg.react_emotes) lines.push('- Use emotes e reações quando apropriado')
+  if (cfg.react_emotes && emojiEnabled) lines.push('- Use emotes e reações quando apropriado')
+  if (!emojiEnabled) lines.push('- NÃO use emojis, emoticons ou reações de nenhum tipo')
   lines.push('')
 
   if ((cfg.allowed_topics ?? '').trim()) {
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const text: string = (body.text ?? '').trim()
   const sendToChat: boolean = body.sendToChat !== false
+  const emojiEnabled: boolean = body.emojiEnabled !== false
   if (!text) return NextResponse.json({ error: 'text required' }, { status: 400 })
 
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'No API key' }, { status: 500 })
@@ -86,8 +88,8 @@ export async function POST(req: NextRequest) {
 
   const cfg = cfgRow?.config?.cfg as IaChatCfg | undefined
   const systemPrompt = cfg
-    ? buildSystemPrompt(cfg)
-    : 'Você é um assistente de chat ao vivo. Responda de forma natural e concisa em português. Sem markdown, texto puro.'
+    ? buildSystemPrompt(cfg, emojiEnabled)
+    : `Você é um assistente de chat ao vivo. Responda de forma natural e concisa em português. Sem markdown, texto puro.${emojiEnabled ? '' : ' Não use emojis.'}`
 
   const maxTokens = cfg?.response_size === 'long' ? 300 : cfg?.response_size === 'medium' ? 150 : 120
 

@@ -1,5 +1,7 @@
 'use client'
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { useLang } from '@/lib/i18n'
+import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
 import {
   SiTwitch, SiYoutube, SiKick, SiTiktok, SiFacebook,
   SiDiscord, SiInstagram, SiGoogle, SiX, SiWhatsapp,
@@ -216,6 +218,7 @@ export default function Home() {
   const [overlay, setOverlay] = useState<Overlay>({ active: false, newTheme: 'light' })
   const C = theme === 'dark' ? DARK : LIGHT
   const isDark = theme === 'dark'
+  const { t } = useLang()
 
   const [windowWidth, setWindowWidth] = useState(1200)
   const isMobile = windowWidth < 768
@@ -726,10 +729,11 @@ useEffect(() => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `0.9rem ${hp}` }}>
           {brandLogo({ opacity: logoOpacity, transition: 'opacity 0.1s' })}
           <div style={{ display: 'flex', gap: isMobile ? '0.5rem' : '1.5rem', alignItems: 'center' }}>
-            <span className="sk-nav-link sk-nav-desktop-links" onClick={() => scrollToSection('sk-features')} style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500 }}>Produto</span>
+            <span className="sk-nav-link sk-nav-desktop-links" onClick={() => scrollToSection('sk-features')} style={{ color: C.muted, fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500 }}>{t('nav_features')}</span>
+            <LanguageSwitcher color={C.muted} hoverBg={C.primaryBg} activeBg={C.primaryBgMed} activeColor={C.primary} />
             {themeBtn}
             <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: isMobile ? '0.5rem 1rem' : '0.55rem 1.3rem', borderRadius: '8px', cursor: 'pointer', fontSize: isMobile ? '0.8rem' : '0.88rem', fontWeight: 700, boxShadow: `0 4px 16px ${C.primaryBgMed}`, minHeight: '44px' }}>
-              App
+              {t('nav_login')}
             </button>
           </div>
         </div>
@@ -745,14 +749,14 @@ useEffect(() => {
             🎉 NOVIDADE — Hub para streamers brasileiros · BETA fechado
           </div>
           <h1 style={{ fontSize: `clamp(1.9rem, 6vw, 4.2rem)`, fontWeight: 900, lineHeight: 1.06, letterSpacing: '-2px', marginBottom: '1rem', color: C.text }}>
-            Gerencie tudo numa<br /><span style={{ color: C.primary }}>só plataforma</span>
+            {t('hero_title_1')} <span style={{ color: C.primary }}>{t('hero_title_2')}</span><br />{t('hero_title_3')}
           </h1>
           <div style={{ fontSize: isMobile ? '0.95rem' : '1.1rem', color: C.muted, marginBottom: '0.9rem', height: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
             <span>Automatize seus</span>
             <span style={{ color: C.primary, fontWeight: 700, minWidth: '130px', textAlign: 'left' }}>{twText}<span className="sk-cursor" /></span>
           </div>
           <p style={{ fontSize: isMobile ? '0.9rem' : '1rem', color: C.muted, maxWidth: '500px', margin: '0 auto 1.6rem', lineHeight: 1.75 }}>
-            Conecte Twitch, YouTube, Kick, TikTok e Facebook. Sorteios, metas e engajamento — de graça.
+            {t('hero_desc')}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', marginBottom: '2rem' }}>
             <div style={{ display: 'flex' }}>
@@ -769,10 +773,10 @@ useEffect(() => {
           </div>
           <div className="sk-hero-buttons" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '4rem', padding: isMobile ? `0 ${hp}` : '0' }}>
             <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.9rem 2.3rem', borderRadius: '8px', fontSize: '0.98rem', fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 24px ${C.primaryBgMed}`, minHeight: '44px' }}>
-              Entrar grátis →
+              {t('hero_cta')} →
             </button>
             <button onClick={() => scrollToSection('sk-howit')} className="sk-btn-ghost" style={{ background: 'transparent', color: C.muted, border: `1px solid ${C.border}`, padding: '0.9rem 1.9rem', borderRadius: '8px', fontSize: '0.92rem', cursor: 'pointer', fontWeight: 500, minHeight: '44px' }}>
-              Como funciona
+              {t('nav_features')}
             </button>
           </div>
           {!isMobile && (
@@ -934,7 +938,7 @@ useEffect(() => {
           <div style={{ display:'inline-block',background:C.accentBg15,border:`1px solid ${C.accentBorder}`,color:C.accent,fontSize:'0.62rem',padding:'0.22rem 0.85rem',borderRadius:'999px',fontWeight:700,marginBottom:'1.2rem',letterSpacing:'1px',position:'relative' }}>BETA ABERTO</div>
           <h2 style={{ fontSize:isMobile?'1.6rem':'2.4rem',fontWeight:900,color:C.text,marginBottom:'0.8rem',letterSpacing:'-1px',position:'relative' }}>Pronto pra centralizar tudo?</h2>
           <p style={{ fontSize:isMobile?'0.9rem':'1rem',color:C.muted,marginBottom:'2.2rem',position:'relative',maxWidth:'420px',margin:'0 auto 2.2rem',lineHeight:1.7 }}>Conecte suas plataformas em menos de 2 minutos e comece a crescer de verdade.</p>
-          <button onClick={() => window.location.href='/login'} className="sk-btn-cta" style={{ background:`linear-gradient(135deg,${C.primary},${isDark?'#7b5cff':'#5a15d0'})`,color:'#fff',border:'none',padding:'1rem 2.8rem',borderRadius:'9px',fontSize:'1rem',fontWeight:700,cursor:'pointer',boxShadow:`0 6px 28px ${C.primaryBgMed}`,position:'relative',minHeight:'44px' }}>Começar agora →</button>
+          <button onClick={() => window.location.href='/login'} className="sk-btn-cta" style={{ background:`linear-gradient(135deg,${C.primary},${isDark?'#7b5cff':'#5a15d0'})`,color:'#fff',border:'none',padding:'1rem 2.8rem',borderRadius:'9px',fontSize:'1rem',fontWeight:700,cursor:'pointer',boxShadow:`0 6px 28px ${C.primaryBgMed}`,position:'relative',minHeight:'44px' }}>{t('hero_cta')} →</button>
           <div style={{ fontSize:'0.78rem',color:C.dim,marginTop:'1.1rem',position:'relative' }}>Sem cartão de crédito. Acesso imediato ao beta.</div>
         </div>
       </section>
@@ -972,7 +976,7 @@ useEffect(() => {
             </div>
             <div>
               <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Produto</div>
-              <div className="sk-legal-link" onClick={()=>scrollToSection('sk-features')} style={{ fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',cursor:'pointer' }}>Recursos</div>
+              <div className="sk-legal-link" onClick={()=>scrollToSection('sk-features')} style={{ fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',cursor:'pointer' }}>{t('nav_features')}</div>
             </div>
             <div>
               <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Streamers</div>
@@ -980,18 +984,18 @@ useEffect(() => {
             </div>
             <div>
               <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Empresa</div>
-              {[{ label:'Sobre',href:'/sobre' },{ label:'Blog',href:'/blog' },{ label:'Contato',href:'/contato' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ display:'block',fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',textDecoration:'none' }}>{l.label}</a>))}
+              {[{ label: t('footer_about'), href:'/sobre' },{ label: t('footer_blog'), href:'/blog' },{ label: t('footer_contact'), href:'/contato' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ display:'block',fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',textDecoration:'none' }}>{l.label}</a>))}
             </div>
             <div>
               <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Legal</div>
-              {[{ label:'Termos',href:'/termos-e-condicoes' },{ label:'Privacidade',href:'/privacidade' },{ label:'Cookies',href:'/cookies' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ display:'block',fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',textDecoration:'none' }}>{l.label}</a>))}
+              {[{ label: t('footer_terms'), href:'/termos-e-condicoes' },{ label: t('footer_privacy'), href:'/privacidade' },{ label: t('footer_cookies'), href:'/cookies' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ display:'block',fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',textDecoration:'none' }}>{l.label}</a>))}
             </div>
           </div>
           <div style={{ height:'1px',background:C.border,marginBottom:'1.4rem' }} />
           <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'1rem',flexDirection:isMobile?'column':'row',textAlign:isMobile?'center':'left' }}>
             <div style={{ fontSize:'0.73rem',color:C.vdim }}>🇧🇷 Feito no Brasil · © 2025 Sheikstream.</div>
             <div style={{ display:'flex',gap:'1.4rem',alignItems:'center',flexWrap:'wrap',justifyContent:'center' }}>
-              {[{ label:'Termos',href:'/termos-e-condicoes' },{ label:'Privacidade',href:'/privacidade' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ fontSize:'0.73rem',color:C.vdim,textDecoration:'none' }}>{l.label}</a>))}
+              {[{ label: t('footer_terms'), href:'/termos-e-condicoes' },{ label: t('footer_privacy'), href:'/privacidade' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ fontSize:'0.73rem',color:C.vdim,textDecoration:'none' }}>{l.label}</a>))}
             </div>
           </div>
         </div>

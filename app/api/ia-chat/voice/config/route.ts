@@ -10,6 +10,7 @@ export type IaVozConfig = {
   minWords: number
   ttsEnabled: boolean
   sendChat: boolean
+  emojiEnabled: boolean
   ignoreWords: string
 }
 
