@@ -237,10 +237,12 @@ export default function IaVozPage() {
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) setNoSupport(true)
-    // Brave detection
+    // Brave detection — multiple methods
     const nav = navigator as any
     if (nav.brave?.isBrave) {
       nav.brave.isBrave().then((b: boolean) => { if (b) setIsBrave(true) }).catch(() => {})
+    } else if (/brave/i.test(navigator.userAgent)) {
+      setIsBrave(true)
     }
   }, [])
 
