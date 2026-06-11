@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifySignature } from '@/app/lib/eventsub'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { fireEventCommand } from '@/app/lib/event-commands'
+import Anthropic from '@anthropic-ai/sdk'
 
 export async function GET() {
   return new NextResponse(JSON.stringify({ ok: true, endpoint: 'twitch-eventsub', ts: Date.now() }), {
@@ -73,6 +74,209 @@ async function sendChat(broadcasterId: string, message: string): Promise<void> {
   })
 }
 
+// ── IA Chat ──────────────────────────────────────────────────────────────────
+
+type IaChatCfg = {
+  enabled: boolean
+  personality: string
+  bot_name: string
+  response_chance: number
+  max_delay: number
+  response_size: string
+  language: string
+  cooldown_user: number
+  mention_user: boolean
+  ignore_commands: boolean
+  reply_to_streamer: boolean
+  lurk_mode: boolean
+  react_emotes: boolean
+  memory: boolean
+  words_to_ignore: string
+  whitelist: string
+  blacklist: string
+  channel_context: string
+  allowed_topics: string
+  forbidden_topics: string
+  generated_prompt: string
+}
+
+type IaState = { user_cooldowns?: Record<string, string> }
+
+const IA_LANGS: Record<string, string> = {
+  'pt-BR': 'Português (BR)',
+  'en-US': 'English (US)',
+  'es': 'Español',
+}
+
+function buildSystemPrompt(cfg: IaChatCfg): string {
+  const lines: string[] = []
+  const name = (cfg.bot_name ?? '').trim() || 'Assistente'
+  lines.push(`Você é ${name}, um assistente de chat ao vivo para streamers.`)
+  lines.push('')
+
+  if ((cfg.personality ?? '').trim()) {
+    lines.push('=== PERSONALIDADE ===')
+    lines.push(cfg.personality.trim())
+    lines.push('')
+  }
+
+  if ((cfg.channel_context ?? '').trim()) {
+    lines.push('=== CONTEXTO DO CANAL ===')
+    lines.push(cfg.channel_context.trim())
+    lines.push('')
+  }
+
+  lines.push('=== COMPORTAMENTO ===')
+  const sizeLbl = cfg.response_size === 'short' ? '1 linha' : cfg.response_size === 'medium' ? '2-4 linhas' : '5+ linhas'
+  lines.push(`- Mantenha respostas com ${sizeLbl}`)
+  lines.push(`- Responda em ${IA_LANGS[cfg.language] ?? 'Português (BR)'}`)
+  if (cfg.mention_user) lines.push('- Mencione o usuário com @nome quando responder')
+  if (cfg.react_emotes) lines.push('- Use emotes e reações quando apropriado para o contexto')
+  if (cfg.memory) lines.push('- Considere o histórico da conversa para contextualizar suas respostas')
+  if (cfg.lurk_mode) lines.push('- Você está em modo silencioso: responda SOMENTE quando for diretamente mencionado pelo nome')
+  if (!cfg.reply_to_streamer) lines.push('- Não responda mensagens do próprio dono do canal')
+  if (cfg.ignore_commands) lines.push('- Ignore mensagens que começam com !, / ou ? (são comandos de outros bots)')
+  lines.push('')
+
+  if ((cfg.allowed_topics ?? '').trim()) {
+    lines.push('=== TÓPICOS PERMITIDOS ===')
+    lines.push(cfg.allowed_topics.trim())
+    lines.push('')
+  }
+
+  if ((cfg.forbidden_topics ?? '').trim()) {
+    lines.push('=== TÓPICOS PROIBIDOS ===')
+    lines.push(`Nunca aborde: ${cfg.forbidden_topics.trim()}`)
+    lines.push('')
+  }
+
+  if ((cfg.words_to_ignore ?? '').trim()) {
+    lines.push('=== PALAVRAS A IGNORAR ===')
+    lines.push(`Ignore mensagens contendo: ${cfg.words_to_ignore.trim()}`)
+    lines.push('')
+  }
+
+  lines.push('=== REGRAS GERAIS ===')
+  lines.push('- Seja natural, animado e autêntico')
+  lines.push('- Nunca invente informações')
+  lines.push('- Não responda conteúdo ofensivo, preconceituoso ou spam')
+  lines.push('- Adapte o tom ao contexto da conversa')
+  lines.push('- Resposta máxima: uma mensagem de chat, sem markdown, sem asteriscos, texto puro')
+
+  return lines.join('\n')
+}
+
+async function handleIaChat(
+  broadcasterId: string,
+  event: Record<string, unknown>,
+  rawText: string,
+  chatter: string,
+): Promise<void> {
+  if (!process.env.ANTHROPIC_API_KEY) return
+
+  const db = getSupabaseAdmin()
+
+  // Load IA config
+  const { data: cfgRow } = await db
+    .from('overlay_configs')
+    .select('config')
+    .eq('broadcaster_id', broadcasterId)
+    .eq('type', 'ia-chat')
+    .maybeSingle()
+
+  if (!cfgRow?.config?.cfg) return
+  const cfg = cfgRow.config.cfg as IaChatCfg
+  if (!cfg.enabled) return
+
+  // Ignore commands (!, /, ?)
+  if (cfg.ignore_commands && /^[!/?]/.test(rawText)) return
+
+  // Skip streamer's own messages unless configured
+  const broadcasterLogin = ((event.broadcaster_user_login) as string) ?? ''
+  if (!cfg.reply_to_streamer && chatter.toLowerCase() === broadcasterLogin.toLowerCase()) return
+
+  // Blacklist
+  if (cfg.blacklist) {
+    const bl = cfg.blacklist.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    if (bl.includes(chatter.toLowerCase())) return
+  }
+
+  // Whitelist — if populated, only respond to those users
+  const wlEntries = (cfg.whitelist ?? '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+  const hasWhitelist = wlEntries.length > 0
+  if (hasWhitelist && !wlEntries.includes(chatter.toLowerCase())) return
+
+  // Words to ignore
+  if (cfg.words_to_ignore) {
+    const words = cfg.words_to_ignore.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    if (words.some(w => rawText.toLowerCase().includes(w))) return
+  }
+
+  // Lurk mode — only respond if bot name is mentioned
+  if (cfg.lurk_mode) {
+    const botName = (cfg.bot_name ?? '').trim().toLowerCase()
+    if (botName && !rawText.toLowerCase().includes(botName)) return
+  }
+
+  // Cooldown check
+  const cooldown = cfg.cooldown_user ?? 30
+  if (cooldown > 0) {
+    const { data: stateRow } = await db
+      .from('overlay_configs')
+      .select('config')
+      .eq('broadcaster_id', broadcasterId)
+      .eq('type', 'ia-chat-state')
+      .maybeSingle()
+
+    const state = (stateRow?.config ?? {}) as IaState
+    const lastAt = state.user_cooldowns?.[chatter]
+    if (lastAt) {
+      const elapsed = (Date.now() - new Date(lastAt).getTime()) / 1000
+      if (elapsed < cooldown) return
+    }
+  }
+
+  // Response chance (whitelist users always get a response)
+  if (!hasWhitelist) {
+    const chance = (cfg.response_chance ?? 40) / 100
+    if (Math.random() > chance) return
+  }
+
+  // Call Claude
+  const maxTokens = cfg.response_size === 'long' ? 300 : cfg.response_size === 'medium' ? 150 : 80
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+  const completion = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: maxTokens,
+    system: buildSystemPrompt(cfg),
+    messages: [{ role: 'user', content: `${chatter}: ${rawText}` }],
+  })
+
+  const block = completion.content[0]
+  if (block.type !== 'text') return
+  const reply = block.text.trim()
+  if (!reply) return
+
+  // Persist cooldown state
+  await db.from('overlay_configs').upsert(
+    {
+      broadcaster_id: broadcasterId,
+      type: 'ia-chat-state',
+      config: { user_cooldowns: { [chatter]: new Date().toISOString() } } satisfies IaState,
+    },
+    { onConflict: 'broadcaster_id,type' }
+  )
+
+  // Optional delay (capped at 8s to stay within serverless limits)
+  const delay = Math.min(cfg.max_delay ?? 0, 8)
+  if (delay > 0) await new Promise(r => setTimeout(r, delay * 1000))
+
+  await sendChat(broadcasterId, reply)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function handleNotification(payload: { subscription: { type: string }; event: Record<string, unknown> }) {
   const eventType: string = payload.subscription.type
   const event = payload.event
@@ -87,36 +291,40 @@ async function handleNotification(payload: { subscription: { type: string }; eve
     } catch { /* ignore */ }
   })()
 
-  // ── Chat commands (!command) ──────────────────────────────────────────────
+  // ── Chat messages ─────────────────────────────────────────────────────────
   if (eventType === 'channel.chat.message') {
-    const msgObj = event.message as { text?: string } | undefined
+    const msgObj  = event.message as { text?: string } | undefined
     const rawText = (msgObj?.text ?? '').trim()
-    if (!rawText.startsWith('!')) return
-
-    const parts   = rawText.slice(1).split(/\s+/)
-    const trigger = parts[0].toLowerCase()
-    const args    = parts.slice(1)
     const chatter = ((event.chatter_user_name ?? event.chatter_user_login) as string) ?? ''
     const channel = ((event.broadcaster_user_login) as string) ?? ''
-    const now     = new Date()
 
-    const { data: cmds } = await db
-      .from('comandos')
-      .select('id, trigger, resposta, cooldown_s, last_used_at')
-      .eq('user_id', broadcasterId)
-      .eq('habilitado', true)
+    // Handle ! commands first
+    if (rawText.startsWith('!')) {
+      const parts   = rawText.slice(1).split(/\s+/)
+      const trigger = parts[0].toLowerCase()
+      const args    = parts.slice(1)
+      const now     = new Date()
 
-    const cmd = (cmds ?? []).find(c => c.trigger.toLowerCase() === trigger)
-    if (!cmd) return
+      const { data: cmds } = await db
+        .from('comandos')
+        .select('id, trigger, resposta, cooldown_s, last_used_at')
+        .eq('user_id', broadcasterId)
+        .eq('habilitado', true)
 
-    if (cmd.last_used_at) {
-      const elapsed = (now.getTime() - new Date(cmd.last_used_at).getTime()) / 1000
-      if (elapsed < (cmd.cooldown_s ?? 30)) return
+      const cmd = (cmds ?? []).find(c => c.trigger.toLowerCase() === trigger)
+      if (cmd) {
+        if (!cmd.last_used_at || (now.getTime() - new Date(cmd.last_used_at).getTime()) / 1000 >= (cmd.cooldown_s ?? 30)) {
+          await db.from('comandos').update({ last_used_at: now.toISOString() }).eq('id', cmd.id)
+          const response = resolveChatVars(cmd.resposta, chatter, channel, args)
+          await sendChat(broadcasterId, response)
+        }
+        return
+      }
+      // Unknown command — fall through to IA
     }
 
-    await db.from('comandos').update({ last_used_at: now.toISOString() }).eq('id', cmd.id)
-    const response = resolveChatVars(cmd.resposta, chatter, channel, args)
-    await sendChat(broadcasterId, response)
+    await handleIaChat(broadcasterId, event, rawText, chatter)
+      .catch(e => console.error('[ia-chat] error:', e))
     return
   }
 
