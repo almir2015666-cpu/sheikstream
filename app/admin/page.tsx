@@ -239,6 +239,7 @@ export default function AdminPage() {
   type SupportTicket = { id: string; subject: string; message: string; reply_email: string | null; username: string | null; status: string; created_at: string; updated_at: string; admin_reply: string | null }
   const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [ticketsLoading, setTicketsLoading] = useState(false)
+  const [ticketFilter, setTicketFilter] = useState('all')
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null)
   const [adminReply, setAdminReply] = useState<Record<string, string>>({})
   const [ticketUpdating, setTicketUpdating] = useState<string | null>(null)
@@ -1661,7 +1662,6 @@ export default function AdminPage() {
               archived:    { bg: 'rgba(148,163,184,.1)',   color: '#94a3b8',  border: 'rgba(148,163,184,.28)', label: 'Arquivado' },
             }
             const STATUS_ORDER: (keyof typeof SC)[] = ['open','in_progress','resolved','closed','archived']
-            const [ticketFilter, setTicketFilter] = React.useState<string>('all')
             const counts2: Record<string, number> = { all: tickets.length, ...Object.fromEntries(Object.keys(SC).map(s => [s, tickets.filter(t => t.status === s).length])) }
             const visible = ticketFilter === 'all' ? tickets : tickets.filter(t => t.status === ticketFilter)
             return (
