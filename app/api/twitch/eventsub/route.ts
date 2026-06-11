@@ -200,16 +200,16 @@ async function handleIaChat(
     return
   }
 
-  // Ignore commands (!, /, ?)
-  if (cfg.ignore_commands && /^[!/?]/.test(rawText)) {
-    console.log('[ia-chat] skip: ignore_commands')
+  // Always skip the bot's own messages (bot sends as broadcaster — prevent infinite loop)
+  const chatterUserId = (event.chatter_user_id as string) ?? ''
+  if (chatterUserId === broadcasterId) {
+    console.log('[ia-chat] skip: own message (loop prevention)')
     return
   }
 
-  // Skip streamer's own messages unless configured
-  const broadcasterLogin = ((event.broadcaster_user_login) as string) ?? ''
-  if (!cfg.reply_to_streamer && chatter.toLowerCase() === broadcasterLogin.toLowerCase()) {
-    console.log('[ia-chat] skip: streamer msg, reply_to_streamer=false')
+  // Ignore commands (!, /, ?)
+  if (cfg.ignore_commands && /^[!/?]/.test(rawText)) {
+    console.log('[ia-chat] skip: ignore_commands')
     return
   }
 
