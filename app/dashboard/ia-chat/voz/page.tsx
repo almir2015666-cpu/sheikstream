@@ -20,6 +20,7 @@ export default function IaVozPage() {
   const [lang, setLang]         = useState('pt-BR')
   const [supported, setSupported] = useState(true)
   const [minWords, setMinWords]  = useState(2)
+  const [apiError, setApiError]   = useState('')
 
   const recogRef    = useRef<any>(null)
   const alwaysRef   = useRef(false)
@@ -43,8 +44,13 @@ export default function IaVozPage() {
         body: JSON.stringify({ text: trimmed }),
       })
       const data = await r.json()
-      if (!r.ok) throw new Error(data.error ?? 'Erro')
-      setHistory(h => [{ id: crypto.randomUUID(), spoken: trimmed, reply: data.reply }, ...h])
+      if (!r.ok) {
+        setApiError(`Erro ${r.status}: ${data.error ?? 'desconhecido'}`)
+        throw new Error(data.error ?? 'Erro')
+      }
+      if (data.warn) setApiError(`Aviso: ${data.warn}`)
+      else setApiError('')
+      setHistory(h => [{ id: crypto.randomUUID(), spoken: trimmed, reply: data.reply ?? '(sem resposta)' }, ...h])
       setStatus('sent')
       setTimeout(() => { if (alwaysRef.current) setStatus('listening'); else setStatus('idle') }, 1800)
     } catch (e) {
@@ -217,6 +223,13 @@ export default function IaVozPage() {
           </div>
         </div>
       </div>
+
+      {/* API error */}
+      {apiError && (
+        <div style={{ background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'.65rem 1rem', marginBottom:'1rem', fontSize:'.82rem', color:'#ef4444' }}>
+          ⚠ {apiError}
+        </div>
+      )}
 
       {/* Transcript live */}
       {interim && (
