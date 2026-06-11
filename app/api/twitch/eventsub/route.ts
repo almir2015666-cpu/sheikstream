@@ -100,7 +100,7 @@ type IaChatCfg = {
   generated_prompt: string
 }
 
-type IaState = { user_cooldowns?: Record<string, string>; global_last_at?: string }
+type IaState = { user_cooldowns?: Record<string, string>; global_last_at?: string; last_bot_msgs?: string[] }
 
 const IA_LANGS: Record<string, string> = {
   'pt-BR': 'Português (BR)',
@@ -200,13 +200,6 @@ async function handleIaChat(
     return
   }
 
-  // Always skip the bot's own messages (bot sends as broadcaster — prevent infinite loop)
-  const chatterUserId = (event.chatter_user_id as string) ?? ''
-  if (chatterUserId === broadcasterId) {
-    console.log('[ia-chat] skip: own message (loop prevention)')
-    return
-  }
-
   // Ignore commands (!, /, ?)
   if (cfg.ignore_commands && /^[!/?]/.test(rawText)) {
     console.log('[ia-chat] skip: ignore_commands')
@@ -258,6 +251,12 @@ async function handleIaChat(
     .maybeSingle()
 
   const state = (stateRow?.config ?? {}) as IaState
+
+  // Skip if message is identical to one the bot recently sent (loop prevention)
+  if ((state.last_bot_msgs ?? []).some(m => m.toLowerCase() === rawText.toLowerCase())) {
+    console.log('[ia-chat] skip: matches recent bot response')
+    return
+  }
 
   // Global cooldown — prevent bot from responding multiple times in rapid succession (anti-loop)
   if (state.global_last_at) {
@@ -313,6 +312,7 @@ async function handleIaChat(
   const newState: IaState = {
     global_last_at: now,
     user_cooldowns: { ...(state.user_cooldowns ?? {}), [chatter]: now },
+    last_bot_msgs: [reply, ...(state.last_bot_msgs ?? []).slice(0, 9)],
   }
   await db.from('overlay_configs').upsert(
     { broadcaster_id: broadcasterId, type: 'ia-chat-state', config: newState },
