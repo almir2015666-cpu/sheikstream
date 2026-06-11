@@ -41,18 +41,27 @@ export async function GET(req: NextRequest) {
     } catch (e) { return { label, status: -1, body: String(e) } }
   }
 
+  // Get slug from DB or from the v1/channels call
+  let slug = row.kick_username?.toLowerCase() || ''
+  if (!slug) {
+    try {
+      const r = await fetch('https://api.kick.com/public/v1/channels', { headers: h })
+      if (r.ok) {
+        const d = await r.json()
+        slug = d?.data?.[0]?.slug || ''
+      }
+    } catch { /* ignore */ }
+  }
+
   const results = await Promise.all([
-    // OIDC userinfo (standard endpoint for OAuth 2.0 providers)
-    probe('oidc_userinfo',       'https://id.kick.com/oauth/userinfo', hNoClient),
-    probe('oidc_userinfo_cid',   'https://id.kick.com/oauth/userinfo'),
-    // Kick public v1 variants
-    probe('v1_users_me',         'https://api.kick.com/public/v1/users/me'),
-    probe('v1_user_me',          'https://api.kick.com/public/v1/user/me'),
-    probe('v1_users',            'https://api.kick.com/public/v1/users'),
-    probe('v1_channels_authed',  'https://api.kick.com/public/v1/channels'),
-    probe('v1_channels_me',      'https://api.kick.com/public/v1/channels/me'),
-    // Token introspect
-    probe('introspect',          'https://id.kick.com/oauth/introspect', hNoClient),
+    probe('v1_users',                'https://api.kick.com/public/v1/users'),
+    probe('v1_channels_authed',      'https://api.kick.com/public/v1/channels'),
+    // Legacy API for followers (public, no auth)
+    ...(slug ? [
+      probe('legacy_v2_channel',     `https://kick.com/api/v2/channels/${slug}`, {}),
+      probe('legacy_v1_channel',     `https://kick.com/api/v1/channels/${slug}`, {}),
+      probe('legacy_v2_channel_ua',  `https://kick.com/api/v2/channels/${slug}`, { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36' }),
+    ] : []),
   ])
 
   return NextResponse.json({
