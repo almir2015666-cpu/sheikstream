@@ -261,6 +261,7 @@ export default function AdminPage() {
   const [notifyLoading, setNotifyLoading] = useState(false)
   const [notifySaving, setNotifySaving] = useState(false)
   const [notifyForm, setNotifyForm] = useState({ title: '', message: '', icon: '📢', color: '#9b30ff', target_username: '', max_views: 0 })
+  const [editingNotifyId, setEditingNotifyId] = useState<string | null>(null)
   type ChangelogEntry = { date: string; time?: string; title: string; desc: string }
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([])
   const [changelogLoading, setChangelogLoading] = useState(false)
@@ -526,14 +527,20 @@ export default function AdminPage() {
     if (!notifyForm.message.trim()) return
     setNotifySaving(true)
     try {
+      const isEdit = !!editingNotifyId
       const res = await fetch('/api/admin/notifications', {
-        method: 'POST',
+        method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-        body: JSON.stringify(notifyForm),
+        body: JSON.stringify(isEdit ? { ...notifyForm, id: editingNotifyId } : notifyForm),
       })
       if (res.ok) {
         const d = await res.json()
-        setNotifyList(prev => [d, ...prev])
+        if (isEdit) {
+          setNotifyList(prev => prev.map(n => n.id === d.id ? d : n))
+          setEditingNotifyId(null)
+        } else {
+          setNotifyList(prev => [d, ...prev])
+        }
         setNotifyForm(p => ({ ...p, title: '', message: '', max_views: 0 }))
       } else {
         const d = await res.json().catch(() => ({}))
@@ -1993,11 +2000,19 @@ export default function AdminPage() {
               <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
                 {/* Card header */}
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(155,48,255,.12)', border: '1px solid rgba(155,48,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>📣</div>
-                  <div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>Enviar aviso aos usuários</div>
-                    <div style={{ fontSize: '0.72rem', color: C.dim, marginTop: '0.1rem' }}>Aparece no dashboard de todos os usuários ativos até ser removido</div>
+                  <div style={{ width: 36, height: 36, borderRadius: '10px', background: editingNotifyId ? 'rgba(251,191,36,.12)' : 'rgba(155,48,255,.12)', border: `1px solid ${editingNotifyId ? 'rgba(251,191,36,.25)' : 'rgba(155,48,255,.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                    {editingNotifyId ? '✏️' : '📣'}
                   </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>{editingNotifyId ? 'Editar aviso' : 'Enviar aviso aos usuários'}</div>
+                    <div style={{ fontSize: '0.72rem', color: C.dim, marginTop: '0.1rem' }}>{editingNotifyId ? 'Modifique o conteúdo e clique em Salvar alterações' : 'Aparece no dashboard de todos os usuários ativos até ser removido'}</div>
+                  </div>
+                  {editingNotifyId && (
+                    <button onClick={() => { setEditingNotifyId(null); setNotifyForm(p => ({ ...p, title: '', message: '', max_views: 0 })) }}
+                      style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.dim, padding: '0.3rem 0.75rem', borderRadius: '7px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>
+                      Cancelar
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ padding: '1.25rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
@@ -2116,8 +2131,8 @@ export default function AdminPage() {
                     </span>
                   )}
                   <button onClick={sendNotification} disabled={notifySaving || !notifyForm.message.trim()}
-                    style={{ padding: '0.6rem 1.6rem', background: notifyForm.message.trim() ? `linear-gradient(135deg, ${C.primary}, #6b1fc2)` : C.cardBgAlt, border: `1px solid ${notifyForm.message.trim() ? C.primary + '60' : C.border}`, color: notifyForm.message.trim() ? '#fff' : C.vdim, borderRadius: '9px', fontSize: '0.85rem', fontWeight: 700, cursor: notifyForm.message.trim() ? 'pointer' : 'not-allowed', transition: 'all .2s', boxShadow: notifyForm.message.trim() ? `0 4px 14px ${C.primary}30` : 'none' }}>
-                    {notifySaving ? 'Enviando...' : '📣 Enviar aviso'}
+                    style={{ padding: '0.6rem 1.6rem', background: notifyForm.message.trim() ? (editingNotifyId ? 'linear-gradient(135deg,#fbbf24,#f59e0b)' : `linear-gradient(135deg, ${C.primary}, #6b1fc2)`) : C.cardBgAlt, border: 'none', color: notifyForm.message.trim() ? '#fff' : C.vdim, borderRadius: '9px', fontSize: '0.85rem', fontWeight: 700, cursor: notifyForm.message.trim() ? 'pointer' : 'not-allowed', transition: 'all .2s', boxShadow: notifyForm.message.trim() ? `0 4px 14px rgba(155,48,255,.25)` : 'none' }}>
+                    {notifySaving ? 'Salvando...' : editingNotifyId ? '✏️ Salvar alterações' : '📣 Enviar aviso'}
                   </button>
                 </div>
               </div>
@@ -2156,7 +2171,17 @@ export default function AdminPage() {
                             )}
                           </div>
                         </div>
-                        <button onClick={() => deleteNotification(n.id)} style={{ background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', padding: '0.28rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Remover</button>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                          <button onClick={() => {
+                            setEditingNotifyId(n.id)
+                            setNotifyForm({ title: n.title ?? '', message: n.message, icon: n.icon, color: n.color, target_username: n.target_username ?? '', max_views: (n as Record<string,unknown>).max_views as number ?? 0 })
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                          }} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(251,191,36,.1)', border: '1px solid rgba(251,191,36,.28)', color: '#fbbf24', borderRadius: '6px', padding: '0.28rem 0.65rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Editar
+                          </button>
+                          <button onClick={() => deleteNotification(n.id)} style={{ background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', padding: '0.28rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>Remover</button>
+                        </div>
                       </div>
                     ))}
                   </div>

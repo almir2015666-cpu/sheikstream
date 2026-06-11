@@ -45,6 +45,34 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  if (!await isAdminPassword(req.headers.get('x-admin-password') ?? ''))
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const body = await req.json()
+    if (!body.id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+    if (!body.message?.trim()) return NextResponse.json({ error: 'message required' }, { status: 400 })
+    const maxViews = Number(body.max_views)
+    const { data, error } = await getSupabaseAdmin()
+      .from('admin_notifications')
+      .update({
+        title:           body.title?.trim() || '',
+        message:         body.message.trim(),
+        icon:            body.icon || '📢',
+        color:           body.color || '#9b30ff',
+        target_username: body.target_username?.trim() || null,
+        max_views:       maxViews > 0 ? maxViews : null,
+      })
+      .eq('id', body.id)
+      .select()
+      .single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data)
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   if (!await isAdminPassword(req.headers.get('x-admin-password') ?? ''))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
