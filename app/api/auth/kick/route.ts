@@ -13,17 +13,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${BASE}/dashboard/conexoes?error=kick_not_configured`)
   }
   const isPopup = req.nextUrl.searchParams.get('popup') === '1'
+  const from    = req.nextUrl.searchParams.get('from') ?? ''
 
   // PKCE
   const verifier = base64url(crypto.randomBytes(32))
   const challenge = base64url(crypto.createHash('sha256').update(verifier).digest())
+
+  const stateValue = isPopup ? 'popup' : (from || 'default')
 
   const params = new URLSearchParams({
     client_id: process.env.KICK_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: 'code',
     scope: 'user:read channel:read events:subscribe',
-    state: isPopup ? 'popup' : 'default',
+    state: stateValue,
     code_challenge: challenge,
     code_challenge_method: 'S256',
   })

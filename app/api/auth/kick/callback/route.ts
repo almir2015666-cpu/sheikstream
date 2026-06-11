@@ -16,8 +16,13 @@ function makePopupHtml(ok: boolean, errMsg?: string) {
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code')
   const error = req.nextUrl.searchParams.get('error')
-  const state = req.nextUrl.searchParams.get('state')
+  const state = req.nextUrl.searchParams.get('state') ?? 'default'
   const isPopup = state === 'popup'
+
+  // state='kick' means user came from /dashboard/plataformas/kick reconnect button
+  const successRedirect = state === 'kick'
+    ? `${BASE}/dashboard/plataformas/kick`
+    : `${BASE}/dashboard/conexoes`
 
   const fail = (msg: string) => isPopup
     ? new NextResponse(makePopupHtml(false, msg), { headers: { 'Content-Type': 'text/html' } })
@@ -105,5 +110,5 @@ export async function GET(req: NextRequest) {
   )
 
   if (isPopup) return new NextResponse(makePopupHtml(true), { headers: { 'Content-Type': 'text/html' } })
-  return NextResponse.redirect(`${BASE}/dashboard/conexoes`)
+  return NextResponse.redirect(successRedirect)
 }

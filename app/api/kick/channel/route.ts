@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
   let token = row.kick_token
   const channelId = row.kick_channel_id ?? ''
   const clientId  = process.env.KICK_CLIENT_ID ?? ''
+  let tokenExpired = false
 
   async function kickFetch(url: string, t: string) {
     return fetch(url, {
@@ -47,13 +48,17 @@ export async function GET(req: NextRequest) {
   // Try fetching user profile
   let profileRes = await kickFetch('https://api.kick.com/public/v1/users/me', token)
 
-  // If 401 and refresh token exists, try to refresh
-  if (profileRes.status === 401 && row.kick_refresh_token) {
-    const newToken = await refreshKickToken(row.kick_refresh_token)
-    if (newToken) {
-      token = newToken
-      await db.from('user_tokens').update({ kick_token: newToken }).eq('user_id', user.id)
-      profileRes = await kickFetch('https://api.kick.com/public/v1/users/me', token)
+  // If 401, try to refresh token
+  if (profileRes.status === 401) {
+    tokenExpired = true
+    if (row.kick_refresh_token) {
+      const newToken = await refreshKickToken(row.kick_refresh_token)
+      if (newToken) {
+        token = newToken
+        tokenExpired = false
+        await db.from('user_tokens').update({ kick_token: newToken }).eq('user_id', user.id)
+        profileRes = await kickFetch('https://api.kick.com/public/v1/users/me', token)
+      }
     }
   }
 
@@ -148,6 +153,6 @@ export async function GET(req: NextRequest) {
     is_live:        isLive,
     stream_title:   streamTitle,
     viewer_count:   viewerCount,
-    token_valid:    profileRes.ok,
+    token_valid:    !tokenExpired,
   })
 }

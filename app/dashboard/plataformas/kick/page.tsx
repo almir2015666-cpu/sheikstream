@@ -358,7 +358,7 @@ export default function KickPlataformaPage() {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: '0.45rem', marginTop: 'auto', paddingTop: '0.25rem', borderTop: `1px solid ${C.border}` }}>
-              <button onClick={openKickPopup} style={{ flex: 1, fontSize: '0.72rem', padding: '0.38rem 0', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}>Reconectar</button>
+              <button onClick={() => { window.location.href = '/api/auth/kick?from=kick' }} style={{ flex: 1, fontSize: '0.72rem', padding: '0.38rem 0', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}>Reconectar</button>
               <button disabled={disconnecting} onClick={handleDisconnect} style={{ flex: 1, fontSize: '0.72rem', padding: '0.38rem 0', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', color: C.red, borderRadius: '6px', cursor: 'pointer', fontWeight: 700, opacity: disconnecting ? 0.6 : 1 }}>
                 {disconnecting ? '...' : 'Desconectar'}
               </button>
