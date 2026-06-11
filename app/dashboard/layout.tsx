@@ -53,9 +53,10 @@ const NAV_GROUPS: Group[] = [
     { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: I.dash },
   ]},
   { label: 'AO VIVO', items: [
-    { id: 'subathon', label: 'Subathon', href: '/dashboard/subathon', icon: I.suba, badge: 'NOVO' },
-    { id: 'timers',   label: 'Timers',   href: '/dashboard/timers',   icon: I.time },
-    { id: 'comandos', label: 'Eventos/Comandos', href: '/dashboard/comandos', icon: I.cmd  },
+    { id: 'subathon',  label: 'Subathon',        href: '/dashboard/subathon',  icon: I.suba, badge: 'NOVO' },
+    { id: 'timers',    label: 'Timers',           href: '/dashboard/timers',    icon: I.time },
+    { id: 'comandos',  label: 'Eventos/Comandos', href: '/dashboard/comandos',  icon: I.cmd  },
+    { id: 'ia-chat',   label: 'IA de Chat',       href: '/dashboard/ia-chat',   icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>, badge: 'NOVO' as Badge },
   ]},
   { label: 'SORTEIO', items: [
     { id: 'sorteios', label: 'Sorteios', href: '/dashboard/sorteios', icon: I.sort,
@@ -106,6 +107,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/perfil': 'Meu Perfil',
   '/dashboard/convites': 'Convites',
   '/dashboard/ia-imagens': 'IA de Imagens',
+  '/dashboard/ia-chat': 'IA de Chat',
 }
 
 function Chip({ type }: { type: Badge }) {
