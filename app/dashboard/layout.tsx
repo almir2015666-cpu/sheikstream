@@ -57,6 +57,7 @@ const NAV_GROUPS: Group[] = [
     { id: 'timers',    label: 'Timers',           href: '/dashboard/timers',    icon: I.time },
     { id: 'comandos',  label: 'Eventos/Comandos', href: '/dashboard/comandos',  icon: I.cmd  },
     { id: 'ia-chat',   label: 'IA de Chat',       href: '/dashboard/ia-chat',   icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>, badge: 'NOVO' as Badge },
+    { id: 'ia-voz',    label: 'IA por Voz',       href: '/dashboard/ia-chat/voz', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>, badge: 'NOVO' as Badge },
   ]},
   { label: 'SORTEIO', items: [
     { id: 'sorteios', label: 'Sorteios', href: '/dashboard/sorteios', icon: I.sort,
@@ -108,6 +109,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/convites': 'Convites',
   '/dashboard/ia-imagens': 'IA de Imagens',
   '/dashboard/ia-chat': 'IA de Chat',
+  '/dashboard/ia-chat/voz': 'IA por Voz',
 }
 
 function Chip({ type }: { type: Badge }) {
