@@ -253,7 +253,7 @@ export default function AdminPage() {
   const [bannerSaving, setBannerSaving] = useState(false)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerSaved, setBannerSaved] = useState(false)
-  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean; spotify_connected: boolean; youtube_connected: boolean; kick_connected: boolean; is_live: boolean; twitch_url: string | null }
+  type OnlineUser = { id: string; platform: string; username: string | null; email: string | null; status: string; created_at: string; last_seen_at: string | null; is_online: boolean; access_count: number; twitch_connected: boolean; livepix_connected: boolean; spotify_connected: boolean; youtube_connected: boolean; kick_connected: boolean; is_live: boolean; twitch_url: string | null; profile_image_url: string | null }
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
   type AdminNotification = { id: string; title: string | null; message: string; icon: string; color: string; created_at: string; target_username: string | null; duration_seconds?: number }
@@ -1900,8 +1900,11 @@ export default function AdminPage() {
                           <div style={{ position: 'absolute', left: 0, top: '12%', bottom: '12%', width: '3px', borderRadius: '0 3px 3px 0', background: u.is_live ? 'linear-gradient(180deg,#ef4444,#f97316)' : isOn ? '#22c55e' : 'transparent' }} />
 
                           {/* Avatar */}
-                          <div style={{ width: 46, height: 46, borderRadius: '50%', background: avatarGrad(u.username ?? 'U'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.15rem', color: '#fff', flexShrink: 0, boxShadow: isOn ? '0 0 0 2px rgba(34,197,94,.35)' : u.is_live ? '0 0 0 2px rgba(239,68,68,.4)' : 'none', letterSpacing: '-0.5px' }}>
-                            {(u.username ?? '?')[0].toUpperCase()}
+                          <div style={{ width: 46, height: 46, borderRadius: '50%', flexShrink: 0, boxShadow: isOn ? '0 0 0 2.5px #22c55e' : u.is_live ? '0 0 0 2.5px #ef4444' : `0 0 0 2px rgba(255,255,255,.08)`, overflow: 'hidden', background: avatarGrad(u.username ?? 'U'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {u.profile_image_url
+                              ? <img src={u.profile_image_url} alt={u.username ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                              : <span style={{ fontWeight: 800, fontSize: '1.15rem', color: '#fff', letterSpacing: '-0.5px' }}>{(u.username ?? '?')[0].toUpperCase()}</span>
+                            }
                           </div>
 
                           {/* Main */}

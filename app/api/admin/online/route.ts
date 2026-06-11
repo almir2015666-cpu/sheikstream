@@ -19,11 +19,28 @@ async function getTwitchAppToken(): Promise<string | null> {
   } catch { return null }
 }
 
-async function fetchLiveUsernames(usernames: string[]): Promise<Set<string>> {
-  if (!usernames.length || !process.env.TWITCH_CLIENT_ID || !process.env.TWITCH_CLIENT_SECRET) return new Set()
-  const token = await getTwitchAppToken()
-  if (!token) return new Set()
+async function fetchProfileImages(usernames: string[], token: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  if (!usernames.length || !process.env.TWITCH_CLIENT_ID) return map
+  for (let i = 0; i < usernames.length; i += 100) {
+    const batch = usernames.slice(i, i + 100)
+    const qs = batch.map(u => `login=${encodeURIComponent(u)}`).join('&')
+    try {
+      const res = await fetch(`https://api.twitch.tv/helix/users?${qs}`, {
+        headers: { Authorization: `Bearer ${token}`, 'Client-Id': process.env.TWITCH_CLIENT_ID! },
+      })
+      if (res.ok) {
+        const { data } = await res.json()
+        for (const u of data ?? []) map.set((u.login as string).toLowerCase(), u.profile_image_url as string)
+      }
+    } catch { /* ignore */ }
+  }
+  return map
+}
+
+async function fetchLiveUsernames(usernames: string[], token: string): Promise<Set<string>> {
   const liveSet = new Set<string>()
+  if (!usernames.length || !process.env.TWITCH_CLIENT_ID) return liveSet
   for (let i = 0; i < usernames.length; i += 100) {
     const batch = usernames.slice(i, i + 100)
     const qs = batch.map(u => `user_login=${encodeURIComponent(u)}`).join('&')
@@ -124,9 +141,19 @@ export async function GET(req: NextRequest) {
   for (const uid of userIdHasYouTube)  { const n = userIdToName.get(uid); if (n) youtubeUsernames.add(n) }
   for (const uid of userIdHasKick)     { const n = userIdToName.get(uid); if (n) kickUsernames.add(n) }
 
-  // Check live status on Twitch for all approved users
+  // Fetch Twitch live status + profile images in parallel (one token)
   const allUsernames = (users ?? []).map(u => u.platform_username).filter(Boolean) as string[]
-  const liveUsernames = await fetchLiveUsernames(allUsernames)
+  let liveUsernames  = new Set<string>()
+  let profileImages  = new Map<string, string>()
+  if (allUsernames.length && process.env.TWITCH_CLIENT_ID && process.env.TWITCH_CLIENT_SECRET) {
+    const token = await getTwitchAppToken()
+    if (token) {
+      ;[liveUsernames, profileImages] = await Promise.all([
+        fetchLiveUsernames(allUsernames, token),
+        fetchProfileImages(allUsernames, token),
+      ])
+    }
+  }
 
   const result = (users ?? []).map(u => {
     const key = (u.platform_username ?? '').toLowerCase()
@@ -147,6 +174,7 @@ export async function GET(req: NextRequest) {
       kick_connected:    kickUsernames.has(key),
       is_live:           liveUsernames.has(key),
       twitch_url:        u.platform_username ? `https://twitch.tv/${u.platform_username}` : null,
+      profile_image_url: profileImages.get(key) ?? null,
     }
   })
 
