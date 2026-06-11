@@ -40,23 +40,30 @@ export default function NotasPage() {
 
   const active = notes.find(n => n.id === activeId) ?? null
 
+  const LS_KEY = 'sk_notas_v1'
+
   useEffect(() => {
-    fetch('/api/notas')
-      .then(r => r.ok ? r.json() : { notes: [] })
-      .then(d => {
-        const list: Note[] = d.notes?.length ? d.notes : [mk()]
-        setNotes(list)
-        setActiveId(list[0].id)
-        setLoaded(true)
-      })
-      .catch(() => { const n = mk(); setNotes([n]); setActiveId(n.id); setLoaded(true) })
+    try {
+      const raw = localStorage.getItem(LS_KEY)
+      const list: Note[] = raw ? JSON.parse(raw) : []
+      const notes = list.length ? list : [mk()]
+      setNotes(notes)
+      setActiveId(notes[0].id)
+    } catch {
+      const n = mk(); setNotes([n]); setActiveId(n.id)
+    }
+    setLoaded(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const persist = useCallback((list: Note[]) => {
     setStatus('saving')
-    fetch('/api/notas', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: list }) })
-      .then(r => setStatus(r.ok ? 'saved' : 'error'))
-      .catch(() => setStatus('error'))
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(list))
+      setStatus('saved')
+    } catch {
+      setStatus('error')
+    }
   }, [])
 
   const schedule = useCallback((list: Note[]) => {
