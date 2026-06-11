@@ -54,14 +54,14 @@ export async function GET(req: NextRequest) {
   }
 
   const results = await Promise.all([
-    probe('v1_users',                'https://api.kick.com/public/v1/users'),
-    probe('v1_channels_authed',      'https://api.kick.com/public/v1/channels'),
-    // Legacy API for followers (public, no auth)
-    ...(slug ? [
-      probe('legacy_v2_channel',     `https://kick.com/api/v2/channels/${slug}`, {}),
-      probe('legacy_v1_channel',     `https://kick.com/api/v1/channels/${slug}`, {}),
-      probe('legacy_v2_channel_ua',  `https://kick.com/api/v2/channels/${slug}`, { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36' }),
-    ] : []),
+    probe('v1_channels_slug_auth',   `https://api.kick.com/public/v1/channels/${slug}`),
+    probe('v1_channels_slug_noauth', `https://api.kick.com/public/v1/channels/${slug}`, {}),
+    probe('v1_channels_id_auth',     `https://api.kick.com/public/v1/channels/${row.kick_channel_id}`),
+    probe('v1_channel_followers',    `https://api.kick.com/public/v1/channels/${slug}/followers`),
+    probe('v1_channel_stats',        `https://api.kick.com/public/v1/channels/${slug}/statistics`),
+    probe('v1_channel_subscribers',  `https://api.kick.com/public/v1/channels/${slug}/subscribers`),
+    probe('v1_user_by_id',          `https://api.kick.com/public/v1/users?id=${row.kick_channel_id}`),
+    probe('v1_user_by_slug',        `https://api.kick.com/public/v1/users?username=${slug}`),
   ])
 
   return NextResponse.json({
