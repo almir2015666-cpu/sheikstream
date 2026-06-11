@@ -1655,183 +1655,202 @@ export default function AdminPage() {
           )}
           {view === 'tickets' && (() => {
             const SC: Record<string, { bg: string; color: string; border: string; label: string }> = {
-              open:        { bg: C.accentBg,               color: C.accent,   border: C.accentBorder,         label: 'Aberto' },
-              in_progress: { bg: 'rgba(251,191,36,.1)',    color: '#fbbf24',  border: 'rgba(251,191,36,.3)',   label: 'Em andamento' },
-              resolved:    { bg: C.primaryBg,              color: C.primary,  border: C.borderStrong,         label: 'Resolvido' },
-              closed:      { bg: C.vvdim,                  color: C.dim,      border: C.border,               label: 'Fechado' },
-              archived:    { bg: 'rgba(148,163,184,.1)',   color: '#94a3b8',  border: 'rgba(148,163,184,.28)', label: 'Arquivado' },
+              open:        { bg: C.accentBg,             color: C.accent,  border: C.accentBorder,         label: 'Aberto' },
+              in_progress: { bg: 'rgba(251,191,36,.12)', color: '#fbbf24', border: 'rgba(251,191,36,.3)',   label: 'Em andamento' },
+              resolved:    { bg: C.primaryBg,            color: C.primary, border: C.borderStrong,         label: 'Resolvido' },
+              closed:      { bg: C.vvdim,                color: C.dim,     border: C.border,               label: 'Fechado' },
+              archived:    { bg: 'rgba(148,163,184,.1)', color: '#94a3b8', border: 'rgba(148,163,184,.28)', label: 'Arquivado' },
             }
-            const STATUS_ORDER: (keyof typeof SC)[] = ['open','in_progress','resolved','closed','archived']
-            const counts2: Record<string, number> = { all: tickets.length, ...Object.fromEntries(Object.keys(SC).map(s => [s, tickets.filter(t => t.status === s).length])) }
+            const STATUS_ORDER = ['open','in_progress','resolved','closed','archived'] as const
+            const counts2: Record<string,number> = { all: tickets.length, ...Object.fromEntries(Object.keys(SC).map(s => [s, tickets.filter(t => t.status === s).length])) }
             const visible = ticketFilter === 'all' ? tickets : tickets.filter(t => t.status === ticketFilter)
+            const active  = tickets.find(t => t.id === expandedTicket) ?? null
+
+            const parseReplies = (raw: string) => {
+              const parts: { text: string; ts?: string }[] = []
+              const segs = raw.split(/\n\n---\[([^\]]+)\]---\n/)
+              parts.push({ text: segs[0].trim() })
+              for (let i = 1; i < segs.length; i += 2) {
+                const txt = (segs[i + 1] ?? '').trim()
+                if (txt) parts.push({ text: txt, ts: segs[i] })
+              }
+              return parts.filter(p => p.text)
+            }
+
             return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', height: 'calc(100vh - 57px)', margin: '-1.5rem', overflow: 'hidden' }}>
 
-                {/* ── Header ── */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <div>
-                    <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: 800, color: C.text }}>Tickets de Suporte</h3>
-                    <div style={{ fontSize: '0.72rem', color: C.muted }}>Mensagens enviadas pelo formulário da landing page</div>
+                {/* ══ LEFT PANEL — conversation list ══ */}
+                <div style={{ width: 320, flexShrink: 0, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', background: C.cardBg }}>
+
+                  {/* Header */}
+                  <div style={{ padding: '1rem 1.1rem 0.65rem', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 800, color: C.text }}>Suporte</span>
+                      <button onClick={() => fetchTickets(storedPw)} disabled={ticketsLoading}
+                        style={{ background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.2rem' }}>
+                        <svg className={ticketsLoading ? 'sk-spin' : ''} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                      </button>
+                    </div>
+                    {/* Filter pills */}
+                    <div style={{ display: 'flex', gap: '0.3rem', overflowX: 'auto', paddingBottom: '0.1rem' }}>
+                      {[
+                        { k:'all',         label:'Todos',      count: counts2.all },
+                        { k:'open',        label:'Abertos',    count: counts2['open'] ?? 0,        color: C.accent },
+                        { k:'in_progress', label:'Andamento',  count: counts2['in_progress'] ?? 0, color: '#fbbf24' },
+                        { k:'resolved',    label:'Resolvidos', count: counts2['resolved'] ?? 0,    color: C.primary },
+                        { k:'closed',      label:'Fechados',   count: counts2['closed'] ?? 0,      color: C.dim },
+                      ].map(f => {
+                        const sel = ticketFilter === f.k
+                        return (
+                          <button key={f.k} onClick={() => setTicketFilter(f.k)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.22rem 0.65rem', borderRadius: '99px', background: sel ? C.primaryBg : 'transparent', border: `1px solid ${sel ? C.borderStrong : C.border}`, color: sel ? C.primary : C.dim, fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {f.label}
+                            {(f.count ?? 0) > 0 && <span style={{ fontSize: '0.6rem', background: sel ? C.primary : C.vdim, color: sel ? '#fff' : C.dim, borderRadius: '99px', padding: '0 4px', minWidth: 14, textAlign: 'center' }}>{f.count}</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <button onClick={() => fetchTickets(storedPw)} disabled={ticketsLoading}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 1rem', borderRadius: '8px', background: C.cardBgAlt, border: `1px solid ${C.border}`, color: C.muted, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
-                    <svg className={ticketsLoading ? 'sk-spin' : ''} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                    Atualizar
-                  </button>
-                </div>
 
-                {/* ── Stat + filter tabs ── */}
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {[{ k:'all', label:`Todos`, count: counts2.all, color: C.primary, bg: C.primaryBg, border: C.border },
-                    { k:'open', label:'Abertos', count: counts2['open'] ?? 0, color: C.accent, bg: C.accentBg, border: C.accentBorder },
-                    { k:'in_progress', label:'Andamento', count: counts2['in_progress'] ?? 0, color: '#fbbf24', bg: 'rgba(251,191,36,.1)', border: 'rgba(251,191,36,.3)' },
-                    { k:'resolved', label:'Resolvidos', count: counts2['resolved'] ?? 0, color: C.primary, bg: C.primaryBg, border: C.borderStrong },
-                    { k:'closed', label:'Fechados', count: counts2['closed'] ?? 0, color: C.dim, bg: C.cardBgAlt, border: C.border },
-                  ].map(f => (
-                    <button key={f.k} onClick={() => setTicketFilter(f.k)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.38rem 0.85rem', borderRadius: '8px', background: ticketFilter === f.k ? f.bg : 'transparent', border: `1px solid ${ticketFilter === f.k ? f.border : C.border}`, color: ticketFilter === f.k ? f.color : C.dim, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: 'all .15s' }}>
-                      {f.label}
-                      {f.count > 0 && <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: '99px', background: ticketFilter === f.k ? f.color : C.vdim, color: ticketFilter === f.k ? (isDark ? '#08090d' : '#fff') : C.dim, fontSize: '0.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{f.count}</span>}
-                    </button>
-                  ))}
-                </div>
-
-                {/* ── List ── */}
-                {ticketsLoading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, color: C.muted, fontSize: '0.85rem', background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}` }}>Carregando...</div>
-                ) : visible.length === 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 140, gap: '0.5rem', color: C.vdim, background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}` }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity:.3 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <span style={{ fontSize: '0.82rem' }}>Nenhum ticket</span>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {visible.map(t => {
-                      const isExpanded = expandedTicket === t.id
-                      const sc = SC[t.status] ?? SC.open
+                  {/* List */}
+                  <div style={{ flex: 1, overflowY: 'auto' }}>
+                    {ticketsLoading ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120, color: C.muted, fontSize: '0.82rem' }}>Carregando...</div>
+                    ) : visible.length === 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 120, gap: '0.4rem', color: C.vdim }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity:.4 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span style={{ fontSize: '0.78rem' }}>Nenhum ticket</span>
+                      </div>
+                    ) : visible.map(t => {
+                      const sc   = SC[t.status] ?? SC.open
+                      const sel  = expandedTicket === t.id
                       const isBug = t.subject?.toLowerCase().includes('bug') || t.subject?.toLowerCase().includes('erro')
+                      const preview = t.admin_reply
+                        ? '↩ ' + t.admin_reply.split(/\n\n---\[/)[0].trim().slice(0, 45)
+                        : t.message?.slice(0, 55)
                       return (
-                        <div key={t.id} style={{ background: C.cardBg, border: `1px solid ${isExpanded ? C.borderStrong : C.border}`, borderRadius: '14px', overflow: 'hidden', transition: 'border-color .15s' }}>
-                          {/* Row header */}
-                          <div className="sk-user-row" onClick={() => setExpandedTicket(isExpanded ? null : t.id)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.9rem 1.25rem', cursor: 'pointer' }}>
-                            {/* Type icon */}
-                            <div style={{ width: 36, height: 36, borderRadius: '10px', background: isBug ? C.dangerBg : C.primaryBg, border: `1px solid ${isBug ? C.dangerBorder : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div key={t.id} onClick={() => setExpandedTicket(sel ? null : t.id)}
+                          style={{ padding: '0.8rem 1.1rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', background: sel ? C.primaryBg : 'transparent', borderLeft: `3px solid ${sel ? C.primary : 'transparent'}`, transition: 'background .1s' }}
+                          onMouseEnter={e => { if (!sel) (e.currentTarget as HTMLDivElement).style.background = C.vvdim }}
+                          onMouseLeave={e => { if (!sel) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                            {/* Avatar */}
+                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: isBug ? 'rgba(255,68,68,.15)' : C.primaryBg, border: `1px solid ${isBug ? C.dangerBorder : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {isBug
-                                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.danger} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.danger} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                               }
                             </div>
-                            {/* Info */}
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '0.18rem' }}>{t.subject}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '0.7rem', color: C.muted, fontWeight: 600 }}>{t.username || '—'}</span>
-                                {t.reply_email && <span style={{ fontSize: '0.7rem', color: C.dim }}>{t.reply_email}</span>}
-                                <span style={{ fontSize: '0.65rem', color: C.vdim }}>{new Date(t.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.18rem' }}>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: sel ? C.primary : C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '0.4rem' }}>{t.subject}</span>
+                                <span style={{ fontSize: '0.6rem', color: C.vdim, flexShrink: 0 }}>{new Date(t.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
                               </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                                <span style={{ fontSize: '0.7rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{preview}</span>
+                                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.45rem', borderRadius: '99px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, flexShrink: 0 }}>{sc.label}</span>
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: C.vdim, marginTop: '0.18rem' }}>{t.username || '—'}</div>
                             </div>
-                            {/* Status */}
-                            <span style={{ padding: '0.2rem 0.7rem', borderRadius: '99px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, fontSize: '0.65rem', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>{sc.label}</span>
-                            {/* Chevron */}
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: C.dim, flexShrink: 0, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><polyline points="6 9 12 15 18 9"/></svg>
                           </div>
-
-                          {/* Expanded */}
-                          {isExpanded && (
-                            <div style={{ borderTop: `1px solid ${C.border}`, background: C.cardBgAlt, display: 'flex', flexDirection: 'column' }}>
-                              {/* Status actions */}
-                              <div style={{ padding: '0.7rem 1.25rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${C.vdim}` }}>
-                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.07em', marginRight: '0.25rem' }}>Status:</span>
-                                {STATUS_ORDER.map(s => {
-                                  const sc2 = SC[s]
-                                  const active = t.status === s
-                                  return (
-                                    <button key={s} disabled={active || ticketUpdating === t.id}
-                                      onClick={() => updateTicket(t.id, { status: s })}
-                                      style={{ padding: '0.22rem 0.7rem', background: active ? sc2.bg : 'transparent', border: `1px solid ${active ? sc2.border : C.border}`, color: active ? sc2.color : C.dim, borderRadius: '7px', fontSize: '0.68rem', fontWeight: 700, cursor: active ? 'default' : 'pointer', transition: 'all .12s' }}>
-                                      {sc2.label}
-                                    </button>
-                                  )
-                                })}
-                                <button disabled={ticketUpdating === t.id}
-                                  onClick={() => { if (confirm('Excluir este ticket permanentemente?')) deleteTicket(t.id) }}
-                                  style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.22rem 0.7rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '7px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}>
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                                  Excluir
-                                </button>
-                              </div>
-
-                              {/* Thread */}
-                              <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.9rem', maxHeight: 400, overflowY: 'auto' }}>
-                                {/* User message */}
-                                <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start' }}>
-                                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
-                                    {(t.username ?? '?')[0].toUpperCase()}
-                                  </div>
-                                  <div style={{ maxWidth: '80%' }}>
-                                    <div style={{ fontSize: '0.63rem', color: C.dim, marginBottom: '0.22rem', fontWeight: 600 }}>
-                                      {t.username || 'Usuário'} · {new Date(t.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
-                                    </div>
-                                    <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '4px 12px 12px 12px', padding: '0.7rem 1rem', fontSize: '0.83rem', color: C.text, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
-                                      {t.message}
-                                    </div>
-                                    {t.reply_email && <div style={{ fontSize: '0.62rem', color: C.vdim, marginTop: '0.2rem' }}>✉ {t.reply_email}</div>}
-                                  </div>
-                                </div>
-
-                                {/* Admin replies */}
-                                {t.admin_reply && (() => {
-                                  const raw = t.admin_reply
-                                  const parts: { text: string; ts?: string }[] = []
-                                  const segments = raw.split(/\n\n---\[([^\]]+)\]---\n/)
-                                  parts.push({ text: segments[0].trim() })
-                                  for (let i = 1; i < segments.length; i += 2) {
-                                    const ts = segments[i]
-                                    const txt = (segments[i + 1] ?? '').trim()
-                                    if (txt) parts.push({ text: txt, ts })
-                                  }
-                                  return parts.filter(p => p.text).map((p, pi) => (
-                                    <div key={pi} style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
-                                      <div style={{ maxWidth: '80%' }}>
-                                        <div style={{ fontSize: '0.63rem', color: C.dim, marginBottom: '0.22rem', textAlign: 'right', fontWeight: 600 }}>
-                                          Admin {p.ts ? '· ' + new Date(p.ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : ''}
-                                        </div>
-                                        <div style={{ background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: '12px 4px 12px 12px', padding: '0.7rem 1rem', fontSize: '0.83rem', color: C.primary, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>
-                                          {p.text}
-                                        </div>
-                                      </div>
-                                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>A</div>
-                                    </div>
-                                  ))
-                                })()}
-                              </div>
-
-                              {/* Reply box */}
-                              <div style={{ padding: '0.75rem 1.25rem', borderTop: `1px solid ${C.vdim}`, display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
-                                <textarea
-                                  value={adminReply[t.id] ?? ''}
-                                  onChange={e => setAdminReply(p => ({ ...p, [t.id]: e.target.value }))}
-                                  onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && adminReply[t.id]?.trim()) { e.preventDefault(); updateTicket(t.id, { admin_reply: adminReply[t.id].trim() }) } }}
-                                  placeholder={t.admin_reply ? 'Adicionar nova resposta... (Ctrl+Enter)' : 'Escreva uma resposta... (Ctrl+Enter)'}
-                                  rows={2}
-                                  style={{ flex: 1, padding: '0.6rem 0.85rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '10px', color: C.text, fontSize: '0.83rem', outline: 'none', resize: 'none', fontFamily: 'inherit', lineHeight: 1.55 }}
-                                />
-                                <button
-                                  disabled={ticketUpdating === t.id || !adminReply[t.id]?.trim()}
-                                  onClick={() => updateTicket(t.id, { admin_reply: adminReply[t.id]!.trim() })}
-                                  style={{ padding: '0.6rem 1.1rem', background: adminReply[t.id]?.trim() ? 'linear-gradient(135deg,#9b30ff,#7b20df)' : C.vvdim, border: 'none', color: adminReply[t.id]?.trim() ? '#fff' : C.dim, borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, cursor: adminReply[t.id]?.trim() ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap' as const, display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                                  {ticketUpdating === t.id ? 'Enviando...' : 'Responder'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       )
                     })}
                   </div>
-                )}
+                </div>
+
+                {/* ══ RIGHT PANEL — chat view ══ */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: isDark ? '#0a0b10' : '#f0eff7' }}>
+                  {!active ? (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', opacity: 0.35 }}>
+                      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <span style={{ fontSize: '0.9rem', color: C.muted }}>Selecione um ticket para responder</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Chat header */}
+                      <div style={{ padding: '0.85rem 1.25rem', borderBottom: `1px solid ${C.border}`, background: C.cardBg, display: 'flex', alignItems: 'center', gap: '0.85rem', flexShrink: 0 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
+                          {(active.username ?? '?')[0].toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{active.subject}</div>
+                          <div style={{ fontSize: '0.68rem', color: C.dim }}>{active.username || '—'} · {active.reply_email || ''}</div>
+                        </div>
+                        {/* Status actions */}
+                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                          {STATUS_ORDER.map(s => {
+                            const sc2 = SC[s]
+                            const isActive = active.status === s
+                            return (
+                              <button key={s} disabled={isActive || ticketUpdating === active.id}
+                                onClick={() => updateTicket(active.id, { status: s })}
+                                style={{ padding: '0.2rem 0.6rem', background: isActive ? sc2.bg : 'transparent', border: `1px solid ${isActive ? sc2.border : C.border}`, color: isActive ? sc2.color : C.dim, borderRadius: '6px', fontSize: '0.65rem', fontWeight: 700, cursor: isActive ? 'default' : 'pointer', transition: 'all .12s', whiteSpace: 'nowrap' }}>
+                                {sc2.label}
+                              </button>
+                            )
+                          })}
+                          <button disabled={ticketUpdating === active.id}
+                            onClick={() => { if (confirm('Excluir este ticket permanentemente?')) deleteTicket(active.id) }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.2rem 0.6rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Messages area */}
+                      <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+
+                        {/* User message — LEFT */}
+                        <div style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-end', maxWidth: '72%' }}>
+                          <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.primaryBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: C.primary, flexShrink: 0 }}>
+                            {(active.username ?? '?')[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={{ background: isDark ? '#1a1b26' : '#fff', border: `1px solid ${C.border}`, borderRadius: '4px 16px 16px 16px', padding: '0.6rem 0.9rem 0.45rem', minWidth: 80 }}>
+                              <div style={{ fontSize: '0.83rem', color: C.text, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>{active.message}</div>
+                              <div style={{ fontSize: '0.6rem', color: C.vdim, marginTop: '0.25rem', textAlign: 'right' }}>{new Date(active.created_at).toLocaleString('pt-BR', { hour:'2-digit', minute:'2-digit' })}</div>
+                            </div>
+                            {active.reply_email && <div style={{ fontSize: '0.6rem', color: C.vdim, marginTop: '0.18rem', paddingLeft: '0.2rem' }}>✉ {active.reply_email}</div>}
+                          </div>
+                        </div>
+
+                        {/* Admin replies — RIGHT */}
+                        {active.admin_reply && parseReplies(active.admin_reply).map((p, pi) => (
+                          <div key={pi} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-end', maxWidth: '72%', alignSelf: 'flex-end', flexDirection: 'row-reverse' }}>
+                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#9b30ff,#6b1fc2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>A</div>
+                            <div style={{ background: 'linear-gradient(135deg,rgba(155,48,255,.18),rgba(107,31,194,.12))', border: `1px solid ${C.borderStrong}`, borderRadius: '16px 4px 16px 16px', padding: '0.6rem 0.9rem 0.45rem', minWidth: 80 }}>
+                              <div style={{ fontSize: '0.83rem', color: C.text, lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>{p.text}</div>
+                              <div style={{ fontSize: '0.6rem', color: C.vdim, marginTop: '0.25rem', textAlign: 'right' }}>
+                                {p.ts ? new Date(p.ts).toLocaleString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : ''}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Reply input */}
+                      <div style={{ padding: '0.75rem 1.25rem', borderTop: `1px solid ${C.border}`, background: C.cardBg, display: 'flex', gap: '0.65rem', alignItems: 'flex-end', flexShrink: 0 }}>
+                        <textarea
+                          value={adminReply[active.id] ?? ''}
+                          onChange={e => setAdminReply(p => ({ ...p, [active.id]: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && adminReply[active.id]?.trim()) { e.preventDefault(); updateTicket(active.id, { admin_reply: adminReply[active.id].trim() }) } }}
+                          placeholder="Escreva uma resposta... (Ctrl+Enter para enviar)"
+                          rows={2}
+                          style={{ flex: 1, padding: '0.65rem 1rem', background: isDark ? '#0f1018' : '#f8f7ff', border: `1px solid ${C.inputBorder}`, borderRadius: '12px', color: C.text, fontSize: '0.85rem', outline: 'none', resize: 'none', fontFamily: 'inherit', lineHeight: 1.55 }}
+                        />
+                        <button
+                          disabled={ticketUpdating === active.id || !adminReply[active.id]?.trim()}
+                          onClick={() => updateTicket(active.id, { admin_reply: adminReply[active.id]!.trim() })}
+                          style={{ width: 42, height: 42, borderRadius: '50%', background: adminReply[active.id]?.trim() ? 'linear-gradient(135deg,#9b30ff,#7b20df)' : C.vvdim, border: 'none', color: adminReply[active.id]?.trim() ? '#fff' : C.dim, cursor: adminReply[active.id]?.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background .15s' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )
           })()}
