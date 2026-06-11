@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
 
   const [cfgRes, wlRes] = await Promise.all([
-    db.from('ai_image_config').select('enabled, cooldown_seconds, max_per_day, allowed_roles').maybeSingle(),
+    db.from('ai_image_config').select('*').maybeSingle(),
     db.from('waitlist').select('id').ilike('platform_username', session.name).maybeSingle(),
   ])
 
@@ -36,22 +36,28 @@ export async function GET(req: NextRequest) {
   // Cooldown remaining (skip if tables don't exist yet)
   let cooldownRemaining = 0
   let usedToday = 0
+  const roleLimits: Record<string, number>  = (cfg as Record<string, unknown>).role_limits  as Record<string, number>  ?? {}
+  const roleDelays: Record<string, number>  = (cfg as Record<string, unknown>).role_delays  as Record<string, number>  ?? {}
+  const effectiveMaxPerDay     = roleLimits[userRole ?? ''] ?? cfg.max_per_day
+  const effectiveCooldown      = roleDelays[userRole ?? ''] ?? cfg.cooldown_seconds
+
   if (cfgRes.data && !cfgRes.error) {
     try {
-      const since = new Date(Date.now() - cfg.cooldown_seconds * 1000).toISOString()
+      const since = new Date(Date.now() - effectiveCooldown * 1000).toISOString()
       const [{ data: recent }, { count }] = await Promise.all([
         db.from('ai_image_generations').select('created_at').eq('user_id', userId).gt('created_at', since).order('created_at', { ascending: false }).limit(1),
         db.from('ai_image_generations').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', new Date(new Date().setHours(0,0,0,0)).toISOString()),
       ])
       if (recent && recent.length > 0) {
         const lastAt = new Date(recent[0].created_at).getTime()
-        cooldownRemaining = Math.max(0, Math.ceil((lastAt + cfg.cooldown_seconds * 1000 - Date.now()) / 1000))
+        cooldownRemaining = Math.max(0, Math.ceil((lastAt + effectiveCooldown * 1000 - Date.now()) / 1000))
       }
       usedToday = count ?? 0
     } catch {}
   }
 
-  const roleLimits: Record<string, number> = (cfg as Record<string, unknown>).role_limits as Record<string, number> ?? {}
-  const effectiveMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
-  return NextResponse.json({ config: { ...cfg, effective_max_per_day: effectiveMaxPerDay }, userRole, cooldownRemaining, usedToday })
+  return NextResponse.json({
+    config: { ...cfg, effective_max_per_day: effectiveMaxPerDay, effective_cooldown_seconds: effectiveCooldown },
+    userRole, cooldownRemaining, usedToday,
+  })
 }

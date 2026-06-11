@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 type Size = '1024x1024' | '1792x1024' | '1024x1792'
 type Fmt = { id: string; label: string; sub: string; size: Size; rw: number; rh: number }
 type CfgData = {
-  config: { enabled: boolean; cooldown_seconds: number; max_per_day: number; effective_max_per_day?: number; allowed_roles: string[] } | null
+  config: { enabled: boolean; cooldown_seconds: number; max_per_day: number; effective_max_per_day?: number; effective_cooldown_seconds?: number; allowed_roles: string[] } | null
   userRole: string | null; cooldownRemaining: number; usedToday: number
 }
 
@@ -163,6 +163,35 @@ const CSS = `
     background:linear-gradient(90deg,#6d28d9,#9b30ff,#c084fc,#9b30ff);
     background-size:200% auto; animation:ia-bar 1.8s linear infinite;
   }
+
+  /* ── light mode ──────────────────────────────────────── */
+  [data-theme="light"] .ia-card { background:#ffffff; border-color:rgba(0,0,0,.1); }
+  [data-theme="light"] .ia-label { color:rgba(15,14,36,.38); }
+  [data-theme="light"] .ia-fmt:hover { background:rgba(123,46,255,.06); border-color:rgba(123,46,255,.2); }
+  [data-theme="light"] .ia-fmt.on { background:rgba(123,46,255,.1); border-color:rgba(123,46,255,.38); box-shadow:0 0 12px rgba(123,46,255,.1); }
+  [data-theme="light"] .ia-ratio-box { background:rgba(0,0,0,.14) !important; border-color:rgba(0,0,0,.22) !important; }
+  [data-theme="light"] .ia-fmt.on .ia-ratio-box { background:rgba(123,46,255,.45) !important; border-color:rgba(123,46,255,.75) !important; }
+  [data-theme="light"] .ia-qual { background:rgba(0,0,0,.04); border-color:rgba(0,0,0,.1); }
+  [data-theme="light"] .ia-qual:hover { background:rgba(123,46,255,.07); border-color:rgba(123,46,255,.22); }
+  [data-theme="light"] .ia-qual.on { background:rgba(123,46,255,.1); border-color:rgba(123,46,255,.42); box-shadow:0 0 10px rgba(123,46,255,.1); }
+  [data-theme="light"] .ia-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.12); color:rgba(15,14,36,.6); }
+  [data-theme="light"] .ia-chip:hover { border-color:rgba(123,46,255,.3); color:rgba(15,14,36,.85); }
+  [data-theme="light"] .ia-chip.on { background:rgba(123,46,255,.12); border-color:rgba(123,46,255,.48); color:#7b2eff; }
+  [data-theme="light"] .ia-ta { background:rgba(0,0,0,.04); border-color:rgba(0,0,0,.12); color:#0a0918; }
+  [data-theme="light"] .ia-ta::placeholder { color:rgba(15,14,36,.3); }
+  [data-theme="light"] .ia-ta:focus { border-color:rgba(123,46,255,.5); box-shadow:0 0 0 3px rgba(123,46,255,.08); }
+  [data-theme="light"] .ia-ex { background:rgba(0,0,0,.03); border-color:rgba(0,0,0,.08); color:rgba(15,14,36,.5); }
+  [data-theme="light"] .ia-ex:hover { background:rgba(123,46,255,.06); border-color:rgba(123,46,255,.2); color:rgba(15,14,36,.82); }
+  [data-theme="light"] .ia-drop { border-color:rgba(0,0,0,.14); }
+  [data-theme="light"] .ia-drop:hover, [data-theme="light"] .ia-drop.over { border-color:rgba(123,46,255,.42); background:rgba(123,46,255,.05); }
+  [data-theme="light"] .ia-btn-gen { background:rgba(123,46,255,.09); border-color:rgba(123,46,255,.15); color:rgba(123,46,255,.4); }
+  [data-theme="light"] .ia-btn-gen.ready { background:linear-gradient(135deg,#7b2eff,#6d28d9); border-color:#7b2eff; color:#fff; box-shadow:0 4px 22px rgba(123,46,255,.28); }
+  [data-theme="light"] .ia-btn-gen.ready:hover { box-shadow:0 6px 30px rgba(123,46,255,.42); }
+  [data-theme="light"] .ia-dl-s { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.12); color:rgba(15,14,36,.65); }
+  [data-theme="light"] .ia-dl-s:hover { background:rgba(0,0,0,.08); }
+  [data-theme="light"] .ia-prog-bar { background:rgba(0,0,0,.08); }
+  [data-theme="light"] .ia-notice.ia-warn { background:rgba(180,130,0,.07); border-color:rgba(180,130,0,.2); color:#a16207; }
+  [data-theme="light"] .ia-notice.ia-err  { background:rgba(200,0,0,.06); border-color:rgba(200,0,0,.2); color:#b91c1c; }
 `
 
 // ── page ─────────────────────────────────────────────────────────────────────
@@ -264,7 +293,7 @@ export default function IAImagensPage() {
       if (!res.ok) { setErr(data.error ?? 'Erro ao gerar imagem'); if (data.waitSeconds) startCd(data.waitSeconds) }
       else {
         setResult({ imageUrl: data.imageUrl, revisedPrompt: data.revisedPrompt, modelUsed: data.modelUsed })
-        const c = cfg?.config?.cooldown_seconds ?? 0; if (c > 0) startCd(c)
+        const c = cfg?.config?.effective_cooldown_seconds ?? cfg?.config?.cooldown_seconds ?? 0; if (c > 0) startCd(c)
         setCfg(p => p ? { ...p, usedToday: p.usedToday + 1 } : p)
       }
     } catch { clearInterval(stepRef.current!); setErr('Erro de conexão. Tente novamente.') }
@@ -280,7 +309,7 @@ export default function IAImagensPage() {
   const maxDay  = cfg?.config?.effective_max_per_day ?? cfg?.config?.max_per_day ?? 10
   const used    = cfg?.usedToday ?? 0
   const usePct  = Math.min((used / maxDay) * 100, 100)
-  const cdTotal = cfg?.config?.cooldown_seconds ?? 1
+  const cdTotal = cfg?.config?.effective_cooldown_seconds ?? cfg?.config?.cooldown_seconds ?? 1
   const cdPct   = cd > 0 ? Math.min((cd / cdTotal) * 100, 100) : 0
   const canGen  = cd === 0 && !gen && used < maxDay && prompt.trim().length > 0
 
@@ -361,7 +390,7 @@ export default function IAImagensPage() {
                 <button key={f.id} className={`ia-fmt${fmt.id === f.id ? ' on' : ''}`} onClick={() => setFmt(f)}>
                   {/* Aspect ratio preview box */}
                   <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 28 }}>
-                    <div style={{
+                    <div className="ia-ratio-box" style={{
                       width:  Math.min(f.rw, 34),
                       height: Math.round(Math.min(f.rw, 34) * (f.rh / f.rw)),
                       maxHeight: 26,

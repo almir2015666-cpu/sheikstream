@@ -36,6 +36,7 @@ export async function PUT(req: NextRequest) {
     max_per_day: Number(body.max_per_day ?? 10),
     allowed_roles: body.allowed_roles ?? ['admin', 'moderador', 'vip'],
     role_limits: body.role_limits ?? {},
+    role_delays: body.role_delays ?? {},
     updated_at: new Date().toISOString(),
   }
 

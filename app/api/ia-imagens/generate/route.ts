@@ -43,14 +43,19 @@ export async function POST(req: NextRequest) {
 
   if (cfgRes.data) {
     try {
-      const since = new Date(Date.now() - cfg.cooldown_seconds * 1000).toISOString()
+      const roleLimits: Record<string, number> = (cfg as Record<string, unknown>).role_limits as Record<string, number> ?? {}
+      const roleDelays: Record<string, number>  = (cfg as Record<string, unknown>).role_delays  as Record<string, number>  ?? {}
+      const userMaxPerDay  = roleLimits[userRole ?? ''] ?? cfg.max_per_day
+      const userCooldown   = roleDelays[userRole ?? '']  ?? cfg.cooldown_seconds
+
+      const since = new Date(Date.now() - userCooldown * 1000).toISOString()
       const { data: recent } = await db.from('ai_image_generations')
         .select('created_at').eq('user_id', userId)
         .gt('created_at', since).order('created_at', { ascending: false }).limit(1)
 
       if (recent && recent.length > 0) {
         const lastAt = new Date(recent[0].created_at).getTime()
-        const waitSec = Math.ceil((lastAt + cfg.cooldown_seconds * 1000 - Date.now()) / 1000)
+        const waitSec = Math.ceil((lastAt + userCooldown * 1000 - Date.now()) / 1000)
         return NextResponse.json({ error: `Aguarde ${waitSec}s antes de gerar outra imagem`, waitSeconds: waitSec }, { status: 429 })
       }
 
@@ -58,8 +63,6 @@ export async function POST(req: NextRequest) {
       const { count } = await db.from('ai_image_generations')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId).gte('created_at', startOfDay.toISOString())
-      const roleLimits: Record<string, number> = (cfg as Record<string, unknown>).role_limits as Record<string, number> ?? {}
-      const userMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
       if ((count ?? 0) >= userMaxPerDay)
         return NextResponse.json({ error: `Limite diário de ${userMaxPerDay} imagens atingido` }, { status: 429 })
     } catch {}

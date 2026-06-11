@@ -158,9 +158,9 @@ export default function AdminPage() {
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
   const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens'>('users')
-  type AiImgCfg = { enabled: boolean; cooldown_seconds: number; max_per_day: number; allowed_roles: string[]; role_limits: Record<string, number> }
+  type AiImgCfg = { enabled: boolean; cooldown_seconds: number; max_per_day: number; allowed_roles: string[]; role_limits: Record<string, number>; role_delays: Record<string, number> }
   type AiGen = { id: string; user_name: string; user_role: string; prompt: string; status: string; created_at: string }
-  const [aiCfg, setAiCfg] = useState<AiImgCfg>({ enabled: true, cooldown_seconds: 300, max_per_day: 10, allowed_roles: ['admin', 'moderador', 'vip'], role_limits: {} })
+  const [aiCfg, setAiCfg] = useState<AiImgCfg>({ enabled: true, cooldown_seconds: 300, max_per_day: 10, allowed_roles: ['admin', 'moderador', 'vip'], role_limits: {}, role_delays: {} })
   const [aiRecent, setAiRecent] = useState<AiGen[]>([])
   const [aiImgExpanded, setAiImgExpanded] = useState<Record<string, string | null>>({})
   const [aiImgLoading, setAiImgLoading] = useState<string | null>(null)
@@ -171,7 +171,7 @@ export default function AdminPage() {
     setAiLoading(true)
     const res = await fetch('/api/admin/ia-imagens/config', { headers: { 'x-admin-password': pw } })
     const d = await res.json()
-    if (d.config) setAiCfg({ ...d.config, role_limits: d.config.role_limits ?? {} })
+    if (d.config) setAiCfg({ ...d.config, role_limits: d.config.role_limits ?? {}, role_delays: d.config.role_delays ?? {} })
     setAiRecent(d.recent ?? [])
     setAiImgExpanded({})
     setAiLoading(false)
@@ -2308,75 +2308,92 @@ export default function AdminPage() {
                         </button>
                       </div>
 
-                      {/* Cooldown */}
+                      {/* Global defaults */}
                       <div style={{ padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.65rem' }}>Delay entre gerações (por usuário)</div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          {[[60,'1 min'],[300,'5 min'],[600,'10 min'],[1800,'30 min'],[3600,'1h']].map(([s, lbl]) => (
-                            <button key={s} onClick={() => setAiCfg(p => ({ ...p, cooldown_seconds: Number(s) }))} style={{ padding: '0.4rem 0.9rem', borderRadius: 8, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', background: aiCfg.cooldown_seconds === s ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.cooldown_seconds === s ? C.borderStrong : C.border}`, color: aiCfg.cooldown_seconds === s ? C.primary : C.muted }}>{lbl}</button>
-                          ))}
-                          <input type="number" min={0} value={aiCfg.cooldown_seconds} onChange={e => setAiCfg(p => ({ ...p, cooldown_seconds: Number(e.target.value) }))} style={{ width: 90, padding: '0.4rem 0.6rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 8, color: C.text, fontSize: '0.82rem', outline: 'none' }} placeholder="seg" />
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.15rem' }}>Padrões globais</div>
+                        <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.85rem' }}>Aplicados a grupos sem configuração específica abaixo</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                          <div>
+                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.muted, marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Limite / dia</div>
+                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                              {[3,5,10,20,50].map(n => (
+                                <button key={n} onClick={() => setAiCfg(p => ({ ...p, max_per_day: n }))} style={{ padding: '0.35rem 0.65rem', borderRadius: 7, fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', background: aiCfg.max_per_day === n ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.max_per_day === n ? C.borderStrong : C.border}`, color: aiCfg.max_per_day === n ? C.primary : C.muted }}>{n}</button>
+                              ))}
+                              <input type="number" min={1} value={aiCfg.max_per_day} onChange={e => setAiCfg(p => ({ ...p, max_per_day: Number(e.target.value) }))} style={{ width: 65, padding: '0.35rem 0.55rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 7, color: C.text, fontSize: '0.82rem', outline: 'none' }} />
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.muted, marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delay entre gerações</div>
+                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                              {([[60,'1m'],[300,'5m'],[600,'10m'],[1800,'30m'],[3600,'1h']] as [number,string][]).map(([s,lbl]) => (
+                                <button key={s} onClick={() => setAiCfg(p => ({ ...p, cooldown_seconds: s }))} style={{ padding: '0.35rem 0.65rem', borderRadius: 7, fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', background: aiCfg.cooldown_seconds === s ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.cooldown_seconds === s ? C.borderStrong : C.border}`, color: aiCfg.cooldown_seconds === s ? C.primary : C.muted }}>{lbl}</button>
+                              ))}
+                              <input type="number" min={0} value={aiCfg.cooldown_seconds} onChange={e => setAiCfg(p => ({ ...p, cooldown_seconds: Number(e.target.value) }))} style={{ width: 65, padding: '0.35rem 0.55rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 7, color: C.text, fontSize: '0.82rem', outline: 'none' }} placeholder="seg" />
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Per-group limits */}
+                      {/* Per-group table */}
                       <div style={{ padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.2rem' }}>Limite diário por grupo</div>
-                        <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.75rem' }}>Configure quantas imagens cada grupo pode gerar por dia. Padrão global é o fallback.</div>
-                        {/* Global default */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.8rem', paddingBottom: '0.75rem', borderBottom: `1px solid ${C.border}` }}>
-                          <span style={{ fontSize: '0.78rem', color: C.muted, width: 80, flexShrink: 0, fontWeight: 600 }}>Padrão:</span>
-                          {[3,5,10,20,50].map(n => (
-                            <button key={n} onClick={() => setAiCfg(p => ({ ...p, max_per_day: n }))} style={{ padding: '0.38rem 0.75rem', borderRadius: 7, fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', background: aiCfg.max_per_day === n ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.max_per_day === n ? C.borderStrong : C.border}`, color: aiCfg.max_per_day === n ? C.primary : C.muted }}>{n}</button>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.15rem' }}>Configuração por grupo</div>
+                        <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.85rem' }}>Limite, delay e acesso individuais por grupo. Campos em branco usam o padrão global.</div>
+
+                        {/* Table header */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 1fr 52px', gap: '0.6rem', alignItems: 'center', paddingBottom: '0.45rem', borderBottom: `1px solid ${C.border}`, marginBottom: '0.1rem' }}>
+                          {['Grupo','Limite / dia','Delay (seg)','Acesso'].map(h => (
+                            <span key={h} style={{ fontSize: '0.62rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: h === 'Acesso' ? 'center' : undefined }}>{h}</span>
                           ))}
-                          <input type="number" min={1} value={aiCfg.max_per_day} onChange={e => setAiCfg(p => ({ ...p, max_per_day: Number(e.target.value) }))} style={{ width: 70, padding: '0.38rem 0.6rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 7, color: C.text, fontSize: '0.82rem', outline: 'none' }} />
                         </div>
-                        {/* Per-role overrides */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          {['todos','admin','moderador','vip','streamer'].map(role => {
-                            const hasOverride = aiCfg.role_limits?.[role] !== undefined
-                            const val = hasOverride ? aiCfg.role_limits[role] : aiCfg.max_per_day
-                            return (
-                              <div key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                <span style={{ fontSize: '0.78rem', fontWeight: 700, width: 80, flexShrink: 0, color: hasOverride ? C.primary : C.muted }}>
-                                  {role === 'todos' ? '🌐 todos' : role}
-                                </span>
-                                <input type="number" min={0} value={val}
+
+                        {['todos','admin','moderador','vip','streamer'].map(role => {
+                          const hasLimitOvr = aiCfg.role_limits?.[role] !== undefined
+                          const hasDelayOvr = aiCfg.role_delays?.[role] !== undefined
+                          const limitVal = hasLimitOvr ? aiCfg.role_limits[role] : aiCfg.max_per_day
+                          const delayVal = hasDelayOvr ? aiCfg.role_delays[role] : aiCfg.cooldown_seconds
+                          const hasAccess = aiCfg.allowed_roles.includes(role)
+                          const dFmt = (s: number) => s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s/60)}m` : `${Math.floor(s/3600)}h`
+                          return (
+                            <div key={role} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 1fr 52px', gap: '0.6rem', alignItems: 'center', padding: '0.45rem 0', borderBottom: `1px solid rgba(255,255,255,0.04)` }}>
+                              {/* Name */}
+                              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: hasAccess ? (role === 'todos' ? '#60a5fa' : C.primary) : C.dim }}>
+                                {role === 'todos' ? '🌐 todos' : role}
+                              </span>
+                              {/* Limit */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                <input type="number" min={0} value={limitVal}
                                   onChange={e => setAiCfg(p => ({ ...p, role_limits: { ...(p.role_limits ?? {}), [role]: Number(e.target.value) } }))}
-                                  style={{ width: 65, padding: '0.35rem 0.55rem', background: hasOverride ? C.inputBg : 'rgba(255,255,255,0.03)', border: `1px solid ${hasOverride ? C.borderStrong : C.border}`, borderRadius: 7, color: hasOverride ? C.text : C.dim, fontSize: '0.82rem', outline: 'none' }} />
-                                <span style={{ fontSize: '0.68rem', color: C.dim }}>img/dia</span>
-                                {hasOverride && (
-                                  <button onClick={() => setAiCfg(p => { const rl = { ...(p.role_limits ?? {}) }; delete rl[role]; return { ...p, role_limits: rl } })}
-                                    style={{ fontSize: '0.68rem', color: C.danger ?? '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.1rem 0.35rem' }}>
-                                    ✕ padrão
-                                  </button>
-                                )}
-                                {!hasOverride && (
-                                  <button onClick={() => setAiCfg(p => ({ ...p, role_limits: { ...(p.role_limits ?? {}), [role]: aiCfg.max_per_day } }))}
-                                    style={{ fontSize: '0.68rem', color: C.primary, background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.1rem 0.35rem' }}>
-                                    + override
-                                  </button>
-                                )}
+                                  style={{ width: 56, padding: '0.3rem 0.45rem', background: hasLimitOvr ? C.inputBg : 'rgba(255,255,255,0.03)', border: `1px solid ${hasLimitOvr ? C.borderStrong : C.border}`, borderRadius: 6, color: hasLimitOvr ? C.text : C.dim, fontSize: '0.82rem', outline: 'none' }} />
+                                <span style={{ fontSize: '0.62rem', color: C.dim }}>img/d</span>
+                                {hasLimitOvr
+                                  ? <button onClick={() => setAiCfg(p => { const r = { ...(p.role_limits??{}) }; delete r[role]; return { ...p, role_limits: r } })} style={{ fontSize: '0.6rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 4, cursor: 'pointer', padding: '0.12rem 0.4rem' }}>✕</button>
+                                  : <span style={{ fontSize: '0.6rem', color: C.dim, opacity: 0.55 }}>padrão</span>
+                                }
                               </div>
-                            )
-                          })}
+                              {/* Delay */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                <input type="number" min={0} value={delayVal}
+                                  onChange={e => setAiCfg(p => ({ ...p, role_delays: { ...(p.role_delays ?? {}), [role]: Number(e.target.value) } }))}
+                                  style={{ width: 56, padding: '0.3rem 0.45rem', background: hasDelayOvr ? C.inputBg : 'rgba(255,255,255,0.03)', border: `1px solid ${hasDelayOvr ? C.borderStrong : C.border}`, borderRadius: 6, color: hasDelayOvr ? C.text : C.dim, fontSize: '0.82rem', outline: 'none' }} />
+                                <span style={{ fontSize: '0.62rem', color: C.dim }}>{dFmt(delayVal)}</span>
+                                {hasDelayOvr
+                                  ? <button onClick={() => setAiCfg(p => { const r = { ...(p.role_delays??{}) }; delete r[role]; return { ...p, role_delays: r } })} style={{ fontSize: '0.6rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 4, cursor: 'pointer', padding: '0.12rem 0.4rem' }}>✕</button>
+                                  : <span style={{ fontSize: '0.6rem', color: C.dim, opacity: 0.55 }}>padrão</span>
+                                }
+                              </div>
+                              {/* Access toggle */}
+                              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                <button onClick={() => setAiCfg(p => ({ ...p, allowed_roles: hasAccess ? p.allowed_roles.filter(r => r !== role) : [...p.allowed_roles, role] }))}
+                                  style={{ width: 38, height: 22, borderRadius: 11, background: hasAccess ? (role === 'todos' ? '#3b82f6' : '#22c55e') : C.vvdim, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                                  <span style={{ position: 'absolute', top: 3, left: hasAccess ? 18 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                        <div style={{ fontSize: '0.67rem', color: C.dim, marginTop: '0.6rem' }}>
+                          💡 &quot;todos&quot; ativo = qualquer usuário aprovado tem acesso, independente do grupo.
                         </div>
-                      </div>
-
-                      {/* Allowed roles */}
-                      <div style={{ padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.65rem' }}>Grupos com acesso</div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          {['todos','admin','moderador','vip','streamer'].map(role => {
-                            const active = aiCfg.allowed_roles.includes(role)
-                            return (
-                              <button key={role} onClick={() => setAiCfg(p => ({ ...p, allowed_roles: active ? p.allowed_roles.filter(r => r !== role) : [...p.allowed_roles, role] }))} style={{ padding: '0.42rem 0.9rem', borderRadius: 8, fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', background: active ? C.primaryBg : C.vvdim, border: `1px solid ${active ? C.borderStrong : C.border}`, color: active ? C.primary : C.muted }}>
-                                {role === 'todos' ? '🌐 Todos' : role}
-                              </button>
-                            )
-                          })}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: C.dim, marginTop: '0.5rem' }}>Se &quot;Todos&quot; estiver ativo, qualquer usuário aprovado pode usar.</div>
                       </div>
 
                       <button onClick={saveAiCfg} disabled={aiSaving} style={{ padding: '0.65rem', borderRadius: 10, fontWeight: 800, fontSize: '0.9rem', background: aiSaved ? C.accentBg : C.primaryBg, border: `1px solid ${aiSaved ? C.accentBorder : C.borderStrong}`, color: aiSaved ? C.accent : C.primary, cursor: 'pointer' }}>
