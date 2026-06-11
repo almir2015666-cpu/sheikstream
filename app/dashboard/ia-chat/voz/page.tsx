@@ -22,12 +22,13 @@ export default function IaVozPage() {
   const [minWords, setMinWords]  = useState(2)
   const [apiError, setApiError]   = useState('')
 
-  const recogRef    = useRef<any>(null)
-  const alwaysRef   = useRef(false)
+  const recogRef      = useRef<any>(null)
+  const alwaysRef     = useRef(false)
   const processingRef = useRef(false)
   const silenceTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const accFinal    = useRef('')
-  const histRef     = useRef<HTMLDivElement>(null)
+  const accFinal      = useRef('')
+  const lastInterim   = useRef('')
+  const histRef       = useRef<HTMLDivElement>(null)
 
   const send = useCallback(async (text: string) => {
     const trimmed = text.trim()
@@ -82,15 +83,17 @@ export default function IaVozPage() {
           interim += t
         }
       }
-      setInterim(accFinal.current + (interim ? ' ' + interim : ''))
+      const display = accFinal.current + (interim ? ' ' + interim : '')
+      setInterim(display)
+      lastInterim.current = display
 
-      // Silence timer — send after 1.8s of no new speech
+      // Silence timer — send after 900ms of no new speech
       if (silenceTimer.current) clearTimeout(silenceTimer.current)
       silenceTimer.current = setTimeout(() => {
-        if (accFinal.current && !processingRef.current) {
-          send(accFinal.current)
-        }
-      }, 1800)
+        if (processingRef.current) return
+        const textToSend = accFinal.current || lastInterim.current
+        if (textToSend) send(textToSend)
+      }, 900)
     }
 
     r.onend = () => {
