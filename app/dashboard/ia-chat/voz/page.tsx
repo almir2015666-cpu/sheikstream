@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Status = 'idle' | 'listening' | 'processing' | 'sent' | 'error'
 type Entry  = { id: string; spoken: string; reply: string }
@@ -8,172 +8,148 @@ const CSS = `
 @keyframes voz-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(57,255,20,.5)} 70%{box-shadow:0 0 0 28px rgba(57,255,20,0)} }
 @keyframes voz-spin { to{transform:rotate(360deg)} }
 @keyframes voz-bar { 0%,100%{height:5px;opacity:.4} 50%{height:24px;opacity:1} }
-.voz-bar { animation: voz-bar .6s ease-in-out infinite; width: 4px; background: #39ff14; border-radius: 2px; display:inline-block; }
+.voz-bar{animation:voz-bar .6s ease-in-out infinite;width:4px;background:#39ff14;border-radius:2px;display:inline-block}
 .voz-scroll::-webkit-scrollbar{width:3px}.voz-scroll::-webkit-scrollbar-thumb{background:rgba(155,48,255,.3);border-radius:3px}
 `
 
 export default function IaVozPage() {
-  const [alwaysOn, setAlwaysOn]   = useState(false)
   const [status, setStatus]       = useState<Status>('idle')
+  const [on, setOn]               = useState(false)
   const [transcript, setTranscript] = useState('')
   const [history, setHistory]     = useState<Entry[]>([])
   const [lang, setLang]           = useState('pt-BR')
-  const [supported, setSupported] = useState(true)
-  const [apiError, setApiError]   = useState('')
+  const [apiErr, setApiErr]       = useState('')
   const [log, setLog]             = useState<string[]>([])
+  const [noSupport, setNoSupport] = useState(false)
 
-  const alwaysRef     = useRef(false)
-  const processingRef = useRef(false)
-  const histRef       = useRef<HTMLDivElement>(null)
-  const sendRef       = useRef<(t: string) => Promise<void>>(async () => {})
+  // All mutable state lives in refs so closures always see fresh values
+  const onRef   = useRef(false)
+  const busyRef = useRef(false)
+  const recRef  = useRef<any>(null)
+  const langRef = useRef('pt-BR')
+  const histRef = useRef<HTMLDivElement>(null)
 
-  const addLog = (msg: string) => setLog(l => [`${new Date().toLocaleTimeString('pt-BR')} — ${msg}`, ...l.slice(0, 9)])
+  const lg = (msg: string) => {
+    const ts = new Date().toLocaleTimeString('pt-BR')
+    setLog(l => [`${ts} — ${msg}`, ...l.slice(0, 14)])
+    console.log('[ia-voz]', msg)
+  }
 
-  const send = useCallback(async (text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed || trimmed.split(/\s+/).length < 2) {
-      addLog(`Ignorado (poucas palavras): "${trimmed}"`)
-      return
-    }
-    if (processingRef.current) return
-    processingRef.current = true
-    setTranscript(trimmed)
+  // Send text to API
+  const sendText = async (text: string) => {
+    const t = text.trim()
+    if (!t) { lg('Sem texto para enviar'); return }
+    if (busyRef.current) { lg('Já processando, aguarde'); return }
+    busyRef.current = true
     setStatus('processing')
-    addLog(`Enviando: "${trimmed}"`)
-
+    lg(`→ Enviando: "${t.slice(0, 60)}"`)
     try {
       const r = await fetch('/api/ia-chat/voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: trimmed }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: t }),
       })
-      const data = await r.json()
-      if (!r.ok) {
-        const msg = `Erro ${r.status}: ${data.error ?? 'desconhecido'}`
-        setApiError(msg); addLog(msg)
-        throw new Error(msg)
-      }
-      if (data.warn) { setApiError(data.warn); addLog(`Aviso: ${data.warn}`) }
-      else setApiError('')
-      const reply = data.reply ?? '(sem resposta)'
-      addLog(`Resposta: "${reply.slice(0, 60)}"`)
-      setHistory(h => [{ id: crypto.randomUUID(), spoken: trimmed, reply }, ...h])
+      const d = await r.json()
+      if (!r.ok) throw new Error(`${r.status}: ${d.error ?? 'erro'}`)
+      if (d.warn) { setApiErr(d.warn); lg(`Aviso: ${d.warn}`) }
+      else setApiErr('')
+      const reply = d.reply ?? '(vazio)'
+      lg(`← Resposta: "${reply.slice(0, 60)}"`)
+      setHistory(h => [{ id: crypto.randomUUID(), spoken: t, reply }, ...h])
       setStatus('sent')
-      setTimeout(() => {
-        setStatus(alwaysRef.current ? 'listening' : 'idle')
-      }, 1500)
+      setTimeout(() => { setStatus(onRef.current ? 'listening' : 'idle') }, 1500)
     } catch (e: any) {
-      if (!apiError) addLog(`Erro: ${e.message}`)
+      setApiErr(e.message)
+      lg(`Erro API: ${e.message}`)
       setStatus('error')
-      setTimeout(() => setStatus(alwaysRef.current ? 'listening' : 'idle'), 2000)
+      setTimeout(() => { setStatus(onRef.current ? 'listening' : 'idle') }, 2000)
     }
-    processingRef.current = false
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    busyRef.current = false
+  }
 
-  // Keep sendRef in sync so recognition callbacks always call latest version
-  useEffect(() => { sendRef.current = send }, [send])
+  // Start one recognition cycle
+  const startCycle = () => {
+    if (!onRef.current || busyRef.current) return
 
-  // Recognition — recreated when lang changes
-  const startRecognition = useCallback(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) { setSupported(false); return }
+    if (!SR) { setNoSupport(true); return }
 
-    const r = new SR()
-    r.continuous     = false   // one utterance at a time — most reliable
-    r.interimResults = true
-    r.lang           = lang
-    r.maxAlternatives = 1
+    const rec = new SR()
+    rec.continuous     = false
+    rec.interimResults = true
+    rec.lang           = langRef.current
+    recRef.current     = rec
 
-    r.onstart = () => { addLog('Microfone ativo'); setStatus('listening') }
+    let captured = ''
 
-    r.onresult = (e: any) => {
+    rec.onstart = () => { lg('Mic ativo'); setStatus('listening') }
+
+    rec.onresult = (e: any) => {
       let interim = '', final = ''
       for (let i = 0; i < e.results.length; i++) {
         const t = e.results[i][0].transcript
-        if (e.results[i].isFinal) final += t
-        else interim += t
+        if (e.results[i].isFinal) final += t; else interim += t
       }
+      if (final) captured = final
       setTranscript(final || interim)
+      if (final) lg(`Detectado: "${final.slice(0, 60)}"`)
     }
 
-    r.onend = () => {
-      addLog('Reconhecimento terminou')
-      if (!processingRef.current && alwaysRef.current) {
-        // grab whatever was the last transcript via DOM trick — use a closure captured ref
-        const lastText = (r as any)._lastTranscript ?? ''
-        if (lastText.trim()) {
-          sendRef.current(lastText)
-        }
-        // auto-restart
-        setTimeout(() => {
-          if (alwaysRef.current && !processingRef.current) {
-            startRecognition()
-          }
-        }, 300)
+    rec.onerror = (e: any) => {
+      if (e.error === 'no-speech') { lg('Silêncio — reiniciando...') }
+      else if (e.error === 'not-allowed') { lg('Permissão negada!'); onRef.current = false; setOn(false); setStatus('error') }
+      else lg(`Erro mic: ${e.error}`)
+    }
+
+    rec.onend = () => {
+      lg('Ciclo encerrado')
+      if (captured) {
+        sendText(captured).then(() => {
+          if (onRef.current) setTimeout(startCycle, 400)
+        })
+      } else {
+        if (onRef.current && !busyRef.current) setTimeout(startCycle, 200)
       }
     }
 
-    r.onerror = (e: any) => {
-      addLog(`Erro mic: ${e.error}`)
-      if (e.error === 'not-allowed') {
-        alwaysRef.current = false; setAlwaysOn(false); setStatus('error')
-      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
-        setStatus('error')
-        setTimeout(() => {
-          if (alwaysRef.current) startRecognition()
-          else setStatus('idle')
-        }, 1000)
-      }
-    }
+    try { rec.start() }
+    catch (e) { lg(`Falha ao iniciar: ${e}`); setTimeout(startCycle, 1000) }
+  }
 
-    // Track final transcript inside the recognition object
-    const origOnResult = r.onresult
-    r.onresult = (e: any) => {
-      origOnResult(e)
-      let final = ''
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) final += e.results[i][0].transcript
-      }
-      if (final) (r as any)._lastTranscript = final
-      else (r as any)._lastTranscript = (r as any)._lastTranscript ?? ''
-    }
-
-    try {
-      r.start()
-      addLog('Iniciando reconhecimento...')
-    } catch (err) {
-      addLog(`Erro ao iniciar: ${err}`)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang])
-
-  const toggleAlwaysOn = useCallback(() => {
-    if (alwaysOn) {
-      alwaysRef.current = false
-      setAlwaysOn(false)
-      setStatus('idle')
-      setTranscript('')
-      addLog('Desativado')
+  const toggle = () => {
+    if (on) {
+      onRef.current = false; setOn(false); setStatus('idle'); setTranscript('')
+      try { recRef.current?.stop() } catch { /* ignore */ }
+      lg('Desativado')
     } else {
-      alwaysRef.current = true
-      setAlwaysOn(true)
-      processingRef.current = false
-      startRecognition()
+      onRef.current = true; setOn(true); busyRef.current = false
+      lg('Ativando...')
+      startCycle()
     }
-  }, [alwaysOn, startRecognition])
+  }
+
+  // Update langRef when lang changes, restart if active
+  useEffect(() => {
+    langRef.current = lang
+    if (on && !busyRef.current) {
+      try { recRef.current?.stop() } catch { /* ignore */ }
+    }
+  }, [lang, on])
+
+  useEffect(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) setNoSupport(true)
+  }, [])
 
   useEffect(() => {
     if (histRef.current) histRef.current.scrollTop = 0
   }, [history])
 
-  const P = '#9b30ff', TXT = '#e8e6f8', DIM = 'rgba(232,230,248,.35)', GREEN = '#39ff14'
+  const P = '#9b30ff', TXT = '#e8e6f8', DIM = 'rgba(232,230,248,.35)', G = '#39ff14'
 
-  if (!supported) return (
+  if (noSupport) return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'60vh', gap:'1rem', color: DIM, textAlign:'center' }}>
       <style>{CSS}</style>
-      <div style={{ fontSize:'.95rem', color:'rgba(239,68,68,.8)' }}>Reconhecimento de voz não suportado</div>
-      <div style={{ fontSize:'.8rem', maxWidth:320 }}>Use Chrome ou Edge.</div>
+      <div style={{ fontSize:'.9rem', color:'rgba(239,68,68,.8)' }}>Não suportado — use Chrome ou Edge</div>
     </div>
   )
 
@@ -187,87 +163,51 @@ export default function IaVozPage() {
       </div>
 
       {/* Main card */}
-      <div style={{
-        background: alwaysOn ? 'rgba(57,255,20,.05)' : '#0d0f18',
-        border: `1.5px solid ${alwaysOn ? 'rgba(57,255,20,.3)' : 'rgba(255,255,255,.08)'}`,
-        borderRadius:16, padding:'1.5rem', marginBottom:'1.25rem',
-        display:'flex', flexDirection:'column', alignItems:'center', gap:'1.25rem',
-        transition:'all .25s',
-      }}>
-        {/* Waveform */}
+      <div style={{ background: on ? 'rgba(57,255,20,.05)' : '#0d0f18', border:`1.5px solid ${on ? 'rgba(57,255,20,.3)' : 'rgba(255,255,255,.08)'}`, borderRadius:16, padding:'1.5rem', marginBottom:'1.25rem', display:'flex', flexDirection:'column', alignItems:'center', gap:'1.25rem', transition:'all .25s' }}>
+
         <div style={{ height:28, display:'flex', alignItems:'center', gap:4, opacity: status === 'listening' ? 1 : 0, transition:'opacity .3s' }}>
-          {[...Array(11)].map((_, i) => (
-            <div key={i} className="voz-bar" style={{ animationDelay:`${i * 0.07}s`, animationPlayState: status === 'listening' ? 'running' : 'paused' }} />
-          ))}
+          {[...Array(11)].map((_,i) => <div key={i} className="voz-bar" style={{ animationDelay:`${i*.07}s`, animationPlayState: status==='listening'?'running':'paused' }} />)}
         </div>
 
-        {/* Mic button */}
-        <button onClick={toggleAlwaysOn} disabled={status === 'processing'}
-          style={{
-            width:100, height:100, borderRadius:'50%',
-            background: alwaysOn ? 'rgba(57,255,20,.1)' : 'rgba(155,48,255,.1)',
-            border:`2px solid ${alwaysOn ? GREEN : P}`,
-            cursor: status === 'processing' ? 'default' : 'pointer',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            animation: alwaysOn && status === 'listening' ? 'voz-pulse 2s ease-in-out infinite' : 'none',
-            transition:'all .2s', outline:'none',
-          }}>
+        <button onClick={toggle} disabled={status === 'processing'} style={{ width:100, height:100, borderRadius:'50%', background: on ? 'rgba(57,255,20,.1)' : 'rgba(155,48,255,.1)', border:`2px solid ${on ? G : P}`, cursor: status==='processing'?'default':'pointer', display:'flex', alignItems:'center', justifyContent:'center', animation: on && status==='listening' ? 'voz-pulse 2s ease-in-out infinite' : 'none', transition:'all .2s', outline:'none' }}>
           {status === 'processing'
-            ? <svg style={{ animation:'voz-spin .75s linear infinite' }} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.2" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+            ? <svg style={{animation:'voz-spin .75s linear infinite'}} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.2" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
             : status === 'sent'
               ? <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              : <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={alwaysOn ? GREEN : P} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          }
+              : <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={on ? G : P} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>}
         </button>
 
         <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:'.95rem', fontWeight:700, color: alwaysOn ? GREEN : status === 'sent' ? '#22c55e' : status === 'error' ? '#ef4444' : DIM }}>
-            {status === 'idle'       && (alwaysOn ? 'Ativo — aguardando...' : 'Desativado')}
-            {status === 'listening'  && 'Ouvindo...'}
-            {status === 'processing' && 'Processando...'}
-            {status === 'sent'       && 'Enviado no chat!'}
-            {status === 'error'      && 'Erro'}
+          <div style={{ fontSize:'.95rem', fontWeight:700, color: on ? G : status==='sent'?'#22c55e':status==='error'?'#ef4444':DIM }}>
+            {!on && 'Desativado'}
+            {on && status==='idle' && 'Aguardando...'}
+            {on && status==='listening' && 'Ouvindo...'}
+            {status==='processing' && 'Processando...'}
+            {status==='sent' && 'Enviado no chat!'}
+            {status==='error' && 'Erro'}
           </div>
-          <div style={{ fontSize:'.72rem', color: DIM, marginTop:'.3rem' }}>
-            {alwaysOn ? 'Clique para desativar' : 'Clique para ativar'}
-          </div>
+          <div style={{ fontSize:'.72rem', color: DIM, marginTop:'.3rem' }}>{on ? 'Clique para desativar' : 'Clique para ativar'}</div>
         </div>
       </div>
 
-      {/* Transcript */}
-      {transcript && (
-        <div style={{ background:'rgba(57,255,20,.04)', border:'1px solid rgba(57,255,20,.15)', borderRadius:10, padding:'.65rem 1rem', marginBottom:'1rem', fontSize:'.88rem', color:'rgba(232,230,248,.75)', fontStyle:'italic' }}>
-          &ldquo;{transcript}&rdquo;
-        </div>
-      )}
+      {transcript && <div style={{ background:'rgba(57,255,20,.04)', border:'1px solid rgba(57,255,20,.15)', borderRadius:10, padding:'.65rem 1rem', marginBottom:'1rem', fontSize:'.88rem', color:'rgba(232,230,248,.75)', fontStyle:'italic' }}>&ldquo;{transcript}&rdquo;</div>}
+      {apiErr && <div style={{ background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'.6rem 1rem', marginBottom:'1rem', fontSize:'.8rem', color:'#ef4444' }}>⚠ {apiErr}</div>}
 
-      {/* API error */}
-      {apiError && (
-        <div style={{ background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'.6rem 1rem', marginBottom:'1rem', fontSize:'.8rem', color:'#ef4444' }}>
-          ⚠ {apiError}
-        </div>
-      )}
-
-      {/* Settings */}
-      <div style={{ background:'#0d0f18', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'.8rem 1rem', marginBottom:'1.25rem', display:'flex', gap:'1rem', flexWrap:'wrap', alignItems:'center' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'.5rem' }}>
-          <label style={{ fontSize:'.78rem', color: DIM, fontWeight:600 }}>Idioma:</label>
-          <select value={lang} onChange={e => setLang(e.target.value)}
-            style={{ background:'rgba(0,0,0,.3)', border:'1px solid rgba(255,255,255,.1)', borderRadius:7, color: TXT, fontSize:'.78rem', padding:'.3rem .6rem', outline:'none', cursor:'pointer' }}>
-            <option value="pt-BR">Português (BR)</option>
-            <option value="en-US">English (US)</option>
-            <option value="es-ES">Español</option>
-          </select>
-        </div>
+      {/* Lang */}
+      <div style={{ background:'#0d0f18', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'.8rem 1rem', marginBottom:'1.25rem', display:'flex', alignItems:'center', gap:'.5rem' }}>
+        <label style={{ fontSize:'.78rem', color: DIM, fontWeight:600 }}>Idioma:</label>
+        <select value={lang} onChange={e => setLang(e.target.value)} style={{ background:'rgba(0,0,0,.3)', border:'1px solid rgba(255,255,255,.1)', borderRadius:7, color: TXT, fontSize:'.78rem', padding:'.3rem .6rem', outline:'none', cursor:'pointer' }}>
+          <option value="pt-BR">Português (BR)</option>
+          <option value="en-US">English (US)</option>
+          <option value="es-ES">Español</option>
+        </select>
       </div>
 
-      {/* Debug log */}
+      {/* Log */}
       {log.length > 0 && (
         <div style={{ background:'#0a0b12', border:'1px solid rgba(255,255,255,.06)', borderRadius:10, padding:'.7rem .9rem', marginBottom:'1.25rem' }}>
           <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.4rem' }}>Log</div>
-          {log.map((l, i) => (
-            <div key={i} style={{ fontSize:'.72rem', color: 'rgba(232,230,248,.45)', fontFamily:'monospace', lineHeight:1.6 }}>{l}</div>
-          ))}
+          {log.map((l,i) => <div key={i} style={{ fontSize:'.72rem', color:'rgba(232,230,248,.45)', fontFamily:'monospace', lineHeight:1.65 }}>{l}</div>)}
         </div>
       )}
 
