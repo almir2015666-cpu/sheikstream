@@ -171,7 +171,18 @@ export default function AdminPage() {
     setAiLoading(true)
     const res = await fetch('/api/admin/ia-imagens/config', { headers: { 'x-admin-password': pw } })
     const d = await res.json()
-    if (d.config) setAiCfg({ ...d.config, role_limits: d.config.role_limits ?? {}, role_delays: d.config.role_delays ?? {} })
+    if (d.config) {
+      const maxDay = d.config.max_per_day ?? 10
+      const defCd = d.config.cooldown_seconds ?? 300
+      const rl: Record<string, number> = {}
+      const rd: Record<string, number> = {}
+      const groups = ['todos', 'admin', 'moderador', 'vip', 'streamer']
+      groups.forEach(g => {
+        rl[g] = (d.config.role_limits ?? {})[g] ?? maxDay
+        rd[g] = (d.config.role_delays ?? {})[g] ?? defCd
+      })
+      setAiCfg({ ...d.config, role_limits: rl, role_delays: rd })
+    }
     setAiRecent(d.recent ?? [])
     setAiImgExpanded({})
     setAiLoading(false)
@@ -2316,36 +2327,10 @@ export default function AdminPage() {
                         </button>
                       </div>
 
-                      {/* Global defaults */}
-                      <div style={{ padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.15rem' }}>Padrões globais</div>
-                        <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.85rem' }}>Aplicados a grupos sem configuração específica abaixo</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                          <div>
-                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.muted, marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Limite / dia</div>
-                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                              {[3,5,10,20,50].map(n => (
-                                <button key={n} onClick={() => setAiCfg(p => ({ ...p, max_per_day: n }))} style={{ padding: '0.35rem 0.65rem', borderRadius: 7, fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', background: aiCfg.max_per_day === n ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.max_per_day === n ? C.borderStrong : C.border}`, color: aiCfg.max_per_day === n ? C.primary : C.muted }}>{n}</button>
-                              ))}
-                              <input type="number" min={1} value={aiCfg.max_per_day} onChange={e => setAiCfg(p => ({ ...p, max_per_day: Number(e.target.value) }))} style={{ width: 65, padding: '0.35rem 0.55rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 7, color: C.text, fontSize: '0.82rem', outline: 'none' }} />
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.muted, marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delay entre gerações</div>
-                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                              {([[60,'1m'],[300,'5m'],[600,'10m'],[1800,'30m'],[3600,'1h']] as [number,string][]).map(([s,lbl]) => (
-                                <button key={s} onClick={() => setAiCfg(p => ({ ...p, cooldown_seconds: s }))} style={{ padding: '0.35rem 0.65rem', borderRadius: 7, fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', background: aiCfg.cooldown_seconds === s ? C.primaryBg : C.vvdim, border: `1px solid ${aiCfg.cooldown_seconds === s ? C.borderStrong : C.border}`, color: aiCfg.cooldown_seconds === s ? C.primary : C.muted }}>{lbl}</button>
-                              ))}
-                              <input type="number" min={0} value={aiCfg.cooldown_seconds} onChange={e => setAiCfg(p => ({ ...p, cooldown_seconds: Number(e.target.value) }))} style={{ width: 65, padding: '0.35rem 0.55rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: 7, color: C.text, fontSize: '0.82rem', outline: 'none' }} placeholder="seg" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Per-group table */}
                       <div style={{ padding: '0.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
                         <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C.text, marginBottom: '0.15rem' }}>Configuração por grupo</div>
-                        <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.85rem' }}>Limite, delay e acesso individuais por grupo. Campos em branco usam o padrão global.</div>
+                        <div style={{ fontSize: '0.7rem', color: C.dim, marginBottom: '0.85rem' }}>Limite diário, delay e acesso individuais por grupo.</div>
 
                         {/* Table header */}
                         <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 1fr 52px', gap: '0.6rem', alignItems: 'center', paddingBottom: '0.45rem', borderBottom: `1px solid ${C.border}`, marginBottom: '0.1rem' }}>
@@ -2355,10 +2340,8 @@ export default function AdminPage() {
                         </div>
 
                         {['todos','admin','moderador','vip','streamer'].map(role => {
-                          const hasLimitOvr = aiCfg.role_limits?.[role] !== undefined
-                          const hasDelayOvr = aiCfg.role_delays?.[role] !== undefined
-                          const limitVal = hasLimitOvr ? aiCfg.role_limits[role] : aiCfg.max_per_day
-                          const delayVal = hasDelayOvr ? aiCfg.role_delays[role] : aiCfg.cooldown_seconds
+                          const limitVal = aiCfg.role_limits?.[role] ?? aiCfg.max_per_day
+                          const delayVal = aiCfg.role_delays?.[role] ?? aiCfg.cooldown_seconds
                           const hasAccess = aiCfg.allowed_roles.includes(role)
                           const dFmt = (s: number) => s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s/60)}m` : `${Math.floor(s/3600)}h`
                           return (
@@ -2368,26 +2351,18 @@ export default function AdminPage() {
                                 {role === 'todos' ? '🌐 todos' : role}
                               </span>
                               {/* Limit */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                 <input type="number" min={0} value={limitVal}
                                   onChange={e => setAiCfg(p => ({ ...p, role_limits: { ...(p.role_limits ?? {}), [role]: Number(e.target.value) } }))}
-                                  style={{ width: 56, padding: '0.3rem 0.45rem', background: hasLimitOvr ? C.inputBg : 'rgba(255,255,255,0.03)', border: `1px solid ${hasLimitOvr ? C.borderStrong : C.border}`, borderRadius: 6, color: hasLimitOvr ? C.text : C.dim, fontSize: '0.82rem', outline: 'none' }} />
+                                  style={{ width: 56, padding: '0.3rem 0.45rem', background: C.inputBg, border: `1px solid ${C.borderStrong}`, borderRadius: 6, color: C.text, fontSize: '0.82rem', outline: 'none' }} />
                                 <span style={{ fontSize: '0.62rem', color: C.dim }}>img/d</span>
-                                {hasLimitOvr
-                                  ? <button onClick={() => setAiCfg(p => { const r = { ...(p.role_limits??{}) }; delete r[role]; return { ...p, role_limits: r } })} style={{ fontSize: '0.6rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 4, cursor: 'pointer', padding: '0.12rem 0.4rem' }}>✕</button>
-                                  : <span style={{ fontSize: '0.6rem', color: C.dim, opacity: 0.55 }}>padrão</span>
-                                }
                               </div>
                               {/* Delay */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                 <input type="number" min={0} value={delayVal}
                                   onChange={e => setAiCfg(p => ({ ...p, role_delays: { ...(p.role_delays ?? {}), [role]: Number(e.target.value) } }))}
-                                  style={{ width: 56, padding: '0.3rem 0.45rem', background: hasDelayOvr ? C.inputBg : 'rgba(255,255,255,0.03)', border: `1px solid ${hasDelayOvr ? C.borderStrong : C.border}`, borderRadius: 6, color: hasDelayOvr ? C.text : C.dim, fontSize: '0.82rem', outline: 'none' }} />
+                                  style={{ width: 56, padding: '0.3rem 0.45rem', background: C.inputBg, border: `1px solid ${C.borderStrong}`, borderRadius: 6, color: C.text, fontSize: '0.82rem', outline: 'none' }} />
                                 <span style={{ fontSize: '0.62rem', color: C.dim }}>{dFmt(delayVal)}</span>
-                                {hasDelayOvr
-                                  ? <button onClick={() => setAiCfg(p => { const r = { ...(p.role_delays??{}) }; delete r[role]; return { ...p, role_delays: r } })} style={{ fontSize: '0.6rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 4, cursor: 'pointer', padding: '0.12rem 0.4rem' }}>✕</button>
-                                  : <span style={{ fontSize: '0.6rem', color: C.dim, opacity: 0.55 }}>padrão</span>
-                                }
                               </div>
                               {/* Access toggle */}
                               <div style={{ display: 'flex', justifyContent: 'center' }}>

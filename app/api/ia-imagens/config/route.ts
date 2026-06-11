@@ -36,11 +36,18 @@ export async function GET(req: NextRequest) {
   // Cooldown remaining (skip if tables don't exist yet)
   let cooldownRemaining = 0
   let usedToday = 0
-  const rawLimits  = ((cfg as Record<string, unknown>).role_limits ?? {}) as Record<string, unknown>
-  const roleDelays: Record<string, number> = (rawLimits._delays ?? {}) as Record<string, number>
-  const roleLimits: Record<string, number> = Object.fromEntries(
-    Object.entries(rawLimits).filter(([k]) => k !== '_delays').map(([k, v]) => [k, Number(v)])
-  )
+
+  const rawRoles: string[] = (cfg as Record<string, unknown>).allowed_roles as string[] ?? []
+  const extEntry = rawRoles.find(r => typeof r === 'string' && r.startsWith('__ext__:'))
+  let roleLimits: Record<string, number> = {}
+  let roleDelays: Record<string, number> = {}
+  if (extEntry) {
+    try {
+      const parsed = JSON.parse(extEntry.slice(8))
+      roleLimits = parsed.limits ?? {}
+      roleDelays = parsed.delays ?? {}
+    } catch {}
+  }
   const effectiveMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
   const effectiveCooldown  = roleDelays[userRole ?? ''] ?? cfg.cooldown_seconds
 
@@ -59,8 +66,9 @@ export async function GET(req: NextRequest) {
     } catch {}
   }
 
+  const cleanRoles = rawRoles.filter(r => typeof r === 'string' && !r.startsWith('__ext__:'))
   return NextResponse.json({
-    config: { ...cfg, effective_max_per_day: effectiveMaxPerDay, effective_cooldown_seconds: effectiveCooldown },
+    config: { ...cfg, allowed_roles: cleanRoles, effective_max_per_day: effectiveMaxPerDay, effective_cooldown_seconds: effectiveCooldown },
     userRole, cooldownRemaining, usedToday,
   })
 }

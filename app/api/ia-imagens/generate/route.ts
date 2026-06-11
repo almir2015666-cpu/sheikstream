@@ -35,19 +35,25 @@ export async function POST(req: NextRequest) {
 
   if (!cfg.enabled) return NextResponse.json({ error: 'Recurso desativado pelo administrador' }, { status: 403 })
 
-  const allowedRoles: string[] = cfg.allowed_roles ?? []
-  const roleOk = allowedRoles.includes('todos') || (userRole && allowedRoles.includes(userRole))
-  if (!roleOk) return NextResponse.json({ error: `Seu grupo (${userRole ?? 'sem grupo'}) não tem acesso. Grupos permitidos: ${allowedRoles.join(', ')}`, requiredRoles: allowedRoles }, { status: 403 })
+  const rawRoles: string[] = ((cfg as Record<string, unknown>).allowed_roles as string[]) ?? []
+  const extEntry = rawRoles.find(r => typeof r === 'string' && r.startsWith('__ext__:'))
+  let roleLimits: Record<string, number> = {}
+  let roleDelays: Record<string, number> = {}
+  if (extEntry) {
+    try {
+      const parsed = JSON.parse(extEntry.slice(8))
+      roleLimits = parsed.limits ?? {}
+      roleDelays = parsed.delays ?? {}
+    } catch {}
+  }
+  const cleanRoles = rawRoles.filter(r => typeof r === 'string' && !r.startsWith('__ext__:'))
+  const roleOk = cleanRoles.includes('todos') || (userRole && cleanRoles.includes(userRole))
+  if (!roleOk) return NextResponse.json({ error: `Seu grupo (${userRole ?? 'sem grupo'}) não tem acesso. Grupos permitidos: ${cleanRoles.join(', ')}`, requiredRoles: cleanRoles }, { status: 403 })
 
   const userId = wlRow?.id ?? session.id
 
   if (cfgRes.data) {
     try {
-      const rawLimits  = ((cfg as Record<string, unknown>).role_limits ?? {}) as Record<string, unknown>
-      const roleDelays: Record<string, number> = (rawLimits._delays ?? {}) as Record<string, number>
-      const roleLimits: Record<string, number> = Object.fromEntries(
-        Object.entries(rawLimits).filter(([k]) => k !== '_delays').map(([k, v]) => [k, Number(v)])
-      )
       const userMaxPerDay = roleLimits[userRole ?? ''] ?? cfg.max_per_day
       const userCooldown  = roleDelays[userRole ?? ''] ?? cfg.cooldown_seconds
 

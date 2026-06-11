@@ -4,6 +4,32 @@ import { getSupabaseAdmin } from '@/app/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
+function extractExt(roles: string[]): {
+  limits: Record<string, number>
+  delays: Record<string, number>
+  cleanRoles: string[]
+} {
+  const extEntry = (roles ?? []).find(r => typeof r === 'string' && r.startsWith('__ext__:'))
+  let limits: Record<string, number> = {}
+  let delays: Record<string, number> = {}
+  if (extEntry) {
+    try {
+      const parsed = JSON.parse((extEntry as string).slice(8))
+      limits = parsed.limits ?? {}
+      delays = parsed.delays ?? {}
+    } catch {}
+  }
+  return {
+    limits,
+    delays,
+    cleanRoles: (roles ?? []).filter((r): r is string => typeof r === 'string' && !r.startsWith('__ext__:')),
+  }
+}
+
+function packExt(cleanRoles: string[], limits: Record<string, number>, delays: Record<string, number>): string[] {
+  return [...cleanRoles, `__ext__:${JSON.stringify({ limits, delays })}`]
+}
+
 export async function GET(req: NextRequest) {
   if (!await isAdminPassword(req.headers.get('x-admin-password') ?? ''))
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -17,11 +43,15 @@ export async function GET(req: NextRequest) {
       .limit(100),
   ])
 
-  // role_delays stored inside role_limits._delays to avoid needing a new DB column
-  const rawLimits = (cfg?.role_limits ?? {}) as Record<string, unknown>
-  const { _delays: roleDelays, ...pureLimits } = rawLimits
+  const { limits: roleLimits, delays: roleDelays, cleanRoles } = extractExt(cfg?.allowed_roles ?? [])
+
   return NextResponse.json({
-    config: cfg ? { ...cfg, role_limits: pureLimits, role_delays: (roleDelays ?? {}) as Record<string, number> } : cfg,
+    config: cfg ? {
+      ...cfg,
+      allowed_roles: cleanRoles,
+      role_limits: roleLimits,
+      role_delays: roleDelays,
+    } : cfg,
     recent: recent ?? [],
   })
 }
@@ -35,16 +65,15 @@ export async function PUT(req: NextRequest) {
 
   const { data: existing } = await db.from('ai_image_config').select('id').maybeSingle()
 
-  // Store role_delays inside role_limits._delays — no extra DB column needed
-  const roleLimits = { ...(body.role_limits ?? {}), _delays: body.role_delays ?? {} }
+  // Per-group config encoded inside allowed_roles — no extra DB columns needed
+  const allowedRoles = packExt(body.allowed_roles ?? [], body.role_limits ?? {}, body.role_delays ?? {})
 
   const payload = {
     ...(existing?.id ? { id: existing.id } : {}),
     enabled: body.enabled ?? true,
     cooldown_seconds: Number(body.cooldown_seconds ?? 300),
     max_per_day: Number(body.max_per_day ?? 10),
-    allowed_roles: body.allowed_roles ?? ['admin', 'moderador', 'vip'],
-    role_limits: roleLimits,
+    allowed_roles: allowedRoles,
     updated_at: new Date().toISOString(),
   }
 
