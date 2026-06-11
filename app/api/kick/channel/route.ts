@@ -104,25 +104,8 @@ export async function GET(req: NextRequest) {
     } catch { /* ignore */ }
   }
 
-  // Legacy public API for follower count (kick.com/api/v2 — no auth, has followers_count)
-  let followersCount: number | null = null
-  if (slug) {
-    try {
-      const r = await fetch(`https://kick.com/api/v2/channels/${slug}`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' },
-      })
-      if (r.ok) {
-        const d = await r.json()
-        followersCount = (d.followers_count ?? null) as number | null
-        if (!isLive && d.livestream) {
-          isLive      = true
-          streamTitle = d.livestream.session_title ?? streamTitle
-          viewerCount = d.livestream.viewer_count  ?? viewerCount
-          if (!category) category = d.livestream.categories?.[0]?.name ?? null
-        }
-      }
-    } catch { /* ignore */ }
-  }
+  // Note: kick.com legacy API (followers_count) blocks server-side requests with 403.
+  // Followers are fetched client-side from the browser instead.
 
   // Persist updated info
   if ((displayName && displayName !== row.kick_username) || (resolvedId && resolvedId !== row.kick_channel_id)) {
@@ -136,7 +119,7 @@ export async function GET(req: NextRequest) {
     username:        displayName    || null,
     channel_id:      resolvedId     || null,
     profile_picture: profilePicture,
-    followers:       followersCount,
+    followers:       null, // fetched client-side (server blocked by Kick security policy)
     active_subs:     activeSubs,
     is_live:         isLive,
     stream_title:    streamTitle,

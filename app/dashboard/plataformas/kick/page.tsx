@@ -124,7 +124,6 @@ export default function KickPlataformaPage() {
         if (d.username)         setUsername(d.username)
         if (d.channel_id)       setChannelId(d.channel_id)
         if (d.profile_picture)  setProfilePicture(d.profile_picture)
-        setFollowers(d.followers ?? null)
         setActiveSubs(d.active_subs ?? 0)
         setIsLive(!!d.is_live)
         setStreamTitle(d.stream_title ?? null)
@@ -135,6 +134,16 @@ export default function KickPlataformaPage() {
       .catch(() => {})
       .finally(() => setChannelLoading(false))
   }, [connected, channelKey])
+
+  // Kick blocks server-side requests for followers_count — fetch client-side from browser
+  useEffect(() => {
+    if (!username) return
+    const slug = username.toLowerCase()
+    fetch(`https://kick.com/api/v2/channels/${slug}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.followers_count != null) setFollowers(d.followers_count) })
+      .catch(() => {})
+  }, [username])
 
   function openKickPopup() {
     const w = 500, h = 700
