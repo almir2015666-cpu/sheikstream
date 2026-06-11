@@ -21,20 +21,6 @@ async function refreshKickToken(refreshToken: string): Promise<string | null> {
   } catch { return null }
 }
 
-function extractUserFields(raw: unknown): { name: string; id: string } {
-  if (!raw || typeof raw !== 'object') return { name: '', id: '' }
-  const u = raw as Record<string, unknown>
-  // Try channel slug from nested channel object first (most reliable for lookup)
-  const ch = (u.channel ?? {}) as Record<string, unknown>
-  const name = String(
-    u.username ?? u.slug ?? u.login ?? ch.slug ?? ch.name ?? u.name ?? u.display_name ?? ''
-  )
-  const id = String(
-    u.id ?? u.user_id ?? u.channel_id ?? u.broadcaster_user_id ?? ch.id ?? ''
-  )
-  return { name, id }
-}
-
 export async function GET(req: NextRequest) {
   const user = decodeSession(req.cookies.get(COOKIE_NAME)?.value ?? '')
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -57,9 +43,10 @@ export async function GET(req: NextRequest) {
     'Client-Id': clientId,
   })
 
-  // Fetch user profile — try refresh on 401
-  let profileRes = await fetch('https://api.kick.com/public/v1/users/me', { headers: authHeaders() })
-  if (profileRes.status === 401) {
+  // GET /public/v1/users — correct endpoint (not /users/me which returns 404)
+  let usersRes = await fetch('https://api.kick.com/public/v1/users', { headers: authHeaders() })
+
+  if (usersRes.status === 401) {
     tokenExpired = true
     if (row.kick_refresh_token) {
       const newToken = await refreshKickToken(row.kick_refresh_token)
@@ -67,7 +54,7 @@ export async function GET(req: NextRequest) {
         token = newToken
         tokenExpired = false
         await db.from('user_tokens').update({ kick_token: newToken }).eq('user_id', user.id)
-        profileRes = await fetch('https://api.kick.com/public/v1/users/me', { headers: authHeaders() })
+        usersRes = await fetch('https://api.kick.com/public/v1/users', { headers: authHeaders() })
       }
     }
   }
@@ -75,49 +62,61 @@ export async function GET(req: NextRequest) {
   let displayName = row.kick_username || ''
   let resolvedChannelId = row.kick_channel_id || ''
 
-  if (profileRes.ok) {
+  if (usersRes.ok) {
     try {
-      const d = await profileRes.json()
-      const raw = d?.data ?? d
-      const item = Array.isArray(raw) ? raw[0] : raw
-      const { name, id } = extractUserFields(item)
-      if (name) displayName      = name
-      if (id)   resolvedChannelId = id
-      console.log('[kick/channel] users/me ok — name:', name, 'id:', id, 'raw keys:', item ? Object.keys(item) : 'null')
-    } catch (e) {
-      console.warn('[kick/channel] users/me parse error:', e)
-    }
-  } else {
-    console.warn('[kick/channel] users/me status:', profileRes.status)
+      const d = await usersRes.json()
+      const arr = d?.data ?? d
+      const u = Array.isArray(arr) ? arr[0] : arr
+      if (u) {
+        const name = String(u.name ?? u.username ?? u.slug ?? '')
+        const id   = String(u.user_id ?? u.id ?? '')
+        if (name) displayName      = name
+        if (id)   resolvedChannelId = id
+      }
+    } catch { /* ignore */ }
   }
 
-  // If still no username, try multiple lookup strategies by ID
-  if (!displayName && resolvedChannelId) {
-    const idLookups = [
-      // Kick public v1: query by broadcaster_user_id
-      () => fetch(`https://api.kick.com/public/v1/channels?broadcaster_user_id=${resolvedChannelId}`, { headers: authHeaders() }),
-      // Kick legacy v2: look up user by numeric ID (no auth needed)
-      () => fetch(`https://kick.com/api/v2/users/${resolvedChannelId}`),
-      // Kick legacy v2: channel by numeric ID (might work as slug)
-      () => fetch(`https://kick.com/api/v2/channels/${resolvedChannelId}`),
-    ]
-    for (const lookup of idLookups) {
-      if (displayName) break
-      try {
-        const res = await lookup()
-        if (!res.ok) continue
-        const d = await res.json()
-        const raw = d?.data ?? d
-        const item = Array.isArray(raw) ? raw[0] : raw
-        if (item) {
-          const found = String(item.slug ?? item.username ?? item.channel?.slug ?? item.name ?? '') || ''
-          if (found) { displayName = found; console.log('[kick/channel] id-lookup found:', found) }
+  // GET /public/v1/channels — returns authenticated user's channel data
+  let isLive = false
+  let streamTitle: string | null = null
+  let viewerCount: number | null = null
+  let followersCount: number | null = null
+  let slug = displayName.toLowerCase()
+
+  const channelsRes = await fetch('https://api.kick.com/public/v1/channels', { headers: authHeaders() })
+  if (channelsRes.ok) {
+    try {
+      const d = await channelsRes.json()
+      const arr = d?.data ?? d
+      const c = Array.isArray(arr) ? arr[0] : arr
+      if (c) {
+        if (c.slug && !slug) { slug = String(c.slug); displayName = c.slug }
+        isLive      = !!(c.stream?.is_live)
+        viewerCount = c.stream?.viewer_count ?? null
+        streamTitle = c.stream_title || null
+        // active_subscribers_count is subs, not followers — get followers separately
+      }
+    } catch { /* ignore */ }
+  }
+
+  // Get follower count from old public Kick API (no auth needed, has followers_count)
+  if (slug) {
+    try {
+      const r = await fetch(`https://kick.com/api/v2/channels/${slug}`)
+      if (r.ok) {
+        const d = await r.json()
+        followersCount = d.followers_count ?? null
+        // Also fill live data if not already set (old API is more complete)
+        if (!isLive && d.livestream) {
+          isLive      = true
+          streamTitle = d.livestream.session_title ?? streamTitle
+          viewerCount = d.livestream.viewer_count ?? viewerCount
         }
-      } catch { /* ignore */ }
-    }
+      }
+    } catch { /* ignore */ }
   }
 
-  // Persist updated info if we found something
+  // Persist if we learned new info
   if ((displayName && displayName !== row.kick_username) || (resolvedChannelId && resolvedChannelId !== row.kick_channel_id)) {
     db.from('user_tokens').update({
       kick_username:   displayName || null,
@@ -125,55 +124,13 @@ export async function GET(req: NextRequest) {
     }).eq('user_id', user.id).then(() => {})
   }
 
-  // Fetch channel stats (followers, live status)
-  let followersCount: number | null = null
-  let isLive = false
-  let streamTitle: string | null = null
-  let viewerCount: number | null = null
-
-  // Try all candidate slugs/IDs in order
-  const candidates = [
-    displayName.toLowerCase(),
-    resolvedChannelId,
-  ].filter((s, i, a) => s && a.indexOf(s) === i)
-
-  for (const slug of candidates) {
-    if (followersCount !== null) break
-    // Try authenticated public v1, then unauthenticated v1, then legacy v2 API
-    const attempts = [
-      () => fetch(`https://api.kick.com/public/v1/channels/${slug}`, { headers: authHeaders() }),
-      () => fetch(`https://api.kick.com/public/v1/channels/${slug}`, { headers: { 'Client-Id': clientId } }),
-      () => fetch(`https://kick.com/api/v2/channels/${slug}`),
-    ]
-    for (const attempt of attempts) {
-      try {
-        const res = await attempt()
-        if (!res.ok) continue
-        const d = await res.json()
-        const raw = d?.data ?? d
-        const c = (Array.isArray(raw) ? raw[0] : raw) as Record<string, unknown>
-        if (!c) continue
-        followersCount = (c.followers_count ?? c.followersCount ?? null) as number | null
-        isLive         = !!(c.is_live ?? c.livestream)
-        const ls = (c.livestream ?? {}) as Record<string, unknown>
-        streamTitle    = (ls.session_title ?? null) as string | null
-        viewerCount    = (ls.viewer_count ?? null) as number | null
-        if (!displayName) {
-          displayName = String(c.slug ?? c.channel_name ?? '') || displayName
-        }
-        console.log('[kick/channel] channel data ok via', slug, '— followers:', followersCount)
-        break
-      } catch { /* ignore */ }
-    }
-  }
-
   return NextResponse.json({
-    username:    displayName || null,
-    channel_id:  resolvedChannelId || null,
-    followers:   followersCount,
-    is_live:     isLive,
+    username:     displayName || null,
+    channel_id:   resolvedChannelId || null,
+    followers:    followersCount,
+    is_live:      isLive,
     stream_title: streamTitle,
     viewer_count: viewerCount,
-    token_valid: !tokenExpired,
+    token_valid:  !tokenExpired,
   })
 }

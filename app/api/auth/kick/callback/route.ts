@@ -77,29 +77,38 @@ export async function GET(req: NextRequest) {
     return fail('token_exception')
   }
 
-  // Fetch Kick user profile
+  // Fetch user info — correct endpoint is /users (not /users/me which returns 404)
   try {
-    const userRes = await fetch('https://api.kick.com/public/v1/users/me', {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        'Client-Id': process.env.KICK_CLIENT_ID,
-      },
+    const userRes = await fetch('https://api.kick.com/public/v1/users', {
+      headers: { Authorization: `Bearer ${access_token}`, 'Client-Id': process.env.KICK_CLIENT_ID },
     })
     if (userRes.ok) {
       const data = await userRes.json()
-      const raw = data?.data ?? data
-      const u = (Array.isArray(raw) ? raw[0] : raw) ?? {}
-      console.log('[kick/callback] users/me raw:', JSON.stringify(u).slice(0, 500))
-      // Check top-level and nested channel object
-      const ch = (u.channel ?? {}) as Record<string, unknown>
-      kickChannelId = String(u.id ?? u.user_id ?? u.channel_id ?? u.broadcaster_user_id ?? ch.id ?? '')
-      kickUsername  = String(u.username ?? u.slug ?? u.login ?? ch.slug ?? ch.name ?? u.name ?? u.display_name ?? '')
-      console.log('[kick/callback] extracted — id:', kickChannelId, 'username:', kickUsername)
-    } else {
-      console.warn('[kick/callback] users/me failed:', userRes.status, await userRes.text())
+      const arr = data?.data ?? data
+      const u = (Array.isArray(arr) ? arr[0] : arr) ?? {}
+      kickChannelId = kickChannelId || String(u.user_id ?? u.id ?? '')
+      kickUsername  = kickUsername  || String(u.name ?? u.username ?? u.slug ?? '')
     }
   } catch (e) {
-    console.warn('[kick/callback] user fetch failed (non-fatal):', e)
+    console.warn('[kick/callback] users fetch failed (non-fatal):', e)
+  }
+
+  // Fetch channel info — /channels returns authenticated user's channel with slug
+  if (!kickUsername) {
+    try {
+      const chanRes = await fetch('https://api.kick.com/public/v1/channels', {
+        headers: { Authorization: `Bearer ${access_token}`, 'Client-Id': process.env.KICK_CLIENT_ID },
+      })
+      if (chanRes.ok) {
+        const data = await chanRes.json()
+        const arr = data?.data ?? data
+        const c = (Array.isArray(arr) ? arr[0] : arr) ?? {}
+        kickUsername  = kickUsername  || String(c.slug ?? '')
+        kickChannelId = kickChannelId || String(c.broadcaster_user_id ?? '')
+      }
+    } catch (e) {
+      console.warn('[kick/callback] channels fetch failed (non-fatal):', e)
+    }
   }
 
   // Persist kick token into user's row
