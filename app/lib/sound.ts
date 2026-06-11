@@ -25,7 +25,11 @@ const FALLBACK: Note[] = [{ f:659, t:0, d:0.14, v:0.28 }, { f:784, t:0.16, d:0.3
 
 // Default audio files hosted in /public/sounds — override the synthesized fallback per slug
 const DEFAULT_SLUG_URLS: Record<string, string> = {
-  'twitch-bits': '/sounds/twitch-bits.mp3',
+  'twitch-bits':    '/sounds/twitch-bits.mp3',
+  'twitch-sub':     '/sounds/twitch-default-alert.mp3',
+  'twitch-resub':   '/sounds/twitch-default-alert.mp3',
+  'twitch-giftsub': '/sounds/twitch-default-alert.mp3',
+  'twitch-follow':  '/sounds/twitch-default-alert.mp3',
 }
 
 const _urlCache: Map<string, AudioBuffer> = new Map()
