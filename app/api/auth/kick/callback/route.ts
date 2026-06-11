@@ -37,6 +37,10 @@ export async function GET(req: NextRequest) {
   const sessionUser = decodeSession(sessionToken)
   if (!sessionUser) return fail('invalid_session')
 
+  // Declare early so token exchange can pre-populate if provider includes user info
+  let kickChannelId = ''
+  let kickUsername = ''
+
   // Exchange code for token
   let access_token: string
   let refresh_token = ''
@@ -60,16 +64,20 @@ export async function GET(req: NextRequest) {
       return fail('token_failed')
     }
     const tokenData = await tokenRes.json()
+    console.log('[kick/callback] token response keys:', Object.keys(tokenData))
     access_token = tokenData.access_token
     refresh_token = tokenData.refresh_token ?? ''
+    // Some OAuth providers include user info in the token response itself
+    if (tokenData.username)    kickUsername  = String(tokenData.username)
+    if (tokenData.user?.slug)  kickUsername  = kickUsername || String(tokenData.user.slug)
+    if (tokenData.user_id)     kickChannelId = String(tokenData.user_id)
+    if (tokenData.channel_id)  kickChannelId = kickChannelId || String(tokenData.channel_id)
   } catch (e) {
     console.error('[kick/callback] token exception:', e)
     return fail('token_exception')
   }
 
   // Fetch Kick user profile
-  let kickChannelId = ''
-  let kickUsername = ''
   try {
     const userRes = await fetch('https://api.kick.com/public/v1/users/me', {
       headers: {
