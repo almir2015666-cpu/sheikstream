@@ -56,16 +56,24 @@ export async function POST(req: NextRequest) {
             </div>
           </div>
         `
-        fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            from,
-            to: [reply_email.trim()],
-            subject: `Recebemos sua ${typeLabel}! — SheikSTREAM`,
-            html,
-          }),
-        }).catch(() => {})
+        try {
+          const emailRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from,
+              to: [reply_email.trim()],
+              subject: `Recebemos sua ${typeLabel}! — SheikSTREAM`,
+              html,
+            }),
+          })
+          if (!emailRes.ok) {
+            const ed = await emailRes.json().catch(() => ({}))
+            console.error('[tickets] Resend error:', ed)
+          }
+        } catch (e) {
+          console.error('[tickets] Resend fetch error:', e)
+        }
       }
     }
 
