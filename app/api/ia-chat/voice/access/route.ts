@@ -13,13 +13,20 @@ export async function GET(req: NextRequest) {
   const { data } = await db.from('overlay_configs').select('config')
     .eq('broadcaster_id', '__global__').eq('type', 'feature-ia-voz').maybeSingle()
 
-  const cfg = data?.config as { enabled: boolean } | null
+  const cfg = data?.config as { enabled: boolean; allowed_roles: string[] } | null
 
-  // Only block if admin explicitly disabled the feature
-  if (cfg && cfg.enabled === false) {
-    return NextResponse.json({ canAccess: false, userRole: null })
+  if (!cfg) return NextResponse.json({ canAccess: true, userRole: null })
+  if (cfg.enabled === false) return NextResponse.json({ canAccess: false, userRole: null })
+
+  const allowed = (cfg.allowed_roles ?? []).map(r => r.toLowerCase())
+
+  if (allowed.length === 0 || allowed.includes('todos')) {
+    return NextResponse.json({ canAccess: true, userRole: null })
   }
 
-  // Any authenticated user has access
-  return NextResponse.json({ canAccess: true, userRole: null })
+  const { data: roleRow } = await db.from('user_roles').select('role').eq('user_id', session.id).maybeSingle()
+  const userRole = roleRow?.role ?? null
+
+  const canAccess = userRole !== null && allowed.includes(userRole.toLowerCase())
+  return NextResponse.json({ canAccess, userRole })
 }
