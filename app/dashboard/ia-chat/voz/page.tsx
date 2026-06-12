@@ -45,6 +45,7 @@ export default function IaVozPage() {
   const [apiErr, setApiErr]         = useState('')
   const [log, setLog]               = useState<string[]>([])
   const [noSupport, setNoSupport]   = useState(false)
+  const [noAccess, setNoAccess]     = useState(false)
   const [saving, setSaving]         = useState(false)
   const [saved, setSaved]           = useState(false)
   const [isBrave, setIsBrave]       = useState(false)
@@ -257,7 +258,12 @@ export default function IaVozPage() {
     }
   }, [])
 
-  // Load saved config on mount
+  // Access check + load config on mount
+  useEffect(() => {
+    fetch('/api/ia-chat/voice/access').then(r => r.ok ? r.json() : { canAccess: true })
+      .then(d => { if (!d.canAccess) setNoAccess(true) }).catch(() => {})
+  }, [])
+
   useEffect(() => {
     fetch('/api/ia-chat/voice/config').then(r => r.json()).then(d => {
       if (!d.cfg) return
@@ -292,10 +298,47 @@ export default function IaVozPage() {
   const CARD = { background:'#0d0f18', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'.9rem 1rem', marginBottom:'1rem' }
   const SEP  = { borderTop:'1px solid rgba(255,255,255,.05)', paddingTop:'.75rem', marginTop:'.75rem' }
 
-  if (noSupport) return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'60vh', color: DIM, textAlign:'center' }}>
+  if (noAccess) return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'65vh', padding:'2rem', textAlign:'center', fontFamily:"-apple-system,'Inter',system-ui,sans-serif" }}>
+      <div style={{ fontSize:'2.8rem', marginBottom:'1rem', lineHeight:1 }}>🔒</div>
+      <div style={{ fontSize:'1rem', fontWeight:800, color:'rgba(239,68,68,.9)', marginBottom:'.55rem' }}>Sem acesso a IA por Voz</div>
+      <div style={{ fontSize:'.82rem', color:'rgba(232,230,248,.4)', lineHeight:1.7, maxWidth:380 }}>
+        Seu grupo atual não tem permissão para usar esta funcionalidade. Entre em contato com o administrador.
+      </div>
+    </div>
+  )
+
+  if (noSupport || isBrave) return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'65vh', padding:'2rem', textAlign:'center' }}>
       <style>{CSS}</style>
-      <div style={{ fontSize:'.9rem', color:'rgba(239,68,68,.8)' }}>Não suportado — use Chrome ou Edge</div>
+      <div style={{ maxWidth:420 }}>
+        <div style={{ fontSize:'3rem', marginBottom:'1rem', lineHeight:1 }}>{isBrave ? '🦁' : '🎙️'}</div>
+        <div style={{ fontSize:'1rem', fontWeight:800, color:'rgba(239,68,68,.9)', marginBottom:'.6rem' }}>
+          {isBrave ? 'Brave não suporta reconhecimento de voz' : 'Navegador sem suporte a voz'}
+        </div>
+        <div style={{ fontSize:'.82rem', color:'rgba(232,230,248,.45)', lineHeight:1.75, marginBottom:'1.5rem' }}>
+          {isBrave
+            ? 'O Brave bloqueia a API de voz do Google em nível de sistema. Mesmo com Shields desativado, o reconhecimento de voz não funciona neste navegador.'
+            : 'Seu navegador não suporta a API de reconhecimento de voz.'}
+        </div>
+        <div style={{ background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:14, padding:'1.1rem 1.25rem', marginBottom:'1rem' }}>
+          <div style={{ fontSize:'.72rem', fontWeight:700, color:'rgba(232,230,248,.35)', textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.6rem' }}>Para usar IA por Voz, abra no:</div>
+          <div style={{ display:'flex', gap:'.75rem', justifyContent:'center', flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'.5rem', padding:'.55rem 1rem', background:'rgba(66,133,244,.12)', border:'1px solid rgba(66,133,244,.3)', borderRadius:10 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#4285f4"/><circle cx="12" cy="12" r="4" fill="#fff"/><path d="M12 2a10 10 0 0 1 8.66 5H12V2z" fill="#ea4335"/><path d="M3.34 7A10 10 0 0 1 12 2v5H3.34z" fill="#fbbc05"/><path d="M2 12a10 10 0 0 1 1.34-5H12v5H2z" fill="#34a853"/></svg>
+              <span style={{ fontSize:'.83rem', fontWeight:700, color:'#4285f4' }}>Google Chrome</span>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:'.5rem', padding:'.55rem 1rem', background:'rgba(0,120,212,.12)', border:'1px solid rgba(0,120,212,.3)', borderRadius:10 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#0078d4"/><path d="M12 6a6 6 0 1 0 0 12A6 6 0 0 0 12 6z" fill="#50e6ff"/><path d="M18 12c0 3.31-2.69 6-6 6s-6-2.69-6-6" fill="#0078d4"/></svg>
+              <span style={{ fontSize:'.83rem', fontWeight:700, color:'#0078d4' }}>Microsoft Edge</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ fontSize:'.7rem', color:'rgba(232,230,248,.2)', lineHeight:1.6 }}>
+          Copie o link e cole no Chrome ou Edge:<br/>
+          <span style={{ color:'rgba(155,48,255,.6)', fontFamily:'monospace', fontSize:'.72rem' }}>sheikstream.com.br/dashboard/ia-chat/voz</span>
+        </div>
+      </div>
     </div>
   )
 

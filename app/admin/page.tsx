@@ -157,7 +157,7 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens' | 'notas'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens' | 'notas' | 'iachat' | 'iavoz'>('users')
   type AiImgCfg = { enabled: boolean; cooldown_seconds: number; max_per_day: number; allowed_roles: string[]; role_limits: Record<string, number>; role_delays: Record<string, number> }
   type AiGen = { id: string; user_name: string; user_role: string; prompt: string; status: string; created_at: string }
   const [aiCfg, setAiCfg] = useState<AiImgCfg>({ enabled: true, cooldown_seconds: 300, max_per_day: 10, allowed_roles: ['admin', 'moderador', 'vip'], role_limits: {}, role_delays: {} })
@@ -167,6 +167,38 @@ export default function AdminPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiSaving, setAiSaving] = useState(false)
   const [aiSaved, setAiSaved] = useState(false)
+
+  type FeatureCfg = { enabled: boolean; allowed_roles: string[] }
+  const FEAT_DEFAULT: FeatureCfg = { enabled: true, allowed_roles: ['todos'] }
+  const [iaChatCfg, setIaChatCfg] = useState<FeatureCfg>(FEAT_DEFAULT)
+  const [iaChatLoading, setIaChatLoading] = useState(false)
+  const [iaChatSaving, setIaChatSaving] = useState(false)
+  const [iaChatSaved, setIaChatSaved] = useState(false)
+  const [iaVozCfg, setIaVozCfg] = useState<FeatureCfg>(FEAT_DEFAULT)
+  const [iaVozLoading, setIaVozLoading] = useState(false)
+  const [iaVozSaving, setIaVozSaving] = useState(false)
+  const [iaVozSaved, setIaVozSaved] = useState(false)
+
+  const fetchFeatureCfg = async (pw: string, feature: 'chat' | 'voz') => {
+    const setter = feature === 'chat' ? setIaChatLoading : setIaVozLoading
+    const cfgSetter = feature === 'chat' ? setIaChatCfg : setIaVozCfg
+    setter(true)
+    try {
+      const res = await fetch(`/api/admin/ia-${feature}/config`, { headers: { 'x-admin-password': pw } })
+      if (res.ok) { const d = await res.json(); if (d.config) cfgSetter(d.config) }
+    } catch {} finally { setter(false) }
+  }
+  const saveFeatureCfg = async (feature: 'chat' | 'voz') => {
+    const cfg = feature === 'chat' ? iaChatCfg : iaVozCfg
+    const setSaving = feature === 'chat' ? setIaChatSaving : setIaVozSaving
+    const setSaved = feature === 'chat' ? setIaChatSaved : setIaVozSaved
+    setSaving(true)
+    try {
+      await fetch(`/api/admin/ia-${feature}/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify(cfg) })
+      setSaved(true); setTimeout(() => setSaved(false), 2500)
+    } catch { alert('Erro ao salvar') } finally { setSaving(false) }
+  }
+
   const fetchAiCfg = async (pw: string) => {
     setAiLoading(true)
     const res = await fetch('/api/admin/ia-imagens/config', { headers: { 'x-admin-password': pw } })
@@ -307,6 +339,8 @@ export default function AdminPage() {
     else if (v === 'notify') { fetchNotifications(storedPw); if (users.length === 0) fetchUsers(storedPw) }
     else if (v === 'invites') fetchAdminInvites(storedPw)
     else if (v === 'iaimagens') fetchAiCfg(storedPw)
+    else if (v === 'iachat') fetchFeatureCfg(storedPw, 'chat')
+    else if (v === 'iavoz') fetchFeatureCfg(storedPw, 'voz')
   }
 
   const fetchUsers = useCallback(async (pw: string) => {
@@ -876,6 +910,10 @@ export default function AdminPage() {
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg> },
       { v: 'iaimagens' as const, label: 'IA de Imagens',
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
+      { v: 'iachat' as const, label: 'IA de Chat',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+      { v: 'iavoz' as const, label: 'IA por Voz',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> },
       { v: 'notas' as const, label: 'Notas',
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
     ]},
@@ -885,6 +923,7 @@ export default function AdminPage() {
     users: 'Usuários', online: 'Online Agora', roles: 'Funções', tickets: 'Suporte',
     notify: 'Avisos', invites: 'Convites', logs: 'Logs', banner: 'Banner',
     passwords: 'Senhas Admin', navorder: 'Ordem do Menu', iaimagens: 'IA de Imagens',
+    iachat: 'IA de Chat', iavoz: 'IA por Voz',
     notas: 'Notas',
   }
 
@@ -2603,6 +2642,73 @@ export default function AdminPage() {
               )}
             </div>
           )}
+
+          {(view === 'iachat' || view === 'iavoz') && (() => {
+            const isChat = view === 'iachat'
+            const cfg = isChat ? iaChatCfg : iaVozCfg
+            const setCfg = isChat ? setIaChatCfg : setIaVozCfg
+            const loading = isChat ? iaChatLoading : iaVozLoading
+            const saving = isChat ? iaChatSaving : iaVozSaving
+            const saved = isChat ? iaChatSaved : iaVozSaved
+            const label = isChat ? 'IA de Chat' : 'IA por Voz'
+            const icon = isChat ? '💬' : '🎙️'
+            const feature = isChat ? 'chat' as const : 'voz' as const
+            const ROLES = ['todos', 'admin', 'moderador', 'vip', 'streamer']
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {loading ? <div style={{ color: C.muted, fontSize: '.85rem' }}>Carregando...</div> : (
+                  <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem' }}>
+                    <h3 style={{ margin: '0 0 .3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>{icon} {label} — Acesso por grupo</h3>
+                    <p style={{ margin: '0 0 1.25rem', fontSize: '.78rem', color: C.muted }}>Configure quais grupos podem acessar esta funcionalidade.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {/* Enable toggle */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '.88rem', color: C.text }}>Funcionalidade ativa</div>
+                          <div style={{ fontSize: '.72rem', color: C.muted, marginTop: '.1rem' }}>Desativar bloqueia para todos os grupos</div>
+                        </div>
+                        <button onClick={() => setCfg(p => ({ ...p, enabled: !p.enabled }))} style={{ width: 44, height: 24, borderRadius: 12, background: cfg.enabled ? C.accent : C.vvdim, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background .2s' }}>
+                          <span style={{ position: 'absolute', top: 3, left: cfg.enabled ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left .2s', display: 'block' }} />
+                        </button>
+                      </div>
+                      {/* Per-group access */}
+                      <div style={{ padding: '.8rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                        <div style={{ fontWeight: 700, fontSize: '.88rem', color: C.text, marginBottom: '.15rem' }}>Acesso por grupo</div>
+                        <div style={{ fontSize: '.7rem', color: C.dim, marginBottom: '.85rem' }}>Ative os grupos que devem ter acesso.</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 52px', gap: '.6rem', alignItems: 'center', paddingBottom: '.45rem', borderBottom: `1px solid ${C.border}`, marginBottom: '.1rem' }}>
+                          {['Grupo', 'Acesso'].map(h => (
+                            <span key={h} style={{ fontSize: '.62rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '.07em', textAlign: h === 'Acesso' ? 'center' : undefined }}>{h}</span>
+                          ))}
+                        </div>
+                        {ROLES.map(role => {
+                          const has = cfg.allowed_roles.includes(role)
+                          return (
+                            <div key={role} style={{ display: 'grid', gridTemplateColumns: '1fr 52px', gap: '.6rem', alignItems: 'center', padding: '.45rem 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
+                              <span style={{ fontSize: '.82rem', fontWeight: 700, color: has ? (role === 'todos' ? '#60a5fa' : C.primary) : C.dim }}>
+                                {role === 'todos' ? '🌐 todos' : role}
+                              </span>
+                              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                <button onClick={() => setCfg(p => ({ ...p, allowed_roles: has ? p.allowed_roles.filter(r => r !== role) : [...p.allowed_roles, role] }))}
+                                  style={{ width: 38, height: 22, borderRadius: 11, background: has ? (role === 'todos' ? '#3b82f6' : '#22c55e') : C.vvdim, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                                  <span style={{ position: 'absolute', top: 3, left: has ? 18 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s', display: 'block' }} />
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                        <div style={{ fontSize: '.67rem', color: C.dim, marginTop: '.6rem' }}>
+                          💡 &quot;todos&quot; ativo = qualquer usuário aprovado tem acesso, independente do grupo.
+                        </div>
+                      </div>
+                      <button onClick={() => saveFeatureCfg(feature)} disabled={saving} style={{ padding: '.65rem', borderRadius: 10, fontWeight: 800, fontSize: '.9rem', background: saved ? C.accentBg : C.primaryBg, border: `1px solid ${saved ? C.accentBorder : C.borderStrong}`, color: saved ? C.accent : C.primary, cursor: 'pointer' }}>
+                        {saving ? 'Salvando...' : saved ? '✓ Salvo!' : '💾 Salvar configuração'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {view === 'notas' && (
             <AdminNotepad C={C} LS="sk_admin_notas_v1" mkNote={() => ({ id: crypto.randomUUID(), title: '', content: '', updatedAt: new Date().toISOString() })} />

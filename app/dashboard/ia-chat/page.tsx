@@ -173,6 +173,7 @@ export default function IaChatPage() {
   const [savedOk, setSavedOk] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
   const [uid, setUid] = useState('')
+  const [noAccess, setNoAccess] = useState(false)
   const lastSaved = useRef('')
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -180,13 +181,14 @@ export default function IaChatPage() {
     fetch('/api/me').then(r => r.ok ? r.json() : null).then(u => {
       if (!u?.id) { setLoading(false); return }
       setUid(u.id)
-      fetch(`/api/overlay-config/ia-chat?uid=${u.id}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(d => {
-          if (d?.cfg) { const m = { ...DEFAULT_CFG, ...d.cfg }; setCfg(m); lastSaved.current = JSON.stringify(m) }
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false))
+      Promise.all([
+        fetch('/api/ia-chat/access').then(r => r.ok ? r.json() : { canAccess: true }),
+        fetch(`/api/overlay-config/ia-chat?uid=${u.id}`).then(r => r.ok ? r.json() : null),
+      ]).then(([access, d]) => {
+        if (!access.canAccess) { setNoAccess(true); setLoading(false); return }
+        if (d?.cfg) { const m = { ...DEFAULT_CFG, ...d.cfg }; setCfg(m); lastSaved.current = JSON.stringify(m) }
+        setLoading(false)
+      }).catch(() => setLoading(false))
     }).catch(() => setLoading(false))
   }, [])
 
@@ -224,6 +226,16 @@ export default function IaChatPage() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: DIM, fontSize: '.9rem', gap: '.55rem' }}>
       <svg className="iac-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
       Carregando...
+    </div>
+  )
+
+  if (noAccess) return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '65vh', padding: '2rem', textAlign: 'center', fontFamily: "-apple-system,'Inter',system-ui,sans-serif" }}>
+      <div style={{ fontSize: '2.8rem', marginBottom: '1rem', lineHeight: 1 }}>🔒</div>
+      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'rgba(239,68,68,.9)', marginBottom: '.55rem' }}>Sem acesso a IA de Chat</div>
+      <div style={{ fontSize: '.82rem', color: 'rgba(232,230,248,.4)', lineHeight: 1.7, maxWidth: 380 }}>
+        Seu grupo atual não tem permissão para usar esta funcionalidade. Entre em contato com o administrador.
+      </div>
     </div>
   )
 
