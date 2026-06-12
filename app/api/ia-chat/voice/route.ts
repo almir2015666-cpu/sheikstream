@@ -73,6 +73,8 @@ export async function POST(req: NextRequest) {
   const text: string = (body.text ?? '').trim()
   const sendToChat: boolean = body.sendToChat !== false
   const emojiEnabled: boolean = body.emojiEnabled !== false
+  const bodyResponseSize: string | undefined = body.responseSize
+  const bodyUserName: string | undefined = (body.userName ?? '').trim() || undefined
   if (!text) return NextResponse.json({ error: 'text required' }, { status: 400 })
 
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'No API key' }, { status: 500 })
@@ -87,11 +89,18 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   const cfg = cfgRow?.config?.cfg as IaChatCfg | undefined
-  const systemPrompt = cfg
-    ? buildSystemPrompt(cfg, emojiEnabled)
+  // Build merged config: body overrides take precedence over saved config
+  const effectiveCfg = cfg ? { ...cfg, ...(bodyResponseSize ? { response_size: bodyResponseSize } : {}) } : undefined
+  let systemPrompt = effectiveCfg
+    ? buildSystemPrompt(effectiveCfg, emojiEnabled)
     : `Você é um assistente de chat ao vivo. Responda de forma natural e concisa em português. Sem markdown, texto puro.${emojiEnabled ? '' : ' Não use emojis.'}`
+  // Inject userName directive
+  if (bodyUserName) {
+    systemPrompt += `\n\nIMPORTANTE: Chame o streamer/usuário pelo nome "${bodyUserName}" sempre que se dirigir a ele.`
+  }
 
-  const maxTokens = cfg?.response_size === 'long' ? 300 : cfg?.response_size === 'medium' ? 150 : 120
+  const effectiveSize = bodyResponseSize ?? cfg?.response_size
+  const maxTokens = effectiveSize === 'long' ? 300 : effectiveSize === 'medium' ? 150 : 120
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 

@@ -59,6 +59,7 @@ const NAV_GROUPS: Group[] = [
     { id: 'subathon',  label: 'Subathon',        href: '/dashboard/subathon',  icon: I.suba, badge: 'NOVO' },
     { id: 'timers',    label: 'Timers',           href: '/dashboard/timers',    icon: I.time },
     { id: 'comandos',  label: 'Eventos/Comandos', href: '/dashboard/comandos',  icon: I.cmd  },
+    { id: 'voice-fx',  label: 'Voice FX',         href: '/dashboard/voice-fx',  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>, badge: 'NOVO' as Badge },
     { id: 'ia', label: 'IA', href: '/dashboard/ia-chat', badge: 'NOVO' as Badge,
       icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>,
       children: [
@@ -121,6 +122,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/ia-imagens': 'IA de Imagens',
   '/dashboard/ia-chat': 'IA de Chat',
   '/dashboard/ia-chat/voz': 'IA por Voz',
+  '/dashboard/voice-fx': 'Voice FX',
 }
 
 function Chip({ type }: { type: Badge }) {
@@ -568,7 +570,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.95rem', fontWeight: 800, color: S.text, letterSpacing: '-0.2px', lineHeight: 1.2 }}>Sheik<span style={{ color: S.accent }}>STREAM</span></div>
-            <div style={{ fontSize: '0.72rem', color: S.muted, marginTop: '1px' }}>Painel do Streamer</div>
+            <div style={{ fontSize: '0.72rem', color: S.muted, marginTop: '1px' }}>{t('sidebar_tagline')}</div>
           </div>
           {isMobile && (
             <button onClick={() => setMobileOpen(false)} style={{ background: 'transparent', border: 'none', color: S.muted, cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem', lineHeight: 1 }}>✕</button>
@@ -733,7 +735,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {!isMobile && t('beta_closed')}
             </div>
             <LanguageSwitcher color={S.dim} hoverBg={S.primaryBg} activeBg={isDark ? 'rgba(155,48,255,0.2)' : 'rgba(123,46,255,0.1)'} activeColor={S.iconActive} />
-            <button onClick={toggleTheme} className="sk-theme-btn" title={isDark ? 'Modo claro' : 'Modo escuro'}>
+            <button onClick={toggleTheme} className="sk-theme-btn" title={isDark ? t('theme_light') : t('theme_dark')}>
               {isDark ? I.sun : I.moon}
             </button>
           </div>

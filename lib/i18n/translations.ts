@@ -51,6 +51,10 @@ export const translations = {
     pt_ia_voice: 'IA por Voz',
 
     // Layout UI
+    sidebar_tagline: 'Painel do Streamer',
+    theme_light: 'Modo claro',
+    theme_dark: 'Modo escuro',
+    nav_voice_fx: 'Voice FX',
     search_placeholder: 'Pesquisar...',
     beta_closed: 'Beta fechado',
     logout: 'Sair',
@@ -166,6 +170,10 @@ export const translations = {
     pt_ia_chat: 'AI Chat',
     pt_ia_voice: 'AI Voice',
 
+    sidebar_tagline: 'Streamer Dashboard',
+    theme_light: 'Light mode',
+    theme_dark: 'Dark mode',
+    nav_voice_fx: 'Voice FX',
     search_placeholder: 'Search...',
     beta_closed: 'Closed Beta',
     logout: 'Sign out',
@@ -277,6 +285,10 @@ export const translations = {
     pt_ia_chat: 'IA de Chat',
     pt_ia_voice: 'IA por Voz',
 
+    sidebar_tagline: 'Panel del Streamer',
+    theme_light: 'Modo claro',
+    theme_dark: 'Modo oscuro',
+    nav_voice_fx: 'Voice FX',
     search_placeholder: 'Buscar...',
     beta_closed: 'Beta cerrado',
     logout: 'Salir',

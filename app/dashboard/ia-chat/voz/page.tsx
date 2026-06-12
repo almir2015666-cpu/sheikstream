@@ -61,6 +61,8 @@ export default function IaVozPage() {
   const [sendChat, setSendChat]     = useState(true)
   const [emojiEnabled, setEmojiEnabled] = useState(true)
   const [ignoreWords, setIgnoreWords] = useState('')
+  const [responseSize, setResponseSize] = useState('medium')
+  const [userName, setUserName]     = useState('')
 
   // Refs — always fresh inside closures
   const onRef          = useRef(false)
@@ -76,6 +78,8 @@ export default function IaVozPage() {
   const sendChatRef    = useRef(true)
   const emojiEnabledRef = useRef(true)
   const ignoreWordsRef = useRef('')
+  const responseSizeRef = useRef('medium')
+  const userNameRef    = useRef('')
   const lastSentRef    = useRef(0)
   const histRef        = useRef<HTMLDivElement>(null)
 
@@ -90,6 +94,8 @@ export default function IaVozPage() {
   useEffect(() => { sendChatRef.current = sendChat }, [sendChat])
   useEffect(() => { emojiEnabledRef.current = emojiEnabled }, [emojiEnabled])
   useEffect(() => { ignoreWordsRef.current = ignoreWords }, [ignoreWords])
+  useEffect(() => { responseSizeRef.current = responseSize }, [responseSize])
+  useEffect(() => { userNameRef.current = userName }, [userName])
 
   const lg = (msg: string) => {
     const ts = new Date().toLocaleTimeString('pt-BR')
@@ -136,7 +142,7 @@ export default function IaVozPage() {
       const r = await fetch('/api/ia-chat/voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: t, sendToChat: sendChatRef.current, emojiEnabled: emojiEnabledRef.current }),
+        body: JSON.stringify({ text: t, sendToChat: sendChatRef.current, emojiEnabled: emojiEnabledRef.current, responseSize: responseSizeRef.current, userName: userNameRef.current }),
       })
       const d = await r.json()
       if (!r.ok) throw new Error(`${r.status}: ${d.error ?? 'erro'}`)
@@ -278,6 +284,8 @@ export default function IaVozPage() {
       if (c.sendChat !== undefined)    setSendChat(c.sendChat)
       if (c.emojiEnabled !== undefined) setEmojiEnabled(c.emojiEnabled)
       if (c.ignoreWords !== undefined) setIgnoreWords(c.ignoreWords)
+      if (c.responseSize)              setResponseSize(c.responseSize)
+      if (c.userName !== undefined)    setUserName(c.userName)
     }).catch(() => {/* ignore */})
   }, [])
 
@@ -286,7 +294,7 @@ export default function IaVozPage() {
     await fetch('/api/ia-chat/voice/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cfg: { lang, wakeEnabled, wakeWord, cooldown, minWords, ttsEnabled, ttsRate, sendChat, emojiEnabled, ignoreWords } }),
+      body: JSON.stringify({ cfg: { lang, wakeEnabled, wakeWord, cooldown, minWords, ttsEnabled, ttsRate, sendChat, emojiEnabled, ignoreWords, responseSize, userName } }),
     })
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -397,15 +405,30 @@ export default function IaVozPage() {
       {/* ── Configurações ── */}
       <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.5rem' }}>Configurações</div>
 
-      {/* Idioma */}
+      {/* Idioma + resposta */}
       <div style={CARD}>
-        <div style={{ display:'flex', alignItems:'center', gap:'.5rem' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'.5rem', marginBottom:'.75rem' }}>
           <label style={{ fontSize:'.78rem', color: DIM, fontWeight:600 }}>Idioma do reconhecimento:</label>
           <select value={lang} onChange={e => setLang(e.target.value)} style={{ background:'rgba(0,0,0,.3)', border:'1px solid rgba(255,255,255,.1)', borderRadius:7, color: TXT, fontSize:'.78rem', padding:'.3rem .6rem', outline:'none', cursor:'pointer' }}>
             <option value="pt-BR">Português (BR)</option>
             <option value="en-US">English (US)</option>
             <option value="es-ES">Español</option>
           </select>
+        </div>
+
+        <div style={{ borderTop:'1px solid rgba(255,255,255,.05)', paddingTop:'.7rem' }}>
+          <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT, marginBottom:'.3rem' }}>Tamanho das respostas</div>
+          <div style={{ display:'flex', gap:'.5rem' }}>
+            {[{id:'short',label:'Curta (1 linha)'},{id:'medium',label:'Média (2-4 linhas)'},{id:'long',label:'Longa (5+ linhas)'}].map(s => (
+              <button key={s.id} onClick={() => setResponseSize(s.id)} style={{ flex:1, padding:'.4rem .4rem', borderRadius:8, border:`1.5px solid ${responseSize===s.id ? 'rgba(155,48,255,.5)' : 'rgba(255,255,255,.08)'}`, background: responseSize===s.id ? 'rgba(155,48,255,.15)' : 'transparent', color: responseSize===s.id ? P : DIM, fontSize:'.72rem', fontWeight:700, cursor:'pointer', transition:'all .15s' }}>{s.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ borderTop:'1px solid rgba(255,255,255,.05)', paddingTop:'.7rem', marginTop:'.75rem' }}>
+          <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT, marginBottom:'.25rem' }}>Como a IA deve te chamar</div>
+          <div style={{ fontSize:'.7rem', color: DIM, marginBottom:'.4rem' }}>Deixe em branco para a IA usar o padrão</div>
+          <input type="text" value={userName} onChange={e => setUserName(e.target.value)} placeholder="Ex: Sheik, Mestre, Commander..." style={{ width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none' }} />
         </div>
       </div>
 

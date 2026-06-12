@@ -23,7 +23,17 @@ export async function GET(req: NextRequest) {
   const userRole = roleRow?.role ?? null
 
   const allowed = cfg.allowed_roles ?? []
-  const canAccess = allowed.includes('todos') || (userRole !== null && allowed.includes(userRole))
 
-  return NextResponse.json({ canAccess, userRole })
+  // Empty allowed_roles = no restriction configured yet → allow all
+  if (allowed.length === 0) return NextResponse.json({ canAccess: true, userRole })
+
+  if (allowed.includes('todos')) return NextResponse.json({ canAccess: true, userRole })
+
+  if (userRole !== null && allowed.includes(userRole)) return NextResponse.json({ canAccess: true, userRole })
+
+  // Fallback: broadcaster/owner without a role assignment — check approved status in users table
+  const { data: userRow } = await db.from('users').select('status').eq('id', session.id).maybeSingle()
+  if (userRow?.status === 'approved' && userRole === null) return NextResponse.json({ canAccess: true, userRole: null })
+
+  return NextResponse.json({ canAccess: false, userRole })
 }
