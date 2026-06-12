@@ -183,9 +183,19 @@ export default function IaVozPage() {
     }
 
     rec.onerror = (e: any) => {
-      if (e.error === 'no-speech') lg('Silêncio — reiniciando...')
-      else if (e.error === 'not-allowed') { lg('Permissão negada!'); onRef.current = false; setOn(false); setStatus('error') }
-      else lg(`Erro mic: ${e.error}`)
+      if (e.error === 'no-speech') {
+        lg('Silêncio — reiniciando...')
+      } else if (e.error === 'not-allowed') {
+        lg('Permissão negada!')
+        onRef.current = false; setOn(false); setStatus('error')
+        setApiErr('Permissão de microfone negada. Clique no cadeado na barra de endereço e permita o microfone.')
+      } else if (e.error === 'network') {
+        lg('Erro de rede — API de voz bloqueada')
+        onRef.current = false; setOn(false); setStatus('error')
+        setApiErr('Erro de rede: o navegador bloqueou a API de voz. No Brave, desative o Shields para este site. Recomendado: use Chrome ou Edge.')
+      } else {
+        lg(`Erro mic: ${e.error}`)
+      }
     }
 
     rec.onend = () => {
