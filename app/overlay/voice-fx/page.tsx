@@ -66,7 +66,7 @@ export default function VoiceFxAudioOnly() {
       source.connect(inGain); inGain.connect(chain.input); chain.output.connect(outGain); outGain.connect(ctx.destination)
       setActive(true); setStatus('running')
     } catch (e: any) {
-      setErrMsg(e.name === 'NotAllowedError' ? 'Permissão negada' : e.message)
+      setErrMsg(e.name === 'NotAllowedError' ? 'obs-permission' : e.message)
       setStatus('error')
     }
   }, [])
@@ -107,8 +107,29 @@ export default function VoiceFxAudioOnly() {
         {status === 'error'   && <span style={{ fontSize: 12, color: '#ef4444' }}>!</span>}
       </div>
 
-      {/* Error tooltip */}
-      {errMsg && (
+      {/* Permission error — full instruction screen */}
+      {errMsg === 'obs-permission' && (
+        <div style={{ position: 'fixed', inset: 0, background: '#0d0f1a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', fontFamily: 'system-ui,sans-serif', color: '#e8e6f8', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '.75rem' }}>🎙️</div>
+          <div style={{ fontSize: '.95rem', fontWeight: 800, color: '#ef4444', marginBottom: '.5rem' }}>Microfone bloqueado no OBS</div>
+          <div style={{ fontSize: '.78rem', color: 'rgba(232,230,248,.5)', lineHeight: 1.8, maxWidth: 380, marginBottom: '1.25rem' }}>
+            O OBS não concede acesso ao microfone para Browser Sources por padrão.
+          </div>
+          <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, padding: '1rem 1.25rem', textAlign: 'left', maxWidth: 420 }}>
+            <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#9b30ff', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.65rem' }}>Solução recomendada</div>
+            <div style={{ fontSize: '.8rem', color: 'rgba(232,230,248,.7)', lineHeight: 2 }}>
+              <div>1. Abra o <strong style={{color:'#e8e6f8'}}>Chrome</strong> ou <strong style={{color:'#e8e6f8'}}>Edge</strong></div>
+              <div>2. Acesse <code style={{color:'#9b30ff',fontSize:'.75rem'}}>sheikstream.com.br/overlay/voice-fx</code></div>
+              <div>3. Permita o microfone quando solicitado</div>
+              <div>4. No OBS, adicione o áudio do Chrome como fonte de <strong style={{color:'#e8e6f8'}}>Captura de Áudio</strong></div>
+            </div>
+          </div>
+          <div onClick={toggle} style={{ marginTop: '1rem', padding: '.5rem 1.25rem', borderRadius: 8, border: '1px solid rgba(155,48,255,.4)', color: '#9b30ff', fontSize: '.78rem', cursor: 'pointer' }}>
+            Tentar novamente
+          </div>
+        </div>
+      )}
+      {errMsg && errMsg !== 'obs-permission' && (
         <div style={{ position: 'fixed', bottom: 44, left: 8, background: 'rgba(239,68,68,.9)', color: '#fff', fontSize: 11, padding: '4px 8px', borderRadius: 6, whiteSpace: 'nowrap', pointerEvents: 'none' }}>{errMsg}</div>
       )}
     </>
