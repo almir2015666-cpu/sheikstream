@@ -327,16 +327,21 @@ export default function IaVozPage() {
       {/* Brave warning */}
       {isBrave && (
         <div style={{ background:'rgba(251,140,0,.08)', border:'1px solid rgba(251,140,0,.3)', borderRadius:12, padding:'.85rem 1rem', marginBottom:'1rem' }}>
-          <div style={{ fontSize:'.8rem', fontWeight:700, color:'#fb8c00', marginBottom:'.3rem' }}>⚠ Brave Browser detectado</div>
-          <div style={{ fontSize:'.73rem', color:'rgba(251,140,0,.8)', lineHeight:1.65, marginBottom:'.5rem' }}>
-            O reconhecimento de voz usa os servidores do Google e pode ser bloqueado pelo Brave. Para ativar:
+          <div style={{ fontSize:'.8rem', fontWeight:700, color:'#fb8c00', marginBottom:'.35rem' }}>⚠ Brave Browser — reconhecimento de voz limitado</div>
+          <div style={{ fontSize:'.73rem', color:'rgba(251,140,0,.8)', lineHeight:1.65, marginBottom:'.55rem' }}>
+            O Brave bloqueia a API de voz do Google por padrão. Tente uma dessas soluções:
           </div>
-          <ol style={{ margin:0, paddingLeft:'1.2rem', fontSize:'.73rem', color:'rgba(251,140,0,.75)', lineHeight:1.9 }}>
-            <li>Abra <strong style={{color:'#fb8c00'}}>brave://settings/privacy</strong></li>
-            <li>Ative <strong style={{color:'#fb8c00'}}>"Usar serviços do Google para funcionalidades do Brave"</strong></li>
-            <li>Recarregue esta página e tente novamente</li>
-          </ol>
-          <div style={{ fontSize:'.7rem', color:'rgba(251,140,0,.55)', marginTop:'.5rem' }}>Alternativa: use Chrome ou Edge para compatibilidade total.</div>
+          <div style={{ fontSize:'.73rem', color:'rgba(251,140,0,.8)', lineHeight:1.9 }}>
+            <div style={{ marginBottom:'.3rem' }}><strong style={{color:'#fb8c00'}}>Opção 1 — Desativar Shields para este site:</strong></div>
+            <div style={{ paddingLeft:'.8rem', marginBottom:'.5rem' }}>Clique no ícone do leão 🦁 na barra de endereço → desative os Shields para <em>sheikstream.com.br</em></div>
+            <div style={{ marginBottom:'.3rem' }}><strong style={{color:'#fb8c00'}}>Opção 2 — Flags do Brave:</strong></div>
+            <div style={{ paddingLeft:'.8rem', marginBottom:'.5rem' }}>Abra <strong>brave://flags</strong> → pesquise <strong>speech</strong> → ative <strong>"Enable web speech API"</strong> → reinicie o Brave</div>
+            <div style={{ marginBottom:'.3rem' }}><strong style={{color:'#fb8c00'}}>Opção 3 — Permissão de microfone:</strong></div>
+            <div style={{ paddingLeft:'.8rem' }}>Clique no cadeado 🔒 na barra de endereço → Microfone → Permitir</div>
+          </div>
+          <div style={{ fontSize:'.7rem', color:'rgba(251,140,0,.5)', marginTop:'.6rem', borderTop:'1px solid rgba(251,140,0,.15)', paddingTop:'.5rem' }}>
+            Recomendado: use <strong style={{color:'#fb8c00'}}>Chrome ou Edge</strong> para compatibilidade total com reconhecimento de voz.
+          </div>
         </div>
       )}
 
