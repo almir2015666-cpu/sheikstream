@@ -169,18 +169,18 @@ export default function VoiceFxOverlay() {
   const activeEff = EFFECTS.find(e => e.id === effectId)!
 
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: '#08090d', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", padding: '1rem', boxSizing: 'border-box', color: '#e8e6f8' }}>
+    <div style={{ width: '100%', background: '#08090d', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", padding: '.75rem', boxSizing: 'border-box', color: '#e8e6f8', display: 'inline-block' }}>
       <style>{`
+        html,body{margin:0;padding:0;background:#08090d;width:100%;height:auto}
         *{box-sizing:border-box}
         input[type=range]{-webkit-appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer}
         input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#9b30ff;cursor:pointer}
         @keyframes vfx-pulse{0%,100%{box-shadow:0 0 0 0 rgba(57,255,20,.4)}70%{box-shadow:0 0 0 16px rgba(57,255,20,0)}}
-        @media(max-width:500px){.vfx-grid{grid-template-columns:repeat(2,1fr)!important}}
       `}</style>
 
       {/* Power row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', background: active ? 'rgba(57,255,20,.04)' : 'rgba(255,255,255,.02)', border: `1.5px solid ${active ? 'rgba(57,255,20,.22)' : 'rgba(255,255,255,.07)'}`, borderRadius: 14, padding: '.9rem 1.1rem', transition: 'all .25s' }}>
-        <button onClick={active ? stopAudio : startAudio} style={{ width: 48, height: 48, borderRadius: '50%', background: active ? 'rgba(57,255,20,.1)' : 'rgba(155,48,255,.1)', border: `2px solid ${active ? '#39ff14' : '#9b30ff'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, outline: 'none', animation: active ? 'vfx-pulse 2.5s ease-in-out infinite' : 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginBottom: '.6rem', background: active ? 'rgba(57,255,20,.04)' : 'rgba(255,255,255,.02)', border: `1.5px solid ${active ? 'rgba(57,255,20,.22)' : 'rgba(255,255,255,.07)'}`, borderRadius: 12, padding: '.6rem .85rem', transition: 'all .25s' }}>
+        <button onClick={active ? stopAudio : startAudio} style={{ width: 40, height: 40, borderRadius: '50%', background: active ? 'rgba(57,255,20,.1)' : 'rgba(155,48,255,.1)', border: `2px solid ${active ? '#39ff14' : '#9b30ff'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, outline: 'none', animation: active ? 'vfx-pulse 2.5s ease-in-out infinite' : 'none' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? '#39ff14' : '#9b30ff'} strokeWidth="2.2" strokeLinecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
         </button>
         <div style={{ flex: 1 }}>
@@ -197,17 +197,16 @@ export default function VoiceFxOverlay() {
       </div>
 
       {/* Visualizer */}
-      <canvas ref={canvasRef} width={760} height={56} style={{ width: '100%', height: 56, borderRadius: 8, background: 'rgba(0,0,0,.3)', display: 'block', marginBottom: '1rem' }} />
+      <canvas ref={canvasRef} width={760} height={40} style={{ width: '100%', height: 40, borderRadius: 6, background: 'rgba(0,0,0,.3)', display: 'block', marginBottom: '.6rem' }} />
 
-      {/* Effects grid */}
-      <div className="vfx-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '.5rem' }}>
+      {/* Effects grid — 4 per row, 2 rows */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '.4rem' }}>
         {EFFECTS.map(eff => {
           const isOn = effectId === eff.id
           return (
-            <button key={eff.id} onClick={() => switchEffect(eff.id)} style={{ padding: '.7rem .5rem', borderRadius: 11, border: `1.5px solid ${isOn ? eff.color + '55' : 'rgba(255,255,255,.06)'}`, background: isOn ? eff.color + '14' : 'rgba(255,255,255,.02)', cursor: 'pointer', textAlign: 'center', transition: 'all .15s', outline: 'none', boxShadow: isOn ? `0 0 14px ${eff.color}20` : 'none' }}>
-              <div style={{ fontSize: '1.3rem', marginBottom: '.2rem', lineHeight: 1 }}>{eff.icon}</div>
-              <div style={{ fontSize: '.75rem', fontWeight: 800, color: isOn ? eff.color : '#e8e6f8' }}>{eff.label}</div>
-              {isOn && <div style={{ width: 5, height: 5, borderRadius: '50%', background: eff.color, margin: '.3rem auto 0', boxShadow: `0 0 6px ${eff.color}` }} />}
+            <button key={eff.id} onClick={() => switchEffect(eff.id)} style={{ padding: '.5rem .4rem', borderRadius: 9, border: `1.5px solid ${isOn ? eff.color + '55' : 'rgba(255,255,255,.06)'}`, background: isOn ? eff.color + '14' : 'rgba(255,255,255,.02)', cursor: 'pointer', textAlign: 'center', transition: 'all .15s', outline: 'none', boxShadow: isOn ? `0 0 10px ${eff.color}20` : 'none' }}>
+              <div style={{ fontSize: '1.1rem', lineHeight: 1 }}>{eff.icon}</div>
+              <div style={{ fontSize: '.68rem', fontWeight: 800, color: isOn ? eff.color : '#e8e6f8', marginTop: '.2rem' }}>{eff.label}</div>
             </button>
           )
         })}
