@@ -30,7 +30,15 @@
       "Bash(curl -L -A \"Mozilla/5.0\" \"https://www.myinstants.com/media/sounds/default_eKkIk7O.mp3\" -o \"c:/Users/josec/sheikstream/public/sounds/twitch-default-alert.mp3\")",
       "Bash(Get-ChildItem -Recurse c:\\\\Users\\\\josec\\\\sheikstream\\\\app\\\\dashboard -Filter \"*.tsx\")",
       "Bash(Format-Table)",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\josec\\\\sheikstream\\\\app\" -Recurse -Directory | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"C:\\\\Users\\\\josec\\\\sheikstream\\\\app\"\\), \"app\" } | Sort-Object)"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\josec\\\\sheikstream\\\\app\" -Recurse -Directory | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"C:\\\\Users\\\\josec\\\\sheikstream\\\\app\"\\), \"app\" } | Sort-Object)",
+      "Bash(xargs grep -l \"ia-imagens\\\\|ia_imagens\\\\|iaImagens\")",
+      "PowerShell(git -C \"c:\\\\Users\\\\josec\\\\sheikstream\" diff --stat HEAD)",
+      "PowerShell(git -C \"c:\\\\Users\\\\josec\\\\sheikstream\" add app/admin/page.tsx app/api/admin/ia-chat/config/route.ts app/api/admin/ia-voz/config/route.ts app/api/ia-chat/access/route.ts app/api/ia-chat/voice/access/route.ts app/api/debug/feature-access/route.ts)",
+      "PowerShell(git -C \"c:\\\\Users\\\\josec\\\\sheikstream\" push)",
+      "PowerShell(git -C \"c:\\\\Users\\\\josec\\\\sheikstream\" add app/api/ia-chat/access/route.ts app/api/ia-chat/voice/access/route.ts)",
+      "Bash(git -C /c/Users/josec/sheikstream diff --stat HEAD)",
+      "Bash(git -C /c/Users/josec/sheikstream add app/api/ia-chat/voice/config/route.ts app/api/ia-chat/voice/route.ts app/dashboard/ia-chat/voz/page.tsx lib/i18n/translations.ts .claude/settings.json)",
+      "Bash(git -C /c/Users/josec/sheikstream commit -m ' *)"
     ],
     "additionalDirectories": [
       "\\tmp"

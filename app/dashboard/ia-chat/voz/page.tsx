@@ -4,6 +4,20 @@ import { useEffect, useRef, useState } from 'react'
 type Status = 'idle' | 'listening' | 'processing' | 'sent' | 'error'
 type Entry  = { id: string; spoken: string; reply: string }
 
+const TTS_PRESETS = [
+  { id: 'normal',  label: 'Normal',  icon: '🗣️', rate: 1.0, pitch: 1.0, desc: 'Voz padrão' },
+  { id: 'deep',    label: 'Grave',   icon: '🎙️', rate: 0.85, pitch: 0.4, desc: 'Mais grave' },
+  { id: 'high',    label: 'Agudo',   icon: '🎵', rate: 1.1, pitch: 1.8, desc: 'Mais agudo' },
+  { id: 'fast',    label: 'Rápido',  icon: '⚡', rate: 1.7, pitch: 1.0, desc: 'Fala rápida' },
+  { id: 'robot',   label: 'Robô',    icon: '🤖', rate: 0.9, pitch: 0.2, desc: 'Robótico' },
+]
+
+const RESPONSE_SIZES = [
+  { id: 'short',  label: 'Curta (1 linha)' },
+  { id: 'medium', label: 'Média (2-4 linhas)' },
+  { id: 'long',   label: 'Longa (5+ linhas)' },
+]
+
 const CSS = `
 @keyframes voz-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(57,255,20,.5)} 70%{box-shadow:0 0 0 28px rgba(57,255,20,0)} }
 @keyframes voz-spin { to{transform:rotate(360deg)} }
@@ -58,11 +72,19 @@ export default function IaVozPage() {
   const [minWords, setMinWords]     = useState(1)
   const [ttsEnabled, setTtsEnabled] = useState(false)
   const [ttsRate, setTtsRate]       = useState(1.0)
+  const [ttsPitch, setTtsPitch]     = useState(1.0)
+  const [ttsPreset, setTtsPreset]   = useState('normal')
   const [sendChat, setSendChat]     = useState(true)
   const [emojiEnabled, setEmojiEnabled] = useState(true)
   const [ignoreWords, setIgnoreWords] = useState('')
   const [responseSize, setResponseSize] = useState('medium')
   const [userName, setUserName]     = useState('')
+  const [personality, setPersonality] = useState('')
+  const [botName, setBotName]       = useState('')
+  const [channelContext, setChannelContext] = useState('')
+  const [allowedTopics, setAllowedTopics] = useState('')
+  const [forbiddenTopics, setForbiddenTopics] = useState('')
+  const [showPersonality, setShowPersonality] = useState(false)
 
   // Refs — always fresh inside closures
   const onRef          = useRef(false)
@@ -75,6 +97,7 @@ export default function IaVozPage() {
   const minWordsRef    = useRef(1)
   const ttsRef         = useRef(false)
   const ttsRateRef     = useRef(1.0)
+  const ttsPitchRef    = useRef(1.0)
   const sendChatRef    = useRef(true)
   const emojiEnabledRef = useRef(true)
   const ignoreWordsRef = useRef('')
@@ -91,6 +114,7 @@ export default function IaVozPage() {
   useEffect(() => { minWordsRef.current = minWords }, [minWords])
   useEffect(() => { ttsRef.current = ttsEnabled }, [ttsEnabled])
   useEffect(() => { ttsRateRef.current = ttsRate }, [ttsRate])
+  useEffect(() => { ttsPitchRef.current = ttsPitch }, [ttsPitch])
   useEffect(() => { sendChatRef.current = sendChat }, [sendChat])
   useEffect(() => { emojiEnabledRef.current = emojiEnabled }, [emojiEnabled])
   useEffect(() => { ignoreWordsRef.current = ignoreWords }, [ignoreWords])
@@ -110,6 +134,7 @@ export default function IaVozPage() {
       const u = new SpeechSynthesisUtterance(text)
       u.lang = langRef.current
       u.rate = ttsRateRef.current
+      u.pitch = ttsPitchRef.current
       window.speechSynthesis.speak(u)
     } catch { /* ignore */ }
   }
@@ -281,11 +306,18 @@ export default function IaVozPage() {
       if (c.minWords !== undefined)    setMinWords(c.minWords)
       if (c.ttsEnabled !== undefined)  setTtsEnabled(c.ttsEnabled)
       if (c.ttsRate !== undefined)     setTtsRate(c.ttsRate)
+      if (c.ttsPitch !== undefined)    setTtsPitch(c.ttsPitch)
+      if (c.ttsPreset)                 setTtsPreset(c.ttsPreset)
       if (c.sendChat !== undefined)    setSendChat(c.sendChat)
       if (c.emojiEnabled !== undefined) setEmojiEnabled(c.emojiEnabled)
       if (c.ignoreWords !== undefined) setIgnoreWords(c.ignoreWords)
       if (c.responseSize)              setResponseSize(c.responseSize)
       if (c.userName !== undefined)    setUserName(c.userName)
+      if (c.personality !== undefined) setPersonality(c.personality)
+      if (c.botName !== undefined)     setBotName(c.botName)
+      if (c.channelContext !== undefined) setChannelContext(c.channelContext)
+      if (c.allowedTopics !== undefined)  setAllowedTopics(c.allowedTopics)
+      if (c.forbiddenTopics !== undefined) setForbiddenTopics(c.forbiddenTopics)
     }).catch(() => {/* ignore */})
   }, [])
 
@@ -294,7 +326,7 @@ export default function IaVozPage() {
     await fetch('/api/ia-chat/voice/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cfg: { lang, wakeEnabled, wakeWord, cooldown, minWords, ttsEnabled, ttsRate, sendChat, emojiEnabled, ignoreWords, responseSize, userName } }),
+      body: JSON.stringify({ cfg: { lang, wakeEnabled, wakeWord, cooldown, minWords, ttsEnabled, ttsRate, ttsPitch, ttsPreset, sendChat, emojiEnabled, ignoreWords, responseSize, userName, personality, botName, channelContext, allowedTopics, forbiddenTopics } }),
     })
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -432,6 +464,40 @@ export default function IaVozPage() {
         </div>
       </div>
 
+      {/* Personalidade */}
+      <div style={CARD}>
+        <button onClick={() => setShowPersonality(v => !v)} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:'none', border:'none', cursor:'pointer', padding:0 }}>
+          <div style={{ fontSize:'.65rem', fontWeight:800, color: P, textTransform:'uppercase', letterSpacing:'.08em' }}>Personalidade da IA</div>
+          <span style={{ color: DIM, fontSize:'.85rem', transition:'transform .2s', display:'inline-block', transform: showPersonality ? 'rotate(180deg)' : 'none' }}>▾</span>
+        </button>
+
+        {showPersonality && (
+          <div style={{ marginTop:'.75rem', display:'flex', flexDirection:'column', gap:'.75rem' }}>
+            <div>
+              <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT, marginBottom:'.25rem' }}>Nome/apelido da IA</div>
+              <input type="text" value={botName} onChange={e => setBotName(e.target.value)} placeholder="Ex: BotZeiro, AstroBot, Lurk..." style={{ width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none' }} />
+            </div>
+            <div>
+              <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT, marginBottom:'.25rem' }}>Personalidade</div>
+              <div style={{ fontSize:'.7rem', color: DIM, marginBottom:'.4rem' }}>Descreva o jeito que a IA deve falar e reagir</div>
+              <textarea value={personality} onChange={e => setPersonality(e.target.value)} rows={3} placeholder="Ex: Você é uma IA sarcástica e bem-humorada. Responde com ironia mas sempre entrega a informação..." style={{ width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none', resize:'vertical', fontFamily:'inherit', lineHeight:1.5 }} />
+            </div>
+            <div>
+              <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT, marginBottom:'.25rem' }}>Contexto do canal</div>
+              <textarea value={channelContext} onChange={e => setChannelContext(e.target.value)} rows={2} placeholder="Ex: Canal de um dev que programa ao vivo. Comunidade jovem e descontraída..." style={{ width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none', resize:'vertical', fontFamily:'inherit', lineHeight:1.5 }} />
+            </div>
+            <div>
+              <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT, marginBottom:'.25rem' }}>Tópicos permitidos</div>
+              <input type="text" value={allowedTopics} onChange={e => setAllowedTopics(e.target.value)} placeholder="Ex: games, tecnologia, piadas, hype na live..." style={{ width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none' }} />
+            </div>
+            <div>
+              <div style={{ fontSize:'.78rem', fontWeight:700, color: TXT, marginBottom:'.25rem' }}>Tópicos proibidos</div>
+              <input type="text" value={forbiddenTopics} onChange={e => setForbiddenTopics(e.target.value)} placeholder="Ex: política, religião, dados pessoais..." style={{ width:'100%', boxSizing:'border-box', background:'rgba(0,0,0,.35)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, color: TXT, fontSize:'.82rem', padding:'.45rem .7rem', outline:'none' }} />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Filtros de ativação */}
       <div style={CARD}>
         <div style={{ fontSize:'.65rem', fontWeight:800, color: P, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.6rem' }}>Filtros de ativação</div>
@@ -494,19 +560,41 @@ export default function IaVozPage() {
         <div style={SEP}>
           <Row label="Ler resposta em voz alta (TTS)" desc="O navegador fala a resposta da IA em voz alta" on={ttsEnabled} onChange={() => setTtsEnabled(v => !v)} />
           {ttsEnabled && (
-            <div style={{ marginTop:'.6rem' }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.35rem' }}>
-                <div style={{ fontSize:'.75rem', color:'rgba(232,230,248,.45)' }}>Velocidade de leitura</div>
-                <span style={{ fontSize:'.82rem', fontWeight:800, color: P, minWidth:36, textAlign:'right' }}>{ttsRate.toFixed(1)}×</span>
+            <div style={{ marginTop:'.6rem', display:'flex', flexDirection:'column', gap:'.65rem' }}>
+              {/* Voice presets */}
+              <div>
+                <div style={{ fontSize:'.72rem', color:'rgba(232,230,248,.45)', marginBottom:'.35rem' }}>Tipo de voz</div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:'.35rem' }}>
+                  {TTS_PRESETS.map(p => (
+                    <button key={p.id} onClick={() => { setTtsPreset(p.id); setTtsRate(p.rate); setTtsPitch(p.pitch) }}
+                      style={{ padding:'.45rem .3rem', borderRadius:8, border:`1.5px solid ${ttsPreset === p.id ? 'rgba(155,48,255,.55)' : 'rgba(255,255,255,.08)'}`, background: ttsPreset === p.id ? 'rgba(155,48,255,.18)' : 'transparent', color: ttsPreset === p.id ? P : 'rgba(232,230,248,.45)', cursor:'pointer', textAlign:'center', transition:'all .15s' }}>
+                      <div style={{ fontSize:'1.1rem', lineHeight:1, marginBottom:'.18rem' }}>{p.icon}</div>
+                      <div style={{ fontSize:'.65rem', fontWeight:700 }}>{p.label}</div>
+                      <div style={{ fontSize:'.6rem', color: ttsPreset === p.id ? 'rgba(155,48,255,.6)' : 'rgba(232,230,248,.25)', marginTop:'.1rem' }}>{p.desc}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <input type="range" min={0.5} max={2.5} step={0.1} value={ttsRate} onChange={e => setTtsRate(+e.target.value)} style={{ width:'100%', accentColor: P, background:`linear-gradient(to right, ${P} ${(ttsRate-0.5)/2*100}%, rgba(255,255,255,.1) ${(ttsRate-0.5)/2*100}%)` }} />
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:'.65rem', color:'rgba(232,230,248,.3)', marginTop:'.2rem' }}>
-                <span>0.5× Lento</span><span>1.0× Normal</span><span>2.5× Rápido</span>
+
+              {/* Fine tune speed */}
+              <div>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.3rem' }}>
+                  <div style={{ fontSize:'.72rem', color:'rgba(232,230,248,.45)' }}>Velocidade</div>
+                  <span style={{ fontSize:'.75rem', fontWeight:800, color: P }}>{ttsRate.toFixed(1)}×</span>
+                </div>
+                <input type="range" min={0.5} max={2.5} step={0.1} value={ttsRate} onChange={e => setTtsRate(+e.target.value)} style={{ width:'100%', accentColor: P, background:`linear-gradient(to right, ${P} ${(ttsRate-0.5)/2*100}%, rgba(255,255,255,.1) ${(ttsRate-0.5)/2*100}%)` }} />
               </div>
-              <div style={{ display:'flex', gap:'.35rem', marginTop:'.45rem', flexWrap:'wrap' }}>
-                {[0.75, 1.0, 1.25, 1.5, 1.75, 2.0].map(r => (
-                  <button key={r} onClick={() => setTtsRate(r)} style={{ padding:'.2rem .55rem', borderRadius:6, border:`1px solid ${ttsRate === r ? 'rgba(155,48,255,.5)' : 'rgba(255,255,255,.1)'}`, background: ttsRate === r ? 'rgba(155,48,255,.2)' : 'transparent', color: ttsRate === r ? P : 'rgba(232,230,248,.4)', fontSize:'.68rem', fontWeight:700, cursor:'pointer' }}>{r.toFixed(2)}×</button>
-                ))}
+
+              {/* Fine tune pitch */}
+              <div>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.3rem' }}>
+                  <div style={{ fontSize:'.72rem', color:'rgba(232,230,248,.45)' }}>Tom</div>
+                  <span style={{ fontSize:'.75rem', fontWeight:800, color: P }}>{ttsPitch.toFixed(1)}</span>
+                </div>
+                <input type="range" min={0} max={2} step={0.1} value={ttsPitch} onChange={e => setTtsPitch(+e.target.value)} style={{ width:'100%', accentColor: P, background:`linear-gradient(to right, ${P} ${ttsPitch/2*100}%, rgba(255,255,255,.1) ${ttsPitch/2*100}%)` }} />
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:'.62rem', color:'rgba(232,230,248,.25)', marginTop:'.18rem' }}>
+                  <span>Grave</span><span>Normal</span><span>Agudo</span>
+                </div>
               </div>
             </div>
           )}

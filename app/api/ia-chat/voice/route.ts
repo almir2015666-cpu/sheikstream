@@ -3,56 +3,57 @@ import { COOKIE_NAME, decodeSession } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import Anthropic from '@anthropic-ai/sdk'
 
-type IaChatCfg = {
-  enabled: boolean; personality: string; bot_name: string
-  response_size: string; language: string
-  channel_context: string; allowed_topics: string; forbidden_topics: string
-  mention_user: boolean; react_emotes: boolean; memory: boolean
-  lurk_mode: boolean; reply_to_streamer: boolean; ignore_commands: boolean
-  words_to_ignore: string; whitelist: string; blacklist: string
-  cooldown_user: number; response_chance: number; max_delay: number
-  generated_prompt: string
+type IaVozFullCfg = {
+  lang?: string
+  personality?: string
+  botName?: string
+  channelContext?: string
+  allowedTopics?: string
+  forbiddenTopics?: string
+  responseSize?: string
+  emojiEnabled?: boolean
 }
 
 const IA_LANGS: Record<string, string> = {
   'pt-BR': 'Português (BR)', 'en-US': 'English (US)', 'es': 'Español',
 }
 
-function buildSystemPrompt(cfg: IaChatCfg, emojiEnabled = true): string {
+function buildVozPrompt(vozCfg: IaVozFullCfg, effectiveSize: string, emojiEnabled: boolean): string {
   const lines: string[] = []
-  const name = (cfg.bot_name ?? '').trim() || 'Assistente'
+  const name = (vozCfg.botName ?? '').trim() || 'Assistente'
+  const sizeLbl = effectiveSize === 'short' ? '1 linha' : effectiveSize === 'medium' ? '2-4 linhas' : '5+ linhas'
+
   lines.push(`Você é ${name}, um assistente de chat ao vivo para streamers.`)
   lines.push('')
 
-  if ((cfg.personality ?? '').trim()) {
+  if ((vozCfg.personality ?? '').trim()) {
     lines.push('=== PERSONALIDADE ===')
-    lines.push(cfg.personality.trim())
+    lines.push(vozCfg.personality!.trim())
     lines.push('')
   }
 
-  if ((cfg.channel_context ?? '').trim()) {
+  if ((vozCfg.channelContext ?? '').trim()) {
     lines.push('=== CONTEXTO DO CANAL ===')
-    lines.push(cfg.channel_context.trim())
+    lines.push(vozCfg.channelContext!.trim())
     lines.push('')
   }
 
   lines.push('=== COMPORTAMENTO ===')
-  const sizeLbl = cfg.response_size === 'short' ? '1 linha' : cfg.response_size === 'medium' ? '2-4 linhas' : '5+ linhas'
   lines.push(`- Mantenha respostas com ${sizeLbl}`)
-  lines.push(`- Responda em ${IA_LANGS[cfg.language] ?? 'Português (BR)'}`)
-  if (cfg.react_emotes && emojiEnabled) lines.push('- Use emotes e reações quando apropriado')
-  if (!emojiEnabled) lines.push('- NÃO use emojis, emoticons ou reações de nenhum tipo')
+  lines.push(`- Responda em ${IA_LANGS[vozCfg.lang ?? 'pt-BR'] ?? 'Português (BR)'}`)
+  if (emojiEnabled) lines.push('- Use emotes e reações quando apropriado')
+  else lines.push('- NÃO use emojis, emoticons ou reações de nenhum tipo')
   lines.push('')
 
-  if ((cfg.allowed_topics ?? '').trim()) {
+  if ((vozCfg.allowedTopics ?? '').trim()) {
     lines.push('=== TÓPICOS PERMITIDOS ===')
-    lines.push(cfg.allowed_topics.trim())
+    lines.push(vozCfg.allowedTopics!.trim())
     lines.push('')
   }
 
-  if ((cfg.forbidden_topics ?? '').trim()) {
+  if ((vozCfg.forbiddenTopics ?? '').trim()) {
     lines.push('=== TÓPICOS PROIBIDOS ===')
-    lines.push(`Nunca aborde: ${cfg.forbidden_topics.trim()}`)
+    lines.push(`Nunca aborde: ${vozCfg.forbiddenTopics!.trim()}`)
     lines.push('')
   }
 
@@ -81,26 +82,27 @@ export async function POST(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
+  // Read ia-voz-config for personality (separate from ia-chat config)
   const { data: cfgRow } = await db
     .from('overlay_configs')
     .select('config')
     .eq('broadcaster_id', user.id)
-    .eq('type', 'ia-chat')
+    .eq('type', 'ia-voz-config')
     .maybeSingle()
 
-  const cfg = cfgRow?.config?.cfg as IaChatCfg | undefined
-  // Build merged config: body overrides take precedence over saved config
-  const effectiveCfg = cfg ? { ...cfg, ...(bodyResponseSize ? { response_size: bodyResponseSize } : {}) } : undefined
-  let systemPrompt = effectiveCfg
-    ? buildSystemPrompt(effectiveCfg, emojiEnabled)
-    : `Você é um assistente de chat ao vivo. Responda de forma natural e concisa em português. Sem markdown, texto puro.${emojiEnabled ? '' : ' Não use emojis.'}`
+  const vozCfg = (cfgRow?.config ?? {}) as IaVozFullCfg
+
+  const effectiveSize = bodyResponseSize ?? vozCfg.responseSize ?? 'medium'
+  const sizeLbl = effectiveSize === 'short' ? '1 linha' : effectiveSize === 'medium' ? '2-4 linhas' : '5+ linhas'
+
+  let systemPrompt = buildVozPrompt(vozCfg, effectiveSize, emojiEnabled)
+
   // Inject userName directive
   if (bodyUserName) {
     systemPrompt += `\n\nIMPORTANTE: Chame o streamer/usuário pelo nome "${bodyUserName}" sempre que se dirigir a ele.`
   }
 
-  const effectiveSize = bodyResponseSize ?? cfg?.response_size
-  const maxTokens = effectiveSize === 'long' ? 300 : effectiveSize === 'medium' ? 150 : 120
+  const maxTokens = effectiveSize === 'long' ? 300 : effectiveSize === 'medium' ? 150 : 80
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 

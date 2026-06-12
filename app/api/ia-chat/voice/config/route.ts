@@ -10,9 +10,18 @@ export type IaVozConfig = {
   minWords: number
   ttsEnabled: boolean
   ttsRate: number
+  ttsPitch: number
+  ttsPreset: string
   sendChat: boolean
   emojiEnabled: boolean
   ignoreWords: string
+  responseSize: string
+  userName: string
+  personality: string
+  botName: string
+  channelContext: string
+  allowedTopics: string
+  forbiddenTopics: string
 }
 
 export async function GET(req: NextRequest) {
