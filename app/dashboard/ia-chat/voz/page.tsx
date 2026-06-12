@@ -340,19 +340,10 @@ export default function IaVozPage() {
 
       {/* Brave warning */}
       {isBrave && (
-        <div style={{ background:'rgba(251,140,0,.08)', border:'1px solid rgba(251,140,0,.3)', borderRadius:12, padding:'.85rem 1rem', marginBottom:'1rem' }}>
-          <div style={{ fontSize:'.8rem', fontWeight:700, color:'#fb8c00', marginBottom:'.35rem' }}>⚠ Brave Browser — reconhecimento de voz limitado</div>
-          <div style={{ fontSize:'.73rem', color:'rgba(251,140,0,.8)', lineHeight:1.65, marginBottom:'.55rem' }}>
-            O Brave bloqueia a API de voz do Google por padrão. Tente uma dessas soluções:
-          </div>
-          <div style={{ fontSize:'.73rem', color:'rgba(251,140,0,.8)', lineHeight:1.9 }}>
-            <div style={{ marginBottom:'.3rem' }}><strong style={{color:'#fb8c00'}}>Opção 1 — Desativar Shields para este site:</strong></div>
-            <div style={{ paddingLeft:'.8rem', marginBottom:'.5rem' }}>Clique no ícone do leão 🦁 na barra de endereço → desative os Shields para <em>sheikstream.com.br</em></div>
-            <div style={{ marginBottom:'.3rem' }}><strong style={{color:'#fb8c00'}}>Opção 2 — Permissão de microfone:</strong></div>
-            <div style={{ paddingLeft:'.8rem' }}>Clique no cadeado 🔒 na barra de endereço → Microfone → Permitir</div>
-          </div>
-          <div style={{ fontSize:'.7rem', color:'rgba(251,140,0,.5)', marginTop:'.6rem', borderTop:'1px solid rgba(251,140,0,.15)', paddingTop:'.5rem' }}>
-            Recomendado: use <strong style={{color:'#fb8c00'}}>Chrome ou Edge</strong> para compatibilidade total com reconhecimento de voz.
+        <div style={{ background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.35)', borderRadius:12, padding:'.85rem 1rem', marginBottom:'1rem' }}>
+          <div style={{ fontSize:'.8rem', fontWeight:700, color:'#ef4444', marginBottom:'.35rem' }}>✕ Brave Browser — reconhecimento de voz não suportado</div>
+          <div style={{ fontSize:'.73rem', color:'rgba(239,68,68,.85)', lineHeight:1.7 }}>
+            O Brave bloqueia a API de voz do Google em nível de sistema — desativar o Shields <strong>não resolve</strong>. Para usar IA por Voz, abra este site no <strong style={{color:'#ef4444'}}>Chrome</strong> ou <strong style={{color:'#ef4444'}}>Edge</strong>.
           </div>
         </div>
       )}
