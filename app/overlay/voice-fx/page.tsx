@@ -4,22 +4,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 type EffectId = 'normal' | 'robot' | 'chipmunk' | 'deep' | 'echo' | 'reverb' | 'demon' | 'alien'
 type EffectChain = { input: AudioNode; output: AudioNode; cleanup: () => void }
 
-const EFFECTS: { id: EffectId; label: string; icon: string; color: string }[] = [
-  { id: 'normal',   label: 'Normal',     icon: '🎙️', color: '#9b30ff' },
-  { id: 'robot',    label: 'Robô',       icon: '🤖', color: '#10b981' },
-  { id: 'chipmunk', label: 'Esquilo',    icon: '🐿️', color: '#f59e0b' },
-  { id: 'deep',     label: 'Grave',      icon: '🦾', color: '#3b82f6' },
-  { id: 'echo',     label: 'Eco',        icon: '🌊', color: '#6366f1' },
-  { id: 'reverb',   label: 'Caverna',    icon: '🏔️', color: '#8b5cf6' },
-  { id: 'demon',    label: 'Demônio',    icon: '😈', color: '#ef4444' },
-  { id: 'alien',    label: 'Alienígena', icon: '👽', color: '#34d399' },
-]
-
 function buildChain(ctx: AudioContext, id: EffectId): EffectChain {
   const nodes: AudioNode[] = []
   const oscs: OscillatorNode[] = []
   const reg = <T extends AudioNode>(n: T): T => { nodes.push(n); return n }
-  const osc = (freq: number, type: OscillatorType = 'sine'): OscillatorNode => {
+  const osc = (freq: number, type: OscillatorType = 'sine') => {
     const o = ctx.createOscillator(); o.frequency.value = freq; o.type = type; o.start(); oscs.push(o); return o
   }
   const cleanup = () => {
@@ -28,126 +17,44 @@ function buildChain(ctx: AudioContext, id: EffectId): EffectChain {
   }
   switch (id) {
     case 'normal': { const g = reg(ctx.createGain()); return { input: g, output: g, cleanup } }
-    case 'robot': {
-      const g = reg(ctx.createGain()); g.gain.value = 0
-      osc(50).connect(g.gain)
-      return { input: g, output: g, cleanup }
-    }
-    case 'chipmunk': {
-      const g = reg(ctx.createGain()); g.gain.value = 0
-      const flt = reg(ctx.createBiquadFilter()); flt.type = 'highpass'; flt.frequency.value = 400
-      osc(220).connect(g.gain); g.connect(flt)
-      return { input: g, output: flt, cleanup }
-    }
-    case 'deep': {
-      const g = reg(ctx.createGain()); g.gain.value = 0
-      const lp = reg(ctx.createBiquadFilter()); lp.type = 'lowpass'; lp.frequency.value = 2200
-      const shelf = reg(ctx.createBiquadFilter()); shelf.type = 'lowshelf'; shelf.frequency.value = 250; shelf.gain.value = 12
-      osc(22).connect(g.gain); g.connect(lp); lp.connect(shelf)
-      return { input: g, output: shelf, cleanup }
-    }
-    case 'echo': {
-      const pre = reg(ctx.createGain())
-      const delay = reg(ctx.createDelay(1.5)); delay.delayTime.value = 0.3
-      const fb = reg(ctx.createGain()); fb.gain.value = 0.55
-      const out = reg(ctx.createGain())
-      pre.connect(out); pre.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(out)
-      return { input: pre, output: out, cleanup }
-    }
-    case 'reverb': {
-      const pre = reg(ctx.createGain()); const conv = reg(ctx.createConvolver())
-      const wet = reg(ctx.createGain()); wet.gain.value = 0.65; const out = reg(ctx.createGain())
-      const len = ctx.sampleRate * 2.5; const ir = ctx.createBuffer(2, len, ctx.sampleRate)
-      for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5) }
-      conv.buffer = ir; pre.connect(out); pre.connect(conv); conv.connect(wet); wet.connect(out)
-      return { input: pre, output: out, cleanup }
-    }
-    case 'demon': {
-      const g = reg(ctx.createGain()); g.gain.value = 0
-      const dist = reg(ctx.createWaveShaper())
-      const curve = new Float32Array(256)
-      for (let i = 0; i < 256; i++) { const x = (i * 2) / 256 - 1; curve[i] = (Math.PI + 150) * x / (Math.PI + 150 * Math.abs(x)) }
-      dist.curve = curve; dist.oversample = '4x'
-      const lp = reg(ctx.createBiquadFilter()); lp.type = 'lowpass'; lp.frequency.value = 1400
-      osc(16, 'sawtooth').connect(g.gain); g.connect(dist); dist.connect(lp)
-      return { input: g, output: lp, cleanup }
-    }
-    case 'alien': {
-      const inp = reg(ctx.createGain())
-      const r1 = reg(ctx.createGain()); r1.gain.value = 0
-      const r2 = reg(ctx.createGain()); r2.gain.value = 0
-      const mix = reg(ctx.createGain()); mix.gain.value = 0.5
-      const o1 = osc(155); const o2 = osc(248)
-      const lfo = osc(4); const lfoG = reg(ctx.createGain()); lfoG.gain.value = 70
-      lfo.connect(lfoG); lfoG.connect(o1.frequency); lfoG.connect(o2.frequency)
-      o1.connect(r1.gain); o2.connect(r2.gain); inp.connect(r1); inp.connect(r2); r1.connect(mix); r2.connect(mix)
-      return { input: inp, output: mix, cleanup }
-    }
+    case 'robot': { const g = reg(ctx.createGain()); g.gain.value = 0; osc(50).connect(g.gain); return { input: g, output: g, cleanup } }
+    case 'chipmunk': { const g = reg(ctx.createGain()); g.gain.value = 0; const f = reg(ctx.createBiquadFilter()); f.type = 'highpass'; f.frequency.value = 400; osc(220).connect(g.gain); g.connect(f); return { input: g, output: f, cleanup } }
+    case 'deep': { const g = reg(ctx.createGain()); g.gain.value = 0; const lp = reg(ctx.createBiquadFilter()); lp.type = 'lowpass'; lp.frequency.value = 2200; const sh = reg(ctx.createBiquadFilter()); sh.type = 'lowshelf'; sh.frequency.value = 250; sh.gain.value = 12; osc(22).connect(g.gain); g.connect(lp); lp.connect(sh); return { input: g, output: sh, cleanup } }
+    case 'echo': { const pre = reg(ctx.createGain()); const d = reg(ctx.createDelay(1.5)); d.delayTime.value = 0.3; const fb = reg(ctx.createGain()); fb.gain.value = 0.55; const out = reg(ctx.createGain()); pre.connect(out); pre.connect(d); d.connect(fb); fb.connect(d); d.connect(out); return { input: pre, output: out, cleanup } }
+    case 'reverb': { const pre = reg(ctx.createGain()); const conv = reg(ctx.createConvolver()); const wet = reg(ctx.createGain()); wet.gain.value = 0.65; const out = reg(ctx.createGain()); const len = ctx.sampleRate * 2.5; const ir = ctx.createBuffer(2, len, ctx.sampleRate); for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5) } conv.buffer = ir; pre.connect(out); pre.connect(conv); conv.connect(wet); wet.connect(out); return { input: pre, output: out, cleanup } }
+    case 'demon': { const g = reg(ctx.createGain()); g.gain.value = 0; const dist = reg(ctx.createWaveShaper()); const curve = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = (i * 2) / 256 - 1; curve[i] = (Math.PI + 150) * x / (Math.PI + 150 * Math.abs(x)) } dist.curve = curve; dist.oversample = '4x'; const lp = reg(ctx.createBiquadFilter()); lp.type = 'lowpass'; lp.frequency.value = 1400; osc(16, 'sawtooth').connect(g.gain); g.connect(dist); dist.connect(lp); return { input: g, output: lp, cleanup } }
+    case 'alien': { const inp = reg(ctx.createGain()); const r1 = reg(ctx.createGain()); r1.gain.value = 0; const r2 = reg(ctx.createGain()); r2.gain.value = 0; const mix = reg(ctx.createGain()); mix.gain.value = 0.5; const o1 = osc(155); const o2 = osc(248); const lfo = osc(4); const lfoG = reg(ctx.createGain()); lfoG.gain.value = 70; lfo.connect(lfoG); lfoG.connect(o1.frequency); lfoG.connect(o2.frequency); o1.connect(r1.gain); o2.connect(r2.gain); inp.connect(r1); inp.connect(r2); r1.connect(mix); r2.connect(mix); return { input: inp, output: mix, cleanup } }
   }
 }
 
-export default function VoiceFxOverlay() {
-  const [active, setActive]     = useState(false)
-  const [effectId, setEffectId] = useState<EffectId>('normal')
-  const [vol, setVol]           = useState(0.85)
-  const [error, setError]       = useState('')
+// Reads effect from URL: /overlay/voice-fx?effect=robot&vol=0.9
+function getParams(): { effect: EffectId; vol: number } {
+  if (typeof window === 'undefined') return { effect: 'normal', vol: 0.85 }
+  const p = new URLSearchParams(window.location.search)
+  const effect = (p.get('effect') ?? 'normal') as EffectId
+  const vol = parseFloat(p.get('vol') ?? '0.85')
+  return { effect, vol: isNaN(vol) ? 0.85 : Math.min(2, Math.max(0, vol)) }
+}
 
-  const ctxRef      = useRef<AudioContext | null>(null)
-  const streamRef   = useRef<MediaStream | null>(null)
-  const chainRef    = useRef<EffectChain | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const inGainRef   = useRef<GainNode | null>(null)
-  const outGainRef  = useRef<GainNode | null>(null)
-  const canvasRef   = useRef<HTMLCanvasElement>(null)
-  const animRef     = useRef(0)
-  const effIdRef    = useRef<EffectId>('normal')
+export default function VoiceFxAudioOnly() {
+  const [active, setActive]   = useState(false)
+  const [effect, setEffect]   = useState<EffectId>('normal')
+  const [status, setStatus]   = useState<'idle' | 'running' | 'error'>('idle')
+  const [errMsg, setErrMsg]   = useState('')
 
-  useEffect(() => { effIdRef.current = effectId }, [effectId])
-  useEffect(() => { if (outGainRef.current && ctxRef.current) outGainRef.current.gain.setTargetAtTime(vol, ctxRef.current.currentTime, 0.01) }, [vol])
-  useEffect(() => () => { stopAudio() }, [])
-
-  const drawViz = useCallback(() => {
-    const canvas = canvasRef.current; const analyser = analyserRef.current
-    if (!canvas || !analyser) { animRef.current = 0; return }
-    const c = canvas.getContext('2d')!
-    const W = canvas.width, H = canvas.height
-    const data = new Uint8Array(analyser.frequencyBinCount)
-    analyser.getByteFrequencyData(data)
-    c.clearRect(0, 0, W, H)
-    const bars = 48, bw = Math.floor(W / bars) - 1, step = Math.floor(data.length / bars)
-    const eff = EFFECTS.find(e => e.id === effIdRef.current)!
-    for (let i = 0; i < bars; i++) {
-      let sum = 0; for (let j = 0; j < step; j++) sum += data[i * step + j]
-      const avg = sum / step / 255; const h = Math.max(2, avg * H * 0.92)
-      const alpha = Math.floor((0.35 + avg * 0.65) * 255).toString(16).padStart(2, '0')
-      c.fillStyle = eff.color + alpha
-      c.beginPath(); try { c.roundRect(i * (bw + 1), H - h, bw, h, 2) } catch { c.rect(i * (bw + 1), H - h, bw, h) }
-      c.fill()
-    }
-    animRef.current = requestAnimationFrame(drawViz)
-  }, [])
-
-  const switchEffect = useCallback((id: EffectId) => {
-    setEffectId(id); effIdRef.current = id
-    const ctx = ctxRef.current; const inG = inGainRef.current; const an = analyserRef.current
-    if (!ctx || !inG || !an) return
-    if (chainRef.current) { try { inG.disconnect(chainRef.current.input) } catch {}; try { chainRef.current.output.disconnect(an) } catch {}; chainRef.current.cleanup() }
-    const chain = buildChain(ctx, id); inG.connect(chain.input); chain.output.connect(an); chainRef.current = chain
-  }, [])
+  const ctxRef    = useRef<AudioContext | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const chainRef  = useRef<EffectChain | null>(null)
 
   const stopAudio = useCallback(() => {
-    cancelAnimationFrame(animRef.current)
     chainRef.current?.cleanup(); chainRef.current = null
     try { ctxRef.current?.close() } catch {}; ctxRef.current = null
     streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null
-    inGainRef.current = null; outGainRef.current = null; analyserRef.current = null
-    setActive(false)
-    const canvas = canvasRef.current
-    if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
+    setActive(false); setStatus('idle')
   }, [])
 
-  const startAudio = useCallback(async () => {
-    setError('')
+  const startAudio = useCallback(async (effectId: EffectId, vol: number) => {
+    setErrMsg('')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false })
       streamRef.current = stream
@@ -155,62 +62,55 @@ export default function VoiceFxOverlay() {
       const source = ctx.createMediaStreamSource(stream)
       const inGain = ctx.createGain(); inGain.gain.value = 1.0
       const outGain = ctx.createGain(); outGain.gain.value = vol
-      const analyser = ctx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.8
-      const chain = buildChain(ctx, effIdRef.current)
-      source.connect(inGain); inGain.connect(chain.input); chain.output.connect(analyser)
-      analyser.connect(outGain); outGain.connect(ctx.destination)
-      inGainRef.current = inGain; outGainRef.current = outGain; analyserRef.current = analyser; chainRef.current = chain
-      setActive(true); drawViz()
+      const chain = buildChain(ctx, effectId); chainRef.current = chain
+      source.connect(inGain); inGain.connect(chain.input); chain.output.connect(outGain); outGain.connect(ctx.destination)
+      setActive(true); setStatus('running')
     } catch (e: any) {
-      setError(e.name === 'NotAllowedError' ? 'Permissão de microfone negada' : `Erro: ${e.message}`)
+      setErrMsg(e.name === 'NotAllowedError' ? 'Permissão negada' : e.message)
+      setStatus('error')
     }
-  }, [vol, drawViz])
+  }, [])
 
-  const activeEff = EFFECTS.find(e => e.id === effectId)!
+  // Init from URL params
+  useEffect(() => {
+    const { effect: e, vol } = getParams()
+    setEffect(e)
+    // Try auto-start (works in OBS browser source)
+    startAudio(e, vol)
+    return () => stopAudio()
+  }, [])
+
+  const toggle = () => {
+    if (active) { stopAudio() }
+    else { const { effect: e, vol } = getParams(); startAudio(e, vol) }
+  }
+
+  const colors: Record<string, string> = { normal:'#9b30ff', robot:'#10b981', chipmunk:'#f59e0b', deep:'#3b82f6', echo:'#6366f1', reverb:'#8b5cf6', demon:'#ef4444', alien:'#34d399' }
+  const c = colors[effect] ?? '#9b30ff'
 
   return (
-    <div style={{ width: '100%', background: '#08090d', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", padding: '.75rem', boxSizing: 'border-box', color: '#e8e6f8', display: 'inline-block' }}>
+    <>
       <style>{`
-        html,body{margin:0;padding:0;background:#08090d;width:100%;height:auto}
+        html,body{margin:0;padding:0;background:transparent!important;overflow:hidden}
         *{box-sizing:border-box}
-        input[type=range]{-webkit-appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer}
-        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#9b30ff;cursor:pointer}
-        @keyframes vfx-pulse{0%,100%{box-shadow:0 0 0 0 rgba(57,255,20,.4)}70%{box-shadow:0 0 0 16px rgba(57,255,20,0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
       `}</style>
 
-      {/* Power row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginBottom: '.6rem', background: active ? 'rgba(57,255,20,.04)' : 'rgba(255,255,255,.02)', border: `1.5px solid ${active ? 'rgba(57,255,20,.22)' : 'rgba(255,255,255,.07)'}`, borderRadius: 12, padding: '.6rem .85rem', transition: 'all .25s' }}>
-        <button onClick={active ? stopAudio : startAudio} style={{ width: 40, height: 40, borderRadius: '50%', background: active ? 'rgba(57,255,20,.1)' : 'rgba(155,48,255,.1)', border: `2px solid ${active ? '#39ff14' : '#9b30ff'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, outline: 'none', animation: active ? 'vfx-pulse 2.5s ease-in-out infinite' : 'none' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? '#39ff14' : '#9b30ff'} strokeWidth="2.2" strokeLinecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-        </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '.9rem', fontWeight: 800, color: active ? '#39ff14' : 'rgba(232,230,248,.35)' }}>
-            {active ? `${activeEff.icon} ${activeEff.label} — ativo` : 'Clique para ativar'}
-          </div>
-          {error && <div style={{ fontSize: '.72rem', color: '#ef4444', marginTop: '.2rem' }}>⚠ {error}</div>}
-        </div>
-        {/* Volume */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexShrink: 0 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(232,230,248,.4)" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-          <input type="range" min={0} max={1} step={0.01} value={vol} onChange={e => setVol(+e.target.value)} style={{ width: 72, accentColor: '#9b30ff', background: `linear-gradient(to right,#9b30ff ${vol * 100}%,rgba(255,255,255,.1) ${vol * 100}%)` }} />
-        </div>
+      {/* Invisible full-area click target — click via OBS "Interagir" to toggle */}
+      <div onClick={toggle} style={{ position: 'fixed', inset: 0, cursor: 'pointer', background: 'transparent' }} />
+
+      {/* Tiny status indicator — bottom-left corner, 28×28px */}
+      <div style={{ position: 'fixed', bottom: 8, left: 8, width: 28, height: 28, borderRadius: '50%', background: status === 'running' ? `${c}22` : status === 'error' ? 'rgba(239,68,68,.2)' : 'rgba(255,255,255,.06)', border: `1.5px solid ${status === 'running' ? c : status === 'error' ? '#ef4444' : 'rgba(255,255,255,.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: status === 'running' ? 'pulse 2s ease-in-out infinite' : 'none', pointerEvents: 'none' }}>
+        {status === 'running' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, boxShadow: `0 0 6px ${c}` }} />}
+        {status === 'idle'    && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,.3)' }} />}
+        {status === 'error'   && <span style={{ fontSize: 12, color: '#ef4444' }}>!</span>}
       </div>
 
-      {/* Visualizer */}
-      <canvas ref={canvasRef} width={760} height={40} style={{ width: '100%', height: 40, borderRadius: 6, background: 'rgba(0,0,0,.3)', display: 'block', marginBottom: '.6rem' }} />
-
-      {/* Effects grid — 4 per row, 2 rows */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '.4rem' }}>
-        {EFFECTS.map(eff => {
-          const isOn = effectId === eff.id
-          return (
-            <button key={eff.id} onClick={() => switchEffect(eff.id)} style={{ padding: '.5rem .4rem', borderRadius: 9, border: `1.5px solid ${isOn ? eff.color + '55' : 'rgba(255,255,255,.06)'}`, background: isOn ? eff.color + '14' : 'rgba(255,255,255,.02)', cursor: 'pointer', textAlign: 'center', transition: 'all .15s', outline: 'none', boxShadow: isOn ? `0 0 10px ${eff.color}20` : 'none' }}>
-              <div style={{ fontSize: '1.1rem', lineHeight: 1 }}>{eff.icon}</div>
-              <div style={{ fontSize: '.68rem', fontWeight: 800, color: isOn ? eff.color : '#e8e6f8', marginTop: '.2rem' }}>{eff.label}</div>
-            </button>
-          )
-        })}
-      </div>
-    </div>
+      {/* Error tooltip */}
+      {errMsg && (
+        <div style={{ position: 'fixed', bottom: 44, left: 8, background: 'rgba(239,68,68,.9)', color: '#fff', fontSize: 11, padding: '4px 8px', borderRadius: 6, whiteSpace: 'nowrap', pointerEvents: 'none' }}>{errMsg}</div>
+      )}
+    </>
   )
 }
