@@ -192,7 +192,7 @@ export default function IaVozPage() {
       } else if (e.error === 'network') {
         lg('Erro de rede — API de voz bloqueada')
         onRef.current = false; setOn(false); setStatus('error')
-        setApiErr('Erro de rede: o navegador bloqueou a API de voz. No Brave, desative o Shields para este site. Recomendado: use Chrome ou Edge.')
+        setApiErr('Erro de rede: o navegador bloqueou a API de voz. Se já desativou o Shields, recarregue a página (F5). Recomendado: use Chrome ou Edge.')
       } else {
         lg(`Erro mic: ${e.error}`)
       }
@@ -326,13 +326,13 @@ export default function IaVozPage() {
         </button>
 
         <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:'.95rem', fontWeight:700, color: on ? G : status==='sent'?'#22c55e':status==='error'?'#ef4444':DIM }}>
-            {!on && 'Desativado'}
-            {on && status==='idle' && 'Aguardando...'}
-            {on && status==='listening' && 'Ouvindo...'}
-            {status==='processing' && 'Processando...'}
-            {status==='sent' && 'Enviado no chat!'}
+          <div style={{ fontSize:'.95rem', fontWeight:700, color: status==='error'?'#ef4444': on ? G : status==='sent'?'#22c55e':DIM }}>
             {status==='error' && 'Erro'}
+            {status!=='error' && !on && 'Desativado'}
+            {status!=='error' && on && status==='idle' && 'Aguardando...'}
+            {status!=='error' && on && status==='listening' && 'Ouvindo...'}
+            {status!=='error' && status==='processing' && 'Processando...'}
+            {status!=='error' && status==='sent' && 'Enviado no chat!'}
           </div>
           <div style={{ fontSize:'.72rem', color: DIM, marginTop:'.3rem' }}>{on ? 'Clique para desativar' : 'Clique para ativar'}</div>
         </div>
