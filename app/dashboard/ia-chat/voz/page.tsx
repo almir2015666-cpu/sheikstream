@@ -12,6 +12,7 @@ const CSS = `
 .voz-scroll::-webkit-scrollbar{width:3px}.voz-scroll::-webkit-scrollbar-thumb{background:rgba(155,48,255,.3);border-radius:3px}
 input[type=range]{-webkit-appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#9b30ff;cursor:pointer}
+@media(max-width:720px){.voz-grid{grid-template-columns:1fr!important}}
 `
 
 function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
@@ -289,13 +290,16 @@ export default function IaVozPage() {
   )
 
   return (
-    <div style={{ maxWidth:620, margin:'0 auto', padding:'1.5rem 1.25rem 3rem', fontFamily:"-apple-system,'Inter',system-ui,sans-serif", color: TXT }}>
+    <div style={{ maxWidth:980, margin:'0 auto', padding:'1.5rem 1.25rem 3rem', fontFamily:"-apple-system,'Inter',system-ui,sans-serif", color: TXT }}>
       <style>{CSS}</style>
 
       <div style={{ marginBottom:'1.75rem' }}>
         <h1 style={{ margin:0, fontSize:'1.1rem', fontWeight:900 }}>IA por Voz</h1>
         <p style={{ margin:'.2rem 0 0', fontSize:'.76rem', color: DIM }}>Fale e a IA responde automaticamente no chat do Twitch</p>
       </div>
+
+      <div className="voz-grid" style={{ display:'grid', gridTemplateColumns:'1fr 280px', gap:'1.25rem', alignItems:'start' }}>
+      <div>
 
       {/* Main toggle card */}
       <div style={{ background: on ? 'rgba(57,255,20,.05)' : '#0d0f18', border:`1.5px solid ${on ? 'rgba(57,255,20,.3)' : 'rgba(255,255,255,.08)'}`, borderRadius:16, padding:'1.5rem', marginBottom:'1.25rem', display:'flex', flexDirection:'column', alignItems:'center', gap:'1.25rem', transition:'all .25s' }}>
@@ -334,9 +338,7 @@ export default function IaVozPage() {
           <div style={{ fontSize:'.73rem', color:'rgba(251,140,0,.8)', lineHeight:1.9 }}>
             <div style={{ marginBottom:'.3rem' }}><strong style={{color:'#fb8c00'}}>Opção 1 — Desativar Shields para este site:</strong></div>
             <div style={{ paddingLeft:'.8rem', marginBottom:'.5rem' }}>Clique no ícone do leão 🦁 na barra de endereço → desative os Shields para <em>sheikstream.com.br</em></div>
-            <div style={{ marginBottom:'.3rem' }}><strong style={{color:'#fb8c00'}}>Opção 2 — Flags do Brave:</strong></div>
-            <div style={{ paddingLeft:'.8rem', marginBottom:'.5rem' }}>Abra <strong>brave://flags</strong> → pesquise <strong>speech</strong> → ative <strong>"Enable web speech API"</strong> → reinicie o Brave</div>
-            <div style={{ marginBottom:'.3rem' }}><strong style={{color:'#fb8c00'}}>Opção 3 — Permissão de microfone:</strong></div>
+            <div style={{ marginBottom:'.3rem' }}><strong style={{color:'#fb8c00'}}>Opção 2 — Permissão de microfone:</strong></div>
             <div style={{ paddingLeft:'.8rem' }}>Clique no cadeado 🔒 na barra de endereço → Microfone → Permitir</div>
           </div>
           <div style={{ fontSize:'.7rem', color:'rgba(251,140,0,.5)', marginTop:'.6rem', borderTop:'1px solid rgba(251,140,0,.15)', paddingTop:'.5rem' }}>
@@ -449,14 +451,6 @@ export default function IaVozPage() {
         {saving ? 'Salvando...' : saved ? '✓ Configurações salvas' : 'Salvar configurações'}
       </button>
 
-      {/* Log */}
-      {log.length > 0 && (
-        <div style={{ background:'#0a0b12', border:'1px solid rgba(255,255,255,.06)', borderRadius:10, padding:'.7rem .9rem', marginBottom:'1rem' }}>
-          <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.4rem' }}>Log</div>
-          {log.map((l,i) => <div key={i} style={{ fontSize:'.72rem', color:'rgba(232,230,248,.45)', fontFamily:'monospace', lineHeight:1.65 }}>{l}</div>)}
-        </div>
-      )}
-
       {/* History */}
       {history.length > 0 && (
         <div>
@@ -477,6 +471,22 @@ export default function IaVozPage() {
           </div>
         </div>
       )}
+      </div>
+
+      {/* Right column — Log */}
+      <div style={{ position:'sticky', top:'1rem' }}>
+        <div style={{ background:'#0a0b12', border:'1px solid rgba(255,255,255,.06)', borderRadius:10, padding:'.7rem .9rem' }}>
+          <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.5rem' }}>Log</div>
+          {log.length === 0 ? (
+            <div style={{ fontSize:'.72rem', color:'rgba(232,230,248,.18)', fontFamily:'monospace', lineHeight:1.65 }}>Sem atividade ainda...</div>
+          ) : (
+            <div className="voz-scroll" style={{ maxHeight:'calc(100vh - 160px)', overflowY:'auto', display:'flex', flexDirection:'column', gap:'.05rem' }}>
+              {log.map((l,i) => <div key={i} style={{ fontSize:'.72rem', color:'rgba(232,230,248,.45)', fontFamily:'monospace', lineHeight:1.65 }}>{l}</div>)}
+            </div>
+          )}
+        </div>
+      </div>
+      </div>
     </div>
   )
 }
