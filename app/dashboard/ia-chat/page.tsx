@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { notify } from '@/app/lib/notify'
+import { useLang } from '@/lib/i18n'
 
 type IaChatCfg = {
   enabled: boolean
@@ -220,21 +221,22 @@ export default function IaChatPage() {
     })
   }, [save])
 
+  const { t } = useLang()
   const P = '#9b30ff', DIM = 'rgba(232,230,248,.28)', MUT = 'rgba(232,230,248,.55)', TXT = '#e8e6f8'
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: DIM, fontSize: '.9rem', gap: '.55rem' }}>
       <svg className="iac-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
-      Carregando...
+      {t('state_loading')}
     </div>
   )
 
   if (noAccess) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '65vh', padding: '2rem', textAlign: 'center', fontFamily: "-apple-system,'Inter',system-ui,sans-serif" }}>
       <div style={{ fontSize: '2.8rem', marginBottom: '1rem', lineHeight: 1 }}>🔒</div>
-      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'rgba(239,68,68,.9)', marginBottom: '.55rem' }}>Sem acesso a IA de Chat</div>
+      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'rgba(239,68,68,.9)', marginBottom: '.55rem' }}>{t('ia_chat_no_access')}</div>
       <div style={{ fontSize: '.82rem', color: 'rgba(232,230,248,.4)', lineHeight: 1.7, maxWidth: 380 }}>
-        Seu grupo atual não tem permissão para usar esta funcionalidade. Entre em contato com o administrador.
+        {t('ia_chat_no_access_desc')}
       </div>
     </div>
   )
@@ -248,15 +250,15 @@ export default function IaChatPage() {
       {/* Page header + save */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900 }}>IA de Chat</h1>
-          <p style={{ margin: '.2rem 0 0', fontSize: '.76rem', color: DIM }}>Configure o bot que responde automaticamente no chat</p>
+          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900 }}>{t('pt_ia_chat')}</h1>
+          <p style={{ margin: '.2rem 0 0', fontSize: '.76rem', color: DIM }}>{t('ia_chat_subtitle')}</p>
         </div>
         <button onClick={() => save(cfg)} disabled={saving}
           style={{ display: 'flex', alignItems: 'center', gap: '.4rem', padding: '.5rem 1.1rem', borderRadius: 9, background: savedOk ? 'rgba(34,197,94,.15)' : saving ? 'rgba(155,48,255,.07)' : 'rgba(155,48,255,.18)', border: `1px solid ${savedOk ? 'rgba(34,197,94,.4)' : 'rgba(155,48,255,.4)'}`, color: savedOk ? '#22c55e' : P, cursor: saving ? 'default' : 'pointer', fontSize: '.82rem', fontWeight: 700 }}>
           {saving ? <svg className="iac-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
             : savedOk ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>}
-          {saving ? 'Salvando...' : savedOk ? 'Salvo!' : 'Salvar'}
+          {saving ? t('action_saving') : savedOk ? t('action_saved') : t('action_save')}
         </button>
       </div>
 
@@ -266,7 +268,7 @@ export default function IaChatPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={cfg.enabled ? '#22c55e' : P} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '.9rem', color: cfg.enabled ? '#22c55e' : TXT }}>IA de chat {cfg.enabled ? 'ativa' : 'inativa'}</div>
+              <div style={{ fontWeight: 700, fontSize: '.9rem', color: cfg.enabled ? '#22c55e' : TXT }}>{cfg.enabled ? t('ia_chat_active') : t('ia_chat_inactive')}</div>
               <div style={{ fontSize: '.73rem', color: DIM }}>Liga ou desliga a IA para responder no chat da live</div>
             </div>
           </div>
@@ -447,10 +449,10 @@ export default function IaChatPage() {
         <button onClick={() => save(cfg)} disabled={saving}
           style={{ width: '100%', padding: '.75rem', background: savedOk ? 'rgba(34,197,94,.12)' : saving ? 'rgba(155,48,255,.07)' : 'rgba(155,48,255,.18)', border: `1px solid ${savedOk ? 'rgba(34,197,94,.35)' : 'rgba(155,48,255,.4)'}`, borderRadius: 11, color: savedOk ? '#22c55e' : P, cursor: saving ? 'default' : 'pointer', fontSize: '.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', fontFamily: 'inherit' }}>
           {saving
-            ? <><svg className="iac-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg> Salvando...</>
+            ? <><svg className="iac-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg> {t('action_saving')}</>
             : savedOk
-              ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Configuração salva!</>
-              : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg> Salvar configuração</>
+              ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> {t('ia_chat_config_saved')}</>
+              : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg> {t('ia_chat_save_config')}</>
           }
         </button>
       </div>

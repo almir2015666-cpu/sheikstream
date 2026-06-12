@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { notify } from '@/app/lib/notify'
+import { useLang } from '@/lib/i18n'
 
 const C = {
   card: '#111219', cardB: 'rgba(255,255,255,0.05)',
@@ -17,6 +18,7 @@ type Banner = {
 }
 
 export default function BannersPage() {
+  const { t } = useLang()
   const [banners, setBanners] = useState<Banner[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -61,23 +63,23 @@ export default function BannersPage() {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Banners de patrocinadores</h2>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{t('pt_banners')}</h2>
           <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '0.12rem 0.5rem', background: 'rgba(59,130,246,0.18)', color: '#60a5fa', borderRadius: '999px', letterSpacing: '0.5px' }}>NOVO</span>
         </div>
         <Link href="/dashboard/banners/novo" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1.2rem', background: C.primary, color: '#fff', borderRadius: '8px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700 }}>
-          + Novo banner
+          {t('banners_new_btn')}
         </Link>
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: C.dim }}>Carregando...</div>
+        <div style={{ textAlign: 'center', padding: '3rem', color: C.dim }}>{t('state_loading')}</div>
       ) : banners.length === 0 ? (
         <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '4rem 2rem', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.2 }}>🖼️</div>
-          <div style={{ fontSize: '1rem', fontWeight: 700, color: C.text, marginBottom: '0.5rem' }}>Nenhum banner cadastrado</div>
-          <div style={{ fontSize: '0.84rem', color: C.dim, marginBottom: '1.5rem' }}>Adicione banners de patrocinadores para exibir nos seus overlays do OBS</div>
+          <div style={{ fontSize: '1rem', fontWeight: 700, color: C.text, marginBottom: '0.5rem' }}>{t('banners_no_results')}</div>
+          <div style={{ fontSize: '0.84rem', color: C.dim, marginBottom: '1.5rem' }}>{t('banners_no_results_desc')}</div>
           <Link href="/dashboard/banners/novo" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.65rem 1.5rem', background: C.primary, color: '#fff', borderRadius: '8px', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 700 }}>
-            Criar primeiro banner
+            {t('banners_create_first')}
           </Link>
         </div>
       ) : (
@@ -102,7 +104,7 @@ export default function BannersPage() {
 
               {/* Toggle habilitado */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                <span style={{ fontSize: '0.75rem', color: b.habilitado ? C.green : C.dim }}>{b.habilitado ? 'Ativo' : 'Inativo'}</span>
+                <span style={{ fontSize: '0.75rem', color: b.habilitado ? C.green : C.dim }}>{b.habilitado ? t('banners_active') : t('banners_inactive')}</span>
                 <div onClick={() => toggleHabilitado(b)} style={{ width: 34, height: 18, borderRadius: 999, background: b.habilitado ? C.green : 'rgba(255,255,255,0.1)', cursor: 'pointer', position: 'relative', transition: 'background 0.15s', flexShrink: 0 }}>
                   <div style={{ position: 'absolute', top: 2, left: b.habilitado ? 18 : 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
                 </div>
@@ -110,7 +112,7 @@ export default function BannersPage() {
 
               {/* Remove */}
               <button onClick={() => removeBanner(b)} style={{ background: 'transparent', border: '1px solid rgba(255,68,68,0.25)', color: '#ff4444', borderRadius: 7, padding: '0.35rem 0.75rem', fontSize: '0.78rem', cursor: 'pointer', flexShrink: 0 }}>
-                Remover
+                {t('banners_remove')}
               </button>
             </div>
           ))}

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useLang } from '@/lib/i18n'
 
 const C = {
   bg: '#08090d', card: '#111219', cardB: 'rgba(255,255,255,0.05)',
@@ -31,6 +32,7 @@ const statusLabel: Record<string, { text: string; color: string }> = {
 }
 
 export default function SorteiosPage() {
+  const { t } = useLang()
   const [sorteios, setSorteios] = useState<Sorteio[]>([])
   const [selected, setSelected] = useState<DetailedSorteio | null>(null)
   const [tab, setTab] = useState<'all' | 'active' | 'finished'>('all')
@@ -138,16 +140,16 @@ export default function SorteiosPage() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Sorteios</h2>
+        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{t('pt_raffles')}</h2>
         <button onClick={() => setCreating(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1.2rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-          + Novo sorteio
+          {t('raffle_new_btn')}
         </button>
       </div>
 
       {/* Create form */}
       {creating && (
         <div style={{ background: C.card, border: '1px solid rgba(155,48,255,0.25)', borderRadius: '12px', padding: '1.3rem', marginBottom: '1rem' }}>
-          <div style={{ fontSize: '0.73rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>Novo Sorteio</div>
+          <div style={{ fontSize: '0.73rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>{t('raffle_new_page_title')}</div>
           <form onSubmit={create}>
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '0.85rem', marginBottom: '0.85rem' }}>
               <div>
@@ -157,7 +159,7 @@ export default function SorteiosPage() {
               <div>
                 <label style={lbl}>Tipo de entrada</label>
                 <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={{ ...inp, cursor: 'pointer' }}>
-                  {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {TYPES.map(ty => <option key={ty.value} value={ty.value}>{ty.label}</option>)}
                 </select>
               </div>
               {form.type === 'keyword' && (
@@ -168,7 +170,7 @@ export default function SorteiosPage() {
               )}
             </div>
             <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setCreating(false)} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: C.dim, borderRadius: '8px', fontSize: '0.83rem', cursor: 'pointer' }}>Cancelar</button>
+              <button type="button" onClick={() => setCreating(false)} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: C.dim, borderRadius: '8px', fontSize: '0.83rem', cursor: 'pointer' }}>{t('action_cancel')}</button>
               <button type="submit" disabled={saving} style={{ padding: '0.5rem 1.3rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.83rem', fontWeight: 700, cursor: 'pointer' }}>Criar</button>
             </div>
           </form>
@@ -181,20 +183,20 @@ export default function SorteiosPage() {
         <div>
           {/* Tabs */}
           <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.25rem', border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content' }}>
-            {(['all', 'active', 'finished'] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{ padding: '0.3rem 0.9rem', borderRadius: '6px', border: 'none', background: tab === t ? C.primaryBg : 'transparent', color: tab === t ? C.primary : C.dim, fontSize: '0.78rem', fontWeight: tab === t ? 700 : 400, cursor: 'pointer', outline: tab === t ? '1px solid rgba(155,48,255,0.3)' : 'none', outlineOffset: '-1px' }}>
-                {t === 'all' ? 'Todos' : t === 'active' ? 'Ativos' : 'Encerrados'}
+            {(['all', 'active', 'finished'] as const).map(tabKey => (
+              <button key={tabKey} onClick={() => setTab(tabKey)} style={{ padding: '0.3rem 0.9rem', borderRadius: '6px', border: 'none', background: tab === tabKey ? C.primaryBg : 'transparent', color: tab === tabKey ? C.primary : C.dim, fontSize: '0.78rem', fontWeight: tab === tabKey ? 700 : 400, cursor: 'pointer', outline: tab === tabKey ? '1px solid rgba(155,48,255,0.3)' : 'none', outlineOffset: '-1px' }}>
+                {tabKey === 'all' ? t('raffle_tab_all') : tabKey === 'active' ? t('raffle_tab_active') : t('raffle_tab_finished')}
               </button>
             ))}
           </div>
 
           {loading ? (
-            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '3rem', textAlign: 'center', color: C.vdim, fontSize: '0.85rem' }}>Carregando...</div>
+            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '3rem', textAlign: 'center', color: C.vdim, fontSize: '0.85rem' }}>{t('state_loading')}</div>
           ) : filtered.length === 0 ? (
             <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '3.5rem 2rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2.5rem', opacity: 0.15, marginBottom: '0.75rem' }}>🎰</div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.text, marginBottom: '0.4rem' }}>Nenhum sorteio</div>
-              <div style={{ fontSize: '0.8rem', color: C.dim }}>Crie seu primeiro sorteio acima</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.text, marginBottom: '0.4rem' }}>{t('raffle_no_results')}</div>
+              <div style={{ fontSize: '0.8rem', color: C.dim }}>{t('raffle_no_results_desc')}</div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -206,7 +208,7 @@ export default function SorteiosPage() {
                     style={{ background: isSelected ? 'rgba(155,48,255,0.08)' : C.card, border: `1px solid ${isSelected ? 'rgba(155,48,255,0.3)' : C.cardB}`, borderRadius: '10px', padding: '0.9rem 1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
-                      <div style={{ fontSize: '0.72rem', color: C.dim, marginTop: '0.15rem' }}>{TYPES.find(t => t.value === s.type)?.label ?? s.type}</div>
+                      <div style={{ fontSize: '0.72rem', color: C.dim, marginTop: '0.15rem' }}>{TYPES.find(ty => ty.value === s.type)?.label ?? s.type}</div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontSize: '0.7rem', fontWeight: 700, color: sl.color }}>{sl.text}</div>
@@ -237,7 +239,7 @@ export default function SorteiosPage() {
             {/* Winner banner */}
             {winner && (
               <div style={{ background: 'rgba(57,255,20,0.08)', border: '1px solid rgba(57,255,20,0.25)', borderRadius: '10px', padding: '1rem', textAlign: 'center', marginBottom: '1rem' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.dim, marginBottom: '0.3rem' }}>VENCEDOR DO SORTEIO</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.dim, marginBottom: '0.3rem' }}>{t('raffle_winner_title')}</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 900, color: C.accent }}>🏆 {winner.username}</div>
                 <div style={{ fontSize: '0.72rem', color: C.dim, marginTop: '0.25rem' }}>entre {winner.total} participantes</div>
               </div>
@@ -247,22 +249,22 @@ export default function SorteiosPage() {
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
               {selected.status === 'pending' && (
                 <button onClick={() => patch(selected.id, { status: 'active' })} disabled={saving} style={{ padding: '0.45rem 1rem', background: 'rgba(57,255,20,0.1)', color: C.accent, border: '1px solid rgba(57,255,20,0.2)', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
-                  ▶ Iniciar sorteio
+                  {t('raffle_start_btn')}
                 </button>
               )}
               {selected.status === 'active' && (
                 <>
                   <button onClick={() => { setWinner(null); draw(selected.id) }} disabled={drawing || saving} style={{ padding: '0.45rem 1rem', background: C.primaryBg, color: C.primary, border: `1px solid rgba(155,48,255,0.3)`, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
-                    {drawing ? 'Sorteando...' : '🎰 Sortear vencedor'}
+                    {drawing ? t('raffle_drawing') : t('raffle_draw_btn')}
                   </button>
                   <button onClick={() => patch(selected.id, { status: 'finished' })} disabled={saving} style={{ padding: '0.45rem 1rem', background: 'rgba(255,68,68,0.08)', color: '#ff6b6b', border: '1px solid rgba(255,68,68,0.15)', borderRadius: '8px', fontSize: '0.82rem', cursor: 'pointer' }}>
-                    Encerrar
+                    {t('raffle_end_btn')}
                   </button>
                 </>
               )}
               {selected.status === 'finished' && (
                 <button onClick={() => { setWinner(null); patch(selected.id, { status: 'pending' }) }} disabled={saving} style={{ padding: '0.45rem 1rem', background: 'rgba(255,255,255,0.04)', color: C.muted, border: `1px solid ${C.cardB}`, borderRadius: '8px', fontSize: '0.82rem', cursor: 'pointer' }}>
-                  ↺ Resetar
+                  {t('raffle_reset_btn')}
                 </button>
               )}
               <button onClick={copyOverlayUrl} style={{ padding: '0.45rem 1rem', background: 'rgba(255,255,255,0.03)', color: copied ? C.accent : C.dim, border: `1px solid ${C.cardB}`, borderRadius: '8px', fontSize: '0.82rem', cursor: 'pointer' }}>

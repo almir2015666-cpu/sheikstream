@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useLang } from '@/lib/i18n'
 
 // ── types & data ────────────────────────────────────────────────────────────
 type Size = '1024x1024' | '1792x1024' | '1024x1792'
@@ -196,6 +197,7 @@ const CSS = `
 
 // ── page ─────────────────────────────────────────────────────────────────────
 export default function IAImagensPage() {
+  const { t } = useLang()
   const [cfg, setCfg]           = useState<CfgData | null>(null)
   const [loading, setLoading]   = useState(true)
   const [denied, setDenied]     = useState(false)
@@ -317,7 +319,7 @@ export default function IAImagensPage() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, flexDirection: 'column', gap: '1rem' }}>
       <style>{CSS}</style>
       <div style={{ fontSize: '2.5rem', animation: 'ia-spin 2s linear infinite', display: 'inline-block' }}>🎨</div>
-      <span style={{ color: 'rgba(232,230,248,.45)', fontSize: '.9rem' }}>Carregando...</span>
+      <span style={{ color: 'rgba(232,230,248,.45)', fontSize: '.9rem' }}>{t('state_loading')}</span>
     </div>
   )
 
@@ -325,9 +327,9 @@ export default function IAImagensPage() {
     <div style={{ maxWidth: 480, margin: '5rem auto', textAlign: 'center', padding: '0 1.5rem' }}>
       <style>{CSS}</style>
       <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(155,48,255,.1)', border: '1px solid rgba(155,48,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '2.2rem' }}>🔒</div>
-      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#e8e6f8', marginBottom: '.6rem' }}>Acesso restrito</div>
+      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#e8e6f8', marginBottom: '.6rem' }}>{t('ia_img_no_access')}</div>
       <div style={{ fontSize: '.9rem', color: 'rgba(232,230,248,.5)', lineHeight: 1.7 }}>
-        Esta funcionalidade é liberada pelo administrador para grupos específicos.<br/>Fale com o dono do canal para solicitar acesso.
+        {t('ia_img_no_access_desc')}
       </div>
     </div>
   )
@@ -417,12 +419,12 @@ export default function IAImagensPage() {
 
           {/* Quality */}
           <div className="ia-card">
-            <div className="ia-label">Qualidade</div>
+            <div className="ia-label">{t('ia_img_label_quality')}</div>
             <div style={{ display: 'flex', gap: '.5rem' }}>
               {(['standard', 'hd'] as const).map(q => (
                 <button key={q} className={`ia-qual${quality === q ? ' on' : ''}`} onClick={() => setQuality(q)}>
                   <div style={{ fontWeight: 800, fontSize: '.8rem', color: quality === q ? '#c084fc' : 'rgba(232,230,248,.65)', textAlign: 'center' }}>
-                    {q === 'standard' ? '⚡ Padrão' : '✨ HD'}
+                    {q === 'standard' ? <>⚡ {t('ia_img_standard')}</> : <>✨ {t('ia_img_hd')}</>}
                   </div>
                   <div style={{ fontSize: '.65rem', color: 'rgba(232,230,248,.3)', textAlign: 'center', marginTop: '.15rem' }}>
                     {q === 'standard' ? 'Rápido' : 'Mais detalhado'}
@@ -556,7 +558,7 @@ export default function IAImagensPage() {
               </>
             ) : (
               <span style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                <span>✨</span> Gerar Imagem
+                <span>✨</span> {t('ia_img_generate_btn')}
                 {!canGen && prompt.trim().length === 0 && <span style={{ fontSize: '.72rem', opacity: .6, fontWeight: 400 }}>— descreva a imagem</span>}
               </span>
             )}
@@ -593,7 +595,7 @@ export default function IAImagensPage() {
                   </details>
                 )}
                 <div style={{ display: 'flex', gap: '.6rem' }}>
-                  <button className="ia-dl ia-dl-p" onClick={download}>⬇ Baixar PNG</button>
+                  <button className="ia-dl ia-dl-p" onClick={download}>{t('ia_img_download')}</button>
                   <button className="ia-dl ia-dl-s" onClick={generate} disabled={!canGen}
                     style={{ cursor: canGen ? 'pointer' : 'not-allowed', opacity: canGen ? 1 : .5 }}>
                     🔄 Gerar novamente

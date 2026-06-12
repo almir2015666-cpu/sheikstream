@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useLang } from '@/lib/i18n'
 
 const C = {
   bg: '#08090d', card: '#111219', cardB: 'rgba(255,255,255,0.05)',
@@ -21,6 +22,7 @@ const TIPOS = [
 ]
 
 export default function MetasPage() {
+  const { t } = useLang()
   const [metas, setMetas] = useState<Meta[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -90,17 +92,17 @@ export default function MetasPage() {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Metas</h2>
-          <span style={{ fontSize: '0.62rem', color: C.muted }}>Atualizadas em tempo real via Twitch</span>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{t('pt_goals')}</h2>
+          <span style={{ fontSize: '0.62rem', color: C.muted }}>{t('metas_realtime')}</span>
         </div>
         <button onClick={() => setCreating(v => !v)} style={{ padding: '0.5rem 1.2rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-          + Nova meta
+          {t('meta_new_btn')}
         </button>
       </div>
 
       {creating && (
         <div style={{ background: C.card, border: '1px solid rgba(155,48,255,0.25)', borderRadius: '12px', padding: '1.3rem', marginBottom: '1rem' }}>
-          <div style={{ fontSize: '0.73rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>Nova Meta</div>
+          <div style={{ fontSize: '0.73rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem' }}>{t('meta_form_title')}</div>
           <form onSubmit={create}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.85rem', marginBottom: '1rem' }}>
               <div>
@@ -110,7 +112,7 @@ export default function MetasPage() {
               <div>
                 <label style={lbl}>Tipo</label>
                 <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={{ ...inp, cursor: 'pointer' }}>
-                  {TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {TIPOS.map(ti => <option key={ti.value} value={ti.value}>{ti.label}</option>)}
                 </select>
               </div>
               <div>
@@ -123,8 +125,8 @@ export default function MetasPage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setCreating(false)} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: C.dim, borderRadius: '8px', fontSize: '0.83rem', cursor: 'pointer' }}>Cancelar</button>
-              <button type="submit" disabled={saving} style={{ padding: '0.5rem 1.3rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.83rem', fontWeight: 700, cursor: 'pointer' }}>Criar meta</button>
+              <button type="button" onClick={() => setCreating(false)} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: C.dim, borderRadius: '8px', fontSize: '0.83rem', cursor: 'pointer' }}>{t('action_cancel')}</button>
+              <button type="submit" disabled={saving} style={{ padding: '0.5rem 1.3rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.83rem', fontWeight: 700, cursor: 'pointer' }}>{t('meta_create_btn')}</button>
             </div>
           </form>
         </div>
@@ -133,8 +135,8 @@ export default function MetasPage() {
       {metas.length === 0 && !creating ? (
         <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '4rem 2rem', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.15 }}>🎯</div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.text, marginBottom: '0.4rem' }}>Nenhuma meta criada</div>
-          <div style={{ fontSize: '0.82rem', color: C.dim }}>Crie metas de subs, bits ou seguidores — elas se atualizam automaticamente via Twitch</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.text, marginBottom: '0.4rem' }}>{t('meta_empty_title')}</div>
+          <div style={{ fontSize: '0.82rem', color: C.dim }}>{t('meta_empty_desc')}</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -142,7 +144,7 @@ export default function MetasPage() {
             const atual = Number(m.current_value) || 0
             const alvo = Number(m.target_value) || 1
             const pct = Math.min(100, Math.round((atual / alvo) * 100))
-            const typeLabel = TIPOS.find(t => t.value === m.type)?.label ?? m.type
+            const typeLabel = TIPOS.find(ti => ti.value === m.type)?.label ?? m.type
             const isEdit = editing?.id === m.id
 
             return (

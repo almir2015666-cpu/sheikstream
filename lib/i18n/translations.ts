@@ -498,6 +498,10 @@ export const translations = {
     ia_img_examples: 'Ver exemplos',
     ia_img_ref_images: 'Imagens de referência',
     ia_img_drag_paste: 'Arraste ou cole imagens de referência',
+
+    // ── Dashboard page ─────────────────────────────────────────────────────
+    dash_welcome_badge: 'Bem-vindo ao Beta!',
+    dash_title: 'Bot da Live — painel de controle',
   },
 
   en: {
@@ -969,6 +973,9 @@ export const translations = {
     ia_img_examples: 'View examples',
     ia_img_ref_images: 'Reference images',
     ia_img_drag_paste: 'Drag or paste reference images',
+
+    dash_welcome_badge: 'Welcome to Beta!',
+    dash_title: 'Live Bot — control panel',
   },
 
   es: {
@@ -1440,6 +1447,9 @@ export const translations = {
     ia_img_examples: 'Ver ejemplos',
     ia_img_ref_images: 'Imágenes de referencia',
     ia_img_drag_paste: 'Arrastra o pega imágenes de referencia',
+
+    dash_welcome_badge: '¡Bienvenido al Beta!',
+    dash_title: 'Bot en Vivo — panel de control',
   },
 } satisfies Record<string, Record<string, string>>
 

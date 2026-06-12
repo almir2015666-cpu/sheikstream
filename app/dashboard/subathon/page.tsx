@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { notify } from '@/app/lib/notify'
+import { useLang } from '@/lib/i18n'
 
 const C = {
   bg: '#08090d', card: '#0f1120', cardB: 'rgba(255,255,255,0.06)',
@@ -66,6 +67,7 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 }
 
 export default function SubathonPage() {
+  const { t } = useLang()
   const [state, setState] = useState<SubState | null>(null)
   const [remaining, setRemaining] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -161,7 +163,7 @@ export default function SubathonPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{state.title || 'Subathon'}</h2>
-            <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.5rem', background: 'rgba(57,255,20,0.12)', color: '#39ff14', borderRadius: '999px', border: '1px solid rgba(57,255,20,0.25)' }}>AO VIVO</span>
+            <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.5rem', background: 'rgba(57,255,20,0.12)', color: '#39ff14', borderRadius: '999px', border: '1px solid rgba(57,255,20,0.25)' }}>{t('subathon_live_badge')}</span>
           </div>
           <button onClick={copyOverlay} style={{ padding: '0.45rem 1rem', background: copied ? 'rgba(57,255,20,0.12)' : C.primaryBg, border: `1px solid ${copied ? 'rgba(57,255,20,0.3)' : C.primaryB}`, color: copied ? C.accent : C.primary, borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
             {copied ? '✓ Copiado' : 'URL OBS'}
@@ -172,7 +174,7 @@ export default function SubathonPage() {
           {/* Big timer */}
           <div style={{ background: C.card, border: `1px solid ${warningColor}44`, borderRadius: '14px', padding: '2rem', textAlign: 'center', gridColumn: '1 / -1' }}>
             <div style={{ fontSize: '0.72rem', fontWeight: 600, color: C.dim, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.75rem' }}>
-              {state.is_paused ? 'PAUSADO' : 'RODANDO'}
+              {state.is_paused ? t('subathon_paused_label') : t('subathon_running')}
             </div>
             <div style={{ fontSize: '4rem', fontWeight: 900, letterSpacing: '-2px', color: warningColor, lineHeight: 1, textShadow: `0 0 30px ${warningColor}44`, transition: 'color 0.3s' }}>
               {fmtTimer(remaining)}
@@ -182,24 +184,24 @@ export default function SubathonPage() {
             </div>
             <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', marginTop: '1.5rem', flexWrap: 'wrap' }}>
               {!state.is_paused && (
-                <button onClick={() => apiAction({ action: 'pause' })} disabled={saving} style={{ padding: '0.55rem 1.2rem', background: 'rgba(255,170,0,0.1)', color: '#ffaa00', border: '1px solid rgba(255,170,0,0.25)', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>⏸ Pausar</button>
+                <button onClick={() => apiAction({ action: 'pause' })} disabled={saving} style={{ padding: '0.55rem 1.2rem', background: 'rgba(255,170,0,0.1)', color: '#ffaa00', border: '1px solid rgba(255,170,0,0.25)', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>{t('subathon_pause_btn')}</button>
               )}
               {state.is_paused && (
-                <button onClick={() => apiAction({ action: 'resume' })} disabled={saving} style={{ padding: '0.55rem 1.2rem', background: 'rgba(57,255,20,0.1)', color: C.accent, border: '1px solid rgba(57,255,20,0.25)', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>▶ Retomar</button>
+                <button onClick={() => apiAction({ action: 'resume' })} disabled={saving} style={{ padding: '0.55rem 1.2rem', background: 'rgba(57,255,20,0.1)', color: C.accent, border: '1px solid rgba(57,255,20,0.25)', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>{t('subathon_resume_btn')}</button>
               )}
               <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                 <input value={addTime} onChange={e => setAddTime(e.target.value)} style={{ width: 90, ...inputCss, padding: '0.5rem 0.7rem', fontSize: '0.82rem' }} placeholder="seg" />
-                <button onClick={() => apiAction({ action: 'add_time', seconds: Number(addTime) })} disabled={saving} style={{ padding: '0.55rem 1.1rem', background: C.primaryBg, color: C.primary, border: `1px solid ${C.primaryB}`, borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>+ Tempo</button>
+                <button onClick={() => apiAction({ action: 'add_time', seconds: Number(addTime) })} disabled={saving} style={{ padding: '0.55rem 1.1rem', background: C.primaryBg, color: C.primary, border: `1px solid ${C.primaryB}`, borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>{t('subathon_add_time_btn')}</button>
               </div>
-              <button onClick={() => { if (confirm('Encerrar o subathon?')) apiAction({ action: 'stop' }) }} disabled={saving} style={{ padding: '0.55rem 1.2rem', background: 'rgba(255,68,68,0.1)', color: '#ff6b6b', border: '1px solid rgba(255,68,68,0.25)', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>■ Encerrar</button>
+              <button onClick={() => { if (confirm('Encerrar o subathon?')) apiAction({ action: 'stop' }) }} disabled={saving} style={{ padding: '0.55rem 1.2rem', background: 'rgba(255,68,68,0.1)', color: '#ff6b6b', border: '1px solid rgba(255,68,68,0.25)', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>{t('subathon_stop_btn')}</button>
             </div>
           </div>
 
           {/* Recent events */}
           <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '1.2rem' }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.75rem' }}>Ações recentes</div>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.75rem' }}>{t('subathon_recent_actions')}</div>
             {events.length === 0 ? (
-              <div style={{ fontSize: '0.8rem', color: C.vdim, textAlign: 'center', padding: '1.5rem 0' }}>Nenhuma ação</div>
+              <div style={{ fontSize: '0.8rem', color: C.vdim, textAlign: 'center', padding: '1.5rem 0' }}>{t('subathon_no_actions')}</div>
             ) : events.map((e, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
                 <span style={{ color: C.text }}>{e.type}</span>
@@ -227,7 +229,7 @@ export default function SubathonPage() {
       <style>{`input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}`}</style>
 
       <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>Novo Subathon</h2>
+        <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>{t('subathon_new_title')}</h2>
         <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.5rem', background: 'rgba(59,130,246,0.18)', color: '#60a5fa', borderRadius: '999px', border: '1px solid rgba(59,130,246,0.3)' }}>NOVO</span>
       </div>
 
@@ -237,13 +239,13 @@ export default function SubathonPage() {
         <div>
           {/* Name */}
           <div style={{ marginBottom: '1.25rem' }}>
-            <label style={labelCss}>Nome do Subathon</label>
+            <label style={labelCss}>{t('subathon_lbl_name')}</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Subathon de Aniversário" style={inputCss} />
           </div>
 
           {/* H : M : S */}
           <div style={{ marginBottom: '1.25rem' }}>
-            <label style={labelCss}>Tempo Inicial</label>
+            <label style={labelCss}>{t('subathon_lbl_initial_time')}</label>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
               <NumBox val={hours} min={0} max={99} label="horas" onChange={setHours} />
               <span style={{ color: C.dim, fontSize: '1.8rem', fontWeight: 200, marginTop: '0.35rem', lineHeight: 1 }}>:</span>
@@ -257,7 +259,7 @@ export default function SubathonPage() {
           {/* Rules */}
           <div style={{ marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-              <label style={{ ...labelCss, marginBottom: 0 }}>Regras de Contribuição</label>
+              <label style={{ ...labelCss, marginBottom: 0 }}>{t('subathon_lbl_rules')}</label>
               <button onClick={() => { setAddingRule(true); const opt = RULE_OPTIONS.find(o => !rules.find(r => r.id === o.id)); if (opt) { setNewRuleId(opt.id); setNewRuleSecs(opt.defaultSecs) } }} style={{ padding: '0.32rem 0.75rem', background: C.primaryBg, border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
                 + Adicionar
               </button>
@@ -302,11 +304,11 @@ export default function SubathonPage() {
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={createSubathon} disabled={saving || !name.trim() || totalSecs === 0}
               style={{ flex: 1, padding: '0.85rem', background: C.blue, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 700, cursor: (saving || !name.trim() || totalSecs === 0) ? 'not-allowed' : 'pointer', opacity: (saving || !name.trim() || totalSecs === 0) ? 0.5 : 1, transition: 'opacity 0.15s' }}>
-              {saving ? 'Criando...' : 'Criar Subathon'}
+              {saving ? t('subathon_creating_btn') : t('subathon_create_btn')}
             </button>
             <button onClick={() => { setName(''); setHours(1); setMins(0); setSecs(0); setRules([]) }}
               style={{ padding: '0.85rem 1.4rem', background: 'transparent', color: C.dim, border: `1px solid ${C.cardB}`, borderRadius: '10px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer' }}>
-              Cancelar
+              {t('action_cancel')}
             </button>
           </div>
         </div>

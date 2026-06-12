@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLang } from '@/lib/i18n'
 
 type EffectId = 'normal' | 'robot' | 'chipmunk' | 'deep' | 'echo' | 'reverb' | 'demon' | 'alien'
 type EffectChain = { input: AudioNode; output: AudioNode; cleanup: () => void }
@@ -107,6 +108,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 const P = '#9b30ff', TXT = '#e8e6f8', DIM = 'rgba(232,230,248,.38)', CARD = { background:'#0d0f18', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:'1rem 1.1rem' }
 
 export default function VoiceFxPage() {
+  const { t } = useLang()
   const [active, setActive]       = useState(false)
   const [effectId, setEffectId]   = useState<EffectId>('normal')
   const [inputVol, setInputVol]   = useState(1.0)
@@ -232,7 +234,7 @@ export default function VoiceFxPage() {
 
       <div style={{ marginBottom:'1.75rem' }}>
         <h1 style={{ margin:0, fontSize:'1.1rem', fontWeight:900 }}>Voice FX</h1>
-        <p style={{ margin:'.2rem 0 0', fontSize:'.76rem', color: DIM }}>Modificador de voz em tempo real — use no OBS via Browser Source</p>
+        <p style={{ margin:'.2rem 0 0', fontSize:'.76rem', color: DIM }}>{t('voice_fx_subtitle')}</p>
       </div>
 
       {/* Power card */}
@@ -244,14 +246,14 @@ export default function VoiceFxPage() {
           </button>
           {/* Status */}
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:'.95rem', fontWeight:800, color: active ? '#39ff14' : DIM }}>{active ? `${activeEff.icon} ${activeEff.label} — ativo` : 'Desativado'}</div>
-            <div style={{ fontSize:'.72rem', color: DIM, marginTop:'.15rem' }}>{active ? 'Capturando microfone' : 'Clique para ativar'}</div>
+            <div style={{ fontSize:'.95rem', fontWeight:800, color: active ? '#39ff14' : DIM }}>{active ? `${activeEff.icon} ${activeEff.label} — ativo` : t('voice_fx_deactivated')}</div>
+            <div style={{ fontSize:'.72rem', color: DIM, marginTop:'.15rem' }}>{active ? t('voice_fx_mic_capture') : t('voice_fx_click_activate')}</div>
           </div>
           {/* Toggles */}
           <div style={{ display:'flex', gap:'.5rem', flexShrink:0 }}>
             <button onClick={() => setMonitor(v => !v)} title={monitor ? 'Monitor ativo (você ouve)' : 'Monitor mudo'} style={{ padding:'.4rem .7rem', borderRadius:8, border:`1px solid ${monitor ? 'rgba(57,255,20,.3)' : 'rgba(255,255,255,.1)'}`, background: monitor ? 'rgba(57,255,20,.08)' : 'transparent', color: monitor ? '#39ff14' : DIM, fontSize:'.72rem', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:'.35rem' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">{monitor ? <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></> : <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></>}</svg>
-              Monitor
+              {t('voice_fx_monitor')}
             </button>
             <button onClick={() => setObsOpen(v => !v)} style={{ padding:'.4rem .7rem', borderRadius:8, border:`1px solid ${obsOpen ? 'rgba(155,48,255,.35)' : 'rgba(255,255,255,.1)'}`, background: obsOpen ? 'rgba(155,48,255,.12)' : 'transparent', color: obsOpen ? P : DIM, fontSize:'.72rem', fontWeight:700, cursor:'pointer' }}>
               OBS
@@ -268,7 +270,7 @@ export default function VoiceFxPage() {
       {/* OBS guide */}
       {obsOpen && (
         <div style={{ background:'rgba(155,48,255,.05)', border:'1px solid rgba(155,48,255,.18)', borderRadius:12, padding:'1rem 1.15rem', marginBottom:'1.25rem' }}>
-          <div style={{ fontSize:'.82rem', fontWeight:800, color: P, marginBottom:'.7rem' }}>Como usar no OBS</div>
+          <div style={{ fontSize:'.82rem', fontWeight:800, color: P, marginBottom:'.7rem' }}>{t('voice_fx_obs_guide_title')}</div>
           <ol style={{ margin:0, padding:'0 0 0 1.1rem', fontSize:'.78rem', color: DIM, lineHeight:2 }}>
             <li>No OBS: Fontes → <strong style={{color:TXT}}>+</strong> → <strong style={{color:TXT}}>Navegador</strong></li>
             <li>Cole a URL: <code style={{ background:'rgba(155,48,255,.15)', padding:'.15rem .45rem', borderRadius:5, color: P, fontSize:'.75rem' }}>sheikstream.com.br/overlay/voice-fx</code></li>
@@ -284,7 +286,7 @@ export default function VoiceFxPage() {
       )}
 
       {/* Effects grid */}
-      <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.6rem' }}>Efeito de voz</div>
+      <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.6rem' }}>{t('voice_fx_effect_label')}</div>
       <div className="vfx-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'.65rem', marginBottom:'1.5rem' }}>
         {EFFECTS.map(eff => {
           const isOn = effectId === eff.id
@@ -301,11 +303,11 @@ export default function VoiceFxPage() {
 
       {/* Volume controls */}
       <div style={CARD}>
-        <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.85rem' }}>Controles de volume</div>
+        <div style={{ fontSize:'.65rem', fontWeight:700, color: DIM, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.85rem' }}>{t('voice_fx_volume_section')}</div>
 
         <div style={{ marginBottom:'.9rem' }}>
           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'.35rem' }}>
-            <span style={{ fontSize:'.78rem', fontWeight:600, color: TXT }}>Volume do microfone</span>
+            <span style={{ fontSize:'.78rem', fontWeight:600, color: TXT }}>{t('voice_fx_volume_mic')}</span>
             <span style={{ fontSize:'.78rem', fontWeight:800, color: P }}>{Math.round(inputVol * 100)}%</span>
           </div>
           <input type="range" min={0} max={2} step={0.01} value={inputVol} onChange={e => setInputVol(+e.target.value)} style={{ width:'100%', accentColor: P, background:`linear-gradient(to right,${P} ${inputVol/2*100}%,rgba(255,255,255,.1) ${inputVol/2*100}%)` }} />
@@ -314,7 +316,7 @@ export default function VoiceFxPage() {
 
         <div>
           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'.35rem' }}>
-            <span style={{ fontSize:'.78rem', fontWeight:600, color: TXT }}>Volume de saída</span>
+            <span style={{ fontSize:'.78rem', fontWeight:600, color: TXT }}>{t('voice_fx_volume_out')}</span>
             <span style={{ fontSize:'.78rem', fontWeight:800, color: P }}>{Math.round(outputVol * 100)}%</span>
           </div>
           <input type="range" min={0} max={1} step={0.01} value={outputVol} onChange={e => setOutputVol(+e.target.value)} style={{ width:'100%', accentColor: P, background:`linear-gradient(to right,${P} ${outputVol*100}%,rgba(255,255,255,.1) ${outputVol*100}%)` }} />

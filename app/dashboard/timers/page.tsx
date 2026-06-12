@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useToast } from '@/app/components/Toast'
+import { useLang } from '@/lib/i18n'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -127,6 +128,8 @@ function TimerModal({
   onClose: () => void
 }) {
 
+  const { t } = useLang()
+
   const isConnected = (key: string) => {
     if (key === 'twitch') return !!connections.twitch
     if (key === 'youtube') return !!connections.youtube
@@ -206,7 +209,7 @@ function TimerModal({
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>
-            {editingId ? 'Editar Timer' : 'Novo Timer'}
+            {editingId ? t('timer_modal_edit_title') : t('timer_modal_new_title')}
           </h2>
           <button
             onClick={onClose}
@@ -219,7 +222,7 @@ function TimerModal({
         {/* Nome */}
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 8 }}>
-            NOME
+            {t('timer_lbl_name')}
           </label>
           <input
             value={form.nome}
@@ -242,7 +245,7 @@ function TimerModal({
         {/* Mensagem */}
         <div style={{ marginBottom: 18 }}>
           <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 8 }}>
-            MENSAGEM
+            {t('timer_lbl_message')}
           </label>
           <textarea
             value={form.mensagem}
@@ -268,7 +271,7 @@ function TimerModal({
         {/* Intervalo */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 8 }}>
-            INTERVALO (MINUTOS)
+            {t('timer_lbl_interval')}
           </label>
           <input
             type="number"
@@ -293,7 +296,7 @@ function TimerModal({
         {/* Plataformas */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 6 }}>
-            ENVIAR NO CHAT QUANDO AO VIVO
+            {t('timer_lbl_platforms')}
           </label>
           <p style={{ margin: '0 0 12px', fontSize: 12, color: '#475569', lineHeight: 1.5 }}>
             Escolha em quais plataformas conectadas o timer deve aparecer. Fora da live, o envio fica pausado automaticamente.
@@ -356,8 +359,8 @@ function TimerModal({
           }}
         >
           <div>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>Timer ativo</p>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Enviar mensagens automaticamente</p>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{t('timer_active_label')}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>{t('timer_active_desc')}</p>
           </div>
           <Toggle checked={form.ativo} onChange={v => setForm(f => ({ ...f, ativo: v }))} />
         </div>
@@ -378,7 +381,7 @@ function TimerModal({
               cursor: 'pointer',
             }}
           >
-            Cancelar
+            {t('action_cancel')}
           </button>
           <button
             onClick={onSave}
@@ -396,7 +399,7 @@ function TimerModal({
               opacity: !form.nome.trim() || !form.mensagem.trim() ? 0.5 : 1,
             }}
           >
-            {saving ? 'Salvando...' : editingId ? 'Salvar' : 'Criar'}
+            {saving ? t('action_saving') : editingId ? t('action_save') : t('action_create')}
           </button>
         </div>
       </div>
@@ -407,6 +410,7 @@ function TimerModal({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function TimersPage() {
+  const { t } = useLang()
   const toast = useToast()
   const [timers, setTimers] = useState<Timer[]>([])
   const [loading, setLoading] = useState(true)
@@ -446,14 +450,14 @@ export default function TimersPage() {
     setShowModal(true)
   }
 
-  function openEdit(t: Timer) {
-    setEditingId(t.id)
+  function openEdit(timer: Timer) {
+    setEditingId(timer.id)
     setForm({
-      nome: t.nome,
-      mensagem: t.mensagem,
-      intervalo_minutos: t.intervalo_minutos,
-      plataformas: t.plataformas,
-      ativo: t.ativo,
+      nome: timer.nome,
+      mensagem: timer.mensagem,
+      intervalo_minutos: timer.intervalo_minutos,
+      plataformas: timer.plataformas,
+      ativo: timer.ativo,
     })
     setShowModal(true)
   }
@@ -488,14 +492,14 @@ export default function TimersPage() {
     setDeleting(id)
     try {
       await fetch(`/api/timers/${id}`, { method: 'DELETE' })
-      setTimers(prev => prev.filter(t => t.id !== id))
+      setTimers(prev => prev.filter(tm => tm.id !== id))
     } finally {
       setDeleting(null)
     }
   }
 
   async function handleToggle(id: string, ativo: boolean) {
-    setTimers(prev => prev.map(t => (t.id === id ? { ...t, ativo } : t)))
+    setTimers(prev => prev.map(tm => (tm.id === id ? { ...tm, ativo } : tm)))
     await fetch(`/api/timers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -508,9 +512,9 @@ export default function TimersPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>⏱ Timers</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>⏱ {t('pt_timers')}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 14, color: '#64748b' }}>
-            Mensagens automáticas no chat durante a live
+            {t('timers_subtitle')}
           </p>
         </div>
         <button
@@ -526,16 +530,16 @@ export default function TimersPage() {
             cursor: 'pointer',
           }}
         >
-          + Novo timer
+          {t('timers_new_btn')}
         </button>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 24 }}>
         {[
-          { label: 'Total', value: timers.length, color: '#94a3b8' },
-          { label: 'Ativos', value: timers.filter(t => t.ativo).length, color: '#4ade80' },
-          { label: 'Inativos', value: timers.filter(t => !t.ativo).length, color: '#f87171' },
+          { label: t('timer_total'), value: timers.length, color: '#94a3b8' },
+          { label: t('timer_active_count'), value: timers.filter(tm => tm.ativo).length, color: '#4ade80' },
+          { label: t('timer_inactive_count'), value: timers.filter(tm => !tm.ativo).length, color: '#f87171' },
         ].map(s => (
           <div
             key={s.label}
@@ -558,7 +562,7 @@ export default function TimersPage() {
 
       {/* List */}
       {loading ? (
-        <p style={{ color: '#64748b', textAlign: 'center', padding: 40 }}>Carregando...</p>
+        <p style={{ color: '#64748b', textAlign: 'center', padding: 40 }}>{t('state_loading')}</p>
       ) : timers.length === 0 ? (
         <div
           style={{
@@ -571,14 +575,14 @@ export default function TimersPage() {
           }}
         >
           <div style={{ fontSize: 40, marginBottom: 12 }}>⏱</div>
-          <p style={{ margin: 0, fontSize: 15 }}>Nenhum timer criado ainda.</p>
-          <p style={{ margin: '6px 0 0', fontSize: 13 }}>Crie seu primeiro timer para enviar mensagens automáticas durante a live.</p>
+          <p style={{ margin: 0, fontSize: 15 }}>{t('timer_no_timers')}</p>
+          <p style={{ margin: '6px 0 0', fontSize: 13 }}>{t('timer_no_timers_desc')}</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {timers.map(t => (
+          {timers.map(tm => (
             <div
-              key={t.id}
+              key={tm.id}
               style={{
                 background: '#111827',
                 border: '1px solid #1f2937',
@@ -588,38 +592,38 @@ export default function TimersPage() {
                 gridTemplateColumns: '1fr auto',
                 gap: 16,
                 alignItems: 'center',
-                opacity: t.ativo ? 1 : 0.55,
+                opacity: tm.ativo ? 1 : 0.55,
               }}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
-                  <span style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9' }}>{t.nome}</span>
+                  <span style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9' }}>{tm.nome}</span>
                   <span
                     style={{
-                      background: t.ativo ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
-                      color: t.ativo ? '#4ade80' : '#f87171',
-                      border: `1px solid ${t.ativo ? '#4ade80' : '#f87171'}`,
+                      background: tm.ativo ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                      color: tm.ativo ? '#4ade80' : '#f87171',
+                      border: `1px solid ${tm.ativo ? '#4ade80' : '#f87171'}`,
                       borderRadius: 20,
                       padding: '1px 8px',
                       fontSize: 11,
                       fontWeight: 600,
                     }}
                   >
-                    {t.ativo ? 'ativo' : 'inativo'}
+                    {tm.ativo ? t('state_active') : t('state_inactive')}
                   </span>
                 </div>
 
                 <p style={{ margin: '0 0 10px', fontSize: 13, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 480 }}>
-                  {t.mensagem}
+                  {tm.mensagem}
                 </p>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 12, color: '#475569' }}>🕐 a cada {formatInterval(t.intervalo_minutos)}</span>
+                  <span style={{ fontSize: 12, color: '#475569' }}>🕐 {t('timer_every')} {formatInterval(tm.intervalo_minutos)}</span>
 
                   {/* Platform status */}
                   <div style={{ display: 'flex', gap: 6 }}>
-                    {PLATS.filter(p => t.plataformas.includes(p.key)).map(p => {
-                      const st = platStatus(t, p.key)
+                    {PLATS.filter(p => tm.plataformas.includes(p.key)).map(p => {
+                      const st = platStatus(tm, p.key)
                       const dot = st === 'success' ? '#4ade80' : st === 'error' ? '#f87171' : '#64748b'
                       return (
                         <span
@@ -643,25 +647,25 @@ export default function TimersPage() {
                     })}
                   </div>
 
-                  {t.ultimo_disparo && (
+                  {tm.ultimo_disparo && (
                     <span style={{ fontSize: 11, color: '#374151' }}>
-                      último: {new Date(t.ultimo_disparo).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      último: {new Date(tm.ultimo_disparo).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Toggle checked={t.ativo} onChange={v => handleToggle(t.id, v)} />
+                <Toggle checked={tm.ativo} onChange={v => handleToggle(tm.id, v)} />
                 <button
-                  onClick={() => openEdit(t)}
+                  onClick={() => openEdit(tm)}
                   style={{ background: 'none', border: '1px solid #1f2937', borderRadius: 6, color: '#64748b', cursor: 'pointer', padding: '6px 10px', fontSize: 13 }}
                 >
                   ✏️
                 </button>
                 <button
-                  onClick={() => handleDelete(t.id)}
-                  disabled={deleting === t.id}
+                  onClick={() => handleDelete(tm.id)}
+                  disabled={deleting === tm.id}
                   style={{ background: 'none', border: '1px solid #1f2937', borderRadius: 6, color: '#f87171', cursor: 'pointer', padding: '6px 10px', fontSize: 13 }}
                 >
                   🗑️

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { notify } from '@/app/lib/notify'
+import { useLang } from '@/lib/i18n'
 
 const C = {
   card: '#111219', cardB: 'rgba(255,255,255,0.05)', cardAlt: '#0f1018',
@@ -41,6 +42,7 @@ function Toggle({ label, desc, checked, onChange }: { label: string; desc?: stri
 type Img = { url: string; ativa: boolean; corFundo: number; duracao: number; transicaoEntrada: string }
 
 export default function NovoBannerPage() {
+  const { t } = useLang()
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [nome, setNome] = useState('')
@@ -92,17 +94,17 @@ export default function NovoBannerPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Link href="/dashboard/banners" style={{ color: C.dim, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Banners
+            {t('pt_banners')}
           </Link>
           <span style={{ color: C.vdim }}>/</span>
-          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Novo Banner</h2>
+          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>{t('banner_new_page_title')}</h2>
         </div>
         <div style={{ display: 'flex', gap: '0.6rem' }}>
           <Link href="/dashboard/banners" style={{ padding: '0.5rem 1.2rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: C.dim, borderRadius: '8px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
-            Cancelar
+            {t('action_cancel')}
           </Link>
           <button onClick={salvar} disabled={saving} style={{ padding: '0.5rem 1.5rem', background: saving ? 'rgba(155,48,255,0.5)' : C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
-            {saving ? 'Salvando...' : 'Salvar banner'}
+            {saving ? t('action_saving') : `${t('action_save')} banner`}
           </button>
         </div>
       </div>
@@ -145,7 +147,7 @@ export default function NovoBannerPage() {
                   <div>
                     <label style={labelStyle}>Transição de entrada</label>
                     <select value={img.transicaoEntrada} onChange={e => updateImg(i, { transicaoEntrada: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
-                      {['Fade In', 'Slide Left', 'Slide Right', 'Zoom In', 'None'].map(t => <option key={t}>{t}</option>)}
+                      {['Fade In', 'Slide Left', 'Slide Right', 'Zoom In', 'None'].map(opt => <option key={opt}>{opt}</option>)}
                     </select>
                   </div>
                   <div>
@@ -174,7 +176,7 @@ export default function NovoBannerPage() {
               <div>
                 <label style={labelStyle}>Transição de saída</label>
                 <select value={transicaoSaida} onChange={e => setTransicaoSaida(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  {['Fade Out', 'Slide Left', 'Slide Right', 'Zoom Out', 'None'].map(t => <option key={t}>{t}</option>)}
+                  {['Fade Out', 'Slide Left', 'Slide Right', 'Zoom Out', 'None'].map(opt => <option key={opt}>{opt}</option>)}
                 </select>
               </div>
             </div>

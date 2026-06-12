@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useLang } from '@/lib/i18n'
 
 const DARK_C = {
   page: '#08090d',
@@ -111,6 +112,7 @@ function formatDate(iso: string) {
 const ROLE_COLORS: Record<string, string> = { admin: '#ff4444', moderador: '#9147ff', vip: '#fbbf24', streamer: '#39ff14', parceiro: '#3b82f6', editor: '#f97316' }
 
 export default function PerfilPage() {
+  const { t } = useLang()
   const [user, setUser] = useState<UserData | null>(null)
   const [form, setForm] = useState({ nome: '', nick: '', email: '', twitchUser: '', youtube: '' })
   const [platforms, setPlatforms] = useState({ twitch: false, youtube: false, discord: false })
@@ -121,8 +123,8 @@ export default function PerfilPage() {
 
   useEffect(() => {
     try {
-      const t = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
-      if (t) setTheme(t)
+      const savedTheme = localStorage.getItem('sk-theme') as 'dark' | 'light' | null
+      if (savedTheme) setTheme(savedTheme)
     } catch {}
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'sk-theme' && (e.newValue === 'dark' || e.newValue === 'light')) setTheme(e.newValue)
@@ -177,7 +179,7 @@ export default function PerfilPage() {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
         </svg>
-        <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Meu perfil</h2>
+        <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>{t('pt_profile')}</h2>
       </div>
 
       {/* Two-column layout */}
@@ -186,19 +188,19 @@ export default function PerfilPage() {
         {/* LEFT — Dados da conta */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', overflow: 'hidden' }}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', marginBottom: '0.25rem' }}>Dados da conta</div>
-            <div style={{ fontSize: '0.78rem', color: C.dim }}>Essas informações identificam seu usuário dentro da plataforma.</div>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', marginBottom: '0.25rem' }}>{t('profile_account_data')}</div>
+            <div style={{ fontSize: '0.78rem', color: C.dim }}>{t('profile_account_desc')}</div>
           </div>
 
           <form onSubmit={handleSave} style={{ padding: '1.5rem' }}>
             {/* Row 1: Nome + Nick */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div>
-                <label style={labelStyle}>Nome</label>
+                <label style={labelStyle}>{t('profile_lbl_name')}</label>
                 <input value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} placeholder="Nome de exibição" style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>Nick</label>
+                <label style={labelStyle}>{t('profile_lbl_nick')}</label>
                 <input value={form.nick} onChange={e => setForm(p => ({ ...p, nick: e.target.value }))} placeholder="@apelido" style={inputStyle} />
               </div>
             </div>
@@ -206,11 +208,11 @@ export default function PerfilPage() {
             {/* Row 2: E-mail + Usuário Twitch */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div>
-                <label style={labelStyle}>E-mail</label>
+                <label style={labelStyle}>{t('profile_lbl_email')}</label>
                 <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="seu@email.com" style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>Usuário Twitch</label>
+                <label style={labelStyle}>{t('profile_lbl_twitch')}</label>
                 <input
                   value={form.twitchUser}
                   readOnly
@@ -222,13 +224,13 @@ export default function PerfilPage() {
 
             {/* Row 3: Canal YouTube (full width) */}
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={labelStyle}>Canal YouTube</label>
+              <label style={labelStyle}>{t('profile_lbl_youtube')}</label>
               <input value={form.youtube} onChange={e => setForm(p => ({ ...p, youtube: e.target.value }))} placeholder="https://youtube.com/@seucanal" style={inputStyle} />
             </div>
 
             {/* Platform toggles */}
             <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '1.25rem', marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: C.muted, marginBottom: '1rem' }}>Plataformas usadas</div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: C.muted, marginBottom: '1rem' }}>{t('profile_platforms')}</div>
               <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
                 {(['twitch', 'youtube', 'discord'] as const).map(pl => (
                   <label key={pl} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', userSelect: 'none' }}>
@@ -256,12 +258,12 @@ export default function PerfilPage() {
                 {saved ? (
                   <>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    Salvo!
+                    {t('profile_saved')}
                   </>
                 ) : (
                   <>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                    Salvar perfil
+                    {t('profile_save_btn')}
                   </>
                 )}
               </button>
@@ -288,10 +290,10 @@ export default function PerfilPage() {
 
           {/* Resumo card */}
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '1.1rem 1.25rem' }}>
-            <div style={{ fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.25rem' }}>Resumo</div>
+            <div style={{ fontWeight: 800, fontSize: '0.88rem', marginBottom: '0.25rem' }}>{t('profile_summary')}</div>
             <div>
               <SummaryRow colors={C}
-                label="Status"
+                label={t('profile_status')}
                 value={
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: '#22c55e', fontSize: '0.74rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '999px' }}>
                     <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: statusColor, display: 'inline-block' }} />
@@ -300,7 +302,7 @@ export default function PerfilPage() {
                 }
               />
               <SummaryRow colors={C}
-                label="Função"
+                label={t('profile_role')}
                 value={userRole ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: `${ROLE_COLORS[userRole] ?? C.primaryBg}22`, border: `1px solid ${ROLE_COLORS[userRole] ?? C.primaryBg}44`, color: ROLE_COLORS[userRole] ?? C.primary, fontSize: '0.74rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '999px', textTransform: 'capitalize' }}>
                     {userRole}
@@ -308,8 +310,8 @@ export default function PerfilPage() {
                 ) : <span style={{ color: C.dim }}>Usuário</span>}
               />
               <SummaryRow colors={C}
-                label="Discord"
-                value={<span style={{ color: C.dim }}>Não vinculado</span>}
+                label={t('profile_discord')}
+                value={<span style={{ color: C.dim }}>{t('profile_discord_unlinked')}</span>}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem' }}>
                 <span style={{ fontSize: '0.82rem', color: C.dim }}>Criado em</span>
@@ -322,17 +324,17 @@ export default function PerfilPage() {
 
           {/* Danger zone */}
           <div style={{ background: C.card, border: '1px solid rgba(255,68,68,0.15)', borderRadius: '14px', padding: '1.1rem 1.25rem' }}>
-            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'rgba(255,107,107,0.7)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Zona de perigo</div>
+            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'rgba(255,107,107,0.7)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{t('profile_danger_zone')}</div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
               <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Sair da conta</div>
-                <div style={{ fontSize: '0.72rem', color: C.dim }}>Precisará fazer login novamente</div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{t('profile_logout_title')}</div>
+                <div style={{ fontSize: '0.72rem', color: C.dim }}>{t('profile_logout_desc')}</div>
               </div>
               <button
                 onClick={() => { window.location.href = '/api/logout' }}
                 style={{ padding: '0.4rem 0.85rem', background: 'rgba(255,68,68,0.08)', border: '1px solid rgba(255,68,68,0.25)', color: '#ff6b6b', borderRadius: '7px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
               >
-                Sair
+                {t('profile_logout_btn')}
               </button>
             </div>
           </div>

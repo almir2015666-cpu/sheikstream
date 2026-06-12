@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useLang } from '@/lib/i18n'
 
 const C = {
   card: '#111219', cardB: 'rgba(255,255,255,0.06)',
@@ -194,6 +195,7 @@ function BarChart({ activities, from, to }: { activities: Activity[]; from: stri
 }
 
 export default function DashboardPage() {
+  const { t } = useLang()
   const [period, setPeriod] = useState<Period>('30d')
   const [customFrom, setCustomFrom] = useState(daysAgoStr(30))
   const [customTo, setCustomTo] = useState(todayStr())
@@ -219,7 +221,7 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    const iv = setInterval(() => setRefreshTick(t => t + 1), 60000)
+    const iv = setInterval(() => setRefreshTick(tick => tick + 1), 60000)
     return () => clearInterval(iv)
   }, [])
 
@@ -276,7 +278,7 @@ export default function DashboardPage() {
       {/* Welcome banner */}
       <div style={{ background: 'linear-gradient(90deg,rgba(59,130,246,0.12),rgba(99,102,241,0.06))', borderBottom: '1px solid rgba(59,130,246,0.15)', padding: isMobile ? '0.65rem 1.25rem' : '0.65rem 3rem', display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '1rem' }}>🚀</span>
-        <span style={{ fontSize: '0.81rem', color: '#93c5fd', fontWeight: 700 }}>Bem-vindo ao Beta!</span>
+        <span style={{ fontSize: '0.81rem', color: '#93c5fd', fontWeight: 700 }}>{t('dash_welcome_badge')}</span>
         <span style={{ fontSize: '0.81rem', color: C.dim }}>
           Seu painel está pronto. Configure suas{' '}
           <Link href="/dashboard/conexoes" style={{ color: '#9b30ff', textDecoration: 'none', fontWeight: 600 }}>conexões de plataforma</Link>
@@ -348,7 +350,7 @@ export default function DashboardPage() {
 
         {/* Header + período */}
         <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.1rem' }}>
-          <h2 style={{ margin: 0, fontSize: '0.94rem', fontWeight: 600, color: C.text }}>Bot da Live — painel de controle</h2>
+          <h2 style={{ margin: 0, fontSize: '0.94rem', fontWeight: 600, color: C.text }}>{t('dash_title')}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.77rem', color: C.dim }}>Período:</span>
             <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -536,7 +538,7 @@ export default function DashboardPage() {
             Arrecadação no período
           </div>
           {!activities ? (
-            <div style={{ height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.vdim, fontSize: '0.82rem' }}>Carregando...</div>
+            <div style={{ height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.vdim, fontSize: '0.82rem' }}>{t('state_loading')}</div>
           ) : (
             <BarChart activities={activities} from={periodFrom} to={periodTo} />
           )}
@@ -610,7 +612,7 @@ export default function DashboardPage() {
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                   Top doadores
                 </div>
-                <button style={{ background: 'none', border: 'none', color: C.dim, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => setRefreshTick(t => t + 1)}>
+                <button style={{ background: 'none', border: 'none', color: C.dim, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => setRefreshTick(tick => tick + 1)}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Sync
                 </button>
               </div>

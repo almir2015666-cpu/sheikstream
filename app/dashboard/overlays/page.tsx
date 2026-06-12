@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { useLang } from '@/lib/i18n'
 
 const C = {
   page: '#08090d', card: '#111219', cardB: 'rgba(255,255,255,0.06)',
@@ -31,15 +32,16 @@ const CATALOG = [
 ]
 
 export default function OverlaysPage() {
+  const { t } = useLang()
   return (
     <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
       <div style={{ marginBottom: '1.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Overlays</h2>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>{t('pt_overlays')}</h2>
         </div>
         <p style={{ margin: 0, fontSize: '0.82rem', color: C.dim }}>
-          Configure e copie as URLs para usar no OBS Studio — cada overlay tem editor visual com prévia ao vivo.
+          {t('overlays_subtitle')}
         </p>
       </div>
 
@@ -71,9 +73,7 @@ export default function OverlaysPage() {
             </div>
             <p style={{ margin: '0 0 0.7rem', fontSize: '0.76rem', color: C.dim, lineHeight: 1.5 }}>{item.desc}</p>
             <p style={{ margin: 0, fontSize: '0.72rem', color: C.vdim }}>
-              {item.live
-                ? 'Abra o editor (ícone de lápis), configure e clique em Salvar para gerar a URL do OBS.'
-                : 'Em breve — integração em desenvolvimento.'}
+              {item.live ? t('overlay_obs_instruction') : t('overlay_coming_soon_msg')}
             </p>
           </div>
         ))}

@@ -1,4 +1,5 @@
 'use client'
+import { useLang } from '@/lib/i18n'
 
 function PlatIcon({ id, color }: { id: string; color: string }) {
   if (id === 'twitch')
@@ -39,12 +40,13 @@ const PLATS = [
 ]
 
 export default function PlataformasPage() {
+  const { t } = useLang()
   return (
     <div style={{ background: '#08090d', minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
 
       <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ margin: '0 0 0.35rem', fontSize: '1.1rem', fontWeight: 800 }}>Plataformas</h2>
-        <p style={{ margin: 0, fontSize: '0.84rem', color: C.dim }}>Configure e gerencie suas plataformas de streaming conectadas</p>
+        <h2 style={{ margin: '0 0 0.35rem', fontSize: '1.1rem', fontWeight: 800 }}>{t('pt_platforms')}</h2>
+        <p style={{ margin: 0, fontSize: '0.84rem', color: C.dim }}>{t('platforms_subtitle')}</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.9rem' }}>
@@ -62,11 +64,11 @@ export default function PlataformasPage() {
                   </div>
                 </div>
                 <div style={{ fontSize: '0.72rem', color: C.vdim, padding: '0.22rem 0.65rem', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '999px', flexShrink: 0 }}>
-                  Não conectado
+                  {t('plat_not_connected')}
                 </div>
               </div>
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '0.9rem' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '0.5rem' }}>Funcionalidades</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '0.5rem' }}>{t('plat_features_label')}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                   {p.features.map(f => (
                     <span key={f} style={{ fontSize: '0.7rem', padding: '0.18rem 0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: C.dim, borderRadius: '5px' }}>{f}</span>
@@ -74,7 +76,7 @@ export default function PlataformasPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: C.primary }}>Configurar →</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: C.primary }}>{t('plat_configure_btn')}</span>
               </div>
             </div>
           </a>

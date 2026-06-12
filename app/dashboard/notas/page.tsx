@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLang } from '@/lib/i18n'
 
 type Note = { id: string; title: string; content: string; updatedAt: string }
 
@@ -37,6 +38,7 @@ export default function NotasPage() {
   const [loaded, setLoaded]     = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const { t } = useLang()
 
   const active = notes.find(n => n.id === activeId) ?? null
 
@@ -96,7 +98,7 @@ export default function NotasPage() {
   if (!loaded) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'rgba(232,230,248,.35)', fontSize: '.9rem' }}>
       <style>{CSS}</style>
-      Carregando...
+      {t('state_loading')}
     </div>
   )
 
@@ -122,7 +124,7 @@ export default function NotasPage() {
               onClick={() => setActiveId(n.id)}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '.25rem' }}>
                 <div style={{ fontSize: '.82rem', fontWeight: n.id === activeId ? 700 : 500, color: n.id === activeId ? '#c084fc' : 'rgba(232,230,248,.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                  {n.title || <span style={{ opacity: .4 }}>Sem título</span>}
+                  {n.title || <span style={{ opacity: .4 }}>{t('notes_untitled')}</span>}
                 </div>
                 <button className="nota-del" onClick={e => { e.stopPropagation(); deleteNote(n.id) }} title="Excluir">✕</button>
               </div>
@@ -149,7 +151,7 @@ export default function NotasPage() {
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', flexShrink: 0, marginLeft: '1rem' }}>
                 <span style={{ fontSize: '.67rem', color: status === 'error' ? '#ef4444' : 'rgba(232,230,248,.25)', fontStyle: 'italic' }}>
-                  {status === 'saving' ? 'salvando...' : status === 'error' ? 'erro ao salvar' : `✓ salvo · ${fmtDate(active.updatedAt)}`}
+                  {status === 'saving' ? t('notes_saving_status') : status === 'error' ? t('notes_error_status') : `${t('notes_saved_status')} · ${fmtDate(active.updatedAt)}`}
                 </span>
                 <button onClick={() => persist(notes)} disabled={status === 'saving'}
                   style={{ display: 'flex', alignItems: 'center', gap: '.3rem', padding: '.3rem .85rem', borderRadius: 7, background: status === 'saving' ? 'rgba(155,48,255,.08)' : 'rgba(155,48,255,.18)', border: '1px solid rgba(155,48,255,.4)', color: '#9b30ff', cursor: status === 'saving' ? 'default' : 'pointer', fontSize: '.72rem', fontWeight: 700, transition: 'all .15s', opacity: status === 'saving' ? 0.7 : 1 }}>
@@ -157,11 +159,11 @@ export default function NotasPage() {
                     ? <svg className="sk-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
                     : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   }
-                  {status === 'saving' ? 'Salvando...' : 'Salvar'}
+                  {status === 'saving' ? t('action_saving') : t('notes_save_btn')}
                 </button>
                 <button onClick={addNote}
                   style={{ padding: '.3rem .7rem', borderRadius: 7, background: 'rgba(155,48,255,.08)', border: '1px solid rgba(155,48,255,.2)', color: 'rgba(155,48,255,.8)', cursor: 'pointer', fontSize: '.72rem', fontWeight: 700 }}>
-                  + Nova
+                  {t('notes_new_btn')}
                 </button>
               </div>
             </div>
@@ -189,7 +191,7 @@ export default function NotasPage() {
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', opacity: .4 }}>
             <div style={{ fontSize: '3rem' }}>📝</div>
-            <div style={{ fontSize: '.9rem', color: 'rgba(232,230,248,.6)' }}>Selecione ou crie uma nota</div>
+            <div style={{ fontSize: '.9rem', color: 'rgba(232,230,248,.6)' }}>{t('notes_select_or_create')}</div>
             <button onClick={addNote} style={{ padding: '.5rem 1.2rem', borderRadius: 9, background: 'rgba(155,48,255,.12)', border: '1px solid rgba(155,48,255,.3)', color: '#9b30ff', cursor: 'pointer', fontWeight: 700, fontSize: '.85rem' }}>+ Nova nota</button>
           </div>
         )}

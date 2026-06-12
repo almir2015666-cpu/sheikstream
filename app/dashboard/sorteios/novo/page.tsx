@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { useLang } from '@/lib/i18n'
 
 const C = {
   card: '#111219', cardB: 'rgba(255,255,255,0.05)', cardAlt: '#0f1018',
@@ -54,6 +55,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
 }
 
 export default function NovoSorteioPage() {
+  const { t } = useLang()
   const [tipo, setTipo] = useState('livepix')
   const [form, setForm] = useState({ titulo: '', premio: '', data: '', contagem: '' })
   const [config, setConfig] = useState({ valorTicket: '', metaInicial: '', metaTotal: '' })
@@ -72,17 +74,17 @@ export default function NovoSorteioPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Link href="/dashboard/sorteios" style={{ color: C.dim, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Sorteios
+            {t('pt_raffles')}
           </Link>
           <span style={{ color: C.vdim }}>/</span>
-          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Novo Sorteio</h2>
+          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>{t('raffle_new_page_title')}</h2>
         </div>
         <div style={{ display: 'flex', gap: '0.6rem' }}>
           <Link href="/dashboard/sorteios" style={{ padding: '0.5rem 1.2rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: C.dim, borderRadius: '8px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
-            Cancelar
+            {t('action_cancel')}
           </Link>
           <button style={{ padding: '0.5rem 1.5rem', background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-            Criar sorteio
+            {t('raffle_create_submit')}
           </button>
         </div>
       </div>
@@ -92,11 +94,11 @@ export default function NovoSorteioPage() {
         {/* Tipo de sorteio */}
         <Section title="Tipo de sorteio">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.65rem' }}>
-            {TIPOS.map(t => (
-              <div key={t.id} onClick={() => setTipo(t.id)} style={{ padding: '0.9rem', borderRadius: '10px', border: `1px solid ${tipo === t.id ? t.color + '55' : 'rgba(255,255,255,0.06)'}`, background: tipo === t.id ? t.color + '12' : 'rgba(255,255,255,0.02)', cursor: 'pointer', textAlign: 'center', transition: 'all 0.08s' }}>
-                <div style={{ fontSize: '1.4rem', color: t.color, marginBottom: '0.35rem' }}>{t.sym}</div>
-                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: C.text, marginBottom: '0.2rem' }}>{t.label}</div>
-                <div style={{ fontSize: '0.68rem', color: C.dim }}>{t.desc}</div>
+            {TIPOS.map(ti => (
+              <div key={ti.id} onClick={() => setTipo(ti.id)} style={{ padding: '0.9rem', borderRadius: '10px', border: `1px solid ${tipo === ti.id ? ti.color + '55' : 'rgba(255,255,255,0.06)'}`, background: tipo === ti.id ? ti.color + '12' : 'rgba(255,255,255,0.02)', cursor: 'pointer', textAlign: 'center', transition: 'all 0.08s' }}>
+                <div style={{ fontSize: '1.4rem', color: ti.color, marginBottom: '0.35rem' }}>{ti.sym}</div>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: C.text, marginBottom: '0.2rem' }}>{ti.label}</div>
+                <div style={{ fontSize: '0.68rem', color: C.dim }}>{ti.desc}</div>
               </div>
             ))}
           </div>
