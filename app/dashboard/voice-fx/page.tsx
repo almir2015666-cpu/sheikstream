@@ -271,7 +271,7 @@ export default function VoiceFxPage() {
           <div style={{ fontSize:'.82rem', fontWeight:800, color: P, marginBottom:'.7rem' }}>Como usar no OBS</div>
           <ol style={{ margin:0, padding:'0 0 0 1.1rem', fontSize:'.78rem', color: DIM, lineHeight:2 }}>
             <li>No OBS: Fontes → <strong style={{color:TXT}}>+</strong> → <strong style={{color:TXT}}>Navegador</strong></li>
-            <li>Cole a URL: <code style={{ background:'rgba(155,48,255,.15)', padding:'.15rem .45rem', borderRadius:5, color: P, fontSize:'.75rem' }}>sheikstream.com.br/dashboard/voice-fx</code></li>
+            <li>Cole a URL: <code style={{ background:'rgba(155,48,255,.15)', padding:'.15rem .45rem', borderRadius:5, color: P, fontSize:'.75rem' }}>sheikstream.com.br/overlay/voice-fx</code></li>
             <li>Dimensões: <strong style={{color:TXT}}>800 × 300</strong> px</li>
             <li>Marque <strong style={{color:TXT}}>"Controlar áudio via OBS"</strong></li>
             <li>Clique direito na fonte → <strong style={{color:TXT}}>Propriedades de áudio</strong> → <strong style={{color:TXT}}>Monitor e Saída</strong></li>
