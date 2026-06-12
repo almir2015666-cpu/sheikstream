@@ -12,9 +12,9 @@ export async function GET(req: NextRequest) {
   if (!await isAdminPassword(req.headers.get('x-admin-password') ?? ''))
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   const db = getSupabaseAdmin()
-  const { data } = await db.from('overlay_configs').select('config')
-    .eq('broadcaster_id', GLOBAL_ID).eq('type', TYPE).maybeSingle()
-  return NextResponse.json({ config: data?.config ?? DEFAULT })
+  const { data: rows } = await db.from('overlay_configs').select('config')
+    .eq('broadcaster_id', GLOBAL_ID).eq('type', TYPE)
+  return NextResponse.json({ config: rows?.[0]?.config ?? DEFAULT })
 }
 
 export async function PUT(req: NextRequest) {

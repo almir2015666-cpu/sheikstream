@@ -10,10 +10,10 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ canAccess: false, userRole: null })
 
   const db = getSupabaseAdmin()
-  const { data } = await db.from('overlay_configs').select('config')
-    .eq('broadcaster_id', '__global__').eq('type', 'feature-ia-voz').maybeSingle()
+  const { data: rows } = await db.from('overlay_configs').select('config')
+    .eq('broadcaster_id', '__global__').eq('type', 'feature-ia-voz')
 
-  const cfg = data?.config as { enabled: boolean; allowed_roles: string[] } | null
+  const cfg = (rows?.[0]?.config ?? null) as { enabled: boolean; allowed_roles: string[] } | null
 
   if (!cfg) return NextResponse.json({ canAccess: true, userRole: null })
   if (cfg.enabled === false) return NextResponse.json({ canAccess: false, userRole: null })

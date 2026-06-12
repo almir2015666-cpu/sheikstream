@@ -194,9 +194,16 @@ export default function AdminPage() {
     const setSaved = feature === 'chat' ? setIaChatSaved : setIaVozSaved
     setSaving(true)
     try {
-      await fetch(`/api/admin/ia-${feature}/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify(cfg) })
-      setSaved(true); setTimeout(() => setSaved(false), 2500)
-    } catch { alert('Erro ao salvar') } finally { setSaving(false) }
+      const res = await fetch(`/api/admin/ia-${feature}/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw }, body: JSON.stringify(cfg) })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        alert(`Erro ao salvar: ${d.error ?? `HTTP ${res.status}`}`)
+      } else {
+        setSaved(true); setTimeout(() => setSaved(false), 2500)
+        // Reload from DB to confirm what was persisted
+        await fetchFeatureCfg(storedPw, feature)
+      }
+    } catch { alert('Erro de conexão ao salvar') } finally { setSaving(false) }
   }
 
   const fetchAiCfg = async (pw: string) => {
@@ -208,7 +215,7 @@ export default function AdminPage() {
       const defCd = d.config.cooldown_seconds || 300
       const rl: Record<string, number> = {}
       const rd: Record<string, number> = {}
-      const groups = ['todos', 'admin', 'moderador', 'vip', 'streamer']
+      const groups = ['todos', 'admin', 'moderador', 'vip', 'streamer', 'parceiro', 'editor']
       groups.forEach(g => {
         rl[g] = (d.config.role_limits ?? {})[g] ?? maxDay
         rd[g] = (d.config.role_delays ?? {})[g] ?? defCd
@@ -2547,7 +2554,7 @@ export default function AdminPage() {
                           ))}
                         </div>
 
-                        {['todos','admin','moderador','vip','streamer'].map(role => {
+                        {['todos','admin','moderador','vip','streamer','parceiro','editor'].map(role => {
                           const limitVal = aiCfg.role_limits?.[role] ?? aiCfg.max_per_day
                           const delayVal = aiCfg.role_delays?.[role] ?? aiCfg.cooldown_seconds
                           const hasAccess = aiCfg.allowed_roles.includes(role)
@@ -2653,7 +2660,7 @@ export default function AdminPage() {
             const label = isChat ? 'IA de Chat' : 'IA por Voz'
             const icon = isChat ? '💬' : '🎙️'
             const feature = isChat ? 'chat' as const : 'voz' as const
-            const ROLES = ['todos', 'admin', 'moderador', 'vip', 'streamer']
+            const ROLES = ['todos', 'admin', 'moderador', 'vip', 'streamer', 'parceiro', 'editor']
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {loading ? <div style={{ color: C.muted, fontSize: '.85rem' }}>Carregando...</div> : (
@@ -2703,6 +2710,12 @@ export default function AdminPage() {
                       <button onClick={() => saveFeatureCfg(feature)} disabled={saving} style={{ padding: '.65rem', borderRadius: 10, fontWeight: 800, fontSize: '.9rem', background: saved ? C.accentBg : C.primaryBg, border: `1px solid ${saved ? C.accentBorder : C.borderStrong}`, color: saved ? C.accent : C.primary, cursor: 'pointer' }}>
                         {saving ? 'Salvando...' : saved ? '✓ Salvo!' : '💾 Salvar configuração'}
                       </button>
+                      {saved && (
+                        <div style={{ padding: '.7rem 1rem', background: 'rgba(34,197,94,.07)', border: '1px solid rgba(34,197,94,.25)', borderRadius: 10, fontSize: '.78rem', color: '#22c55e' }}>
+                          <strong>Confirmação do banco:</strong> grupos com acesso → <strong>{cfg.allowed_roles.length === 0 ? 'nenhum' : cfg.allowed_roles.join(', ')}</strong>{' '}
+                          | funcionalidade: <strong>{cfg.enabled ? 'ativa' : 'desativada'}</strong>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
