@@ -24,7 +24,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ canAccess: true, userRole: null })
   }
 
-  const { data: roleRow } = await db.from('user_roles').select('role').eq('user_id', session.id).maybeSingle()
+  // Admin assigns roles using waitlist UUID; session.id is the Twitch numeric ID.
+  // Check both IDs so role lookup works regardless of which was stored.
+  const { data: wlRow } = await db.from('waitlist').select('id')
+    .ilike('platform_username', session.name).maybeSingle()
+  const ids = [wlRow?.id, session.id].filter(Boolean) as string[]
+
+  const { data: roleRow } = await db.from('user_roles').select('role')
+    .in('user_id', ids).order('created_at', { ascending: false }).limit(1).maybeSingle()
   const userRole = roleRow?.role ?? null
 
   const canAccess = userRole !== null && allowed.includes(userRole.toLowerCase())
