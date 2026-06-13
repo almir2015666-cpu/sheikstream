@@ -289,7 +289,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })
         .catch(() => {/* network error — keep current order */})
     fetchNavOrder()
-    const navIv = setInterval(fetchNavOrder, 60_000)
+    const navIv = setInterval(fetchNavOrder, 15_000)
     const fetchBanner = () => fetch('/api/dev-banner').then(r => r.json()).then(d => setBanner(d?.active ? d : null)).catch(() => {})
     fetchBanner()
     const iv = setInterval(fetchBanner, 30000)

@@ -337,6 +337,11 @@ export default function AdminPage() {
     { id: 'convites',    label: 'Convites' },
     { id: 'perfil',      label: 'Meu Perfil' },
   ]
+  const NAV_CHILDREN: Record<string, { id: string; label: string }[]> = {
+    ia:          [{ id: 'ia-chat', label: 'IA de Chat' }, { id: 'ia-voz', label: 'IA por Voz' }, { id: 'ia-imagens', label: 'IA de Imagens' }],
+    sorteios:    [{ id: 's-criar', label: 'Criar / Editar' }, { id: 's-tickets', label: 'Tickets' }],
+    plataformas: [{ id: 'p-twitch', label: 'Twitch' }, { id: 'p-kick', label: 'Kick' }, { id: 'p-livepix', label: 'Livepix' }],
+  }
   const [navOrder, setNavOrder]           = useState<string[]>(NAV_ITEMS_LIST.map(i => i.id))
   const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon' | ''>>({})
   const [navStatusLoaded, setNavStatusLoaded] = useState(false)
@@ -2465,34 +2470,45 @@ export default function AdminPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
                     {ordered.map((item, idx) => {
                       const st = navItemStatus[item.id] ?? ''
+                      const children = NAV_CHILDREN[item.id] ?? []
+                      const statusRow = (id: string, label: string, isChild: boolean) => {
+                        const s = navItemStatus[id] ?? ''
+                        return (
+                          <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: isChild ? '0.45rem 1rem 0.45rem 2.2rem' : '0.65rem 1rem', background: s ? 'rgba(245,158,11,0.04)' : (isChild ? C.vvdim : C.cardBgAlt), border: `1px solid ${s ? 'rgba(245,158,11,0.2)' : C.border}`, borderRadius: '8px' }}>
+                            {isChild
+                              ? <span style={{ fontSize: '0.65rem', color: C.vdim, flexShrink: 0 }}>↳</span>
+                              : <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.vdim, width: 18, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                            }
+                            <span style={{ flex: 1, fontSize: isChild ? '0.8rem' : '0.88rem', fontWeight: isChild ? 500 : 600, color: s ? C.muted : C.text }}>{label}</span>
+                            <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                              {(['', 'maintenance', 'soon'] as const).map(val => {
+                                const labels: Record<string, string> = { '': 'Ativo', maintenance: '🔧 Manutenção', soon: '⏳ Em breve' }
+                                const isAct = s === val
+                                const colors: Record<string, string> = { '': '#22c55e', maintenance: '#f59e0b', soon: '#818cf8' }
+                                return (
+                                  <button key={val} onClick={() => setStatus(id, val)}
+                                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.68rem', fontWeight: isAct ? 700 : 500, borderRadius: '6px', cursor: 'pointer', border: `1px solid ${isAct ? colors[val] + '66' : C.border}`, background: isAct ? `${colors[val]}18` : 'transparent', color: isAct ? colors[val] : C.vdim, whiteSpace: 'nowrap' }}>
+                                    {labels[val]}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                            {!isChild && (
+                              <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                                <button disabled={idx === 0} onClick={() => moveNav(item.id, 'up')}
+                                  style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
+                                <button disabled={idx === ordered.length - 1} onClick={() => moveNav(item.id, 'down')}
+                                  style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === ordered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === ordered.length - 1 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }
                       return (
-                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.65rem 1rem', background: st ? 'rgba(245,158,11,0.04)' : C.cardBgAlt, border: `1px solid ${st ? 'rgba(245,158,11,0.2)' : C.border}`, borderRadius: '10px' }}>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.vdim, width: 18, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
-                          <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600, color: st ? C.muted : C.text }}>{item.label}</span>
-
-                          {/* Status toggle */}
-                          <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                            {(['', 'maintenance', 'soon'] as const).map(val => {
-                              const labels: Record<string, string> = { '': 'Ativo', maintenance: '🔧 Manutenção', soon: '⏳ Em breve' }
-                              const active = st === val
-                              const colors: Record<string, string> = { '': '#22c55e', maintenance: '#f59e0b', soon: '#818cf8' }
-                              return (
-                                <button key={val} onClick={() => setStatus(item.id, val)}
-                                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.68rem', fontWeight: active ? 700 : 500, borderRadius: '6px', cursor: 'pointer', border: `1px solid ${active ? colors[val] + '66' : C.border}`, background: active ? `${colors[val]}18` : 'transparent', color: active ? colors[val] : C.vdim, whiteSpace: 'nowrap' }}>
-                                  {labels[val]}
-                                </button>
-                              )
-                            })}
-                          </div>
-
-                          {/* Reorder */}
-                          <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                            <button disabled={idx === 0} onClick={() => moveNav(item.id, 'up')}
-                              style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
-                            <button disabled={idx === ordered.length - 1} onClick={() => moveNav(item.id, 'down')}
-                              style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === ordered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === ordered.length - 1 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
-                          </div>
-                        </div>
+                        <React.Fragment key={item.id}>
+                          {statusRow(item.id, item.label, false)}
+                          {children.map(ch => statusRow(ch.id, ch.label, true))}
+                        </React.Fragment>
                       )
                     })}
                   </div>
