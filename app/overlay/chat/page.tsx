@@ -12,15 +12,22 @@ function userColor(name: string) {
 }
 
 function ChatContent() {
-  const sp       = useSearchParams()
+  const sp = useSearchParams()
   const channel  = sp.get('channel') ?? ''
   const fontSize = Number(sp.get('size') ?? 15)
   const maxMsgs  = Number(sp.get('max') ?? 25)
-  const bg       = sp.get('bg') !== 'false'
-  const direction = sp.get('dir') ?? 'bottom' // top | bottom
+  const bgOn     = sp.get('bg') !== 'false'
+  const direction = sp.get('dir') ?? 'bottom'
+  const opacity  = Number(sp.get('opacity') ?? 55)
+  const radius   = Number(sp.get('radius') ?? 8)
+  const anim     = sp.get('anim') ?? 'slide'
+  const shadow   = sp.get('shadow') === 'true'
+  const hidecmd  = sp.get('hidecmd') === 'true'
+  const bgcol    = sp.get('bgcol') ?? '#000000'
+
   const [msgs, setMsgs] = useState<Msg[]>([])
-  const wsRef    = useRef<WebSocket | null>(null)
-  const idRef    = useRef(0)
+  const wsRef  = useRef<WebSocket | null>(null)
+  const idRef  = useRef(0)
 
   useEffect(() => {
     if (!channel) return
@@ -41,10 +48,10 @@ function ChatContent() {
         const tagStr = privmsg[1] ?? ''
         const user   = privmsg[2]
         const text   = privmsg[3].trimEnd()
+        if (hidecmd && text.startsWith('!')) return
         const tags: Record<string, string> = {}
         tagStr.replace(/^@/, '').split(';').forEach(t => {
-          const [k, v] = t.split('=')
-          tags[k] = v ?? ''
+          const [k, v] = t.split('='); tags[k] = v ?? ''
         })
         const color = tags['color'] || userColor(user)
         setMsgs(prev => {
@@ -56,18 +63,18 @@ function ChatContent() {
     }
     connect()
     return () => { wsRef.current?.close() }
-  }, [channel, maxMsgs])
+  }, [channel, maxMsgs, hidecmd])
 
-  const msgStyle: React.CSSProperties = {
-    padding: bg ? '5px 10px' : '3px 0',
-    borderRadius: bg ? 8 : 0,
-    background: bg ? 'rgba(0,0,0,0.55)' : 'transparent',
-    backdropFilter: bg ? 'blur(8px)' : 'none',
-    marginBottom: 4,
-    animation: 'fadeIn .2s ease',
-    lineHeight: 1.45,
-    wordBreak: 'break-word',
+  // Background color with opacity
+  const getMsgBg = () => {
+    if (!bgOn) return 'transparent'
+    const op  = Math.round(Math.min(opacity, 95) * 2.55).toString(16).padStart(2, '0')
+    return `${bgcol}${op}`
   }
+  const msgBg = getMsgBg()
+  const textShadow = shadow ? '0 1px 5px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,1)' : 'none'
+
+  const animClass = anim === 'slide' ? 'msg-slide' : anim === 'fade' ? 'msg-fade' : 'msg-pop'
 
   const list = direction === 'top' ? msgs : [...msgs].reverse()
 
@@ -78,7 +85,12 @@ function ChatContent() {
           background:transparent!important;background-color:transparent!important;
           margin:0!important;padding:0!important;overflow:hidden!important;
         }
-        @keyframes fadeIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes msg-slide{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes msg-fade{from{opacity:0}to{opacity:1}}
+        @keyframes msg-pop{from{opacity:0;transform:scale(0.82)}to{opacity:1;transform:scale(1)}}
+        .msg-slide{animation:msg-slide .22s cubic-bezier(0.4,0,0.2,1) both}
+        .msg-fade{animation:msg-fade .3s ease both}
+        .msg-pop{animation:msg-pop .18s cubic-bezier(0.34,1.56,0.64,1) both}
       `}</style>
       <div style={{
         position: 'fixed', inset: 0, background: 'transparent',
@@ -91,12 +103,20 @@ function ChatContent() {
         {!channel ? (
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>?channel= não configurado</div>
         ) : (
-          list.map(m => (
-            <div key={m.id} style={msgStyle}>
-              <span style={{ fontWeight: 700, color: m.color, marginRight: 6 }}>{m.user}:</span>
-              <span style={{ color: '#fff' }}>{m.text}</span>
-            </div>
-          ))
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {list.map(m => (
+              <div key={m.id} className={animClass} style={{
+                padding: bgOn ? '5px 10px' : '2px 0',
+                borderRadius: bgOn ? radius : 0,
+                background: msgBg,
+                backdropFilter: bgOn && bgcol === '#000000' ? 'blur(6px)' : 'none',
+                lineHeight: 1.45, wordBreak: 'break-word',
+              }}>
+                <span style={{ fontWeight: 700, color: m.color, marginRight: 5, textShadow }}>{m.user}:</span>
+                <span style={{ color: '#fff', textShadow }}>{m.text}</span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </>
