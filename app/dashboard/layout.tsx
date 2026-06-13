@@ -6,6 +6,7 @@ import { ToastProvider } from '@/app/components/Toast'
 import { useLang } from '@/lib/i18n'
 import type { TKey } from '@/lib/i18n/translations'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
+import { ChatWidget } from '@/app/components/ChatWidget'
 
 const SW = 240
 
@@ -62,7 +63,6 @@ const NAV_GROUPS: Group[] = [
     { id: 'subathon',  label: 'Subathon',        href: '/dashboard/subathon',  icon: I.suba, badge: 'NOVO' },
     { id: 'timers',    label: 'Timers',           href: '/dashboard/timers',    icon: I.time },
     { id: 'agenda',    label: 'Agenda',           href: '/dashboard/agenda',    icon: I.agen, badge: 'NOVO' as Badge },
-    { id: 'moderacao', label: 'Moderação',        href: '/dashboard/moderacao', icon: I.mod,  badge: 'NOVO' as Badge },
     { id: 'alertas',   label: 'Alertas',          href: '/dashboard/alertas',   icon: I.alrt, badge: 'NOVO' as Badge },
     { id: 'comandos',  label: 'Eventos/Comandos', href: '/dashboard/comandos',  icon: I.cmd  },
     { id: 'voice-fx',  label: 'Voice FX',         href: '/dashboard/voice-fx',  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>, badge: 'NOVO' as Badge },
@@ -130,7 +130,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/ia-chat/voz': 'IA por Voz',
   '/dashboard/voice-fx': 'Voice FX',
   '/dashboard/agenda': 'Agenda de Lives',
-  '/dashboard/moderacao': 'Moderação Automática',
   '/dashboard/alertas': 'Fila de Alertas',
 }
 
@@ -229,7 +228,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const ITEM_KEY: Partial<Record<string, TKey>> = {
     dashboard: 'nav_dashboard', subathon: 'nav_subathon', timers: 'nav_timers',
-    agenda: 'nav_agenda', moderacao: 'nav_moderacao', alertas: 'nav_alertas',
+    agenda: 'nav_agenda', alertas: 'nav_alertas',
     comandos: 'nav_commands', ia: 'nav_ia', 'ia-chat': 'nav_ia_chat', 'ia-voz': 'nav_ia_voice',
     sorteios: 'nav_raffles', 's-criar': 'nav_raffle_create', 's-tickets': 'nav_raffle_tickets',
     plataformas: 'nav_platforms', metas: 'nav_goals', overlays: 'nav_overlays_item',
@@ -246,7 +245,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     '/dashboard/conexoes': 'pt_connections', '/dashboard/perfil': 'pt_profile',
     '/dashboard/convites': 'pt_invites', '/dashboard/ia-imagens': 'pt_ia_images',
     '/dashboard/ia-chat': 'pt_ia_chat', '/dashboard/ia-chat/voz': 'pt_ia_voice',
-    '/dashboard/agenda': 'pt_agenda', '/dashboard/moderacao': 'pt_moderacao', '/dashboard/alertas': 'pt_alertas',
+    '/dashboard/agenda': 'pt_agenda', '/dashboard/alertas': 'pt_alertas',
   }
   const tItem = (id: string, fallback: string) => { const k = ITEM_KEY[id]; return k ? t(k) : fallback }
   const pageTitle = PAGE_TITLE_KEYS[pathname] ? t(PAGE_TITLE_KEYS[pathname]) : (PAGE_TITLES[pathname] ?? 'Dashboard')
@@ -846,6 +845,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </>
       )}
 
+      <ChatWidget currentUserId={user?.id ?? null} currentUserName={user?.name ?? null} currentUserImage={user?.image ?? null} />
     </div>
   )
 }
