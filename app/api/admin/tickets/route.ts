@@ -97,8 +97,18 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const url = new URL(req.url)
-    const id = url.searchParams.get('id')
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+    const id  = url.searchParams.get('id')
+    const ids = url.searchParams.get('ids')  // comma-separated bulk delete
+
+    if (ids) {
+      const idArr = ids.split(',').map(s => s.trim()).filter(Boolean)
+      if (!idArr.length) return NextResponse.json({ error: 'ids required' }, { status: 400 })
+      const { error } = await getSupabaseAdmin().from('support_tickets').delete().in('id', idArr)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, deleted: idArr.length })
+    }
+
+    if (!id) return NextResponse.json({ error: 'id or ids required' }, { status: 400 })
     const { error } = await getSupabaseAdmin().from('support_tickets').delete().eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })

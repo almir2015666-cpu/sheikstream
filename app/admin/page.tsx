@@ -280,6 +280,8 @@ export default function AdminPage() {
   const [ticketsLoading, setTicketsLoading] = useState(false)
   const [ticketFilter, setTicketFilter] = useState('all')
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null)
+  const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const [adminReply, setAdminReply] = useState<Record<string, string>>({})
   const [ticketUpdating, setTicketUpdating] = useState<string | null>(null)
   const [activity, setActivity] = useState<ActivityLog[]>([])
@@ -557,6 +559,21 @@ export default function AdminPage() {
       if (expandedTicket === id) setExpandedTicket(null)
     } finally {
       setTicketUpdating(null)
+    }
+  }
+
+  async function bulkDeleteTickets() {
+    if (selectedTickets.size === 0) return
+    if (!confirm(`Excluir ${selectedTickets.size} ticket(s) permanentemente?`)) return
+    setBulkDeleting(true)
+    try {
+      const ids = [...selectedTickets].join(',')
+      await fetch(`/api/admin/tickets?ids=${encodeURIComponent(ids)}`, { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
+      setTickets(prev => prev.filter(t => !selectedTickets.has(t.id)))
+      if (expandedTicket && selectedTickets.has(expandedTicket)) setExpandedTicket(null)
+      setSelectedTickets(new Set())
+    } finally {
+      setBulkDeleting(false)
     }
   }
 
@@ -1755,13 +1772,28 @@ export default function AdminPage() {
                   <div style={{ padding: '1rem 1.1rem 0.65rem', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                       <span style={{ fontSize: '0.95rem', fontWeight: 800, color: C.text }}>Suporte</span>
-                      <button onClick={() => fetchTickets(storedPw)} disabled={ticketsLoading}
-                        style={{ background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.2rem' }}>
-                        <svg className={ticketsLoading ? 'sk-spin' : ''} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {selectedTickets.size > 0 && (
+                          <>
+                            <button onClick={() => setSelectedTickets(new Set())}
+                              style={{ padding: '0.22rem 0.55rem', background: 'transparent', border: `1px solid ${C.border}`, color: C.dim, borderRadius: '6px', fontSize: '0.65rem', fontWeight: 600, cursor: 'pointer' }}>
+                              Limpar
+                            </button>
+                            <button onClick={bulkDeleteTickets} disabled={bulkDeleting}
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.22rem 0.65rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                              {bulkDeleting ? '...' : `Excluir (${selectedTickets.size})`}
+                            </button>
+                          </>
+                        )}
+                        <button onClick={() => fetchTickets(storedPw)} disabled={ticketsLoading}
+                          style={{ background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.2rem' }}>
+                          <svg className={ticketsLoading ? 'sk-spin' : ''} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        </button>
+                      </div>
                     </div>
-                    {/* Filter pills */}
-                    <div style={{ display: 'flex', gap: '0.3rem', overflowX: 'auto', paddingBottom: '0.1rem' }}>
+                    {/* Filter pills + select all */}
+                    <div style={{ display: 'flex', gap: '0.3rem', overflowX: 'auto', paddingBottom: '0.1rem', alignItems: 'center' }}>
                       {[
                         { k:'all',         label:'Todos',      count: counts2.all },
                         { k:'open',        label:'Abertos',    count: counts2['open'] ?? 0,        color: C.accent },
@@ -1778,6 +1810,21 @@ export default function AdminPage() {
                           </button>
                         )
                       })}
+                      {/* Select all visible */}
+                      {visible.length > 0 && (() => {
+                        const visIds = visible.map(t => t.id)
+                        const allSel = visIds.every(id => selectedTickets.has(id))
+                        return (
+                          <button onClick={() => setSelectedTickets(prev => {
+                            const n = new Set(prev)
+                            if (allSel) visIds.forEach(id => n.delete(id))
+                            else visIds.forEach(id => n.add(id))
+                            return n
+                          })} style={{ marginLeft: 'auto', padding: '0.22rem 0.55rem', borderRadius: '6px', background: allSel ? C.dangerBg : 'transparent', border: `1px solid ${allSel ? C.dangerBorder : C.border}`, color: allSel ? C.danger : C.vdim, fontSize: '0.63rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {allSel ? '✕ Desmarcar' : '☐ Todos'}
+                          </button>
+                        )
+                      })()}
                     </div>
                   </div>
 
@@ -1791,26 +1838,33 @@ export default function AdminPage() {
                         <span style={{ fontSize: '0.78rem' }}>Nenhum ticket</span>
                       </div>
                     ) : visible.map(t => {
-                      const sc   = SC[t.status] ?? SC.open
-                      const sel  = expandedTicket === t.id
-                      const isBug = t.subject?.toLowerCase().includes('bug') || t.subject?.toLowerCase().includes('erro')
+                      const sc      = SC[t.status] ?? SC.open
+                      const sel     = expandedTicket === t.id
+                      const checked = selectedTickets.has(t.id)
+                      const isBug   = t.subject?.toLowerCase().includes('bug') || t.subject?.toLowerCase().includes('erro')
                       const preview = t.admin_reply
                         ? '↩ ' + t.admin_reply.split(/\n\n---\[/)[0].trim().slice(0, 45)
                         : t.message?.slice(0, 55)
                       return (
-                        <div key={t.id} onClick={() => setExpandedTicket(sel ? null : t.id)}
-                          style={{ padding: '0.8rem 1.1rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', background: sel ? C.primaryBg : 'transparent', borderLeft: `3px solid ${sel ? C.primary : 'transparent'}`, transition: 'background .1s' }}
-                          onMouseEnter={e => { if (!sel) (e.currentTarget as HTMLDivElement).style.background = C.vvdim }}
-                          onMouseLeave={e => { if (!sel) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}>
+                        <div key={t.id}
+                          style={{ padding: '0.8rem 1.1rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', background: checked ? 'rgba(255,68,68,0.06)' : sel ? C.primaryBg : 'transparent', borderLeft: `3px solid ${checked ? C.danger : sel ? C.primary : 'transparent'}`, transition: 'background .1s' }}
+                          onMouseEnter={e => { if (!sel && !checked) (e.currentTarget as HTMLDivElement).style.background = C.vvdim }}
+                          onMouseLeave={e => { if (!sel && !checked) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                            {/* Checkbox */}
+                            <div onClick={e => { e.stopPropagation(); setSelectedTickets(prev => { const n = new Set(prev); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n }) }}
+                              style={{ width: 16, height: 16, borderRadius: '4px', border: `2px solid ${checked ? C.danger : C.border}`, background: checked ? C.dangerBg : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 11, cursor: 'pointer', transition: 'all .1s' }}>
+                              {checked && <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke={C.danger} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 6 5 9 10 3"/></svg>}
+                            </div>
                             {/* Avatar */}
-                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: isBug ? 'rgba(255,68,68,.15)' : C.primaryBg, border: `1px solid ${isBug ? C.dangerBorder : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <div onClick={() => setExpandedTicket(sel ? null : t.id)}
+                              style={{ width: 38, height: 38, borderRadius: '50%', background: isBug ? 'rgba(255,68,68,.15)' : C.primaryBg, border: `1px solid ${isBug ? C.dangerBorder : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {isBug
                                 ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.danger} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                                 : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                               }
                             </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
+                            <div onClick={() => setExpandedTicket(sel ? null : t.id)} style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.18rem' }}>
                                 <span style={{ fontSize: '0.82rem', fontWeight: 700, color: sel ? C.primary : C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '0.4rem' }}>{t.subject}</span>
                                 <span style={{ fontSize: '0.6rem', color: C.vdim, flexShrink: 0 }}>{new Date(t.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
