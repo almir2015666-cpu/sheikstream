@@ -184,24 +184,20 @@ const PLATFORM_COLORS: Record<string, string> = {
   Discord: '#5865f2', Google: '#4285f4',
 }
 
-const TW_WORDS = ['sorteios', 'comandos', 'analytics', 'metas', 'notificações', 'streams']
 
 
-const TESTIMONIALS = [
-  { name: 'GabrielXD', platform: 'Twitch · 234K seguidores', initials: 'GX', color: '#9b30ff',
-    text: 'O SheikSTREAM mudou como gerencio meu canal. Antes ficava alternando entre 4 abas, agora tudo num só lugar.' },
-  { name: 'LunaStream', platform: 'TikTok · 1.2M seguidores', initials: 'LS', color: '#ff6bbd',
-    text: 'Os sorteios automáticos deixaram meu chat muito mais engajado. Cresci 40% em 2 meses usando a plataforma.' },
-  { name: 'NitroGamer', platform: 'Kick · 445K seguidores', initials: 'NG', color: '#39ff14',
-    text: 'Finalmente uma ferramenta pensada no streamer brasileiro. Suporte rápido e funcionalidades que fazem diferença.' },
+const TESTIMONIAL_KEYS = [
+  { name: 'GabrielXD', platformKey: 'testimonial1_platform' as const, initials: 'GX', color: '#9b30ff', textKey: 'testimonial1_text' as const },
+  { name: 'LunaStream', platformKey: 'testimonial2_platform' as const, initials: 'LS', color: '#ff6bbd', textKey: 'testimonial2_text' as const },
+  { name: 'NitroGamer', platformKey: 'testimonial3_platform' as const, initials: 'NG', color: '#39ff14', textKey: 'testimonial3_text' as const },
 ]
 
-const FAQ_ITEMS = [
-  { q: 'É realmente gratuito?', a: 'Sim, 100% gratuito durante o beta. Sem cartão de crédito, sem taxa de setup, sem surpresas.' },
-  { q: 'Quais plataformas são suportadas?', a: 'Twitch, YouTube, Kick e TikTok. Facebook e Instagram estão no roadmap.' },
-  { q: 'Preciso ter CNPJ ou empresa?', a: 'Não. Qualquer streamer pessoa física pode se cadastrar.' },
-  { q: 'Como funciona o beta fechado?', a: 'Novos usuários entram por convite ou lista de espera, garantindo qualidade para todos.' },
-  { q: 'Vou perder meu acesso quando sair do beta?', a: 'Não. Usuários do beta têm acesso garantido e quem entrar agora fica no plano gratuito para sempre.' },
+const FAQ_KEYS = [
+  { qKey: 'faq1_q' as const, aKey: 'faq1_a' as const },
+  { qKey: 'faq2_q' as const, aKey: 'faq2_a' as const },
+  { qKey: 'faq3_q' as const, aKey: 'faq3_a' as const },
+  { qKey: 'faq4_q' as const, aKey: 'faq4_a' as const },
+  { qKey: 'faq5_q' as const, aKey: 'faq5_a' as const },
 ]
 
 
@@ -219,15 +215,14 @@ export default function Home() {
   const C = theme === 'dark' ? DARK : LIGHT
   const isDark = theme === 'dark'
   const { t } = useLang()
+  const TW_WORDS = [t('tw_word1'), t('tw_word2'), t('tw_word3'), t('tw_word4'), t('tw_word5'), t('tw_word6')]
 
   const [windowWidth, setWindowWidth] = useState(1200)
   const isMobile = windowWidth < 768
 
   const [chatOpen, setChatOpen] = useState(false)
   const [chatTab, setChatTab] = useState<'chat' | 'ticket'>('chat')
-  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([
-    { role: 'assistant', content: 'Olá! Sou o assistente do Sheikstream. Pode me perguntar qualquer coisa sobre a plataforma!' },
-  ])
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [ticketForm, setTicketForm] = useState({ subject: '', message: '', reply_email: '' })
@@ -346,11 +341,11 @@ useEffect(() => {
     setChatInput('')
     setChatLoading(true)
     try {
-      const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: updated.slice(1) }) })
+      const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: updated }) })
       const data = await res.json()
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.content }])
     } catch {
-      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Ops, tive um problema. Tente novamente.' }])
+      setChatMessages(prev => [...prev, { role: 'assistant', content: t('chat_error_msg') }])
     } finally {
       setChatLoading(false)
     }
@@ -392,7 +387,7 @@ useEffect(() => {
   const hp = isMobile ? '1.25rem' : '2.5rem'
 
   const themeBtn = (
-    <button onClick={handleThemeToggle} className="sk-theme-btn" title={isDark ? 'Modo claro' : 'Modo escuro'}
+    <button onClick={handleThemeToggle} className="sk-theme-btn" title={isDark ? t('theme_light') : t('theme_dark')}
       style={{ background: C.primaryBg, border: `1px solid ${C.border}`, color: C.primary, padding: '0.45rem 0.6rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', minWidth: '44px' }}>
       {isDark ? <SunIcon /> : <MoonIcon />}
     </button>
@@ -406,9 +401,9 @@ useEffect(() => {
           <div style={{ padding: '0.9rem 1rem', background: C.primaryBg, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: C.chatBtnGrad, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', color: '#fff', fontWeight: 900 }}>S</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text }}>Assistente Sheikstream</div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text }}>{t('chat_assistant_name')}</div>
               <div style={{ fontSize: '0.7rem', color: C.accent, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />Online
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />{t('chat_online')}
               </div>
             </div>
             <button onClick={() => setChatOpen(false)} style={{ background: 'transparent', border: 'none', color: C.dim, cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, padding: '0.2rem' }}>✕</button>
@@ -418,7 +413,7 @@ useEffect(() => {
             {(['chat', 'ticket'] as const).map(tab => (
               <button key={tab} onClick={() => setChatTab(tab)}
                 style={{ flex: 1, padding: '0.5rem', background: 'transparent', border: 'none', borderBottom: chatTab === tab ? `2px solid ${C.primary}` : '2px solid transparent', color: chatTab === tab ? C.primary : C.dim, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {tab === 'chat' ? '💬 Chat' : '🎫 Abrir Ticket'}
+                {tab === 'chat' ? '💬 Chat' : `🎫 ${t('chat_open_ticket_tab')}`}
               </button>
             ))}
           </div>
@@ -426,6 +421,9 @@ useEffect(() => {
           {chatTab === 'chat' && (
             <>
               <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: C.cardBgAlt }}>
+                <div className="sk-chat-msg" style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{ maxWidth: '82%', padding: '0.6rem 0.85rem', borderRadius: '12px 12px 12px 4px', background: C.chatAiBg, border: `1px solid ${C.chatAiBorder}`, color: C.text, fontSize: '0.82rem', lineHeight: 1.6 }}>{t('chat_initial_msg')}</div>
+                </div>
                 {chatMessages.map((m, i) => (
                   <div key={i} className="sk-chat-msg" style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                     <div style={{ maxWidth: '82%', padding: '0.6rem 0.85rem', borderRadius: m.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px', background: m.role === 'user' ? C.chatUserBg : C.chatAiBg, border: m.role === 'user' ? 'none' : `1px solid ${C.chatAiBorder}`, color: m.role === 'user' ? '#fff' : C.text, fontSize: '0.82rem', lineHeight: 1.6 }}>{m.content}</div>
@@ -441,7 +439,7 @@ useEffect(() => {
                 <div ref={chatEndRef} />
               </div>
               <div style={{ padding: '0.75rem', borderTop: `1px solid ${C.border}`, display: 'flex', gap: '0.5rem', background: C.cardBgAlt }}>
-                <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }} placeholder="Pergunte qualquer coisa..." disabled={chatLoading}
+                <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }} placeholder={t('chat_placeholder')} disabled={chatLoading}
                   style={{ flex: 1, padding: '0.55rem 0.8rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.82rem', outline: 'none', opacity: chatLoading ? 0.6 : 1, minHeight: '44px' }} />
                 <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()} className="sk-send-btn"
                   style={{ padding: '0.55rem 0.9rem', background: C.primary, border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.88rem', cursor: chatLoading ? 'not-allowed' : 'pointer', opacity: !chatInput.trim() ? 0.45 : 1, minHeight: '44px', minWidth: '44px' }}>→</button>
@@ -454,17 +452,17 @@ useEffect(() => {
               {ticketDone ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.75rem', textAlign: 'center' }}>
                   <div style={{ fontSize: '2.5rem' }}>✅</div>
-                  <div style={{ fontSize: '0.92rem', fontWeight: 700, color: C.accent }}>Ticket enviado!</div>
-                  <div style={{ fontSize: '0.78rem', color: C.muted }}>O time admin vai analisar em breve.</div>
-                  <button onClick={() => { setTicketDone(false) }} style={{ marginTop: '0.5rem', padding: '0.4rem 1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>Novo ticket</button>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 700, color: C.accent }}>{t('chat_ticket_done_title')}</div>
+                  <div style={{ fontSize: '0.78rem', color: C.muted }}>{t('chat_ticket_done_sub')}</div>
+                  <button onClick={() => { setTicketDone(false) }} style={{ marginTop: '0.5rem', padding: '0.4rem 1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>{t('chat_new_ticket_btn')}</button>
                 </div>
               ) : (
                 <form onSubmit={sendTicket} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  <div style={{ fontSize: '0.72rem', color: C.muted, lineHeight: 1.5 }}>Envie um ticket para o admin. Inclua seu e-mail se quiser uma resposta.</div>
+                  <div style={{ fontSize: '0.72rem', color: C.muted, lineHeight: 1.5 }}>{t('chat_ticket_form_desc')}</div>
                   {[
-                    { label: 'Assunto *', key: 'subject' as const, placeholder: 'Ex: Bug no overlay, sugestão...', required: true },
-                    { label: 'E-mail para resposta', key: 'reply_email' as const, placeholder: 'seu@email.com', required: false },
-                    { label: 'Seu nome / nick', key: 'username' as const, placeholder: '@usuario', required: false },
+                    { label: t('chat_ticket_subject_lbl'), key: 'subject' as const, placeholder: t('chat_ticket_subject_ph'), required: true },
+                    { label: t('chat_ticket_email_lbl'), key: 'reply_email' as const, placeholder: 'seu@email.com', required: false },
+                    { label: t('chat_ticket_name_lbl'), key: 'username' as const, placeholder: '@usuario', required: false },
                   ].map(f => (
                     <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                       <label style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase' }}>{f.label}</label>
@@ -473,14 +471,14 @@ useEffect(() => {
                     </div>
                   ))}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                    <label style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase' }}>Mensagem *</label>
-                    <textarea value={ticketForm.message} onChange={e => setTicketForm(p => ({ ...p, message: e.target.value }))} placeholder="Descreva o problema ou sugestão em detalhes..." required rows={4}
+                    <label style={{ fontSize: '0.68rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase' }}>{t('chat_ticket_message_lbl')}</label>
+                    <textarea value={ticketForm.message} onChange={e => setTicketForm(p => ({ ...p, message: e.target.value }))} placeholder={t('chat_ticket_msg_ph')} required rows={4}
                       style={{ padding: '0.5rem 0.7rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '7px', color: C.text, fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
                   </div>
                   {ticketError && <div style={{ fontSize: '0.75rem', color: '#ff4444', padding: '0.4rem 0.6rem', background: 'rgba(255,68,68,0.1)', borderRadius: '6px' }}>{ticketError}</div>}
                   <button type="submit" disabled={ticketSending || !ticketForm.subject.trim() || !ticketForm.message.trim()}
                     style={{ padding: '0.6rem', background: C.primary, border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.85rem', fontWeight: 700, cursor: ticketSending ? 'not-allowed' : 'pointer', opacity: !ticketForm.subject.trim() || !ticketForm.message.trim() ? 0.45 : 1 }}>
-                    {ticketSending ? 'Enviando...' : 'Enviar ticket →'}
+                    {ticketSending ? t('chat_ticket_sending') : t('chat_ticket_send_btn')}
                   </button>
                 </form>
               )}
@@ -515,30 +513,30 @@ useEffect(() => {
           {brandLogo()}
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             {themeBtn}
-            <button onClick={() => setPage('landing')} style={{ background: 'transparent', border: `1px solid ${C.vvdim}`, color: C.muted, padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', minHeight: '44px' }}>Voltar</button>
+            <button onClick={() => setPage('landing')} style={{ background: 'transparent', border: `1px solid ${C.vvdim}`, color: C.muted, padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', minHeight: '44px' }}>{t('action_back')}</button>
           </div>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 65px)', padding: '2rem 1rem' }}>
           <div style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderTop: `3px solid ${C.primary}`, borderRadius: '18px', padding: isMobile ? '2rem 1.5rem' : '3rem 2.5rem', width: '100%', maxWidth: '460px', textAlign: 'center', boxShadow: `0 12px 50px ${C.primaryBgLight}` }}>
             <div className="sk-pending-pulse" style={{ width: '72px', height: '72px', borderRadius: '50%', background: C.primaryBg, border: `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '2rem' }}>⏳</div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: C.accentBg, border: `1px solid ${C.accentBorder}`, color: C.accent, fontSize: '0.68rem', padding: '0.22rem 0.85rem', borderRadius: '999px', marginBottom: '1.4rem', fontWeight: 700, letterSpacing: '1px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />AGUARDANDO APROVAÇÃO
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />{t('pending_badge')}
             </div>
-            <h1 style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 900, marginBottom: '0.6rem', color: C.text }}>Quase lá!</h1>
+            <h1 style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 900, marginBottom: '0.6rem', color: C.text }}>{t('pending_title')}</h1>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
               <PIcon id={loginPlatform} color={platColor} size={18} />
-              <span style={{ fontSize: '0.88rem', color: C.muted }}>Conectado via <strong style={{ color: C.text }}>{loginPlatform}</strong></span>
+              <span style={{ fontSize: '0.88rem', color: C.muted }}>{t('pending_connected_via')} <strong style={{ color: C.text }}>{loginPlatform}</strong></span>
             </div>
             <p style={{ fontSize: '0.87rem', color: C.muted, lineHeight: 1.75, maxWidth: '360px', margin: '0 auto 2rem' }}>
-              Você está na fila de espera. O administrador irá revisar seu acesso em breve e você será notificado assim que for aprovado.
+              {t('pending_desc')}
             </p>
             <div style={{ background: C.accentBg15, border: `1px dashed ${C.accentBorder}`, borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.6rem' }}>DEMONSTRAÇÃO</div>
+              <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.6rem' }}>{t('pending_demo_label')}</div>
               <button onClick={() => setPage('terms')} style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.65rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', width: '100%', minHeight: '44px' }}>
-                Simular aprovação do admin →
+                {t('pending_simulate_btn')}
               </button>
             </div>
-            <button onClick={() => setPage('landing')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', minHeight: '44px' }}>Voltar ao início</button>
+            <button onClick={() => setPage('landing')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', minHeight: '44px' }}>{t('action_back_home')}</button>
           </div>
         </div>
         {chatWidget}
@@ -551,9 +549,9 @@ useEffect(() => {
     const canContinue = termsState.termos && termsState.privacidade
     const toggleTerm = (key: keyof TermsState) => setTermsState(prev => ({ ...prev, [key]: !prev[key] }))
     const checkboxItems = [
-      { key: 'termos' as const, label: 'Li e concordo com os', link: 'Termos de Uso', required: true, slug: '/termos-e-condicoes' },
-      { key: 'privacidade' as const, label: 'Li e concordo com a', link: 'Política de Privacidade', required: true, slug: '/privacidade' },
-      { key: 'news' as const, label: 'Aceito receber novidades e promoções da Sheikstream', link: '', required: false, slug: '' },
+      { key: 'termos' as const, label: t('terms_item1_label'), link: t('terms_item1_link'), required: true, slug: '/termos-e-condicoes' },
+      { key: 'privacidade' as const, label: t('terms_item2_label'), link: t('terms_item2_link'), required: true, slug: '/privacidade' },
+      { key: 'news' as const, label: t('terms_item3_label'), link: '', required: false, slug: '' },
     ]
     return (
       <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
@@ -562,13 +560,13 @@ useEffect(() => {
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <div style={{ fontSize: '1.6rem', fontWeight: 900, color: C.text }}>Sheik<span style={{ color: C.accent }}>STREAM</span></div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.6rem', background: C.accentBg, border: `1px solid ${C.accentBorder}`, color: C.accent, fontSize: '0.72rem', padding: '0.22rem 0.85rem', borderRadius: '999px', fontWeight: 700 }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />Acesso aprovado!
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, display: 'inline-block' }} />{t('terms_approved_badge')}
             </div>
           </div>
           <div style={{ background: isDark ? '#1a1b2e' : '#ffffff', border: `1px solid ${C.borderStrong}`, borderRadius: '16px', overflow: 'hidden', boxShadow: `0 8px 40px ${C.primaryBgLight}` }}>
             <div style={{ padding: '1.5rem', borderBottom: `1px solid ${C.border}` }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: C.text, margin: 0, marginBottom: '0.4rem' }}>Antes de continuar</h2>
-              <p style={{ fontSize: '0.85rem', color: C.muted, margin: 0, lineHeight: 1.6 }}>Para usar a plataforma, você precisa aceitar os termos abaixo.</p>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: C.text, margin: 0, marginBottom: '0.4rem' }}>{t('terms_title')}</h2>
+              <p style={{ fontSize: '0.85rem', color: C.muted, margin: 0, lineHeight: 1.6 }}>{t('terms_desc')}</p>
             </div>
             <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {checkboxItems.map(item => (
@@ -581,17 +579,17 @@ useEffect(() => {
                   </span>
                 </div>
               ))}
-              <p style={{ fontSize: '0.75rem', color: C.vdim, margin: '0' }}>* obrigatórios</p>
+              <p style={{ fontSize: '0.75rem', color: C.vdim, margin: '0' }}>{t('terms_required_hint')}</p>
             </div>
             <div style={{ padding: '0 1.5rem 1.5rem' }}>
               <button disabled={!canContinue} onClick={() => { if (canContinue) { alert('Bem-vindo!'); setPage('landing'); setTermsState({ termos: false, privacidade: false, news: false }) } }}
                 style={{ width: '100%', padding: '0.85rem', background: canContinue ? `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})` : C.vvdim, color: canContinue ? '#fff' : C.vdim, border: 'none', borderRadius: '10px', fontSize: '0.95rem', fontWeight: 700, cursor: canContinue ? 'pointer' : 'not-allowed', minHeight: '44px' }}>
-                Continuar
+                {t('terms_continue_btn')}
               </button>
             </div>
           </div>
           <div style={{ textAlign: 'center', marginTop: '1.2rem' }}>
-            <button onClick={() => setPage('pending')} style={{ background: 'transparent', border: 'none', color: C.vdim, fontSize: '0.8rem', cursor: 'pointer', minHeight: '44px' }}>← Voltar</button>
+            <button onClick={() => setPage('pending')} style={{ background: 'transparent', border: 'none', color: C.vdim, fontSize: '0.8rem', cursor: 'pointer', minHeight: '44px' }}>{t('terms_back_btn')}</button>
           </div>
         </div>
       </div>
@@ -607,30 +605,30 @@ useEffect(() => {
           {brandLogo()}
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             {themeBtn}
-            <button onClick={() => { setPage('landing'); setWaitlistDone(false); setWaitlistEmail('') }} style={{ background: 'transparent', border: `1px solid ${C.vvdim}`, color: C.muted, padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', minHeight: '44px' }}>Voltar</button>
+            <button onClick={() => { setPage('landing'); setWaitlistDone(false); setWaitlistEmail('') }} style={{ background: 'transparent', border: `1px solid ${C.vvdim}`, color: C.muted, padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', minHeight: '44px' }}>{t('action_back')}</button>
           </div>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 65px)', padding: '2rem 1rem' }}>
           {!waitlistDone ? (
             <div style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderTop: `3px solid ${C.primary}`, borderRadius: '16px', padding: isMobile ? '2rem 1.5rem' : '2.5rem 2rem', width: '100%', maxWidth: '440px', textAlign: 'center' }}>
               <div style={{ width: '58px', height: '58px', borderRadius: '14px', background: C.primaryBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '1.7rem' }}>⏳</div>
-              <h1 style={{ fontSize: '1.65rem', fontWeight: 900, marginBottom: '0.5rem', color: C.text }}>Lista de espera</h1>
-              <p style={{ fontSize: '0.88rem', color: C.muted, lineHeight: 1.7, maxWidth: '320px', margin: '0 auto 2rem' }}>O SheikSTREAM está em beta fechado. Cadastre seu e-mail e avisamos quando sua vaga abrir.</p>
+              <h1 style={{ fontSize: '1.65rem', fontWeight: 900, marginBottom: '0.5rem', color: C.text }}>{t('waitlist_title')}</h1>
+              <p style={{ fontSize: '0.88rem', color: C.muted, lineHeight: 1.7, maxWidth: '320px', margin: '0 auto 2rem' }}>{t('waitlist_desc')}</p>
               <form onSubmit={e => { e.preventDefault(); if (waitlistEmail.trim()) setWaitlistDone(true) }}>
                 <input type="email" required placeholder="seu@email.com" value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)}
                   style={{ width: '100%', padding: '0.75rem 1rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.9rem', outline: 'none', marginBottom: '0.75rem', boxSizing: 'border-box', minHeight: '44px' }} />
                 <button type="submit" className="sk-btn-cta" style={{ width: '100%', padding: '0.82rem', background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer', minHeight: '44px' }}>
-                  Garantir minha vaga grátis
+                  {t('waitlist_submit_btn')}
                 </button>
               </form>
-              <p style={{ marginTop: '1.2rem', fontSize: '0.75rem', color: C.vdim }}>Sem spam. Apenas um aviso quando sua vaga abrir.</p>
+              <p style={{ marginTop: '1.2rem', fontSize: '0.75rem', color: C.vdim }}>{t('waitlist_no_spam')}</p>
             </div>
           ) : (
             <div style={{ background: C.cardBg, border: `1px solid ${C.accentBorder}`, borderTop: `3px solid ${C.accent}`, borderRadius: '16px', padding: isMobile ? '2rem 1.5rem' : '2.5rem 2rem', width: '100%', maxWidth: '440px', textAlign: 'center' }}>
               <div style={{ width: '58px', height: '58px', borderRadius: '50%', background: C.accentBg, border: `1px solid ${C.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem', fontSize: '1.7rem', color: C.accent }}>✓</div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem', color: C.text }}>Cadastro confirmado!</h2>
-              <p style={{ fontSize: '0.85rem', color: C.muted, lineHeight: 1.7, marginBottom: '2rem' }}>Avisamos em <strong style={{ color: C.text }}>{waitlistEmail}</strong> assim que abrir.</p>
-              <button onClick={() => { setPage('landing'); setWaitlistDone(false); setWaitlistEmail('') }} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.6rem 1.5rem', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', minHeight: '44px' }}>Voltar ao início</button>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem', color: C.text }}>{t('waitlist_done_title')}</h2>
+              <p style={{ fontSize: '0.85rem', color: C.muted, lineHeight: 1.7, marginBottom: '2rem' }}>{t('waitlist_done_prefix')} <strong style={{ color: C.text }}>{waitlistEmail}</strong> {t('waitlist_done_sub')}</p>
+              <button onClick={() => { setPage('landing'); setWaitlistDone(false); setWaitlistEmail('') }} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, padding: '0.6rem 1.5rem', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', minHeight: '44px' }}>{t('action_back_home')}</button>
             </div>
           )}
         </div>
@@ -642,7 +640,7 @@ useEffect(() => {
   // ── LOGIN ────────────────────────────────────────────────────────────────
   if (page === 'login') {
     const oauthPlatforms = [
-      { id: 'Twitch', color: '#9147ff', bg: 'rgba(145,71,255,0.1)', label: 'Entrar com Twitch' },
+      { id: 'Twitch', color: '#9147ff', bg: 'rgba(145,71,255,0.1)', label: t('login_twitch_btn') },
     ]
     return (
       <div style={{ fontFamily: "-apple-system,'Inter',system-ui,sans-serif", background: C.bg, minHeight: '100vh', color: C.text }}>
@@ -651,33 +649,33 @@ useEffect(() => {
           {brandLogo()}
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             {themeBtn}
-            <button onClick={() => setPage('landing')} style={{ background: 'transparent', border: `1px solid ${C.vvdim}`, color: C.muted, padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', minHeight: '44px' }}>Voltar</button>
+            <button onClick={() => setPage('landing')} style={{ background: 'transparent', border: `1px solid ${C.vvdim}`, color: C.muted, padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', minHeight: '44px' }}>{t('action_back')}</button>
           </div>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 65px)', padding: '2rem 1rem' }}>
           <div style={{ background: C.cardBg, border: `1px solid ${C.borderStrong}`, borderTop: `3px solid ${C.primary}`, borderRadius: '16px', padding: isMobile ? '1.5rem' : '2.2rem', width: '100%', maxWidth: '410px', boxShadow: `0 8px 40px ${C.primaryBgLight}` }}>
             <div style={{ textAlign: 'center', marginBottom: '1.8rem' }}>
               <div style={{ fontSize: isMobile ? '1.5rem' : '1.9rem', fontWeight: 900, letterSpacing: '1px', color: C.text }}>Sheik<span style={{ color: C.accent }}>STREAM</span></div>
-              <div style={{ fontSize: '0.85rem', color: C.muted, marginTop: '0.3rem' }}>Conecte sua plataforma e entre no hub</div>
+              <div style={{ fontSize: '0.85rem', color: C.muted, marginTop: '0.3rem' }}>{t('login_subtitle')}</div>
             </div>
             {oauthPlatforms.map(p => (
               <button key={p.id} onClick={() => handleOAuth(p.id)} className="sk-oauth-btn" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.85rem', padding: '0.7rem 1rem', borderRadius: '8px', marginBottom: '0.6rem', border: `1px solid ${loading === p.id ? p.color : C.oauthBtnBorder}`, background: loading === p.id ? p.bg : C.oauthBtnBg, color: C.text, fontSize: isMobile ? '0.82rem' : '0.9rem', fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', textAlign: 'left', minHeight: '44px' }}>
                 <span style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><PIcon id={p.id} color={p.color} size={20} /></span>
-                <span style={{ flex: 1 }}>{loading === p.id ? 'Conectando...' : p.label}</span>
+                <span style={{ flex: 1 }}>{loading === p.id ? t('login_connecting') : p.label}</span>
                 <span style={{ color: C.vdim, fontSize: '13px' }}>›</span>
               </button>
             ))}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', margin: '1rem 0' }}>
               <div style={{ flex: 1, height: '1px', background: C.separatorBg }} />
-              <span style={{ fontSize: '0.75rem', color: C.vdim }}>ou entre com e-mail</span>
+              <span style={{ fontSize: '0.75rem', color: C.vdim }}>{t('login_email_divider')}</span>
               <div style={{ flex: 1, height: '1px', background: C.separatorBg }} />
             </div>
             <input type="email" placeholder="seu@email.com" style={{ width: '100%', padding: '0.7rem 1rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, borderRadius: '8px', color: C.text, fontSize: '0.9rem', outline: 'none', marginBottom: '0.6rem', boxSizing: 'border-box', minHeight: '44px' }} />
             <button onClick={() => setPage('pending')} className="sk-btn-cta" style={{ width: '100%', padding: '0.72rem', background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', minHeight: '44px' }}>
-              Entrar com e-mail
+              {t('login_email_btn')}
             </button>
             <div style={{ textAlign: 'center', marginTop: '1.2rem', fontSize: '0.78rem', color: C.vdim }}>
-              Não tem conta?{' '}<span onClick={() => setPage('waitlist')} style={{ color: C.primary, cursor: 'pointer', fontWeight: 600 }}>Criar conta grátis</span>
+              {t('login_no_account')}{' '}<span onClick={() => setPage('waitlist')} style={{ color: C.primary, cursor: 'pointer', fontWeight: 600 }}>{t('login_create_free')}</span>
             </div>
           </div>
         </div>
@@ -752,7 +750,7 @@ useEffect(() => {
             {t('hero_title_1')} <span style={{ color: C.primary }}>{t('hero_title_2')}</span><br />{t('hero_title_3')}
           </h1>
           <div style={{ fontSize: isMobile ? '0.95rem' : '1.1rem', color: C.muted, marginBottom: '0.9rem', height: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-            <span>Automatize seus</span>
+            <span>{t('hero_automate_label')}</span>
             <span style={{ color: C.primary, fontWeight: 700, minWidth: '130px', textAlign: 'left' }}>{twText}<span className="sk-cursor" /></span>
           </div>
           <p style={{ fontSize: isMobile ? '0.9rem' : '1rem', color: C.muted, maxWidth: '500px', margin: '0 auto 1.6rem', lineHeight: 1.75 }}>
@@ -769,7 +767,7 @@ useEffect(() => {
                 <div key={i} style={{ width: '26px', height: '26px', borderRadius: '50%', background: c, border: `2px solid ${C.bg}`, marginLeft: i > 0 ? '-9px' : '0' }} />
               ))}
             </div>
-            <span style={{ fontSize: '0.85rem', color: C.muted }}><strong style={{ color: C.text }}>{userCount.toLocaleString('pt-BR')}+</strong> streamers cadastrados</span>
+            <span style={{ fontSize: '0.85rem', color: C.muted }}><strong style={{ color: C.text }}>{userCount.toLocaleString('pt-BR')}+</strong> {t('hero_users_count')}</span>
           </div>
           <div className="sk-hero-buttons" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '4rem', padding: isMobile ? `0 ${hp}` : '0' }}>
             <button onClick={() => window.location.href = '/login'} className="sk-btn-cta" style={{ background: `linear-gradient(135deg,${C.primary},${isDark ? '#7b5cff' : '#5a15d0'})`, color: '#fff', border: 'none', padding: '0.9rem 2.3rem', borderRadius: '8px', fontSize: '0.98rem', fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 24px ${C.primaryBgMed}`, minHeight: '44px' }}>
@@ -792,16 +790,16 @@ useEffect(() => {
                   </div>
                   <div style={{ flex: 1, padding: '1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.6rem' }}>
-                      {[{ label:'Viewers',value:'3.2K',platform:'Twitch',color:'#9147ff',delta:'+12%'},{ label:'Inscritos',value:'47.1K',platform:'YouTube',color:'#ff0000',delta:'+8%'},{ label:'Seguidores',value:'89K',platform:'Kick',color:'#53fc18',delta:'+23%'}].map(s => (
-                        <div key={s.label} style={{ background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '9px', padding: '0.7rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}><span style={{ fontSize: '0.6rem', color: C.dim }}>{s.label}</span><PIcon id={s.platform} color={s.color} size={11} /></div>
+                      {[{ labelKey:'mock_stat_viewers' as const,value:'3.2K',platform:'Twitch',color:'#9147ff',delta:'+12%'},{ labelKey:'mock_stat_subs' as const,value:'47.1K',platform:'YouTube',color:'#ff0000',delta:'+8%'},{ labelKey:'mock_stat_followers' as const,value:'89K',platform:'Kick',color:'#53fc18',delta:'+23%'}].map(s => (
+                        <div key={s.labelKey} style={{ background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '9px', padding: '0.7rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}><span style={{ fontSize: '0.6rem', color: C.dim }}>{t(s.labelKey)}</span><PIcon id={s.platform} color={s.color} size={11} /></div>
                           <div style={{ fontSize: '1.2rem', fontWeight: 800, color: C.text }}>{s.value}</div>
                           <div style={{ fontSize: '0.58rem', color: C.accent, fontWeight: 600 }}>{s.delta}</div>
                         </div>
                       ))}
                     </div>
                     <div style={{ background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '9px', padding: '0.8rem' }}>
-                      <div style={{ fontSize: '0.62rem', color: C.dim, marginBottom: '0.65rem', fontWeight: 600 }}>Audiência — últimos 7 dias</div>
+                      <div style={{ fontSize: '0.62rem', color: C.dim, marginBottom: '0.65rem', fontWeight: 600 }}>{t('mock_chart_label')}</div>
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '5px', height: '52px' }}>
                         {[38,54,70,48,82,65,100].map((h, i) => (<div key={i} style={{ flex: 1, height: `${h}%`, background: i===6 ? `linear-gradient(180deg,${C.primary},${C.primary}80)` : C.primaryBgLight, borderRadius: '3px 3px 0 0' }} />))}
                       </div>
@@ -816,10 +814,10 @@ useEffect(() => {
 
       {/* Stats */}
       <div className="sk-stats-row" style={{ display: 'flex', justifyContent: 'center', padding: `2.5rem ${hp}`, maxWidth: '700px', margin: '0 auto', width: '100%', flexWrap: 'wrap', gap: isMobile ? '0' : '0' }}>
-        {[{ value:'5',label:'plataformas integradas'},{ value:'R$0',label:'para sempre no beta'},{ value:'100%',label:'focado em BR'}].map((s,i) => (
-          <div key={s.label} style={{ textAlign:'center',flex:1,minWidth:'130px',padding:'0 1.5rem',borderLeft:i>0 ? `1px solid ${C.border}` : 'none' }}>
+        {[{ value:'5',labelKey:'stat_platforms' as const},{ value:'R$0',labelKey:'stat_price' as const},{ value:'100%',labelKey:'stat_focus' as const}].map((s,i) => (
+          <div key={s.labelKey} style={{ textAlign:'center',flex:1,minWidth:'130px',padding:'0 1.5rem',borderLeft:i>0 ? `1px solid ${C.border}` : 'none' }}>
             <div style={{ fontSize:'2rem',fontWeight:900,color:C.statColor,lineHeight:1,letterSpacing:'-1px' }}>{s.value}</div>
-            <div style={{ fontSize:'0.73rem',color:C.dim,marginTop:'0.3rem' }}>{s.label}</div>
+            <div style={{ fontSize:'0.73rem',color:C.dim,marginTop:'0.3rem' }}>{t(s.labelKey)}</div>
           </div>
         ))}
       </div>
@@ -838,21 +836,21 @@ useEffect(() => {
       {/* Como Funciona */}
       <section id="sk-howit" style={{ padding:`5rem ${hp}`,maxWidth:'1000px',margin:'0 auto',width:'100%',boxSizing:'border-box',...revealStyle('sk-howit') }}>
         <div style={{ textAlign:'center',marginBottom:'3.5rem' }}>
-          <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',fontWeight:700,marginBottom:'0.6rem' }}>Como funciona</div>
-          <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,letterSpacing:'-1px',marginBottom:'0.5rem' }}>3 passos simples</h2>
+          <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',fontWeight:700,marginBottom:'0.6rem' }}>{t('howit_label')}</div>
+          <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,letterSpacing:'-1px',marginBottom:'0.5rem' }}>{t('howit_heading')}</h2>
         </div>
         <div className="sk-howit-grid" style={{ display:'grid',gridTemplateColumns:'1fr auto 1fr auto 1fr',alignItems:'center',gap:'0.5rem' }}>
           {[
-            { icon:'🔗',title:'Conecte suas plataformas',desc:'Vincule Twitch, YouTube, Kick e TikTok com um clique.' },
-            { icon:'⚙️',title:'Configure em minutos',desc:'Defina comandos, sorteios e metas automaticamente.' },
-            { icon:'📊',title:'Gerencie num só lugar',desc:'Painel unificado com métricas em tempo real.' },
+            { icon:'🔗', titleKey:'step1_title' as const, descKey:'step1_desc' as const },
+            { icon:'⚙️', titleKey:'step2_title' as const, descKey:'step2_desc' as const },
+            { icon:'📊', titleKey:'step3_title' as const, descKey:'step3_desc' as const },
           ].map((step,i) => (
             <>
               <div key={step.icon} className="sk-step-card" style={{ background:C.cardBg,border:`1px solid ${C.border}`,borderRadius:'16px',padding:isMobile?'1.5rem 1rem':'2rem 1.5rem',textAlign:'center' }}>
                 <div style={{ width:'60px',height:'60px',borderRadius:'16px',background:C.primaryBg,border:`1px solid ${C.borderStrong}`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 1.2rem',fontSize:'1.8rem' }}>{step.icon}</div>
-                <div style={{ display:'inline-block',background:C.primaryBg,border:`1px solid ${C.border}`,color:C.primary,fontSize:'0.65rem',fontWeight:800,padding:'0.15rem 0.7rem',borderRadius:'999px',marginBottom:'0.8rem' }}>PASSO {i+1}</div>
-                <h3 style={{ fontSize:'0.95rem',fontWeight:700,color:C.text,marginBottom:'0.6rem' }}>{step.title}</h3>
-                <p style={{ fontSize:'0.82rem',color:C.muted,lineHeight:1.65,margin:0 }}>{step.desc}</p>
+                <div style={{ display:'inline-block',background:C.primaryBg,border:`1px solid ${C.border}`,color:C.primary,fontSize:'0.65rem',fontWeight:800,padding:'0.15rem 0.7rem',borderRadius:'999px',marginBottom:'0.8rem' }}>{t('step_label')} {i+1}</div>
+                <h3 style={{ fontSize:'0.95rem',fontWeight:700,color:C.text,marginBottom:'0.6rem' }}>{t(step.titleKey)}</h3>
+                <p style={{ fontSize:'0.82rem',color:C.muted,lineHeight:1.65,margin:0 }}>{t(step.descKey)}</p>
               </div>
               {i<2 && <div key={`a${i}`} className="sk-howit-arrow" style={{ textAlign:'center',fontSize:'1.6rem',color:C.primary,opacity:0.6 }}>→</div>}
             </>
@@ -864,22 +862,22 @@ useEffect(() => {
 
       {/* Features */}
       <section id="sk-features" style={{ padding:`5rem ${hp}`,maxWidth:'1000px',margin:'0 auto',width:'100%',boxSizing:'border-box',...revealStyle('sk-features') }}>
-        <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',marginBottom:'0.6rem',fontWeight:700 }}>Produto</div>
-        <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,marginBottom:'0.6rem',letterSpacing:'-1px' }}>Feito pra quem vive de stream</h2>
-        <p style={{ fontSize:'0.9rem',color:C.dim,marginBottom:'2.5rem',maxWidth:'480px' }}>Tudo que você precisa para crescer, num só painel.</p>
+        <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',marginBottom:'0.6rem',fontWeight:700 }}>{t('features_label')}</div>
+        <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,marginBottom:'0.6rem',letterSpacing:'-1px' }}>{t('features_heading')}</h2>
+        <p style={{ fontSize:'0.9rem',color:C.dim,marginBottom:'2.5rem',maxWidth:'480px' }}>{t('features_sub')}</p>
         <div className="sk-features-grid" style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',border:`1px solid ${C.border}`,borderRadius:'14px',overflow:'hidden' }}>
           {[
-            { icon:'◈',title:'Painel Unificado',desc:'Métricas de todas as plataformas em tempo real.',green:true },
-            { icon:'◎',title:'Gerenciamento de Metas',desc:'Defina e acompanhe metas de seguidores e subs.',green:false },
-            { icon:'✦',title:'Sorteios e Eventos',desc:'Sorteios automáticos que deixam o chat em chamas.',green:true },
-            { icon:'◉',title:'Notificações ao Vivo',desc:'Avise sua comunidade no segundo exato da live.',green:false },
-            { icon:'▲',title:'Analytics Avançados',desc:'Descubra o que retém — e o que faz sair.',green:true },
-            { icon:'⬡',title:'Bot de Automação',desc:'Moderação, comandos e respostas automáticas.',green:false },
+            { icon:'◈',titleKey:'feature1_title' as const,descKey:'feature1_desc' as const,green:true },
+            { icon:'◎',titleKey:'feature2_title' as const,descKey:'feature2_desc' as const,green:false },
+            { icon:'✦',titleKey:'feature3_title' as const,descKey:'feature3_desc' as const,green:true },
+            { icon:'◉',titleKey:'feature4_title' as const,descKey:'feature4_desc' as const,green:false },
+            { icon:'▲',titleKey:'feature5_title' as const,descKey:'feature5_desc' as const,green:true },
+            { icon:'⬡',titleKey:'feature6_title' as const,descKey:'feature6_desc' as const,green:false },
           ].map(f => (
-            <div key={f.title} className="sk-feature-card" style={{ background:C.cardBg,padding:isMobile?'1.3rem':'1.6rem',borderRight:`1px solid ${C.featureSep}`,borderBottom:`1px solid ${C.featureSep}` }}>
+            <div key={f.titleKey} className="sk-feature-card" style={{ background:C.cardBg,padding:isMobile?'1.3rem':'1.6rem',borderRight:`1px solid ${C.featureSep}`,borderBottom:`1px solid ${C.featureSep}` }}>
               <div style={{ width:'38px',height:'38px',background:f.green?C.iconGreenBg:C.iconPurpleBg,borderRadius:'9px',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'1rem',fontSize:'17px',color:f.green?C.iconGreen:C.iconPurple,border:`1px solid ${f.green?C.accentBorder:C.border}` }}>{f.icon}</div>
-              <div style={{ fontSize:'0.93rem',fontWeight:700,color:C.text,marginBottom:'0.4rem' }}>{f.title}</div>
-              <div style={{ fontSize:'0.81rem',color:C.muted,lineHeight:1.65 }}>{f.desc}</div>
+              <div style={{ fontSize:'0.93rem',fontWeight:700,color:C.text,marginBottom:'0.4rem' }}>{t(f.titleKey)}</div>
+              <div style={{ fontSize:'0.81rem',color:C.muted,lineHeight:1.65 }}>{t(f.descKey)}</div>
             </div>
           ))}
         </div>
@@ -890,17 +888,17 @@ useEffect(() => {
       {/* Depoimentos */}
       <section id="sk-testimonials" style={{ padding:`5rem ${hp}`,maxWidth:'1000px',margin:'0 auto',width:'100%',boxSizing:'border-box',...revealStyle('sk-testimonials') }}>
         <div style={{ textAlign:'center',marginBottom:'3rem' }}>
-          <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',fontWeight:700,marginBottom:'0.6rem' }}>Depoimentos</div>
-          <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,letterSpacing:'-1px' }}>O que nossos usuários falam</h2>
+          <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',fontWeight:700,marginBottom:'0.6rem' }}>{t('testimonials_label')}</div>
+          <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,letterSpacing:'-1px' }}>{t('testimonials_heading')}</h2>
         </div>
         <div className="sk-testimonials-grid" style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:'1.25rem' }}>
-          {TESTIMONIALS.map(t => (
-            <div key={t.name} className="sk-testimonial-card" style={{ background:C.cardBg,border:`1px solid ${C.border}`,borderRadius:'16px',padding:'1.8rem' }}>
+          {TESTIMONIAL_KEYS.map(tm => (
+            <div key={tm.name} className="sk-testimonial-card" style={{ background:C.cardBg,border:`1px solid ${C.border}`,borderRadius:'16px',padding:'1.8rem' }}>
               <div style={{ color:'#fbbf24',fontSize:'1rem',letterSpacing:'2px',marginBottom:'1rem' }}>★★★★★</div>
-              <p style={{ fontSize:'0.88rem',color:C.muted,lineHeight:1.75,marginBottom:'1.4rem',fontStyle:'italic' }}>"{t.text}"</p>
+              <p style={{ fontSize:'0.88rem',color:C.muted,lineHeight:1.75,marginBottom:'1.4rem',fontStyle:'italic' }}>"{t(tm.textKey)}"</p>
               <div style={{ display:'flex',alignItems:'center',gap:'0.75rem' }}>
-                <div style={{ width:'40px',height:'40px',borderRadius:'50%',background:t.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.85rem',fontWeight:900,color:'#fff',flexShrink:0,boxShadow:`0 3px 12px ${t.color}44` }}>{t.initials}</div>
-                <div><div style={{ fontSize:'0.88rem',fontWeight:700,color:C.text }}>{t.name}</div><div style={{ fontSize:'0.72rem',color:C.muted }}>{t.platform}</div></div>
+                <div style={{ width:'40px',height:'40px',borderRadius:'50%',background:tm.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.85rem',fontWeight:900,color:'#fff',flexShrink:0,boxShadow:`0 3px 12px ${tm.color}44` }}>{tm.initials}</div>
+                <div><div style={{ fontSize:'0.88rem',fontWeight:700,color:C.text }}>{tm.name}</div><div style={{ fontSize:'0.72rem',color:C.muted }}>{t(tm.platformKey)}</div></div>
               </div>
             </div>
           ))}
@@ -912,18 +910,18 @@ useEffect(() => {
       {/* FAQ */}
       <section id="sk-faq" style={{ padding:`5rem ${hp}`,maxWidth:'780px',margin:'0 auto',width:'100%',boxSizing:'border-box',...revealStyle('sk-faq') }}>
         <div style={{ textAlign:'center',marginBottom:'3rem' }}>
-          <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',fontWeight:700,marginBottom:'0.6rem' }}>FAQ</div>
-          <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,letterSpacing:'-1px' }}>Dúvidas frequentes</h2>
+          <div style={{ fontSize:'0.7rem',letterSpacing:'2.5px',color:C.accent,textTransform:'uppercase',fontWeight:700,marginBottom:'0.6rem' }}>{t('faq_label')}</div>
+          <h2 style={{ fontSize:isMobile?'1.7rem':'2.2rem',fontWeight:900,color:C.text,letterSpacing:'-1px' }}>{t('faq_heading')}</h2>
         </div>
         <div style={{ display:'flex',flexDirection:'column',gap:'0.5rem' }}>
-          {FAQ_ITEMS.map((item,i) => (
+          {FAQ_KEYS.map((item,i) => (
             <div key={i} className="sk-faq-item" onClick={() => setFaqOpen(faqOpen===i?null:i)}
               style={{ background:faqOpen===i?C.primaryBgLight:C.cardBg,border:`1px solid ${faqOpen===i?C.borderStrong:C.border}`,borderRadius:'10px',overflow:'hidden' }}>
               <div style={{ padding:'1.1rem 1.4rem',display:'flex',justifyContent:'space-between',alignItems:'center',gap:'1rem',minHeight:'44px' }}>
-                <span style={{ fontSize:isMobile?'0.88rem':'0.93rem',fontWeight:600,color:C.text }}>{item.q}</span>
+                <span style={{ fontSize:isMobile?'0.88rem':'0.93rem',fontWeight:600,color:C.text }}>{t(item.qKey)}</span>
                 <span style={{ color:C.primary,fontSize:'1.1rem',fontWeight:700,flexShrink:0,transition:'transform 0.15s',transform:faqOpen===i?'rotate(45deg)':'rotate(0deg)' }}>+</span>
               </div>
-              {faqOpen===i && <div style={{ padding:'0 1.4rem 1.1rem',fontSize:'0.87rem',color:C.muted,lineHeight:1.75,borderTop:`1px solid ${C.border}`,paddingTop:'1rem' }}>{item.a}</div>}
+              {faqOpen===i && <div style={{ padding:'0 1.4rem 1.1rem',fontSize:'0.87rem',color:C.muted,lineHeight:1.75,borderTop:`1px solid ${C.border}`,paddingTop:'1rem' }}>{t(item.aKey)}</div>}
             </div>
           ))}
         </div>
@@ -935,11 +933,11 @@ useEffect(() => {
       <section id="sk-cta" style={{ padding:`5rem ${hp}`,maxWidth:'1000px',margin:'0 auto',width:'100%',boxSizing:'border-box',...revealStyle('sk-cta') }}>
         <div style={{ background:`linear-gradient(135deg,${C.primaryBg},${C.accentBg15})`,border:`1px solid ${C.borderStrong}`,borderRadius:'20px',padding:isMobile?'2.5rem 1.5rem':'4rem 3rem',textAlign:'center',position:'relative',overflow:'hidden' }}>
           <div style={{ position:'absolute',top:'-60px',left:'50%',transform:'translateX(-50%)',width:'500px',height:'280px',background:`radial-gradient(ellipse, ${C.primary}20, transparent 70%)`,pointerEvents:'none' }} />
-          <div style={{ display:'inline-block',background:C.accentBg15,border:`1px solid ${C.accentBorder}`,color:C.accent,fontSize:'0.62rem',padding:'0.22rem 0.85rem',borderRadius:'999px',fontWeight:700,marginBottom:'1.2rem',letterSpacing:'1px',position:'relative' }}>BETA ABERTO</div>
-          <h2 style={{ fontSize:isMobile?'1.6rem':'2.4rem',fontWeight:900,color:C.text,marginBottom:'0.8rem',letterSpacing:'-1px',position:'relative' }}>Pronto pra centralizar tudo?</h2>
-          <p style={{ fontSize:isMobile?'0.9rem':'1rem',color:C.muted,marginBottom:'2.2rem',position:'relative',maxWidth:'420px',margin:'0 auto 2.2rem',lineHeight:1.7 }}>Conecte suas plataformas em menos de 2 minutos e comece a crescer de verdade.</p>
+          <div style={{ display:'inline-block',background:C.accentBg15,border:`1px solid ${C.accentBorder}`,color:C.accent,fontSize:'0.62rem',padding:'0.22rem 0.85rem',borderRadius:'999px',fontWeight:700,marginBottom:'1.2rem',letterSpacing:'1px',position:'relative' }}>{t('cta_badge')}</div>
+          <h2 style={{ fontSize:isMobile?'1.6rem':'2.4rem',fontWeight:900,color:C.text,marginBottom:'0.8rem',letterSpacing:'-1px',position:'relative' }}>{t('cta_heading')}</h2>
+          <p style={{ fontSize:isMobile?'0.9rem':'1rem',color:C.muted,marginBottom:'2.2rem',position:'relative',maxWidth:'420px',margin:'0 auto 2.2rem',lineHeight:1.7 }}>{t('cta_desc')}</p>
           <button onClick={() => window.location.href='/login'} className="sk-btn-cta" style={{ background:`linear-gradient(135deg,${C.primary},${isDark?'#7b5cff':'#5a15d0'})`,color:'#fff',border:'none',padding:'1rem 2.8rem',borderRadius:'9px',fontSize:'1rem',fontWeight:700,cursor:'pointer',boxShadow:`0 6px 28px ${C.primaryBgMed}`,position:'relative',minHeight:'44px' }}>{t('hero_cta')} →</button>
-          <div style={{ fontSize:'0.78rem',color:C.dim,marginTop:'1.1rem',position:'relative' }}>Sem cartão de crédito. Acesso imediato ao beta.</div>
+          <div style={{ fontSize:'0.78rem',color:C.dim,marginTop:'1.1rem',position:'relative' }}>{t('cta_sub')}</div>
         </div>
       </section>
 
@@ -948,14 +946,14 @@ useEffect(() => {
         <div style={{ borderBottom:`1px solid ${C.border}` }}>
           <div style={{ maxWidth:'1000px',margin:'0 auto',padding:`1.8rem ${hp}`,display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',flexWrap:'wrap',gap:'1.5rem',flexDirection:isMobile?'column':'row' }}>
             <div>
-              <div style={{ fontSize:'0.97rem',fontWeight:700,color:C.text,marginBottom:'0.2rem' }}>Fique por dentro</div>
-              <div style={{ fontSize:'0.8rem',color:C.dim }}>Assine para saber as novidades</div>
+              <div style={{ fontSize:'0.97rem',fontWeight:700,color:C.text,marginBottom:'0.2rem' }}>{t('footer_newsletter_title')}</div>
+              <div style={{ fontSize:'0.8rem',color:C.dim }}>{t('footer_newsletter_sub')}</div>
             </div>
             {!newsletterDone ? (
               <form onSubmit={e=>{ e.preventDefault(); if(newsletterEmail.trim()) setNewsletterDone(true) }} style={{ display:'flex',gap:'0.5rem',flexWrap:'wrap',width:isMobile?'100%':'auto' }}>
                 <input type="email" required placeholder="seu@email.com" value={newsletterEmail} onChange={e=>setNewsletterEmail(e.target.value)}
                   style={{ padding:'0.6rem 1rem',background:C.inputBg,border:`1px solid ${C.inputBorder}`,borderRadius:'8px',color:C.text,fontSize:'0.85rem',outline:'none',width:isMobile?'100%':'220px',boxSizing:'border-box',minHeight:'44px' }} />
-                <button type="submit" style={{ padding:'0.6rem 1.3rem',background:C.primary,color:'#fff',border:'none',borderRadius:'8px',fontSize:'0.85rem',fontWeight:600,cursor:'pointer',minHeight:'44px',width:isMobile?'100%':'auto' }}>Assinar</button>
+                <button type="submit" style={{ padding:'0.6rem 1.3rem',background:C.primary,color:'#fff',border:'none',borderRadius:'8px',fontSize:'0.85rem',fontWeight:600,cursor:'pointer',minHeight:'44px',width:isMobile?'100%':'auto' }}>{t('footer_subscribe_btn')}</button>
               </form>
             ) : (
               <div style={{ color:C.accent,fontSize:'0.9rem',fontWeight:700 }}>✓ Inscrito!</div>
@@ -975,25 +973,25 @@ useEffect(() => {
               </div>
             </div>
             <div>
-              <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Produto</div>
+              <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>{t('footer_product')}</div>
               <div className="sk-legal-link" onClick={()=>scrollToSection('sk-features')} style={{ fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',cursor:'pointer' }}>{t('nav_features')}</div>
             </div>
             <div>
-              <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Streamers</div>
+              <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>{t('footer_streamers_col')}</div>
               {['Twitch','YouTube','Kick','TikTok'].map(p => (<div key={p} className="sk-legal-link" style={{ fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem' }}>{p}</div>))}
             </div>
             <div>
-              <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Empresa</div>
+              <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>{t('footer_company')}</div>
               {[{ label: t('footer_about'), href:'/sobre' },{ label: t('footer_blog'), href:'/blog' },{ label: t('footer_contact'), href:'/contato' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ display:'block',fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',textDecoration:'none' }}>{l.label}</a>))}
             </div>
             <div>
-              <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>Legal</div>
+              <div style={{ fontSize:'0.65rem',fontWeight:700,letterSpacing:'1.8px',color:C.vdim,textTransform:'uppercase',marginBottom:'1.1rem' }}>{t('footer_legal_col')}</div>
               {[{ label: t('footer_terms'), href:'/termos-e-condicoes' },{ label: t('footer_privacy'), href:'/privacidade' },{ label: t('footer_cookies'), href:'/cookies' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ display:'block',fontSize:'0.83rem',color:C.dim,marginBottom:'0.6rem',textDecoration:'none' }}>{l.label}</a>))}
             </div>
           </div>
           <div style={{ height:'1px',background:C.border,marginBottom:'1.4rem' }} />
           <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'1rem',flexDirection:isMobile?'column':'row',textAlign:isMobile?'center':'left' }}>
-            <div style={{ fontSize:'0.73rem',color:C.vdim }}>🇧🇷 Feito no Brasil · © 2025 Sheikstream.</div>
+            <div style={{ fontSize:'0.73rem',color:C.vdim }}>{t('footer_made_in_brazil')}</div>
             <div style={{ display:'flex',gap:'1.4rem',alignItems:'center',flexWrap:'wrap',justifyContent:'center' }}>
               {[{ label: t('footer_terms'), href:'/termos-e-condicoes' },{ label: t('footer_privacy'), href:'/privacidade' }].map(l => (<a key={l.label} href={l.href} className="sk-legal-link" style={{ fontSize:'0.73rem',color:C.vdim,textDecoration:'none' }}>{l.label}</a>))}
             </div>
