@@ -8,12 +8,25 @@ const S = {
   borderP: 'rgba(155,48,255,0.25)', text: '#e8e6f8',
   muted: 'rgba(232,230,248,0.6)', dim: 'rgba(232,230,248,0.38)',
   primary: '#9b30ff', primaryBg: 'rgba(155,48,255,0.14)',
-  sent: '#9b30ff', received: '#1e2035',
-  input: 'rgba(255,255,255,0.05)',
+  sent: '#9b30ff', received: '#1e2035', input: 'rgba(255,255,255,0.05)',
 }
 
+const SETUP_SQL = `-- Cole esse SQL no editor de SQL do seu projeto Supabase (uma única vez)
+CREATE TABLE IF NOT EXISTS dm_messages (
+  id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  sender_id   TEXT        NOT NULL,
+  sender_name TEXT        NOT NULL,
+  sender_image TEXT,
+  receiver_id TEXT        NOT NULL,
+  content     TEXT        NOT NULL,
+  read_at     TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS dm_recv_idx ON dm_messages(receiver_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS dm_send_idx ON dm_messages(sender_id,   created_at DESC);`
+
 type ChatUser = { id: string; name: string; image?: string | null; email?: string }
-type Message = {
+type Message  = {
   id: string; sender_id: string; receiver_id: string
   sender_name: string; sender_image?: string | null
   content: string; read_at: string | null; created_at: string
@@ -32,8 +45,7 @@ function Avatar({ name, image, size = 36 }: { name: string; image?: string | nul
 }
 
 function timeLabel(iso: string) {
-  const d = new Date(iso)
-  const now = new Date()
+  const d = new Date(iso), now = new Date()
   const diff = now.getTime() - d.getTime()
   if (diff < 60000) return 'agora'
   if (diff < 3600000) return `${Math.floor(diff / 60000)}min`
@@ -42,28 +54,7 @@ function timeLabel(iso: string) {
 }
 
 function playNotificationSound() {
-  try {
-    const audio = new Audio(SOUND_URL)
-    audio.volume = 0.6
-    audio.play().catch(() => {})
-  } catch {}
-}
-
-// localStorage helpers
-const LS_MSGS = (a: string, b: string) => `sk-dm-${[a, b].sort().join('-')}`
-const LS_USERS = 'sk-dm-users'
-
-function lsGetMsgs(a: string, b: string): Message[] {
-  try { return JSON.parse(localStorage.getItem(LS_MSGS(a, b)) || '[]') } catch { return [] }
-}
-function lsSaveMsgs(a: string, b: string, msgs: Message[]) {
-  try { localStorage.setItem(LS_MSGS(a, b), JSON.stringify(msgs.slice(-200))) } catch {}
-}
-function lsGetUsers(): ChatUser[] {
-  try { return JSON.parse(localStorage.getItem(LS_USERS) || '[]') } catch { return [] }
-}
-function lsSaveUsers(users: ChatUser[]) {
-  try { localStorage.setItem(LS_USERS, JSON.stringify(users)) } catch {}
+  try { const a = new Audio(SOUND_URL); a.volume = 0.6; a.play().catch(() => {}) } catch {}
 }
 
 export function ChatWidget({
@@ -73,51 +64,43 @@ export function ChatWidget({
   currentUserName: string | null
   currentUserImage?: string | null
 }) {
-  const [open, setOpen] = useState(false)
-  const [view, setView] = useState<'list' | 'chat'>('list')
-  const [users, setUsers] = useState<ChatUser[]>([])
-  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
-  const [unread, setUnread] = useState<Record<string, number>>({})
+  const [open, setOpen]                   = useState(false)
+  const [view, setView]                   = useState<'list' | 'chat' | 'setup'>('list')
+  const [users, setUsers]                 = useState<ChatUser[]>([])
+  const [selectedUser, setSelectedUser]   = useState<ChatUser | null>(null)
+  const [messages, setMessages]           = useState<Message[]>([])
+  const [input, setInput]                 = useState('')
+  const [sending, setSending]             = useState(false)
+  const [unread, setUnread]               = useState<Record<string, number>>({})
+  const [totalUnread, setTotalUnread]     = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [totalUnread, setTotalUnread] = useState(0)
-  const lastCheckRef = useRef<string>(new Date().toISOString())
-  const msgsEndRef = useRef<HTMLDivElement>(null)
-  const knownMsgIds = useRef<Set<string>>(new Set())
+  const [copied, setCopied]               = useState(false)
+  const lastCheckRef  = useRef<string>(new Date().toISOString())
+  const knownIds      = useRef<Set<string>>(new Set())
+  const msgsEndRef    = useRef<HTMLDivElement>(null)
 
-  // Load users
+  // ── Load users ──────────────────────────────────────────────────────────────
   const loadUsers = useCallback(async () => {
     try {
       const r = await fetch('/api/dm/users')
-      if (r.ok) {
-        const data: ChatUser[] = await r.json()
-        if (data.length > 0) { setUsers(data); lsSaveUsers(data) }
-        else setUsers(lsGetUsers())
-      } else setUsers(lsGetUsers())
-    } catch { setUsers(lsGetUsers()) }
+      if (!r.ok) return
+      const data: ChatUser[] = await r.json()
+      if (Array.isArray(data)) setUsers(data)
+    } catch {}
   }, [])
 
-  // Load conversation
-  const loadConversation = useCallback(async (otherUser: ChatUser) => {
-    if (!currentUserId) return
+  // ── Load conversation ────────────────────────────────────────────────────────
+  const loadConversation = useCallback(async (other: ChatUser) => {
     try {
-      const r = await fetch(`/api/dm?with=${otherUser.id}`)
-      if (r.ok) {
-        const data: Message[] = await r.json()
-        setMessages(data)
-        data.forEach(m => knownMsgIds.current.add(m.id))
-        lsSaveMsgs(currentUserId, otherUser.id, data)
-      } else {
-        setMessages(lsGetMsgs(currentUserId, otherUser.id))
-      }
-    } catch {
-      setMessages(lsGetMsgs(currentUserId, otherUser.id))
-    }
-  }, [currentUserId])
+      const r = await fetch(`/api/dm?with=${other.id}`)
+      if (!r.ok) { setView('setup'); return }
+      const data: Message[] = await r.json()
+      setMessages(Array.isArray(data) ? data : [])
+      data.forEach(m => knownIds.current.add(m.id))
+    } catch { setView('setup') }
+  }, [])
 
-  // Poll for new messages
+  // ── Poll ─────────────────────────────────────────────────────────────────────
   const poll = useCallback(async () => {
     if (!currentUserId) return
     try {
@@ -126,70 +109,57 @@ export function ChatWidget({
       const r = await fetch(`/api/dm?since=${encodeURIComponent(since)}`)
       if (!r.ok) return
       const newMsgs: Message[] = await r.json()
-      if (newMsgs.length === 0) return
+      if (!Array.isArray(newMsgs) || newMsgs.length === 0) return
 
-      const truly = newMsgs.filter(m => !knownMsgIds.current.has(m.id))
-      if (truly.length === 0) return
-      truly.forEach(m => knownMsgIds.current.add(m.id))
+      const novel = newMsgs.filter(m => !knownIds.current.has(m.id))
+      if (novel.length === 0) return
+      novel.forEach(m => knownIds.current.add(m.id))
 
       // Update unread counts
       const counts: Record<string, number> = {}
-      truly.forEach(m => { counts[m.sender_id] = (counts[m.sender_id] ?? 0) + 1 })
-      setUnread(prev => {
-        const next = { ...prev }
-        Object.entries(counts).forEach(([id, c]) => { next[id] = (next[id] ?? 0) + c })
-        return next
+      novel.forEach(m => { counts[m.sender_id] = (counts[m.sender_id] ?? 0) + 1 })
+      setUnread(prev => { const n = { ...prev }; Object.entries(counts).forEach(([id, c]) => { n[id] = (n[id] ?? 0) + c }); return n })
+      setTotalUnread(prev => prev + novel.length)
+
+      // If conversation is open, append relevant messages
+      setSelectedUser(su => {
+        if (su) {
+          const rel = novel.filter(m => m.sender_id === su.id || m.receiver_id === su.id)
+          if (rel.length) setMessages(prev => [...prev, ...rel])
+        }
+        return su
       })
-      setTotalUnread(prev => prev + truly.length)
 
-      // Update open conversation if relevant
-      if (selectedUser) {
-        const relevant = truly.filter(m => m.sender_id === selectedUser.id || m.receiver_id === selectedUser.id)
-        if (relevant.length > 0) {
-          setMessages(prev => {
-            const updated = [...prev, ...relevant]
-            lsSaveMsgs(currentUserId, selectedUser.id, updated)
-            return updated
-          })
-        }
-      }
-
-      // Notification + sound for each unique sender
+      // Notification + sound
       playNotificationSound()
-      const senders = new Map<string, Message>()
-      truly.forEach(m => { if (!senders.has(m.sender_id)) senders.set(m.sender_id, m) })
-      senders.forEach((msg) => {
-        const u = users.find(u => u.id === msg.sender_id) ?? {
-          id: msg.sender_id, name: msg.sender_name, image: msg.sender_image,
-        }
+      const bySender = new Map<string, Message>()
+      novel.forEach(m => { if (!bySender.has(m.sender_id)) bySender.set(m.sender_id, m) })
+      bySender.forEach(msg => {
+        const u = users.find(u => u.id === msg.sender_id) ?? { id: msg.sender_id, name: msg.sender_name, image: msg.sender_image }
         const notif: Notification = { user: u, message: msg.content, msgId: msg.id }
         setNotifications(prev => [...prev.filter(n => n.user.id !== u.id), notif])
-        // Auto-dismiss after 6s
         setTimeout(() => setNotifications(prev => prev.filter(n => n.msgId !== notif.msgId)), 6000)
       })
     } catch {}
-  }, [currentUserId, selectedUser, users])
+  }, [currentUserId, users])
 
   useEffect(() => {
     if (!currentUserId) return
     loadUsers()
-    const interval = setInterval(poll, 5000)
-    return () => clearInterval(interval)
+    const iv = setInterval(poll, 5000)
+    return () => clearInterval(iv)
   }, [currentUserId, loadUsers, poll])
 
-  // Scroll to bottom when messages update
-  useEffect(() => {
-    msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  // Mark as read when opening conversation
+  // ── Open conversation ────────────────────────────────────────────────────────
   function openConversation(u: ChatUser) {
     setSelectedUser(u)
     setView('chat')
     loadConversation(u)
+    const had = unread[u.id] ?? 0
     setUnread(prev => { const n = { ...prev }; delete n[u.id]; return n })
-    setTotalUnread(prev => Math.max(0, prev - (unread[u.id] ?? 0)))
-    // Mark as read in backend
+    setTotalUnread(prev => Math.max(0, prev - had))
     fetch('/api/dm', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sender_id: u.id }) }).catch(() => {})
   }
 
@@ -199,58 +169,51 @@ export function ChatWidget({
     openConversation(notif.user)
   }
 
+  // ── Send message ─────────────────────────────────────────────────────────────
   async function sendMessage() {
-    if (!input.trim() || !selectedUser || !currentUserId) return
+    if (!input.trim() || !selectedUser || !currentUserId || sending) return
     setSending(true)
-    const optimistic: Message = {
-      id: crypto.randomUUID(),
-      sender_id: currentUserId, receiver_id: selectedUser.id,
-      sender_name: currentUserName ?? 'Você',
-      sender_image: currentUserImage ?? null,
-      content: input.trim(), read_at: null,
-      created_at: new Date().toISOString(),
-    }
-    setMessages(prev => {
-      const updated = [...prev, optimistic]
-      lsSaveMsgs(currentUserId, selectedUser.id, updated)
-      return updated
-    })
-    knownMsgIds.current.add(optimistic.id)
+    const content = input.trim()
     setInput('')
+    const optimistic: Message = {
+      id: `opt-${Date.now()}`, sender_id: currentUserId, receiver_id: selectedUser.id,
+      sender_name: currentUserName ?? 'Você', sender_image: currentUserImage ?? null,
+      content, read_at: null, created_at: new Date().toISOString(),
+    }
+    setMessages(prev => [...prev, optimistic])
     try {
       const r = await fetch('/api/dm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receiver_id: selectedUser.id, content: optimistic.content }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiver_id: selectedUser.id, content }),
       })
       if (r.ok) {
         const real: Message = await r.json()
-        knownMsgIds.current.add(real.id)
-        setMessages(prev => {
-          const updated = prev.map(m => m.id === optimistic.id ? real : m)
-          lsSaveMsgs(currentUserId, selectedUser.id, updated)
-          return updated
-        })
+        knownIds.current.add(real.id)
+        setMessages(prev => prev.map(m => m.id === optimistic.id ? real : m))
+      } else {
+        setView('setup')
+        setMessages(prev => prev.filter(m => m.id !== optimistic.id))
       }
-    } catch {}
-    setSaving(false)
+    } catch {
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id))
+    } finally { setSending(false) }
   }
 
-  function setSaving(_: boolean) { setSending(false) }
+  function copySQL() {
+    navigator.clipboard.writeText(SETUP_SQL).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+  }
 
   if (!currentUserId) return null
 
-  const unreadByUser = (uid: string) => unread[uid] ?? 0
-
   return (
     <>
-      {/* Notification popups */}
+      {/* ── Notification popups ─────────────────────────────────────────────── */}
       {notifications.map((notif, idx) => (
         <div key={notif.msgId} style={{
-          position: 'fixed', bottom: 88 + idx * 90, right: 24, width: 300, zIndex: 9999,
-          background: '#1a1c30', border: '1px solid rgba(155,48,255,0.35)',
+          position: 'fixed', bottom: 88 + idx * 88, right: 24, width: 300, zIndex: 9999,
+          background: '#1a1c30', border: '1px solid rgba(155,48,255,0.4)',
           borderRadius: '14px', padding: '0.85rem 1rem',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(155,48,255,0.12)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
           animation: 'slideInRight 0.25s ease',
           display: 'flex', alignItems: 'flex-start', gap: '0.65rem',
         }}>
@@ -270,21 +233,18 @@ export function ChatWidget({
         </div>
       ))}
 
-      {/* Chat panel */}
+      {/* ── Chat panel ──────────────────────────────────────────────────────── */}
       {open && (
         <div style={{
           position: 'fixed', bottom: 80, right: 24, width: 340, height: 500,
-          background: S.bg, border: `1px solid ${S.border}`,
-          borderRadius: '16px', zIndex: 9998, display: 'flex', flexDirection: 'column',
-          boxShadow: '0 16px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(155,48,255,0.08)',
-          overflow: 'hidden',
+          background: S.bg, border: `1px solid ${S.border}`, borderRadius: '16px',
+          zIndex: 9998, display: 'flex', flexDirection: 'column',
+          boxShadow: '0 16px 64px rgba(0,0,0,0.6)', overflow: 'hidden',
         }}>
           {/* Header */}
           <div style={{ background: S.header, padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', borderBottom: `1px solid ${S.border}`, flexShrink: 0 }}>
-            {view === 'chat' && (
-              <button onClick={() => { setView('list'); setSelectedUser(null); setMessages([]) }} style={{ background: 'transparent', border: 'none', color: S.muted, cursor: 'pointer', padding: '0.2rem', fontSize: '1rem', lineHeight: 1 }}>
-                ←
-              </button>
+            {(view === 'chat' || view === 'setup') && (
+              <button onClick={() => { setView('list'); setSelectedUser(null); setMessages([]) }} style={{ background: 'transparent', border: 'none', color: S.muted, cursor: 'pointer', padding: '0.2rem', fontSize: '1rem' }}>←</button>
             )}
             {view === 'chat' && selectedUser ? (
               <>
@@ -294,13 +254,31 @@ export function ChatWidget({
             ) : (
               <>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9b30ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span style={{ color: S.text, fontWeight: 700, fontSize: '0.88rem', flex: 1 }}>Mensagens</span>
+                <span style={{ color: S.text, fontWeight: 700, fontSize: '0.88rem', flex: 1 }}>
+                  {view === 'setup' ? 'Configurar Chat' : 'Mensagens'}
+                </span>
               </>
             )}
-            <button onClick={() => setOpen(false)} style={{ background: 'transparent', border: 'none', color: S.dim, cursor: 'pointer', padding: '0.2rem', fontSize: '1rem', lineHeight: 1 }}>
-              ✕
-            </button>
+            <button onClick={() => setOpen(false)} style={{ background: 'transparent', border: 'none', color: S.dim, cursor: 'pointer', padding: '0.2rem', fontSize: '1rem' }}>✕</button>
           </div>
+
+          {/* Setup screen */}
+          {view === 'setup' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '10px', padding: '0.85rem', fontSize: '0.8rem', color: '#fcd34d', lineHeight: 1.5 }}>
+                ⚠️ A tabela do chat ainda não foi criada no Supabase. Execute o SQL abaixo uma única vez.
+              </div>
+              <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.85rem', fontSize: '0.72rem', color: '#86efac', fontFamily: 'monospace', lineHeight: 1.6, whiteSpace: 'pre-wrap', userSelect: 'all', overflowX: 'auto' }}>
+                {SETUP_SQL}
+              </div>
+              <button onClick={copySQL} style={{ background: copied ? 'rgba(34,197,94,0.15)' : S.primaryBg, border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : S.borderP}`, color: copied ? '#86efac' : S.primary, borderRadius: '9px', padding: '0.6rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+                {copied ? '✓ Copiado!' : '📋 Copiar SQL'}
+              </button>
+              <div style={{ color: S.dim, fontSize: '0.72rem', textAlign: 'center', lineHeight: 1.6 }}>
+                Após executar, volte aqui e clique em ← para tentar novamente.
+              </div>
+            </div>
+          )}
 
           {/* User list */}
           {view === 'list' && (
@@ -311,7 +289,7 @@ export function ChatWidget({
                   Nenhum usuário encontrado
                 </div>
               ) : users.map(u => {
-                const uc = unreadByUser(u.id)
+                const uc = unread[u.id] ?? 0
                 return (
                   <button key={u.id} onClick={() => openConversation(u)} style={{
                     width: '100%', background: 'transparent', border: 'none',
@@ -344,7 +322,7 @@ export function ChatWidget({
               <div style={{ flex: 1, overflowY: 'auto', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 {messages.length === 0 && (
                   <div style={{ textAlign: 'center', color: S.dim, fontSize: '0.78rem', marginTop: '2rem' }}>
-                    Nenhuma mensagem ainda.<br />Diga olá! 👋
+                    Nenhuma mensagem ainda. Diga olá! 👋
                   </div>
                 )}
                 {messages.map(m => {
@@ -360,6 +338,7 @@ export function ChatWidget({
                         <div>{m.content}</div>
                         <div style={{ fontSize: '0.62rem', color: isMine ? 'rgba(255,255,255,0.5)' : S.dim, marginTop: '0.2rem', textAlign: 'right' }}>
                           {timeLabel(m.created_at)}
+                          {isMine && m.read_at && ' ✓✓'}
                         </div>
                       </div>
                     </div>
@@ -378,10 +357,10 @@ export function ChatWidget({
                 <button onClick={sendMessage} disabled={sending || !input.trim()} style={{
                   background: input.trim() ? S.primary : 'rgba(255,255,255,0.05)',
                   border: 'none', borderRadius: '10px', padding: '0 0.85rem',
-                  color: input.trim() ? '#fff' : S.dim, cursor: input.trim() ? 'pointer' : 'default',
-                  fontSize: '1rem', transition: 'all 0.15s',
+                  color: input.trim() ? '#fff' : S.dim,
+                  cursor: input.trim() ? 'pointer' : 'default', fontSize: '1rem',
                 }}>
-                  ➤
+                  {sending ? '…' : '➤'}
                 </button>
               </div>
             </>
@@ -389,7 +368,7 @@ export function ChatWidget({
         </div>
       )}
 
-      {/* Floating button */}
+      {/* ── Floating button ──────────────────────────────────────────────────── */}
       <button onClick={() => { setOpen(o => !o); if (!open) setView('list') }} style={{
         position: 'fixed', bottom: 24, right: 24, width: 52, height: 52,
         borderRadius: '50%', border: 'none', cursor: 'pointer',
@@ -412,7 +391,7 @@ export function ChatWidget({
       <style>{`
         @keyframes slideInRight {
           from { transform: translateX(120%); opacity: 0; }
-          to   { transform: translateX(0);   opacity: 1; }
+          to   { transform: translateX(0);    opacity: 1; }
         }
       `}</style>
     </>
