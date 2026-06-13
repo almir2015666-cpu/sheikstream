@@ -77,6 +77,7 @@ export function ChatWidget({
   const [copied, setCopied]               = useState(false)
   const lastCheckRef  = useRef<string>(new Date().toISOString())
   const knownIds      = useRef<Set<string>>(new Set())
+  const usersRef      = useRef<ChatUser[]>([])   // ref so poll never needs users in deps
   const msgsEndRef    = useRef<HTMLDivElement>(null)
 
   // ── Load users ──────────────────────────────────────────────────────────────
@@ -85,7 +86,7 @@ export function ChatWidget({
       const r = await fetch('/api/dm/users')
       if (!r.ok) return
       const data: ChatUser[] = await r.json()
-      if (Array.isArray(data)) setUsers(data)
+      if (Array.isArray(data)) { setUsers(data); usersRef.current = data }
     } catch {}
   }, [])
 
@@ -135,13 +136,13 @@ export function ChatWidget({
       const bySender = new Map<string, Message>()
       novel.forEach(m => { if (!bySender.has(m.sender_id)) bySender.set(m.sender_id, m) })
       bySender.forEach(msg => {
-        const u = users.find(u => u.id === msg.sender_id) ?? { id: msg.sender_id, name: msg.sender_name, image: msg.sender_image }
+        const u = usersRef.current.find(u => u.id === msg.sender_id) ?? { id: msg.sender_id, name: msg.sender_name, image: msg.sender_image }
         const notif: Notification = { user: u, message: msg.content, msgId: msg.id }
         setNotifications(prev => [...prev.filter(n => n.user.id !== u.id), notif])
         setTimeout(() => setNotifications(prev => prev.filter(n => n.msgId !== notif.msgId)), 6000)
       })
     } catch {}
-  }, [currentUserId, users])
+  }, [currentUserId])  // stable — no users dep, uses usersRef instead
 
   useEffect(() => {
     if (!currentUserId) return
@@ -149,7 +150,7 @@ export function ChatWidget({
     const ivPoll  = setInterval(poll, 5000)
     const ivUsers = setInterval(loadUsers, 30000)
     return () => { clearInterval(ivPoll); clearInterval(ivUsers) }
-  }, [currentUserId, loadUsers, poll])
+  }, [currentUserId, loadUsers, poll])  // poll is now stable (no users dep)
 
   useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
