@@ -8,6 +8,39 @@ function getUser(req: NextRequest) {
   return decodeSession(token)
 }
 
+async function getTwitchAppToken(): Promise<string | null> {
+  try {
+    const res = await fetch('https://id.twitch.tv/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     process.env.TWITCH_CLIENT_ID!,
+        client_secret: process.env.TWITCH_CLIENT_SECRET!,
+        grant_type:    'client_credentials',
+      }),
+    })
+    if (!res.ok) return null
+    const d = await res.json()
+    return d.access_token ?? null
+  } catch { return null }
+}
+
+async function fetchProfileImages(usernames: string[], token: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  if (!usernames.length || !process.env.TWITCH_CLIENT_ID) return map
+  const qs = usernames.map(u => `login=${encodeURIComponent(u)}`).join('&')
+  try {
+    const res = await fetch(`https://api.twitch.tv/helix/users?${qs}`, {
+      headers: { Authorization: `Bearer ${token}`, 'Client-Id': process.env.TWITCH_CLIENT_ID! },
+    })
+    if (res.ok) {
+      const { data } = await res.json()
+      for (const u of data ?? []) map.set((u.login as string).toLowerCase(), u.profile_image_url as string)
+    }
+  } catch {}
+  return map
+}
+
 export async function GET(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -31,12 +64,26 @@ export async function GET(req: NextRequest) {
       (recent ?? []).map(r => (r.username as string).toLowerCase())
     )
 
-    const users = (tokens ?? []).map(t => ({
-      id: t.user_id as string,
-      name: (t.twitch_username as string) ?? 'Usuário',
-      image: null,
-      is_online: onlineSet.has(((t.twitch_username as string) ?? '').toLowerCase()),
-    }))
+    const usernames = (tokens ?? [])
+      .map(t => t.twitch_username as string)
+      .filter(Boolean)
+
+    // Fetch profile images from Twitch in parallel with the rest
+    let profileImages = new Map<string, string>()
+    if (usernames.length && process.env.TWITCH_CLIENT_ID && process.env.TWITCH_CLIENT_SECRET) {
+      const appToken = await getTwitchAppToken()
+      if (appToken) profileImages = await fetchProfileImages(usernames, appToken)
+    }
+
+    const users = (tokens ?? []).map(t => {
+      const name = (t.twitch_username as string) ?? 'Usuário'
+      return {
+        id: t.user_id as string,
+        name,
+        image: profileImages.get(name.toLowerCase()) ?? null,
+        is_online: onlineSet.has(name.toLowerCase()),
+      }
+    })
 
     users.sort((a, b) => Number(b.is_online) - Number(a.is_online) || a.name.localeCompare(b.name))
 
