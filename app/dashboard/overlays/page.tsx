@@ -15,11 +15,12 @@ function Icon({ type, color }: { type: string; color: string }) {
   if (type === 'meta-subs')      return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill={color}/></svg>
   if (type === 'sorteio')        return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M8 21h8M12 17v4M17 3H7l-2 6h14L17 3z"/><path d="M5 9c0 3.5 2 6 7 6s7-2.5 7-6"/></svg>
   if (type === 'alert')          return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+  if (type === 'countdown')      return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/></svg>
   return                                <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
 }
 
-const CATALOG = [
-{ type: 'subathon',      label: 'Subathon',        badge: 'NOVO', color: '#60a5fa', live: true,
+const CATALOG: { type: string; label: string; badge: string | null; color: string; live: boolean; desc: string; href?: string }[] = [
+  { type: 'subathon',      label: 'Subathon',        badge: 'NOVO', color: '#60a5fa', live: true,
     desc: 'Cronômetro de live progressivo — cada contribuição adiciona tempo ao relógio.' },
   { type: 'meta-subs',     label: 'Meta de Subs',    badge: null,   color: '#34d399', live: true,
     desc: 'Barra de progresso da meta de inscrições da Twitch em tempo real.' },
@@ -27,6 +28,9 @@ const CATALOG = [
     desc: 'Progresso do sorteio unificado com contadores por fonte.' },
   { type: 'meta',          label: 'Meta',            badge: 'NOVO', color: '#f87171', live: true,
     desc: 'Overlay de progresso de uma meta ativa criada pelo streamer.' },
+  { type: 'countdown',     label: 'Countdown',       badge: 'NOVO', color: '#9b30ff', live: true,
+    desc: 'Contagem regressiva para o início da live — compatível com Browser Source no OBS.',
+    href: '/dashboard/countdown' },
   { type: 'patrocinadores',label: 'Patrocinadores',  badge: 'NOVO', color: '#a78bfa', live: false,
     desc: 'Carrossel de banners de patrocinadores com timing e layout configurável.' },
 ]
@@ -49,7 +53,7 @@ export default function OverlaysPage() {
         {CATALOG.map(item => (
           <div key={item.type} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: 12, padding: '1.1rem 1.2rem', position: 'relative' }}>
             <Link
-              href={`/dashboard/overlays/${item.type}`}
+              href={item.href ?? `/dashboard/overlays/${item.type}`}
               style={{ position: 'absolute', top: '0.8rem', right: '0.8rem', padding: '0.3rem 0.35rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, display: 'flex', alignItems: 'center', color: C.dim, textDecoration: 'none' }}
               title="Editar overlay"
             >
