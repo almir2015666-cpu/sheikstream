@@ -329,6 +329,7 @@ export default function AdminPage() {
     { id: 'overlays',    label: 'Overlays' },
     { id: 'banners',     label: 'Banners' },
     { id: 'countdown',   label: 'Countdown' },
+    { id: 'polling',     label: 'Enquete ao vivo' },
     { id: 'collab',      label: 'Fila de Collab' },
     { id: 'raids',       label: 'Raids' },
     { id: 'analytics',   label: 'Analytics' },

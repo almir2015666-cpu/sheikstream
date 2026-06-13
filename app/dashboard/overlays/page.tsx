@@ -16,6 +16,9 @@ function Icon({ type, color }: { type: string; color: string }) {
   if (type === 'sorteio')        return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M8 21h8M12 17v4M17 3H7l-2 6h14L17 3z"/><path d="M5 9c0 3.5 2 6 7 6s7-2.5 7-6"/></svg>
   if (type === 'alert')          return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
   if (type === 'countdown')      return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/></svg>
+  if (type === 'polling')        return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+  if (type === 'chat')           return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  if (type === 'goal')           return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill={color}/></svg>
   return                                <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
 }
 
@@ -31,6 +34,15 @@ const CATALOG: { type: string; label: string; badge: string | null; color: strin
   { type: 'countdown',     label: 'Countdown',       badge: 'NOVO', color: '#9b30ff', live: true,
     desc: 'Contagem regressiva para o início da live — compatível com Browser Source no OBS.',
     href: '/dashboard/countdown' },
+  { type: 'polling',       label: 'Enquete ao vivo', badge: 'NOVO', color: '#22c55e', live: true,
+    desc: 'Crie enquetes e exiba os resultados em tempo real no OBS. Viewers votam pelo navegador.',
+    href: '/dashboard/polling' },
+  { type: 'chat',          label: 'Chat Overlay',    badge: 'NOVO', color: '#60a5fa', live: true,
+    desc: 'Exibe mensagens do chat da Twitch em tempo real sobre a tela — sem banco de dados.',
+    href: '/dashboard/overlays/chat' },
+  { type: 'goal',          label: 'Meta (Goal)',      badge: 'NOVO', color: '#f59e0b', live: true,
+    desc: 'Barra de progresso de meta personalizada: subs, bits, doações ou valor manual.',
+    href: '/dashboard/overlays/goal' },
   { type: 'patrocinadores',label: 'Patrocinadores',  badge: 'NOVO', color: '#a78bfa', live: false,
     desc: 'Carrossel de banners de patrocinadores com timing e layout configurável.' },
 ]
