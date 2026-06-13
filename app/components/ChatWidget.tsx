@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS dm_messages (
 CREATE INDEX IF NOT EXISTS dm_recv_idx ON dm_messages(receiver_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS dm_send_idx ON dm_messages(sender_id,   created_at DESC);`
 
-type ChatUser = { id: string; name: string; image?: string | null; email?: string }
+type ChatUser = { id: string; name: string; image?: string | null; email?: string; is_online?: boolean }
 type Message  = {
   id: string; sender_id: string; receiver_id: string
   sender_name: string; sender_image?: string | null
@@ -146,8 +146,9 @@ export function ChatWidget({
   useEffect(() => {
     if (!currentUserId) return
     loadUsers()
-    const iv = setInterval(poll, 5000)
-    return () => clearInterval(iv)
+    const ivPoll  = setInterval(poll, 5000)
+    const ivUsers = setInterval(loadUsers, 30000)
+    return () => { clearInterval(ivPoll); clearInterval(ivUsers) }
   }, [currentUserId, loadUsers, poll])
 
   useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
@@ -299,6 +300,8 @@ export function ChatWidget({
                   }}>
                     <div style={{ position: 'relative' }}>
                       <Avatar name={u.name} image={u.image} size={38} />
+                      {/* online dot */}
+                      <div style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: '50%', background: u.is_online ? '#22c55e' : 'rgba(255,255,255,0.15)', border: '2px solid #111219' }} />
                       {uc > 0 && (
                         <span style={{ position: 'absolute', top: -3, right: -3, background: S.primary, color: '#fff', borderRadius: '99px', fontSize: '0.6rem', fontWeight: 800, minWidth: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
                           {uc}
@@ -306,7 +309,10 @@ export function ChatWidget({
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: uc > 0 ? S.text : S.muted, fontWeight: uc > 0 ? 700 : 500, fontSize: '0.85rem' }}>{u.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ color: uc > 0 ? S.text : S.muted, fontWeight: uc > 0 ? 700 : 500, fontSize: '0.85rem' }}>{u.name}</span>
+                        {u.is_online && <span style={{ fontSize: '0.62rem', color: '#22c55e', background: 'rgba(34,197,94,0.12)', padding: '0.05rem 0.4rem', borderRadius: '99px', fontWeight: 600 }}>online</span>}
+                      </div>
                       <div style={{ color: S.dim, fontSize: '0.72rem' }}>{u.email ?? ''}</div>
                     </div>
                     {uc > 0 && <div style={{ width: 8, height: 8, borderRadius: '50%', background: S.primary, flexShrink: 0 }} />}
