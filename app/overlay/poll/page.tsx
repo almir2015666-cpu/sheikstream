@@ -6,27 +6,93 @@ type Option = { text: string; votes: number }
 type Poll = { question: string; options: Option[]; status: string }
 
 function PollContent() {
-  const sp     = useSearchParams()
-  const uid    = sp.get('uid') ?? ''
-  const color  = sp.get('color') ?? '#9b30ff'
-  const bg     = sp.get('bg') !== 'false'
-  const showCmd = sp.get('cmd') !== 'false' // show !1 !2 labels
+  const sp      = useSearchParams()
+  const uid     = sp.get('uid') ?? ''
+  const color   = sp.get('color') ?? '#9b30ff'
+  const bg      = sp.get('bg') !== 'false'
+  const channel = sp.get('channel') ?? ''
+  const showCmd = sp.get('cmd') !== 'false'
 
   const [poll, setPoll] = useState<Poll | null>(null)
-  const ivRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollRef = useRef<Poll | null>(null)
+  const ivRef   = useRef<ReturnType<typeof setInterval> | null>(null)
+  const wsRef   = useRef<WebSocket | null>(null)
+  const deadRef = useRef(false)
+
   const total = (poll?.options ?? []).reduce((s, o) => s + o.votes, 0)
 
+  // Poll results every 3s
   useEffect(() => {
     if (!uid) return
     const load = () =>
       fetch(`/api/poll?uid=${uid}`)
         .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d) setPoll(d) })
+        .then(d => { if (d) { setPoll(d); pollRef.current = d } })
         .catch(() => {})
     load()
     ivRef.current = setInterval(load, 3000)
     return () => { if (ivRef.current) clearInterval(ivRef.current) }
   }, [uid])
+
+  // Twitch IRC — runs here in OBS Browser Source (always open while streaming)
+  useEffect(() => {
+    if (!uid || !channel) return
+    deadRef.current = false
+
+    const connect = () => {
+      if (deadRef.current) return
+      const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443')
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        ws.send('CAP REQ :twitch.tv/tags\r\n')
+        ws.send('PASS SCHMOOZE\r\n')
+        ws.send('NICK justinfan77777\r\n')
+        ws.send(`JOIN #${channel.toLowerCase()}\r\n`)
+      }
+
+      ws.onmessage = async (e) => {
+        const raw = e.data as string
+        if (raw.includes('PING')) { ws.send('PONG :tmi.twitch.tv\r\n'); return }
+
+        const m = raw.match(/^(@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG #[^ ]+ :(.+)/)
+        if (!m) return
+
+        const username = m[2].toLowerCase()
+        const text = m[3].trim().toLowerCase()
+
+        let idx = -1
+        const c1 = text.match(/^!vote\s+(\d+)$/)
+        const c2 = text.match(/^!(\d+)$/)
+        const c3 = text.match(/^!v(\d+)$/)
+        if (c1) idx = parseInt(c1[1]) - 1
+        else if (c2) idx = parseInt(c2[1]) - 1
+        else if (c3) idx = parseInt(c3[1]) - 1
+        if (idx < 0) return
+
+        const cur = pollRef.current
+        if (!cur || cur.status !== 'active' || idx >= cur.options.length) return
+
+        // Send vote — server handles dedup by username
+        await fetch('/api/poll', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid, optionIndex: idx, username }),
+        }).catch(() => {})
+      }
+
+      ws.onclose = () => {
+        if (deadRef.current) return
+        setTimeout(connect, 3000)
+      }
+    }
+
+    connect()
+    return () => {
+      deadRef.current = true
+      try { wsRef.current?.close() } catch {}
+    }
+  }, [uid, channel])
 
   const boxStyle: React.CSSProperties = bg ? {
     background: 'rgba(8,9,13,0.88)',
@@ -71,7 +137,7 @@ function PollContent() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
                       <span style={{ fontSize: '0.85rem', fontWeight: isLeader ? 700 : 500, color: isLeader ? '#fff' : 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         {showCmd && poll.status !== 'closed' && (
-                          <span style={{ fontSize: '0.62rem', fontWeight: 800, color: color, background: `${color}22`, padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>
+                          <span style={{ fontSize: '0.62rem', fontWeight: 800, color, background: `${color}22`, padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>
                             !{i + 1}
                           </span>
                         )}

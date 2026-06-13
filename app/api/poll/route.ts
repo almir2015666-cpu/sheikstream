@@ -22,9 +22,10 @@ export async function GET(req: NextRequest) {
     .eq('broadcaster_id', id)
     .eq('type', TYPE)
     .maybeSingle()
-  return NextResponse.json(data?.config ?? null, {
-    headers: { 'Cache-Control': 'no-store' },
-  })
+  if (!data?.config) return NextResponse.json(null, { headers: { 'Cache-Control': 'no-store' } })
+  // Strip internal voters list before returning — clients don't need it
+  const { voters: _v, ...pub } = data.config as Record<string, unknown> & { voters?: unknown }
+  return NextResponse.json(pub, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(req: NextRequest) {
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     question: question.trim(),
     options: options.map((o: string) => ({ text: o.trim(), votes: 0 })),
     status: 'active',
+    voters: [],
     created_at: new Date().toISOString(),
   }
   await getSupabaseAdmin()
@@ -58,7 +60,7 @@ export async function PATCH(req: NextRequest) {
       .eq('broadcaster_id', user.id).eq('type', TYPE).maybeSingle()
     if (!data?.config) return NextResponse.json({ error: 'No poll' }, { status: 404 })
     const newCfg = body.reset
-      ? { ...data.config, options: data.config.options.map((o: { text: string }) => ({ ...o, votes: 0 })), status: 'active' }
+      ? { ...data.config, options: data.config.options.map((o: { text: string }) => ({ ...o, votes: 0 })), status: 'active', voters: [] }
       : { ...data.config, status: 'closed' }
     await getSupabaseAdmin()
       .from('overlay_configs')
@@ -68,21 +70,37 @@ export async function PATCH(req: NextRequest) {
   }
 
   // public vote
-  const { uid, optionIndex } = body
+  const { uid, optionIndex, username } = body
   if (!uid || optionIndex === undefined) return NextResponse.json({ error: 'Invalid' }, { status: 400 })
-  const { data } = await getSupabaseAdmin()
+  const db = getSupabaseAdmin()
+  const { data } = await db
     .from('overlay_configs').select('config')
     .eq('broadcaster_id', uid).eq('type', TYPE).maybeSingle()
   if (!data?.config || data.config.status !== 'active')
     return NextResponse.json({ error: 'No active poll' }, { status: 404 })
-  const options = [...data.config.options]
+
+  const cfg = data.config as Record<string, unknown> & { options: { text: string; votes: number }[]; voters?: string[] }
+  const options = [...cfg.options]
   if (optionIndex < 0 || optionIndex >= options.length)
     return NextResponse.json({ error: 'Invalid option' }, { status: 400 })
-  options[optionIndex] = { ...options[optionIndex], votes: (options[optionIndex].votes ?? 0) + 1 }
-  await getSupabaseAdmin()
-    .from('overlay_configs')
-    .update({ config: { ...data.config, options }, updated_at: new Date().toISOString() })
-    .eq('broadcaster_id', uid).eq('type', TYPE)
+
+  // Server-side dedup by username
+  if (username) {
+    const voters: string[] = cfg.voters ?? []
+    const key = String(username).toLowerCase()
+    if (voters.includes(key)) return NextResponse.json({ error: 'Already voted' }, { status: 409 })
+    options[optionIndex] = { ...options[optionIndex], votes: (options[optionIndex].votes ?? 0) + 1 }
+    await db.from('overlay_configs')
+      .update({ config: { ...cfg, options, voters: [...voters, key] }, updated_at: new Date().toISOString() })
+      .eq('broadcaster_id', uid).eq('type', TYPE)
+  } else {
+    // URL-based voting (no username) — no dedup, trust client
+    options[optionIndex] = { ...options[optionIndex], votes: (options[optionIndex].votes ?? 0) + 1 }
+    await db.from('overlay_configs')
+      .update({ config: { ...cfg, options }, updated_at: new Date().toISOString() })
+      .eq('broadcaster_id', uid).eq('type', TYPE)
+  }
+
   return NextResponse.json({ ok: true })
 }
 
