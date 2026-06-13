@@ -460,12 +460,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const orderedItems = (() => {
     if (navOrder.length === 0) return NAV_ALL
-    const orderMap = new Map(navOrder.map((id, i) => [id, i] as [string, number]))
-    return [...NAV_ALL].sort((a, b) => {
-      const ia = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999
-      const ib = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999
-      return ia - ib
-    })
+    const orderMap  = new Map(navOrder.map((id, i) => [id, i] as [string, number]))
+    const naturalPos = new Map(NAV_ALL.map((item, i) => [item.id, i]))
+    // Items in navOrder sort by their saved index (×10000).
+    // Items NOT in navOrder find the nearest preceding saved item in NAV_ALL
+    // and slot in right after it, preserving natural relative order.
+    const getScore = (item: Item) => {
+      if (orderMap.has(item.id)) return orderMap.get(item.id)! * 10000
+      const nat = naturalPos.get(item.id) ?? 0
+      let prevScore = -10000
+      for (const [id, idx] of orderMap.entries()) {
+        const nidx = naturalPos.get(id) ?? 0
+        if (nidx < nat) prevScore = Math.max(prevScore, idx * 10000)
+      }
+      return prevScore + nat + 1
+    }
+    return [...NAV_ALL].sort((a, b) => getScore(a) - getScore(b))
   })()
 
   if (status === 'loading') return <div style={{ background: DARK_S.bg, minHeight: '100vh' }} />
