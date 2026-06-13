@@ -111,7 +111,7 @@ export default function ChatConfigPage() {
     return `${col}${Math.round(op * 2.55).toString(16).padStart(2, '0')}`
   })()
   const visibleMsgs = hidecmd ? PREVIEW_MSGS.filter(m => !m.text.startsWith('!')) : PREVIEW_MSGS
-  const previewList = dir === 'bottom' ? [...visibleMsgs].reverse() : visibleMsgs
+  const previewList = visibleMsgs
 
   return (
     <div style={{ padding: '28px 24px', maxWidth: 820, margin: '0 auto', fontFamily: "'Inter',system-ui,sans-serif", color: S.text }}>
@@ -259,8 +259,8 @@ export default function ChatConfigPage() {
             <div style={{
               background: 'rgba(0,100,0,0.25)', border: '1px dashed rgba(255,255,255,0.1)',
               borderRadius: 8, height: 280, overflow: 'hidden', position: 'relative',
-              display: 'flex', flexDirection: 'column',
-              justifyContent: dir === 'top' ? 'flex-start' : 'flex-end',
+              display: 'flex', flexDirection: dir === 'top' ? 'column' : 'column-reverse',
+              justifyContent: 'flex-start',
               padding: 10,
             }}>
               <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', position: 'absolute', top: 6, right: 8 }}>OBS preview</div>

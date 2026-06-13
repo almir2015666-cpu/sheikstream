@@ -108,7 +108,7 @@ export default function PollingPage() {
           Voltar
         </button>
         <h1 style={{ flex: 1, color: S.text, fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>Enquete ao vivo</h1>
-        {msg && <span style={{ fontSize: '0.82rem', color: S.green, fontWeight: 600 }}>{msg}</span>}
+        {msg && <span style={{ fontSize: '0.82rem', color: msg.startsWith('Erro') ? S.red : S.green, fontWeight: 600 }}>{msg}</span>}
         {!creating && (
           <button onClick={() => setCreating(true)}
             style={{ padding: '8px 20px', background: S.primary, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>

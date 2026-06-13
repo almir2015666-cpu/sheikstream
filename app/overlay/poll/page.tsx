@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 type Option = { text: string; votes: number }
 type Poll = { question: string; options: Option[]; status: string }
 
+const REF_W = 400 // design reference width in px
+
 function PollContent() {
   const sp      = useSearchParams()
   const uid     = sp.get('uid') ?? ''
@@ -14,12 +16,20 @@ function PollContent() {
   const showCmd = sp.get('cmd') !== 'false'
 
   const [poll, setPoll] = useState<Poll | null>(null)
+  const [scale, setScale] = useState(1)
   const pollRef = useRef<Poll | null>(null)
   const ivRef   = useRef<ReturnType<typeof setInterval> | null>(null)
   const wsRef   = useRef<WebSocket | null>(null)
   const deadRef = useRef(false)
 
   const total = (poll?.options ?? []).reduce((s, o) => s + o.votes, 0)
+
+  useEffect(() => {
+    const update = () => setScale(window.innerWidth / REF_W)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   // Poll results every 3s
   useEffect(() => {
@@ -112,14 +122,14 @@ function PollContent() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
       `}</style>
       <div style={{
-        position: 'fixed', inset: 0, background: 'transparent',
+        position: 'fixed', inset: 0, background: 'transparent', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: "'Inter',system-ui,sans-serif", pointerEvents: 'none',
       }}>
         {!uid ? (
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>?uid= não configurado</div>
         ) : !poll ? null : (
-          <div style={{ ...boxStyle, minWidth: 320, maxWidth: 440, animation: 'fadeUp .4s ease' }}>
+          <div style={{ ...boxStyle, width: REF_W, transform: `scale(${scale})`, transformOrigin: 'center center', animation: 'fadeUp .4s ease' }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.18em', color, textTransform: 'uppercase', marginBottom: 10 }}>
               {poll.status === 'closed' ? '🔒 ENCERRADA' : '📊 ENQUETE'}
             </div>
