@@ -76,7 +76,9 @@ function ChatContent() {
 
   const animClass = anim === 'slide' ? 'msg-slide' : anim === 'fade' ? 'msg-fade' : 'msg-pop'
 
-  const list = direction === 'top' ? msgs : [...msgs].reverse()
+  // bottom: newest at bottom (chronological order, overflows upward)
+  // top:    newest at top (reversed order, overflows downward)
+  const list = direction === 'top' ? [...msgs].reverse() : msgs
 
   return (
     <>
@@ -94,16 +96,24 @@ function ChatContent() {
       `}</style>
       <div style={{
         position: 'fixed', inset: 0, background: 'transparent',
-        display: 'flex', flexDirection: 'column',
-        justifyContent: direction === 'top' ? 'flex-start' : 'flex-end',
-        padding: '12px 10px',
+        overflow: 'hidden',
         fontFamily: "'Inter',system-ui,sans-serif",
-        fontSize, pointerEvents: 'none', overflow: 'hidden',
+        fontSize, pointerEvents: 'none',
       }}>
         {!channel ? (
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>?channel= não configurado</div>
+          <div style={{ position: 'absolute', bottom: 12, left: 10, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>?channel= não configurado</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{
+            position: 'absolute',
+            ...(direction === 'top'
+              ? { top: 12, left: 10, right: 10 }
+              : { bottom: 12, left: 10, right: 10 }),
+            maxHeight: 'calc(100% - 24px)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: direction === 'top' ? 'column' : 'column-reverse',
+            gap: 4,
+          }}>
             {list.map(m => (
               <div key={m.id} className={animClass} style={{
                 padding: bgOn ? '5px 10px' : '2px 0',
@@ -111,6 +121,7 @@ function ChatContent() {
                 background: msgBg,
                 backdropFilter: bgOn && bgcol === '#000000' ? 'blur(6px)' : 'none',
                 lineHeight: 1.45, wordBreak: 'break-word',
+                flexShrink: 0,
               }}>
                 <span style={{ fontWeight: 700, color: m.color, marginRight: 5, textShadow }}>{m.user}:</span>
                 <span style={{ color: '#fff', textShadow }}>{m.text}</span>
