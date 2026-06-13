@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers"
 import { ToastProvider } from "./components/Toast"
 import { LangProvider } from "@/lib/i18n"
+import { ChatWidgetLoader } from "./components/ChatWidgetLoader"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -63,7 +64,7 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><LangProvider><Providers><ToastProvider>{children}</ToastProvider></Providers></LangProvider></body>
+      <body className="min-h-full flex flex-col"><LangProvider><Providers><ToastProvider>{children}</ToastProvider></Providers></LangProvider><ChatWidgetLoader /></body>
     </html>
   );
 }

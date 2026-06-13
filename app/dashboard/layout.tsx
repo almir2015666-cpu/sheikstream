@@ -6,7 +6,6 @@ import { ToastProvider } from '@/app/components/Toast'
 import { useLang } from '@/lib/i18n'
 import type { TKey } from '@/lib/i18n/translations'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
-import { ChatWidget } from '@/app/components/ChatWidget'
 
 const SW = 240
 
@@ -862,7 +861,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </>
       )}
 
-      <ChatWidget currentUserId={user?.id ?? null} currentUserName={user?.name ?? null} currentUserImage={user?.image ?? null} />
     </div>
   )
 }
