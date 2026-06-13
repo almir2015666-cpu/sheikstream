@@ -75,10 +75,11 @@ export function ChatWidget({
   const [totalUnread, setTotalUnread]     = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [copied, setCopied]               = useState(false)
-  const lastCheckRef  = useRef<string>(new Date(Date.now() - 30000).toISOString())
-  const knownIds      = useRef<Set<string>>(new Set())
-  const usersRef      = useRef<ChatUser[]>([])   // ref so poll never needs users in deps
-  const msgsEndRef    = useRef<HTMLDivElement>(null)
+  const lastCheckRef    = useRef<string>(new Date(Date.now() - 30000).toISOString())
+  const knownIds        = useRef<Set<string>>(new Set())
+  const usersRef        = useRef<ChatUser[]>([])
+  const selectedUserRef = useRef<ChatUser | null>(null)  // stable ref for use inside poll
+  const msgsEndRef      = useRef<HTMLDivElement>(null)
 
   // ── Load users ──────────────────────────────────────────────────────────────
   const loadUsers = useCallback(async () => {
@@ -123,14 +124,12 @@ export function ChatWidget({
       setUnread(prev => { const n = { ...prev }; Object.entries(counts).forEach(([id, c]) => { n[id] = (n[id] ?? 0) + c }); return n })
       setTotalUnread(prev => prev + novel.length)
 
-      // If conversation is open, append relevant messages
-      setSelectedUser(su => {
-        if (su) {
-          const rel = novel.filter(m => m.sender_id === su.id || m.receiver_id === su.id)
-          if (rel.length) setMessages(prev => [...prev, ...rel])
-        }
-        return su
-      })
+      // If conversation is open, append relevant messages directly via ref
+      const su = selectedUserRef.current
+      if (su) {
+        const rel = novel.filter(m => m.sender_id === su.id || m.receiver_id === su.id)
+        if (rel.length) setMessages(prev => [...prev, ...rel])
+      }
 
       // Notification + sound
       playNotificationSound()
@@ -175,6 +174,7 @@ export function ChatWidget({
 
   // ── Open conversation ────────────────────────────────────────────────────────
   function openConversation(u: ChatUser) {
+    selectedUserRef.current = u
     setSelectedUser(u)
     setView('chat')
     loadConversation(u)
@@ -265,7 +265,7 @@ export function ChatWidget({
           {/* Header */}
           <div style={{ background: S.header, padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', borderBottom: `1px solid ${S.border}`, flexShrink: 0 }}>
             {(view === 'chat' || view === 'setup') && (
-              <button onClick={() => { setView('list'); setSelectedUser(null); setMessages([]) }} style={{ background: 'transparent', border: 'none', color: S.muted, cursor: 'pointer', padding: '0.2rem', fontSize: '1rem' }}>←</button>
+              <button onClick={() => { selectedUserRef.current = null; setView('list'); setSelectedUser(null); setMessages([]) }} style={{ background: 'transparent', border: 'none', color: S.muted, cursor: 'pointer', padding: '0.2rem', fontSize: '1rem' }}>←</button>
             )}
             {view === 'chat' && selectedUser ? (
               <>
