@@ -565,9 +565,6 @@ export const translations = {
     footer_subscribe_btn: 'Assinar',
     footer_made_in_brazil: '🇧🇷 Feito no Brasil · © 2025 Sheikstream.',
 
-    theme_light: 'Modo claro',
-    theme_dark: 'Modo escuro',
-
     action_back: 'Voltar',
     action_back_home: 'Voltar ao início',
 
@@ -1180,9 +1177,6 @@ export const translations = {
     footer_subscribe_btn: 'Subscribe',
     footer_made_in_brazil: '🇧🇷 Made in Brazil · © 2025 Sheikstream.',
 
-    theme_light: 'Light mode',
-    theme_dark: 'Dark mode',
-
     action_back: 'Back',
     action_back_home: 'Back to home',
 
@@ -1794,9 +1788,6 @@ export const translations = {
     footer_newsletter_sub: 'Suscríbete para conocer las novedades',
     footer_subscribe_btn: 'Suscribirse',
     footer_made_in_brazil: '🇧🇷 Hecho en Brasil · © 2025 Sheikstream.',
-
-    theme_light: 'Modo claro',
-    theme_dark: 'Modo oscuro',
 
     action_back: 'Volver',
     action_back_home: 'Volver al inicio',
