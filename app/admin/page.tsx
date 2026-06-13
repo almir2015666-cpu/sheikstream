@@ -328,6 +328,7 @@ export default function AdminPage() {
     { id: 'metas',       label: 'Metas' },
     { id: 'overlays',    label: 'Overlays' },
     { id: 'banners',     label: 'Banners' },
+    { id: 'countdown',   label: 'Countdown' },
     { id: 'collab',      label: 'Fila de Collab' },
     { id: 'raids',       label: 'Raids' },
     { id: 'analytics',   label: 'Analytics' },
