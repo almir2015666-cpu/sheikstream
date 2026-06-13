@@ -649,12 +649,19 @@ export default function AdminPage() {
       else if (logTab === 'admin') fetchLogs(storedPw)
       else if (logTab === 'errors') fetchErrorLogs(storedPw)
       else if (logTab === 'system') fetchSystemLogs(storedPw)
-      else if (logTab === 'changelog') fetchChangelog(storedPw)
-      else fetchActivity(storedPw, logTab)
+      else if (logTab !== 'changelog') fetchActivity(storedPw, logTab)
     }
     const iv = setInterval(refresh, 30000)
     return () => clearInterval(iv)
-  }, [logTab, storedPw, view, fetchLogs, fetchErrorLogs, fetchSystemLogs, fetchLoginLogs, fetchChangelog, fetchActivity])
+  }, [logTab, storedPw, view, fetchLogs, fetchErrorLogs, fetchSystemLogs, fetchLoginLogs, fetchActivity])
+
+  // Changelog: auto-load on tab switch + refresh every 30s
+  useEffect(() => {
+    if (view !== 'logs' || logTab !== 'changelog' || !storedPw) return
+    fetchChangelog(storedPw)
+    const iv = setInterval(() => fetchChangelog(storedPw), 30_000)
+    return () => clearInterval(iv)
+  }, [view, logTab, storedPw, fetchChangelog])
 
   // Load nav order + itemStatus from API when switching to navorder view
   useEffect(() => {
@@ -1348,7 +1355,7 @@ export default function AdminPage() {
                   return (
                     <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {changelogLoading && <div style={{ textAlign: 'center', color: C.dim, fontSize: '0.9rem', padding: '2rem' }}>Carregando...</div>}
-                      {!changelogLoading && !filtered.length && <div style={{ textAlign: 'center', color: C.dim, fontSize: '0.9rem', padding: '2rem' }}>{changelog.length === 0 ? 'Clique em Atualizar para carregar o changelog.' : 'Nenhum resultado.'}</div>}
+                      {!changelogLoading && !filtered.length && <div style={{ textAlign: 'center', color: C.dim, fontSize: '0.9rem', padding: '2rem' }}>{changelog.length === 0 ? 'Nenhuma entrada no changelog.' : 'Nenhum resultado.'}</div>}
                       {filtered.map((entry, i) => (
                         <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', padding: '0.9rem 1rem', background: C.cardBgAlt, borderRadius: '10px', border: `1px solid ${C.border}` }}>
                           <div style={{ flexShrink: 0, minWidth: '86px' }}>
