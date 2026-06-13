@@ -39,13 +39,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(data ?? [])
     }
 
-    // All unread by sender
+    // All unread messages (used by poll — no timestamp dependency)
     const { data, error } = await db
       .from('dm_messages')
-      .select('sender_id, sender_name, sender_image, content, created_at')
+      .select('*')
       .eq('receiver_id', user.id)
       .is('read_at', null)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
     if (error) return NextResponse.json([], { status: 200 })
     return NextResponse.json(data ?? [])
   } catch {

@@ -75,7 +75,7 @@ export function ChatWidget({
   const [totalUnread, setTotalUnread]     = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [copied, setCopied]               = useState(false)
-  const lastCheckRef    = useRef<string>(new Date(Date.now() - 30000).toISOString())
+  const notifiedIds     = useRef<Set<string>>(new Set())  // IDs already notified (separate from knownIds)
   const knownIds        = useRef<Set<string>>(new Set())
   const usersRef        = useRef<ChatUser[]>([])
   const selectedUserRef = useRef<ChatUser | null>(null)  // stable ref for use inside poll
@@ -98,25 +98,24 @@ export function ChatWidget({
       if (!r.ok) { setView('setup'); return }
       const data: Message[] = await r.json()
       setMessages(Array.isArray(data) ? data : [])
-      data.forEach(m => knownIds.current.add(m.id))
+      // Mark all as known so poll doesn't re-notify
+      data.forEach(m => { knownIds.current.add(m.id); notifiedIds.current.add(m.id) })
     } catch { setView('setup') }
   }, [])
 
-  // ── Poll ─────────────────────────────────────────────────────────────────────
+  // ── Poll — busca TODAS as mensagens não lidas (sem depender de relógio) ──────
   const poll = useCallback(async () => {
     if (!currentUserId) return
     try {
-      const since = lastCheckRef.current
-      const r = await fetch(`/api/dm?since=${encodeURIComponent(since)}`, { credentials: 'include' })
-      // Update AFTER fetch resolves so messages sent during a slow fetch are never missed
-      lastCheckRef.current = new Date().toISOString()
+      const r = await fetch('/api/dm', { credentials: 'include' })
       if (!r.ok) return
-      const newMsgs: Message[] = await r.json()
-      if (!Array.isArray(newMsgs) || newMsgs.length === 0) return
+      const unread: Message[] = await r.json()
+      if (!Array.isArray(unread) || unread.length === 0) return
 
-      const novel = newMsgs.filter(m => !knownIds.current.has(m.id))
+      // novel = mensagens que ainda não notificamos
+      const novel = unread.filter(m => !notifiedIds.current.has(m.id))
       if (novel.length === 0) return
-      novel.forEach(m => knownIds.current.add(m.id))
+      novel.forEach(m => notifiedIds.current.add(m.id))
 
       // Update unread counts
       const counts: Record<string, number> = {}
