@@ -118,9 +118,7 @@ function PollContent() {
       }}>
         {!uid ? (
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>?uid= não configurado</div>
-        ) : !poll ? (
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Nenhuma enquete ativa</div>
-        ) : (
+        ) : !poll ? null : (
           <div style={{ ...boxStyle, minWidth: 320, maxWidth: 440, animation: 'fadeUp .4s ease' }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.18em', color, textTransform: 'uppercase', marginBottom: 10 }}>
               {poll.status === 'closed' ? '🔒 ENCERRADA' : '📊 ENQUETE'}
