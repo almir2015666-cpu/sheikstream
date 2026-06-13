@@ -6,106 +6,27 @@ type Option = { text: string; votes: number }
 type Poll = { question: string; options: Option[]; status: string }
 
 function PollContent() {
-  const sp      = useSearchParams()
-  const uid     = sp.get('uid') ?? ''
-  const color   = sp.get('color') ?? '#9b30ff'
-  const bg      = sp.get('bg') !== 'false'
-  const channel = sp.get('channel') ?? ''
+  const sp     = useSearchParams()
+  const uid    = sp.get('uid') ?? ''
+  const color  = sp.get('color') ?? '#9b30ff'
+  const bg     = sp.get('bg') !== 'false'
+  const showCmd = sp.get('cmd') !== 'false' // show !1 !2 labels
 
   const [poll, setPoll] = useState<Poll | null>(null)
-  const pollRef  = useRef<Poll | null>(null)
-  const ivRef    = useRef<ReturnType<typeof setInterval> | null>(null)
-  const wsRef    = useRef<WebSocket | null>(null)
-  const votedRef = useRef<Set<string>>(new Set())
-
+  const ivRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const total = (poll?.options ?? []).reduce((s, o) => s + o.votes, 0)
 
-  // Poll the API for results every 3s
   useEffect(() => {
     if (!uid) return
     const load = () =>
       fetch(`/api/poll?uid=${uid}`)
         .then(r => r.ok ? r.json() : null)
-        .then(d => { if (d) { setPoll(d); pollRef.current = d } })
+        .then(d => { if (d) setPoll(d) })
         .catch(() => {})
     load()
     ivRef.current = setInterval(load, 3000)
     return () => { if (ivRef.current) clearInterval(ivRef.current) }
   }, [uid])
-
-  // Twitch IRC — chat voting
-  useEffect(() => {
-    if (!uid || !channel) return
-
-    const connect = () => {
-      const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443')
-      wsRef.current = ws
-
-      ws.onopen = () => {
-        ws.send('CAP REQ :twitch.tv/tags\r\n')
-        ws.send('PASS SCHMOOZE\r\n')
-        ws.send('NICK justinfan99999\r\n')
-        ws.send(`JOIN #${channel.toLowerCase()}\r\n`)
-      }
-
-      ws.onmessage = async (e) => {
-        const raw = e.data as string
-        if (raw.includes('PING')) { ws.send('PONG :tmi.twitch.tv\r\n'); return }
-
-        const m = raw.match(/^(@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG #[^ ]+ :(.+)/)
-        if (!m) return
-
-        const tagStr = m[1] ?? ''
-        const username = m[2].toLowerCase()
-        const text = m[3].trim().toLowerCase()
-
-        // Accept: !vote 1, !vote 2, !1, !2, !v1, !v2
-        let idx = -1
-        const cmd1 = text.match(/^!vote\s+(\d+)$/)
-        const cmd2 = text.match(/^!(\d+)$/)
-        const cmd3 = text.match(/^!v(\d+)$/)
-        if (cmd1) idx = parseInt(cmd1[1]) - 1
-        else if (cmd2) idx = parseInt(cmd2[1]) - 1
-        else if (cmd3) idx = parseInt(cmd3[1]) - 1
-        if (idx < 0) return
-
-        const cur = pollRef.current
-        if (!cur || cur.status !== 'active') return
-        if (idx >= cur.options.length) return
-        if (votedRef.current.has(username)) return
-
-        // Deduplicate immediately before the await
-        votedRef.current.add(username)
-
-        try {
-          const r = await fetch('/api/poll', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ uid, optionIndex: idx }),
-          })
-          if (!r.ok) votedRef.current.delete(username)
-        } catch {
-          votedRef.current.delete(username)
-        }
-      }
-
-      ws.onclose = () => { setTimeout(connect, 3000) }
-    }
-
-    connect()
-    return () => { wsRef.current?.close() }
-  }, [uid, channel])
-
-  // Reset voted set when poll resets (new poll or reset action)
-  const prevPollKey = useRef('')
-  useEffect(() => {
-    if (!poll) return
-    const key = poll.question + poll.options.map(o => o.text).join('|')
-    if (key !== prevPollKey.current) {
-      prevPollKey.current = key
-      votedRef.current = new Set()
-    }
-  }, [poll])
 
   const boxStyle: React.CSSProperties = bg ? {
     background: 'rgba(8,9,13,0.88)',
@@ -135,22 +56,10 @@ function PollContent() {
           <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Nenhuma enquete ativa</div>
         ) : (
           <div style={{ ...boxStyle, minWidth: 320, maxWidth: 440, animation: 'fadeUp .4s ease' }}>
-            <div style={{
-              fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.18em',
-              color: color, textTransform: 'uppercase', marginBottom: 10,
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <span>{poll.status === 'closed' ? '🔒 ENCERRADA' : '📊 ENQUETE'}</span>
-              {channel && poll.status === 'active' && (
-                <span style={{ opacity: 0.6, fontWeight: 500, letterSpacing: '0.06em', fontSize: '0.64rem' }}>
-                  · vote no chat: !vote 1, !vote 2...
-                </span>
-              )}
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.18em', color, textTransform: 'uppercase', marginBottom: 10 }}>
+              {poll.status === 'closed' ? '🔒 ENCERRADA' : '📊 ENQUETE'}
             </div>
-            <div style={{
-              fontSize: '1.05rem', fontWeight: 800, color: '#fff',
-              marginBottom: 16, lineHeight: 1.35,
-            }}>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', marginBottom: 16, lineHeight: 1.35 }}>
               {poll.question}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -159,21 +68,16 @@ function PollContent() {
                 const isLeader = total > 0 && opt.votes === Math.max(...poll.options.map(o => o.votes))
                 return (
                   <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <span style={{
-                        fontSize: '0.85rem', fontWeight: isLeader ? 700 : 500,
-                        color: isLeader ? '#fff' : 'rgba(255,255,255,0.7)',
-                        display: 'flex', alignItems: 'center', gap: 6,
-                      }}>
-                        {channel && poll.status === 'active' && (
-                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: color, opacity: 0.8,
-                            background: `${color}22`, padding: '1px 5px', borderRadius: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: isLeader ? 700 : 500, color: isLeader ? '#fff' : 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {showCmd && poll.status !== 'closed' && (
+                          <span style={{ fontSize: '0.62rem', fontWeight: 800, color: color, background: `${color}22`, padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>
                             !{i + 1}
                           </span>
                         )}
                         {isLeader && total > 0 ? '✦ ' : ''}{opt.text}
                       </span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isLeader ? color : 'rgba(255,255,255,0.5)' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isLeader ? color : 'rgba(255,255,255,0.5)', flexShrink: 0 }}>
                         {pct}% <span style={{ fontWeight: 400, fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>({opt.votes})</span>
                       </span>
                     </div>

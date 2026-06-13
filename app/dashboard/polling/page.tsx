@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 const S = {
@@ -8,7 +8,6 @@ const S = {
   primary: '#9b30ff', primaryBg: 'rgba(155,48,255,0.12)', border: 'rgba(255,255,255,0.07)',
   green: '#22c55e', red: '#ef4444',
 }
-
 const inp: React.CSSProperties = {
   width: '100%', padding: '0.6rem 0.9rem', background: '#08090d',
   border: `1px solid ${S.border}`, borderRadius: 8, color: S.text,
@@ -17,47 +16,155 @@ const inp: React.CSSProperties = {
 
 type Option = { text: string; votes: number }
 type Poll   = { question: string; options: Option[]; status: string; created_at: string }
+type IrcStatus = 'off' | 'connecting' | 'connected' | 'error'
 
 export default function PollingPage() {
   const router = useRouter()
-  const [uid,      setUid]     = useState('')
-  const [channel,  setChannel] = useState('')
-  const [poll,    setPoll]    = useState<Poll | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving,  setSaving]  = useState(false)
-  const [msg,     setMsg]     = useState('')
-  const [question, setQuestion] = useState('')
-  const [options,  setOptions]  = useState(['', '', '', ''])
-  const [copied,   setCopied]   = useState<'overlay'|'vote'|null>(null)
-  const [creating, setCreating] = useState(false)
-  const ivRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [uid,       setUid]       = useState('')
+  const [channel,   setChannel]   = useState('')
+  const [poll,      setPoll]      = useState<Poll | null>(null)
+  const [loading,   setLoading]   = useState(true)
+  const [saving,    setSaving]    = useState(false)
+  const [msg,       setMsg]       = useState('')
+  const [question,  setQuestion]  = useState('')
+  const [options,   setOptions]   = useState(['', '', '', ''])
+  const [copied,    setCopied]    = useState<'overlay'|'vote'|null>(null)
+  const [creating,  setCreating]  = useState(false)
+  const [ircStatus, setIrcStatus] = useState<IrcStatus>('off')
+  const [chatVotes, setChatVotes] = useState(0)
+
+  const ivRef      = useRef<ReturnType<typeof setInterval> | null>(null)
+  const wsRef      = useRef<WebSocket | null>(null)
+  const votedRef   = useRef<Set<string>>(new Set())
+  const pollRef    = useRef<Poll | null>(null)
+  const uidRef     = useRef('')
+  const reconnRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const deadRef    = useRef(false) // true when component unmounts or channel cleared
 
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000) }
+
+  // Keep refs in sync
+  useEffect(() => { pollRef.current = poll }, [poll])
+  useEffect(() => { uidRef.current = uid }, [uid])
 
   useEffect(() => {
     fetch('/api/me').then(r => r.ok ? r.json() : null).then(u => {
       if (u?.id) setUid(u.id)
-      if (u?.name) setChannel(u.name.toLowerCase())
+      if (u?.name) setChannel(u.name.toLowerCase().replace(/\s/g, ''))
     }).catch(() => {})
   }, [])
 
-  const loadPoll = () =>
+  const loadPoll = useCallback(() =>
     fetch('/api/poll').then(r => r.ok ? r.json() : null)
       .then(d => { setPoll(d); setLoading(false) }).catch(() => setLoading(false))
+  , [])
 
   useEffect(() => {
     loadPoll()
     ivRef.current = setInterval(loadPoll, 4000)
     return () => { if (ivRef.current) clearInterval(ivRef.current) }
-  }, [])
+  }, [loadPoll])
+
+  // Reset voted set when poll identity changes (new poll or reset)
+  const prevPollKey = useRef('')
+  useEffect(() => {
+    if (!poll) return
+    const key = poll.question + poll.options.map(o => o.text).join('|')
+    if (key !== prevPollKey.current) {
+      prevPollKey.current = key
+      votedRef.current = new Set()
+      setChatVotes(0)
+    }
+  }, [poll])
+
+  // IRC connection — runs in this page's browser tab
+  const connectIrc = useCallback((ch: string) => {
+    if (wsRef.current) { try { wsRef.current.close() } catch {} }
+
+    setIrcStatus('connecting')
+    const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443')
+    wsRef.current = ws
+
+    ws.onopen = () => {
+      ws.send('CAP REQ :twitch.tv/tags\r\n')
+      ws.send('PASS SCHMOOZE\r\n')
+      ws.send('NICK justinfan88888\r\n')
+      ws.send(`JOIN #${ch}\r\n`)
+    }
+
+    ws.onmessage = async (e) => {
+      const raw = e.data as string
+      if (raw.includes('PING')) { ws.send('PONG :tmi.twitch.tv\r\n'); return }
+      if (raw.includes('366')) { setIrcStatus('connected'); return } // JOIN success (End of NAMES list)
+
+      const m = raw.match(/^(@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG #[^ ]+ :(.+)/)
+      if (!m) return
+
+      const username = m[2].toLowerCase()
+      const text = m[3].trim().toLowerCase()
+
+      let idx = -1
+      const c1 = text.match(/^!vote\s+(\d+)$/)
+      const c2 = text.match(/^!(\d+)$/)
+      const c3 = text.match(/^!v(\d+)$/)
+      if (c1) idx = parseInt(c1[1]) - 1
+      else if (c2) idx = parseInt(c2[1]) - 1
+      else if (c3) idx = parseInt(c3[1]) - 1
+      if (idx < 0) return
+
+      const cur = pollRef.current
+      if (!cur || cur.status !== 'active') return
+      if (idx >= cur.options.length) return
+      if (votedRef.current.has(username)) return
+
+      votedRef.current.add(username)
+
+      try {
+        const r = await fetch('/api/poll', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: uidRef.current, optionIndex: idx }),
+        })
+        if (r.ok) {
+          setChatVotes(v => v + 1)
+          loadPoll()
+        } else {
+          votedRef.current.delete(username)
+        }
+      } catch {
+        votedRef.current.delete(username)
+      }
+    }
+
+    ws.onerror = () => setIrcStatus('error')
+
+    ws.onclose = () => {
+      if (deadRef.current) return
+      setIrcStatus('connecting')
+      reconnRef.current = setTimeout(() => {
+        if (!deadRef.current) connectIrc(ch)
+      }, 3000)
+    }
+  }, [loadPoll])
+
+  useEffect(() => {
+    deadRef.current = false
+    if (!channel) { setIrcStatus('off'); return }
+    connectIrc(channel)
+    return () => {
+      deadRef.current = true
+      if (reconnRef.current) clearTimeout(reconnRef.current)
+      if (wsRef.current) { try { wsRef.current.close() } catch {} }
+      setIrcStatus('off')
+    }
+  }, [channel, connectIrc])
 
   async function create() {
     const validOpts = options.filter(o => o.trim())
     if (!question.trim() || validOpts.length < 2) { flash('Preencha a pergunta e ao menos 2 opções'); return }
     setSaving(true)
     const r = await fetch('/api/poll', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, options: validOpts }),
     })
     setSaving(false)
@@ -82,10 +189,8 @@ export default function PollingPage() {
   }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const overlayUrl = uid
-    ? `${origin}/overlay/poll?uid=${uid}&color=%239b30ff${channel ? `&channel=${channel.toLowerCase()}` : ''}`
-    : ''
-  const voteUrl = uid ? `${origin}/votar/${uid}` : ''
+  const overlayUrl = uid ? `${origin}/overlay/poll?uid=${uid}&color=%239b30ff` : ''
+  const voteUrl    = uid ? `${origin}/votar/${uid}` : ''
 
   const copy = (url: string, which: 'overlay'|'vote') => {
     navigator.clipboard.writeText(url)
@@ -95,9 +200,12 @@ export default function PollingPage() {
 
   const total = (poll?.options ?? []).reduce((s, o) => s + o.votes, 0)
 
-  const label = (t: string) => (
+  const lbl = (t: string) => (
     <div style={{ fontSize: '0.75rem', fontWeight: 600, color: S.dim, marginBottom: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{t}</div>
   )
+
+  const ircDot = { off: S.dim, connecting: '#f59e0b', connected: S.green, error: S.red }[ircStatus]
+  const ircLabel = { off: 'Chat desconectado', connecting: 'Conectando ao chat...', connected: `Chat conectado — ${chatVotes} voto${chatVotes !== 1 ? 's' : ''} do chat`, error: 'Erro no chat IRC' }[ircStatus]
 
   if (loading) return <div style={{ padding: 40, color: S.dim }}>Carregando...</div>
 
@@ -121,13 +229,32 @@ export default function PollingPage() {
         )}
       </div>
 
+      {/* IRC status bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '10px 14px',
+        background: S.card, border: `1px solid ${S.border}`, borderRadius: 10 }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: ircDot, display: 'inline-block', flexShrink: 0,
+          animation: ircStatus === 'connecting' ? 'pulse 1.2s infinite' : ircStatus === 'connected' ? 'pulse 2s infinite' : 'none' }} />
+        <span style={{ fontSize: '0.8rem', color: ircStatus === 'connected' ? S.green : S.muted, fontWeight: ircStatus === 'connected' ? 700 : 400 }}>
+          {ircLabel}
+        </span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: '0.75rem', color: S.dim }}>Canal:</span>
+          <input
+            value={channel}
+            onChange={e => setChannel(e.target.value.toLowerCase().replace(/\s/g, ''))}
+            placeholder="nomeDaLive"
+            style={{ padding: '4px 10px', background: '#08090d', border: `1px solid ${S.border}`, borderRadius: 6, color: S.text, fontSize: '0.82rem', outline: 'none', fontFamily: 'inherit', width: 140 }}
+          />
+        </div>
+      </div>
+
       {/* Criar enquete */}
       {creating && (
         <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
           <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 16 }}>Nova enquete</div>
-          {label('Pergunta')}
+          {lbl('Pergunta')}
           <input style={{ ...inp, marginBottom: 16 }} value={question} onChange={e => setQuestion(e.target.value)} placeholder="Qual game jogar agora?" />
-          {label('Opções (mín. 2, máx. 4)')}
+          {lbl('Opções (mín. 2, máx. 4)')}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
             {options.map((o, i) => (
               <input key={i} style={inp} value={o} onChange={e => { const n = [...options]; n[i] = e.target.value; setOptions(n) }}
@@ -169,7 +296,10 @@ export default function PollingPage() {
                 return (
                   <div key={i}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: isLeader ? 700 : 500, color: isLeader ? S.text : S.muted }}>{opt.text}</span>
+                      <span style={{ fontSize: '0.88rem', fontWeight: isLeader ? 700 : 500, color: isLeader ? S.text : S.muted, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: S.primary, background: S.primaryBg, padding: '1px 5px', borderRadius: 4 }}>!{i+1}</span>
+                        {opt.text}
+                      </span>
                       <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isLeader ? S.primary : S.dim }}>{pct}% ({opt.votes})</span>
                     </div>
                     <div style={{ height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
@@ -208,17 +338,7 @@ export default function PollingPage() {
 
           {/* URLs */}
           <div style={{ background: S.card, border: `1px solid rgba(155,48,255,0.2)`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
-            {label('Canal da Twitch (para votação por chat)')}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
-              <input
-                value={channel}
-                onChange={e => setChannel(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                placeholder="nomeDaLive"
-                style={{ flex: 1, padding: '8px 12px', background: '#08090d', border: `1px solid ${S.border}`, borderRadius: 8, color: S.text, fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit' }}
-              />
-            </div>
-
-            {label('URL do overlay para OBS (Browser Source)')}
+            {lbl('URL do overlay para OBS (Browser Source)')}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
               <div style={{ flex: 1, background: '#08090d', border: `1px solid ${S.border}`, borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: S.muted, wordBreak: 'break-all' }}>
                 {overlayUrl || '— faça login para gerar a URL —'}
@@ -230,7 +350,7 @@ export default function PollingPage() {
                 </button>
               )}
             </div>
-            {label('URL de votação pública (link alternativo pelo navegador)')}
+            {lbl('URL de votação pelo navegador (link alternativo)')}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div style={{ flex: 1, background: '#08090d', border: `1px solid ${S.border}`, borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: S.muted, wordBreak: 'break-all' }}>
                 {voteUrl || '— faça login para gerar a URL —'}
@@ -260,14 +380,15 @@ export default function PollingPage() {
       <div style={{ background: 'rgba(155,48,255,0.06)', border: `1px solid rgba(155,48,255,0.15)`, borderRadius: 12, padding: 20 }}>
         <div style={{ fontWeight: 700, color: S.text, fontSize: '0.9rem', marginBottom: 10 }}>Como usar</div>
         <ol style={{ color: S.muted, fontSize: '0.82rem', margin: 0, paddingLeft: 20, lineHeight: 2.1 }}>
-          <li>Digite o nome do seu canal da Twitch no campo acima</li>
-          <li>Crie uma enquete com a pergunta e as opções</li>
-          <li>Cole a <strong style={{ color: S.text }}>URL do overlay</strong> em um Browser Source no OBS (400×250 px)</li>
-          <li>Os viewers digitam <strong style={{ color: S.text }}>!vote 1</strong>, <strong style={{ color: S.text }}>!vote 2</strong>… (ou <strong style={{ color: S.text }}>!1</strong>, <strong style={{ color: S.text }}>!2</strong>…) no chat para votar</li>
-          <li>Cada viewer só pode votar uma vez por enquete</li>
-          <li>Os resultados aparecem em tempo real no overlay (atualiza a cada 3s)</li>
-          <li>Encerre quando quiser — resultado fica travado na tela</li>
+          <li>Digite o nome do canal da Twitch no campo acima — aguarde <strong style={{ color: S.green }}>Chat conectado</strong></li>
+          <li>Crie uma enquete. Os viewers digitam <strong style={{ color: S.text }}>!vote 1</strong>, <strong style={{ color: S.text }}>!vote 2</strong>… no chat</li>
+          <li>Cada viewer só vota uma vez. Os votos aparecem em tempo real</li>
+          <li>Cole a URL do overlay em um Browser Source no OBS (400×250 px)</li>
+          <li>Encerre quando quiser — resultado trava na tela</li>
         </ol>
+        <div style={{ marginTop: 10, fontSize: '0.75rem', color: S.dim }}>
+          ⚠️ Mantenha esta aba aberta durante a enquete — a leitura do chat acontece aqui no dashboard.
+        </div>
       </div>
 
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
