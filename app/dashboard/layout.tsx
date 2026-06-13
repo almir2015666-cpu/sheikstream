@@ -35,6 +35,9 @@ const I = {
   cmd:  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>,
   time: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
   over: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+  agen: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  mod:  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  alrt: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
   suba: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
   link: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
   prof: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
@@ -58,6 +61,9 @@ const NAV_GROUPS: Group[] = [
   { label: 'AO VIVO', items: [
     { id: 'subathon',  label: 'Subathon',        href: '/dashboard/subathon',  icon: I.suba, badge: 'NOVO' },
     { id: 'timers',    label: 'Timers',           href: '/dashboard/timers',    icon: I.time },
+    { id: 'agenda',    label: 'Agenda',           href: '/dashboard/agenda',    icon: I.agen, badge: 'NOVO' as Badge },
+    { id: 'moderacao', label: 'Moderação',        href: '/dashboard/moderacao', icon: I.mod,  badge: 'NOVO' as Badge },
+    { id: 'alertas',   label: 'Alertas',          href: '/dashboard/alertas',   icon: I.alrt, badge: 'NOVO' as Badge },
     { id: 'comandos',  label: 'Eventos/Comandos', href: '/dashboard/comandos',  icon: I.cmd  },
     { id: 'voice-fx',  label: 'Voice FX',         href: '/dashboard/voice-fx',  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>, badge: 'NOVO' as Badge },
     { id: 'ia', label: 'IA', href: '/dashboard/ia-chat', badge: 'NOVO' as Badge,
@@ -123,6 +129,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/ia-chat': 'IA de Chat',
   '/dashboard/ia-chat/voz': 'IA por Voz',
   '/dashboard/voice-fx': 'Voice FX',
+  '/dashboard/agenda': 'Agenda de Lives',
+  '/dashboard/moderacao': 'Moderação Automática',
+  '/dashboard/alertas': 'Fila de Alertas',
 }
 
 function Chip({ type }: { type: Badge }) {
@@ -220,6 +229,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const ITEM_KEY: Partial<Record<string, TKey>> = {
     dashboard: 'nav_dashboard', subathon: 'nav_subathon', timers: 'nav_timers',
+    agenda: 'nav_agenda', moderacao: 'nav_moderacao', alertas: 'nav_alertas',
     comandos: 'nav_commands', ia: 'nav_ia', 'ia-chat': 'nav_ia_chat', 'ia-voz': 'nav_ia_voice',
     sorteios: 'nav_raffles', 's-criar': 'nav_raffle_create', 's-tickets': 'nav_raffle_tickets',
     plataformas: 'nav_platforms', metas: 'nav_goals', overlays: 'nav_overlays_item',
@@ -236,6 +246,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     '/dashboard/conexoes': 'pt_connections', '/dashboard/perfil': 'pt_profile',
     '/dashboard/convites': 'pt_invites', '/dashboard/ia-imagens': 'pt_ia_images',
     '/dashboard/ia-chat': 'pt_ia_chat', '/dashboard/ia-chat/voz': 'pt_ia_voice',
+    '/dashboard/agenda': 'pt_agenda', '/dashboard/moderacao': 'pt_moderacao', '/dashboard/alertas': 'pt_alertas',
   }
   const tItem = (id: string, fallback: string) => { const k = ITEM_KEY[id]; return k ? t(k) : fallback }
   const pageTitle = PAGE_TITLE_KEYS[pathname] ? t(PAGE_TITLE_KEYS[pathname]) : (PAGE_TITLES[pathname] ?? 'Dashboard')
