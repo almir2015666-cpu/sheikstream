@@ -76,9 +76,10 @@ function ChatContent() {
 
   const animClass = anim === 'slide' ? 'msg-slide' : anim === 'fade' ? 'msg-fade' : 'msg-pop'
 
-  // bottom: newest at bottom (chronological, justifyContent:flex-end clips oldest at top)
-  // top:    newest at top (reversed, justifyContent:flex-start clips oldest at bottom)
-  const list = direction === 'top' ? [...msgs].reverse() : msgs
+  // both directions: newest first in DOM
+  // bottom → column-reverse: newest anchors to bottom, overflow clips oldest at top
+  // top    → column:         newest anchors to top,    overflow clips oldest at bottom
+  const list = [...msgs].reverse()
 
   return (
     <>
@@ -111,8 +112,7 @@ function ChatContent() {
             height: 'calc(100% - 24px)',
             overflow: 'hidden',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: direction === 'top' ? 'flex-start' : 'flex-end',
+            flexDirection: direction === 'top' ? 'column' : 'column-reverse',
             gap: 4,
           }}>
             {list.map(m => (
