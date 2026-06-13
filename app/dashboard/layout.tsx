@@ -96,8 +96,14 @@ const NAV_GROUPS: Group[] = [
     { id: 'metas', label: 'Metas', href: '/dashboard/metas', icon: I.meta },
   ]},
   { label: 'OVERLAYS', items: [
-    { id: 'overlays', label: 'Overlays', href: '/dashboard/overlays', icon: I.over },
-    { id: 'banners',  label: 'Banners',  href: '/dashboard/banners',  icon: I.ban, badge: 'NOVO' as Badge },
+    { id: 'overlays',   label: 'Overlays',  href: '/dashboard/overlays',  icon: I.over },
+    { id: 'banners',    label: 'Banners',   href: '/dashboard/banners',   icon: I.ban, badge: 'NOVO' as Badge },
+    { id: 'countdown',  label: 'Countdown', href: '/dashboard/countdown', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, badge: 'NOVO' as Badge },
+  ]},
+  { label: 'COMUNIDADE', items: [
+    { id: 'collab', label: 'Fila de Collab', href: '/dashboard/collab', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, badge: 'NOVO' as Badge },
+    { id: 'raids',  label: 'Raids',         href: '/dashboard/raids',  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>, badge: 'NOVO' as Badge },
+    { id: 'analytics', label: 'Analytics',  href: '/dashboard/analytics', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, badge: 'NOVO' as Badge },
   ]},
   { label: 'CONTA', items: [
     { id: 'notas',    label: 'Notas',      href: '/dashboard/notas',   icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
@@ -130,6 +136,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/voice-fx': 'Voice FX',
   '/dashboard/agenda': 'Agenda de Lives',
   '/dashboard/alertas': 'Fila de Alertas',
+  '/dashboard/countdown': 'Countdown para OBS',
+  '/dashboard/collab': 'Fila de Collab',
+  '/dashboard/raids': 'Histórico de Raids',
+  '/dashboard/analytics': 'Analytics',
 }
 
 function Chip({ type }: { type: Badge }) {

@@ -121,6 +121,11 @@ export default function ConexoesPage() {
   const [spotifySuccess, setSpotifySuccess] = useState(false)
   const [kickDisconnecting, setKickDisconnecting] = useState(false)
   const [urlError, setUrlError] = useState<string | null>(null)
+  const [discordWebhookUrl, setDiscordWebhookUrl] = useState('')
+  const [discordSaving, setDiscordSaving] = useState(false)
+  const [discordSaved, setDiscordSaved] = useState(false)
+  const [discordTesting, setDiscordTesting] = useState(false)
+  const [discordMsg, setDiscordMsg] = useState('')
 
   async function handleDisconnect(platform: string) {
     setDisconnecting(true)
@@ -398,6 +403,42 @@ export default function ConexoesPage() {
       if (d) setLastSyncDate(d)
     } catch { /**/ }
   }, [])
+
+  useEffect(() => {
+    fetch('/api/discord-webhook')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.webhookUrl) { setDiscordWebhookUrl(d.webhookUrl); setDiscordSaved(true) }
+      })
+      .catch(() => {})
+  }, [])
+
+  async function saveDiscordWebhook() {
+    setDiscordSaving(true); setDiscordMsg('')
+    try {
+      const r = await fetch('/api/discord-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webhookUrl: discordWebhookUrl }),
+      })
+      const d = await r.json()
+      if (d.ok) { setDiscordSaved(true); setDiscordMsg('Salvo com sucesso!') }
+      else setDiscordMsg(d.error ?? 'Erro ao salvar')
+    } finally { setDiscordSaving(false) }
+  }
+
+  async function testDiscordWebhook() {
+    setDiscordTesting(true); setDiscordMsg('')
+    try {
+      const r = await fetch('/api/discord-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ test: true, webhookUrl: discordWebhookUrl }),
+      })
+      const d = await r.json()
+      setDiscordMsg(d.ok ? '✅ Mensagem enviada ao Discord!' : `❌ ${d.error}`)
+    } finally { setDiscordTesting(false) }
+  }
 
   useEffect(() => {
     fetch('/api/livepix/config')
@@ -756,6 +797,74 @@ export default function ConexoesPage() {
               Configurar Livepix
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Discord Webhook section */}
+      <div style={{ marginTop: '1.5rem', marginBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: C.text }}>Notificações</h2>
+        </div>
+        <div style={{ background: C.card, border: `1px solid ${discordSaved ? 'rgba(88,101,242,0.35)' : C.border}`, borderRadius: 12, padding: '1.2rem 1.3rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(88,101,242,0.12)', border: '1px solid rgba(88,101,242,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#5865f2">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.08.114 18.1.133 18.116a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.88rem', color: C.text }}>Discord Webhook</span>
+                {discordSaved && (
+                  <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.45rem', background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderRadius: 999, border: '1px solid rgba(34,197,94,0.2)' }}>configurado</span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.76rem', color: C.dim }}>Receba notificações no Discord quando for ao vivo</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <div style={{ fontSize: '0.72rem', color: C.dim, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>URL do Webhook</div>
+            <input
+              type="url"
+              placeholder="https://discord.com/api/webhooks/..."
+              value={discordWebhookUrl}
+              onChange={e => { setDiscordWebhookUrl(e.target.value); setDiscordMsg('') }}
+              style={{
+                width: '100%', padding: '0.55rem 0.75rem',
+                background: '#08090d', border: `1px solid ${C.border}`,
+                borderRadius: 8, color: C.text, fontSize: '0.82rem',
+                outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={saveDiscordWebhook}
+                disabled={discordSaving || !discordWebhookUrl.trim()}
+                style={{ padding: '0.5rem 1.1rem', background: 'rgba(88,101,242,0.15)', border: '1px solid rgba(88,101,242,0.35)', color: '#818cf8', borderRadius: 8, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', opacity: (!discordWebhookUrl.trim() || discordSaving) ? 0.5 : 1 }}
+              >
+                {discordSaving ? 'Salvando...' : 'Salvar'}
+              </button>
+              <button
+                onClick={testDiscordWebhook}
+                disabled={discordTesting || !discordWebhookUrl.trim()}
+                style={{ padding: '0.5rem 1.1rem', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', opacity: (!discordWebhookUrl.trim() || discordTesting) ? 0.5 : 1 }}
+              >
+                {discordTesting ? 'Testando...' : 'Testar webhook'}
+              </button>
+            </div>
+            {discordMsg && (
+              <div style={{ fontSize: '0.78rem', color: discordMsg.startsWith('✅') ? '#22c55e' : '#ef4444', marginTop: 2 }}>
+                {discordMsg}
+              </div>
+            )}
+            <div style={{ fontSize: '0.72rem', color: C.vdim, lineHeight: 1.5 }}>
+              Para criar um webhook: Discord → canal → Editar canal → Integrações → Criar webhook → Copiar URL
+            </div>
+          </div>
         </div>
       </div>
 
