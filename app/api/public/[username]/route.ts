@@ -21,9 +21,10 @@ async function getTwitchAppToken(): Promise<string | null> {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { username: string } }
+  { params }: { params: Promise<{ username: string }> }
 ) {
-  const username = params.username?.toLowerCase()
+  const { username: rawUsername } = await params
+  const username = rawUsername?.toLowerCase()
   if (!username) return NextResponse.json({ error: 'username required' }, { status: 400 })
 
   const db = getSupabaseAdmin()

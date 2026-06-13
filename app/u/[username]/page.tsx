@@ -31,9 +31,10 @@ async function fetchProfile(username: string): Promise<Profile | null> {
 }
 
 export async function generateMetadata(
-  { params }: { params: { username: string } }
+  { params }: { params: Promise<{ username: string }> }
 ): Promise<Metadata> {
-  const p = await fetchProfile(params.username)
+  const { username } = await params
+  const p = await fetchProfile(username)
   if (!p) return { title: 'Streamer não encontrado — SheikSTREAM' }
   return {
     title: `${p.displayName} — SheikSTREAM`,
@@ -46,8 +47,9 @@ export async function generateMetadata(
   }
 }
 
-export default async function PublicProfilePage({ params }: { params: { username: string } }) {
-  const profile = await fetchProfile(params.username)
+export default async function PublicProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params
+  const profile = await fetchProfile(username)
   if (!profile) notFound()
 
   const { displayName, profileImage, description, isLive, streamTitle, streamGame, viewerCount, agenda } = profile
