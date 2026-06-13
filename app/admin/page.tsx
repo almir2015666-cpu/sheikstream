@@ -316,18 +316,24 @@ export default function AdminPage() {
     { id: 'dashboard',   label: 'Dashboard' },
     { id: 'subathon',    label: 'Subathon' },
     { id: 'timers',      label: 'Timers' },
-    { id: 'comandos',    label: 'Comandos' },
+    { id: 'agenda',      label: 'Agenda' },
+    { id: 'alertas',     label: 'Alertas' },
+    { id: 'voice-fx',    label: 'Voice FX' },
+    { id: 'ia',          label: 'IA' },
+    { id: 'comandos',    label: 'Eventos/Comandos' },
     { id: 'sorteios',    label: 'Sorteios' },
     { id: 'plataformas', label: 'Plataformas' },
     { id: 'metas',       label: 'Metas' },
     { id: 'overlays',    label: 'Overlays' },
     { id: 'banners',     label: 'Banners' },
-    { id: 'ia-imagens',  label: 'IA de Imagens' },
+    { id: 'notas',       label: 'Notas' },
     { id: 'conexoes',    label: 'Conexões' },
     { id: 'convites',    label: 'Convites' },
     { id: 'perfil',      label: 'Meu Perfil' },
   ]
-  const [navOrder, setNavOrder] = useState<string[]>(NAV_ITEMS_LIST.map(i => i.id))
+  const [navOrder, setNavOrder]           = useState<string[]>(NAV_ITEMS_LIST.map(i => i.id))
+  const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon' | ''>>({})
+  const [navStatusLoaded, setNavStatusLoaded] = useState(false)
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -624,13 +630,19 @@ export default function AdminPage() {
     return () => clearInterval(iv)
   }, [logTab, storedPw, view, fetchLogs, fetchErrorLogs, fetchSystemLogs, fetchLoginLogs, fetchChangelog, fetchActivity])
 
-  // Load nav order from localStorage when switching to navorder view
+  // Load nav order + itemStatus from API when switching to navorder view
   useEffect(() => {
     if (view !== 'navorder') return
-    try {
-      const s = localStorage.getItem('sk-nav-order')
-      setNavOrder(s ? JSON.parse(s) : NAV_ITEMS_LIST.map(i => i.id))
-    } catch {}
+    setNavStatusLoaded(false)
+    fetch('/api/admin/nav-order')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.order && Array.isArray(d.order) && d.order.length > 0) setNavOrder(d.order)
+        else { try { const s = localStorage.getItem('sk-nav-order'); if (s) setNavOrder(JSON.parse(s)) } catch {} }
+        if (d?.itemStatus && typeof d.itemStatus === 'object') setNavItemStatus(d.itemStatus)
+      })
+      .catch(() => {})
+      .finally(() => setNavStatusLoaded(true))
   }, [view])
 
   const fetchOnlineUsers = useCallback(async (pw: string) => {
@@ -2350,6 +2362,9 @@ export default function AdminPage() {
               setNavOrder(arr)
             }
 
+            const cleanStatus: Record<string, 'maintenance' | 'soon'> = {}
+            Object.entries(navItemStatus).forEach(([k, v]) => { if (v === 'maintenance' || v === 'soon') cleanStatus[k] = v })
+
             const saveNav = async () => {
               const arr = ordered.map(i => i.id)
               try { localStorage.setItem('sk-nav-order', JSON.stringify(arr)) } catch {}
@@ -2357,9 +2372,9 @@ export default function AdminPage() {
                 const res = await fetch('/api/admin/nav-order', {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-                  body: JSON.stringify({ order: arr }),
+                  body: JSON.stringify({ order: arr, itemStatus: cleanStatus }),
                 })
-                if (res.ok) alert('Ordem salva! Vai refletir para todos os usuários.')
+                if (res.ok) alert('Salvo! Vai refletir para todos os usuários.')
                 else alert('Salvo localmente. Erro ao salvar no banco.')
               } catch {
                 alert('Salvo localmente. Sem conexão com o banco.')
@@ -2368,41 +2383,66 @@ export default function AdminPage() {
 
             const resetNav = async () => {
               setNavOrder(NAV_ITEMS_LIST.map(i => i.id))
+              setNavItemStatus({})
               try { localStorage.removeItem('sk-nav-order') } catch {}
               try {
                 await fetch('/api/admin/nav-order', {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-                  body: JSON.stringify({ order: NAV_ITEMS_LIST.map(i => i.id) }),
+                  body: JSON.stringify({ order: NAV_ITEMS_LIST.map(i => i.id), itemStatus: {} }),
                 })
               } catch {}
+            }
+
+            const setStatus = (id: string, val: 'maintenance' | 'soon' | '') => {
+              setNavItemStatus(prev => { const n = { ...prev }; if (val) n[id] = val; else delete n[id]; return n })
             }
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
-                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>⠿ Ordem do Menu lateral</h3>
-                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Use os botões ▲/▼ para reordenar os itens da sidebar do dashboard. Clique em Salvar para aplicar.</p>
+                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>⠿ Ordem e Status do Menu</h3>
+                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Reordene com ▲/▼ e defina o status de cada item. Em manutenção ou Em breve aparecem desativados na sidebar.</p>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
-                    {ordered.map((item, idx) => (
-                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.65rem 1rem', background: C.cardBgAlt, border: `1px solid ${C.border}`, borderRadius: '10px' }}>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.vdim, width: 18, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
-                        <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600, color: C.text }}>{item.label}</span>
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                          <button disabled={idx === 0} onClick={() => moveNav(item.id, 'up')}
-                            style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
-                          <button disabled={idx === ordered.length - 1} onClick={() => moveNav(item.id, 'down')}
-                            style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === ordered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === ordered.length - 1 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                    {ordered.map((item, idx) => {
+                      const st = navItemStatus[item.id] ?? ''
+                      return (
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.65rem 1rem', background: st ? 'rgba(245,158,11,0.04)' : C.cardBgAlt, border: `1px solid ${st ? 'rgba(245,158,11,0.2)' : C.border}`, borderRadius: '10px' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.vdim, width: 18, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                          <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600, color: st ? C.muted : C.text }}>{item.label}</span>
+
+                          {/* Status toggle */}
+                          <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                            {(['', 'maintenance', 'soon'] as const).map(val => {
+                              const labels: Record<string, string> = { '': 'Ativo', maintenance: '🔧 Manutenção', soon: '⏳ Em breve' }
+                              const active = st === val
+                              const colors: Record<string, string> = { '': '#22c55e', maintenance: '#f59e0b', soon: '#818cf8' }
+                              return (
+                                <button key={val} onClick={() => setStatus(item.id, val)}
+                                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.68rem', fontWeight: active ? 700 : 500, borderRadius: '6px', cursor: 'pointer', border: `1px solid ${active ? colors[val] + '66' : C.border}`, background: active ? `${colors[val]}18` : 'transparent', color: active ? colors[val] : C.vdim, whiteSpace: 'nowrap' }}>
+                                  {labels[val]}
+                                </button>
+                              )
+                            })}
+                          </div>
+
+                          {/* Reorder */}
+                          <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                            <button disabled={idx === 0} onClick={() => moveNav(item.id, 'up')}
+                              style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
+                            <button disabled={idx === ordered.length - 1} onClick={() => moveNav(item.id, 'down')}
+                              style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === ordered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === ordered.length - 1 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.65rem' }}>
                     <button onClick={saveNav}
                       style={{ flex: 1, padding: '0.55rem 0', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-                      ✓ Salvar ordem
+                      ✓ Salvar
                     </button>
                     <button onClick={resetNav}
                       style={{ padding: '0.55rem 1rem', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>

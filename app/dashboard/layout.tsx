@@ -206,6 +206,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [navOrder, setNavOrder] = useState<string[]>([])
+  const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon'>>({})
   // Suggestion/bug form (global — all pages)
   const [showSugg, setShowSugg] = useState(false)
   const [suggType, setSuggType] = useState<'suggestion' | 'bug'>('suggestion')
@@ -270,8 +271,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setNavOrder(d.order)
           try { localStorage.setItem('sk-nav-order', JSON.stringify(d.order)) } catch {}
         } else {
-          // No global order saved yet — clear any stale local order
           try { localStorage.removeItem('sk-nav-order') } catch {}
+        }
+        if (d?.itemStatus && typeof d.itemStatus === 'object') {
+          setNavItemStatus(d.itemStatus)
         }
       })
       .catch(() => {/* network error — keep default order */})
@@ -637,6 +640,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             const isAct = active(item)
             const isExp = open.has(item.id)
             const hasCh = !!item.children
+            const itemSt = navItemStatus[item.id]
+            if (itemSt) {
+              const isMaint = itemSt === 'maintenance'
+              return (
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.6rem 0.75rem', borderRadius: '9px', marginBottom: '2px', color: S.vdim, fontSize: '0.9rem', fontWeight: 400, opacity: 0.5, cursor: 'not-allowed', letterSpacing: '-0.1px', userSelect: 'none' }}>
+                  <span style={{ color: S.vdim, flexShrink: 0, display: 'flex' }}>{item.icon}</span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tItem(item.id, item.label)}</span>
+                  {isMaint
+                    ? <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', borderRadius: '99px', letterSpacing: '0.4px', flexShrink: 0, border: '1px solid rgba(245,158,11,0.3)', whiteSpace: 'nowrap' }}>MANUTENÇÃO</span>
+                    : <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: 'rgba(99,102,241,0.15)', color: '#818cf8', borderRadius: '99px', letterSpacing: '0.4px', flexShrink: 0, border: '1px solid rgba(99,102,241,0.3)', whiteSpace: 'nowrap' }}>EM BREVE</span>
+                  }
+                </div>
+              )
+            }
             return (
               <div key={item.id} style={{ position: 'relative' }}>
                 <Link

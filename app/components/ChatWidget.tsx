@@ -75,7 +75,7 @@ export function ChatWidget({
   const [totalUnread, setTotalUnread]     = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [copied, setCopied]               = useState(false)
-  const lastCheckRef  = useRef<string>(new Date().toISOString())
+  const lastCheckRef  = useRef<string>(new Date(Date.now() - 30000).toISOString())
   const knownIds      = useRef<Set<string>>(new Set())
   const usersRef      = useRef<ChatUser[]>([])   // ref so poll never needs users in deps
   const msgsEndRef    = useRef<HTMLDivElement>(null)
@@ -106,8 +106,9 @@ export function ChatWidget({
     if (!currentUserId) return
     try {
       const since = lastCheckRef.current
+      const r = await fetch(`/api/dm?since=${encodeURIComponent(since)}`, { credentials: 'include' })
+      // Update AFTER fetch resolves so messages sent during a slow fetch are never missed
       lastCheckRef.current = new Date().toISOString()
-      const r = await fetch(`/api/dm?since=${encodeURIComponent(since)}`)
       if (!r.ok) return
       const newMsgs: Message[] = await r.json()
       if (!Array.isArray(newMsgs) || newMsgs.length === 0) return
@@ -144,13 +145,31 @@ export function ChatWidget({
     } catch {}
   }, [currentUserId])  // stable — no users dep, uses usersRef instead
 
+  // Load initial unread count so badge shows on page load
+  const loadInitialUnread = useCallback(async () => {
+    try {
+      const r = await fetch('/api/dm/unread', { credentials: 'include' })
+      if (!r.ok) return
+      const data: { sender_id: string; count: number }[] = await r.json()
+      if (!Array.isArray(data)) return
+      const counts: Record<string, number> = {}
+      let total = 0
+      data.forEach(({ sender_id, count }) => { counts[sender_id] = count; total += count })
+      setUnread(counts)
+      setTotalUnread(total)
+    } catch {}
+  }, [])
+
   useEffect(() => {
     if (!currentUserId) return
     loadUsers()
-    const ivPoll  = setInterval(poll, 5000)
+    loadInitialUnread()
+    // Poll immediately on mount, then every 3s for more responsive notifications
+    poll()
+    const ivPoll  = setInterval(poll, 3000)
     const ivUsers = setInterval(loadUsers, 30000)
     return () => { clearInterval(ivPoll); clearInterval(ivUsers) }
-  }, [currentUserId, loadUsers, poll])  // poll is now stable (no users dep)
+  }, [currentUserId, loadUsers, loadInitialUnread, poll])
 
   useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -212,10 +231,10 @@ export function ChatWidget({
       {/* ── Notification popups ─────────────────────────────────────────────── */}
       {notifications.map((notif, idx) => (
         <div key={notif.msgId} style={{
-          position: 'fixed', bottom: 88 + idx * 88, right: 24, width: 300, zIndex: 9999,
-          background: '#1a1c30', border: '1px solid rgba(155,48,255,0.4)',
+          position: 'fixed', top: 16 + idx * 96, right: 16, width: 320, zIndex: 99999,
+          background: '#1a1c30', border: '1px solid rgba(155,48,255,0.5)',
           borderRadius: '14px', padding: '0.85rem 1rem',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(155,48,255,0.1)',
           animation: 'slideInRight 0.25s ease',
           display: 'flex', alignItems: 'flex-start', gap: '0.65rem',
         }}>

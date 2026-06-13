@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAdminPassword } from '@/app/lib/adminAuth'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 
-// Uses overlay_configs with broadcaster_id='_global_' — no new table needed
 const GLOBAL_ID = '_global_'
 const NAV_TYPE  = 'nav_order'
 
@@ -14,10 +13,11 @@ export async function GET() {
       .eq('broadcaster_id', GLOBAL_ID)
       .eq('type', NAV_TYPE)
       .single()
-    const order = data?.config?.order ?? null
-    return NextResponse.json({ order })
+    const order      = data?.config?.order      ?? null
+    const itemStatus = data?.config?.itemStatus ?? {}
+    return NextResponse.json({ order, itemStatus })
   } catch {
-    return NextResponse.json({ order: null })
+    return NextResponse.json({ order: null, itemStatus: {} })
   }
 }
 
@@ -25,14 +25,15 @@ export async function PUT(req: NextRequest) {
   if (!await isAdminPassword(req.headers.get('x-admin-password') ?? ''))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
-    const { order } = await req.json()
+    const body = await req.json()
+    const { order, itemStatus } = body
     if (!Array.isArray(order)) return NextResponse.json({ error: 'Invalid' }, { status: 400 })
     const { error } = await getSupabaseAdmin()
       .from('overlay_configs')
       .upsert({
         broadcaster_id: GLOBAL_ID,
         type: NAV_TYPE,
-        config: { order },
+        config: { order, itemStatus: itemStatus ?? {} },
         updated_at: new Date().toISOString(),
       }, { onConflict: 'broadcaster_id,type' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
