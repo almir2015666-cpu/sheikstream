@@ -21,13 +21,15 @@ type Raid = {
   partner_image: string | null; viewer_count: number; notes: string | null; occurred_at: string
 }
 
-const EMPTY = { raid_type: 'incoming' as const, partner_name: '', viewer_count: '', notes: '' }
+type RaidType = 'incoming' | 'outgoing'
+type FormState = { raid_type: RaidType; partner_name: string; viewer_count: string; notes: string }
+const EMPTY: FormState = { raid_type: 'incoming', partner_name: '', viewer_count: '', notes: '' }
 
 export default function RaidsPage() {
   const [raids, setRaids] = useState<Raid[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState(EMPTY)
+  const [form, setForm] = useState<FormState>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
