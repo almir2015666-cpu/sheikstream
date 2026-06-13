@@ -271,7 +271,7 @@ export default function ChatConfigPage() {
                     borderRadius: bgOff ? 0 : radius,
                     background: msgBg,
                     lineHeight: 1.4, wordBreak: 'break-word' as const,
-                    fontSize: Math.min(size, 14),
+                    fontSize: size,
                     animation: anim === 'slide' ? `slideIn .2s ${i*0.04}s both` : anim === 'fade' ? `fadeIn .25s ${i*0.04}s both` : `popIn .18s ${i*0.04}s both`,
                   }}>
                     <span style={{ fontWeight: 700, color: m.color, marginRight: 5, textShadow: shadow ? '0 1px 4px rgba(0,0,0,0.9)' : 'none' }}>{m.user}:</span>
