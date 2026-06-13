@@ -272,25 +272,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     try {
       if (localStorage.getItem('sk-admin-authed') === '1') setIsAdmin(true)
     } catch { /* ignore */ }
-    // Load nav order from DB — DB is source of truth, localStorage is ignored
-    fetch('/api/admin/nav-order')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d?.order && Array.isArray(d.order) && d.order.length > 0) {
-          setNavOrder(d.order)
-          try { localStorage.setItem('sk-nav-order', JSON.stringify(d.order)) } catch {}
-        } else {
-          try { localStorage.removeItem('sk-nav-order') } catch {}
-        }
-        if (d?.itemStatus && typeof d.itemStatus === 'object') {
-          setNavItemStatus(d.itemStatus)
-        }
-      })
-      .catch(() => {/* network error — keep default order */})
+    // Load nav order from DB — DB is source of truth, polls every 60s for live updates
+    const fetchNavOrder = () =>
+      fetch('/api/admin/nav-order')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.order && Array.isArray(d.order) && d.order.length > 0) {
+            setNavOrder(d.order)
+            try { localStorage.setItem('sk-nav-order', JSON.stringify(d.order)) } catch {}
+          } else {
+            try { localStorage.removeItem('sk-nav-order') } catch {}
+          }
+          if (d?.itemStatus && typeof d.itemStatus === 'object') {
+            setNavItemStatus(d.itemStatus)
+          }
+        })
+        .catch(() => {/* network error — keep current order */})
+    fetchNavOrder()
+    const navIv = setInterval(fetchNavOrder, 60_000)
     const fetchBanner = () => fetch('/api/dev-banner').then(r => r.json()).then(d => setBanner(d?.active ? d : null)).catch(() => {})
     fetchBanner()
     const iv = setInterval(fetchBanner, 30000)
-    return () => clearInterval(iv)
+    return () => { clearInterval(navIv); clearInterval(iv) }
   }, [])
 
   // Auto-dismiss badge when navigating to that page
