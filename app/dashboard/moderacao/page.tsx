@@ -42,15 +42,34 @@ export default function ModeracaoPage() {
   const [newWord, setNewWord] = useState('')
   const [newUser, setNewUser] = useState('')
 
+  const LS_KEY = 'sk-moderacao'
+
+  function lsLoad(): ModConfig | null {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null') } catch { return null }
+  }
+  function lsSave(data: ModConfig) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(data)) } catch {}
+  }
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const r = await fetch('/api/moderacao')
-      if (r.ok) setConfig(await r.json())
+      if (r.ok) {
+        const data = await r.json()
+        setConfig(data)
+        lsSave(data)
+      } else {
+        const saved = lsLoad()
+        if (saved) setConfig(saved)
+      }
+    } catch {
+      const saved = lsLoad()
+      if (saved) setConfig(saved)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
 
@@ -58,12 +77,14 @@ export default function ModeracaoPage() {
     setSaving(true)
     setSaved(false)
     try {
-      const r = await fetch('/api/moderacao', {
+      lsSave(config)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+      fetch('/api/moderacao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
-      })
-      if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
+      }).catch(() => {})
     } finally {
       setSaving(false)
     }

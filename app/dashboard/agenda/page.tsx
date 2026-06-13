@@ -44,15 +44,32 @@ export default function AgendaPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
 
+  const LS_KEY = 'sk-agenda'
+
+  function lsLoad(): AgendaItem[] {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]') } catch { return [] }
+  }
+  function lsSave(data: AgendaItem[]) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(data)) } catch {}
+  }
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const r = await fetch('/api/agenda')
-      if (r.ok) setItems(await r.json())
+      if (r.ok) {
+        const data = await r.json()
+        setItems(data)
+        lsSave(data)
+      } else {
+        setItems(lsLoad())
+      }
+    } catch {
+      setItems(lsLoad())
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
 
@@ -79,13 +96,22 @@ export default function AgendaPage() {
     if (!form.title.trim()) return
     setSaving(true)
     try {
-      const method = editing ? 'PATCH' : 'POST'
-      const body = editing ? { id: editing.id, ...form } : form
-      const r = await fetch('/api/agenda', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      if (r.ok) {
-        await load()
-        setShowModal(false)
+      if (editing) {
+        const updated = items.map(i => i.id === editing.id ? { ...i, ...form } : i)
+        setItems(updated)
+        lsSave(updated)
+        fetch('/api/agenda', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing.id, ...form }) }).catch(() => {})
+      } else {
+        const newItem: AgendaItem = {
+          id: crypto.randomUUID(), ...form, is_active: true,
+          created_at: new Date().toISOString(),
+        }
+        const updated = [...items, newItem]
+        setItems(updated)
+        lsSave(updated)
+        fetch('/api/agenda', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) }).catch(() => {})
       }
+      setShowModal(false)
     } finally {
       setSaving(false)
     }
@@ -94,8 +120,10 @@ export default function AgendaPage() {
   async function handleDelete(id: string) {
     setDeleting(id)
     try {
-      await fetch(`/api/agenda?id=${id}`, { method: 'DELETE' })
-      await load()
+      const updated = items.filter(i => i.id !== id)
+      setItems(updated)
+      lsSave(updated)
+      fetch(`/api/agenda?id=${id}`, { method: 'DELETE' }).catch(() => {})
     } finally {
       setDeleting(null)
     }
