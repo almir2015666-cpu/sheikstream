@@ -20,21 +20,25 @@ type Poll   = { question: string; options: Option[]; status: string; created_at:
 
 export default function PollingPage() {
   const router = useRouter()
-  const [uid,     setUid]     = useState('')
+  const [uid,      setUid]     = useState('')
+  const [channel,  setChannel] = useState('')
   const [poll,    setPoll]    = useState<Poll | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
   const [msg,     setMsg]     = useState('')
   const [question, setQuestion] = useState('')
   const [options,  setOptions]  = useState(['', '', '', ''])
-  const [copied,   setCopied]   = useState(false)
+  const [copied,   setCopied]   = useState<'overlay'|'vote'|null>(null)
   const [creating, setCreating] = useState(false)
   const ivRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000) }
 
   useEffect(() => {
-    fetch('/api/me').then(r => r.ok ? r.json() : null).then(u => { if (u?.id) setUid(u.id) }).catch(() => {})
+    fetch('/api/me').then(r => r.ok ? r.json() : null).then(u => {
+      if (u?.id) setUid(u.id)
+      if (u?.name) setChannel(u.name.toLowerCase())
+    }).catch(() => {})
   }, [])
 
   const loadPoll = () =>
@@ -77,13 +81,16 @@ export default function PollingPage() {
     flash('Enquete excluída')
   }
 
-  const overlayUrl = uid ? `${typeof window !== 'undefined' ? window.location.origin : ''}/overlay/poll?uid=${uid}&color=%239b30ff` : ''
-  const voteUrl    = uid ? `${typeof window !== 'undefined' ? window.location.origin : ''}/votar/${uid}` : ''
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const overlayUrl = uid
+    ? `${origin}/overlay/poll?uid=${uid}&color=%239b30ff${channel ? `&channel=${channel.toLowerCase()}` : ''}`
+    : ''
+  const voteUrl = uid ? `${origin}/votar/${uid}` : ''
 
-  const copy = (url: string) => {
+  const copy = (url: string, which: 'overlay'|'vote') => {
     navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopied(which)
+    setTimeout(() => setCopied(null), 2000)
   }
 
   const total = (poll?.options ?? []).reduce((s, o) => s + o.votes, 0)
@@ -201,21 +208,39 @@ export default function PollingPage() {
 
           {/* URLs */}
           <div style={{ background: S.card, border: `1px solid rgba(155,48,255,0.2)`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
+            {label('Canal da Twitch (para votação por chat)')}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
+              <input
+                value={channel}
+                onChange={e => setChannel(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                placeholder="nomeDaLive"
+                style={{ flex: 1, padding: '8px 12px', background: '#08090d', border: `1px solid ${S.border}`, borderRadius: 8, color: S.text, fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit' }}
+              />
+            </div>
+
             {label('URL do overlay para OBS (Browser Source)')}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ flex: 1, background: '#08090d', border: `1px solid ${S.border}`, borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: S.muted, wordBreak: 'break-all' }}>
+              <div style={{ flex: 1, background: '#08090d', border: `1px solid ${S.border}`, borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: S.muted, wordBreak: 'break-all' }}>
                 {overlayUrl || '— faça login para gerar a URL —'}
               </div>
               {overlayUrl && (
-                <button onClick={() => copy(overlayUrl)}
-                  style={{ padding: '8px 16px', background: copied ? S.green : S.primary, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}>
-                  {copied ? '✓' : 'Copiar'}
+                <button onClick={() => copy(overlayUrl, 'overlay')}
+                  style={{ padding: '8px 16px', background: copied === 'overlay' ? S.green : S.primary, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}>
+                  {copied === 'overlay' ? '✓' : 'Copiar'}
                 </button>
               )}
             </div>
-            {label('URL de votação pública (navegador dos viewers)')}
-            <div style={{ background: '#08090d', border: `1px solid ${S.border}`, borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: S.muted, wordBreak: 'break-all' }}>
-              {voteUrl || '— faça login para gerar a URL —'}
+            {label('URL de votação pública (link alternativo pelo navegador)')}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ flex: 1, background: '#08090d', border: `1px solid ${S.border}`, borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: S.muted, wordBreak: 'break-all' }}>
+                {voteUrl || '— faça login para gerar a URL —'}
+              </div>
+              {voteUrl && (
+                <button onClick={() => copy(voteUrl, 'vote')}
+                  style={{ padding: '8px 16px', background: copied === 'vote' ? S.green : 'rgba(255,255,255,0.07)', color: copied === 'vote' ? '#fff' : S.muted, border: `1px solid ${S.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}>
+                  {copied === 'vote' ? '✓' : 'Copiar'}
+                </button>
+              )}
             </div>
           </div>
         </>
@@ -234,12 +259,14 @@ export default function PollingPage() {
       {/* Como usar */}
       <div style={{ background: 'rgba(155,48,255,0.06)', border: `1px solid rgba(155,48,255,0.15)`, borderRadius: 12, padding: 20 }}>
         <div style={{ fontWeight: 700, color: S.text, fontSize: '0.9rem', marginBottom: 10 }}>Como usar</div>
-        <ol style={{ color: S.muted, fontSize: '0.82rem', margin: 0, paddingLeft: 20, lineHeight: 2 }}>
+        <ol style={{ color: S.muted, fontSize: '0.82rem', margin: 0, paddingLeft: 20, lineHeight: 2.1 }}>
+          <li>Digite o nome do seu canal da Twitch no campo acima</li>
           <li>Crie uma enquete com a pergunta e as opções</li>
-          <li>Cole a <strong style={{ color: S.text }}>URL do overlay</strong> em um Browser Source no OBS (tamanho recomendado: 400×250)</li>
-          <li>Compartilhe a <strong style={{ color: S.text }}>URL de votação</strong> no chat para os viewers votarem</li>
-          <li>Os resultados aparecem no overlay em tempo real (atualiza a cada 3s)</li>
-          <li>Encerre a enquete quando quiser — ela fica travada no resultado final</li>
+          <li>Cole a <strong style={{ color: S.text }}>URL do overlay</strong> em um Browser Source no OBS (400×250 px)</li>
+          <li>Os viewers digitam <strong style={{ color: S.text }}>!vote 1</strong>, <strong style={{ color: S.text }}>!vote 2</strong>… (ou <strong style={{ color: S.text }}>!1</strong>, <strong style={{ color: S.text }}>!2</strong>…) no chat para votar</li>
+          <li>Cada viewer só pode votar uma vez por enquete</li>
+          <li>Os resultados aparecem em tempo real no overlay (atualiza a cada 3s)</li>
+          <li>Encerre quando quiser — resultado fica travado na tela</li>
         </ol>
       </div>
 
