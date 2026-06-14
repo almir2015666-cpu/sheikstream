@@ -64,7 +64,7 @@ const EVENT_META: Record<string, { icon: string; label: string; color: string }>
   resub:    { icon: '🔁', label: 'Reinscrição!',        color: '#9146FF' },
   giftsub:  { icon: '🎁', label: 'Gift Sub!',           color: '#c084fc' },
   follow:   { icon: '❤️',  label: 'Novo seguidor!',     color: '#ff6eb6' },
-  bits:     { icon: '💎', label: 'Bits enviados!',      color: '#fbbf24' },
+  bits:     { icon: '💎', label: 'Bits recebidos!',     color: '#fbbf24' },
   donation: { icon: '💸', label: 'Doação recebida!',    color: '#39ff14' },
   member:   { icon: '🏅', label: 'Novo membro!',        color: '#ff4040' },
   command:  { icon: '⚡', label: 'Evento!',             color: '#22d3ee' },
