@@ -336,7 +336,8 @@ function AlertOverlayContent() {
   const debug = sp.get('debug') === '1'
 
   // cfgMap holds one config per event slug (+ '' for the generic fallback)
-  const cfgMapRef = useRef<Record<string, Cfg>>({})
+  // Each entry may also have `variations: Cfg[]` for random selection
+  const cfgMapRef = useRef<Record<string, { cfg: Cfg; variations?: Cfg[] }>>({})
   const [, forceUpdate] = useState(0)
 
   const [queue, setQueue] = useState<AlertEvent[]>([])
@@ -357,7 +358,14 @@ function AlertOverlayContent() {
     const load = (key: string) =>
       fetch(`/api/overlay-config/${key}?uid=${uid}`, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
-        .then(d => d?.style ? { ...DEF, ...d.style } as Cfg : null)
+        .then(d => {
+          if (!d?.style) return null
+          const cfg = { ...DEF, ...d.style } as Cfg
+          const variations = Array.isArray(d.variations)
+            ? (d.variations as Partial<Cfg>[]).map(v => ({ ...DEF, ...v } as Cfg))
+            : undefined
+          return { cfg, variations }
+        })
         .catch(() => null)
 
     const loadAll = () => {
@@ -366,8 +374,9 @@ function AlertOverlayContent() {
         load('alert'),
         ...slugsToLoad.map(s => load(`alert-${s}`)),
       ]).then(([generic, ...eventCfgs]) => {
-        const map: Record<string, Cfg> = { '': generic ?? DEF }
-        slugsToLoad.forEach((s, i) => { map[s] = eventCfgs[i] ?? generic ?? DEF })
+        const def = { cfg: DEF }
+        const map: Record<string, { cfg: Cfg; variations?: Cfg[] }> = { '': generic ?? def }
+        slugsToLoad.forEach((s, i) => { map[s] = eventCfgs[i] ?? generic ?? def })
         cfgMapRef.current = map
         forceUpdate(n => n + 1)
       })
@@ -380,8 +389,13 @@ function AlertOverlayContent() {
 
   const getCfg = (ev: AlertEvent): Cfg => {
     const map = cfgMapRef.current
-    if (ev.slug && map[ev.slug]) return map[ev.slug]
-    return map[''] ?? DEF
+    const entry = (ev.slug && map[ev.slug]) ? map[ev.slug] : (map[''] ?? { cfg: DEF })
+    // Random variation: if variations exist, pick one at random (including the base cfg)
+    if (entry.variations && entry.variations.length > 0) {
+      const all = [entry.cfg, ...entry.variations]
+      return all[Math.floor(Math.random() * all.length)]
+    }
+    return entry.cfg
   }
 
   useEffect(() => {

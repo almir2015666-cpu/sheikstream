@@ -327,6 +327,33 @@ async function handleIaChat(
   console.log('[ia-chat] sent!')
 }
 
+// ── Loyalty helpers ──────────────────────────────────────────────────────────
+
+async function awardLoyaltyPoints(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  broadcasterId: string,
+  viewerLogin: string,
+  points: number,
+): Promise<void> {
+  if (!viewerLogin || points <= 0) return
+  const { data: existing } = await db.from('loyalty_points').select('id, points, total_earned')
+    .eq('broadcaster_id', broadcasterId).eq('viewer_login', viewerLogin).maybeSingle()
+  if (existing) {
+    await db.from('loyalty_points').update({
+      points: (existing.points ?? 0) + points,
+      total_earned: (existing.total_earned ?? 0) + points,
+      updated_at: new Date().toISOString(),
+    }).eq('id', existing.id)
+  } else {
+    await db.from('loyalty_points').insert({
+      broadcaster_id: broadcasterId,
+      viewer_login: viewerLogin,
+      points,
+      total_earned: points,
+    }).catch(() => { /* may already exist */ })
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function handleNotification(payload: { subscription: { type: string }; event: Record<string, unknown> }) {
@@ -357,6 +384,86 @@ async function handleNotification(payload: { subscription: { type: string }; eve
       const args    = parts.slice(1)
       const now     = new Date()
 
+      // Song request command
+      const { data: srCfg } = await db.from('song_request_config').select('*').eq('broadcaster_id', broadcasterId).maybeSingle()
+      const srCmd = ((srCfg?.command as string | undefined) ?? 'sr').toLowerCase()
+      if ((srCfg?.enabled !== false) && (trigger === srCmd || trigger === 'song')) {
+        const query = args.join(' ').trim()
+        if (!query) {
+          await sendChat(broadcasterId, `🎵 Use !${srCmd} <nome da música ou artista>`)
+        } else {
+          try {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://sheikstream.com.br'
+            const res = await fetch(`${baseUrl}/api/song-requests/add`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'sheikstream-internal-2024' },
+              body: JSON.stringify({ broadcaster_id: broadcasterId, requester: chatter, query }),
+            })
+            const data = await res.json() as { ok?: boolean; track?: { title: string; artist: string; duration_ms: number }; message?: string }
+            if (data.ok && data.track) {
+              const t = data.track
+              const dur = t.duration_ms ? ` (${Math.floor(t.duration_ms / 60000)}:${String(Math.floor((t.duration_ms % 60000) / 1000)).padStart(2, '0')})` : ''
+              if ((srCfg as { announce_chat?: boolean } | null)?.announce_chat !== false) {
+                await sendChat(broadcasterId, `🎵 ${t.title} — ${t.artist}${dur} adicionado à fila por @${chatter}`)
+              }
+            } else {
+              await sendChat(broadcasterId, `🎵 @${chatter} ${data.message ?? 'Não foi possível adicionar a música'}`)
+            }
+          } catch { /* ignore */ }
+        }
+        return
+      }
+
+      // Loyalty commands
+      if (trigger === 'pontos' || trigger === 'points') {
+        const { data: lp } = await db.from('loyalty_points').select('points').eq('broadcaster_id', broadcasterId).eq('viewer_login', chatter.toLowerCase()).maybeSingle()
+        const { data: lcfg } = await db.from('loyalty_config').select('currency_name, enabled').eq('broadcaster_id', broadcasterId).maybeSingle()
+        if (lcfg?.enabled !== false) {
+          const pts = lp?.points ?? 0
+          const currency = (lcfg as { currency_name?: string } | null)?.currency_name ?? 'pontos'
+          await sendChat(broadcasterId, `🏆 @${chatter} tem ${pts} ${currency}`)
+        }
+        return
+      }
+
+      if (trigger === 'ranking' || trigger === 'top') {
+        const { data: lcfg } = await db.from('loyalty_config').select('currency_name, enabled').eq('broadcaster_id', broadcasterId).maybeSingle()
+        if (lcfg?.enabled !== false) {
+          const { data: top } = await db.from('loyalty_points').select('viewer_login, points')
+            .eq('broadcaster_id', broadcasterId).order('points', { ascending: false }).limit(5)
+          if (top && top.length > 0) {
+            const currency = (lcfg as { currency_name?: string } | null)?.currency_name ?? 'pontos'
+            const list = top.map((r, i) => `${i + 1}º ${r.viewer_login}: ${r.points}`).join(' | ')
+            await sendChat(broadcasterId, `🏆 Top ${currency}: ${list}`)
+          }
+        }
+        return
+      }
+
+      if (trigger === 'resgatar' || trigger === 'redeem') {
+        const rewardName = args.join(' ').trim()
+        const { data: lcfg } = await db.from('loyalty_config').select('currency_name, enabled').eq('broadcaster_id', broadcasterId).maybeSingle()
+        if (lcfg?.enabled !== false && rewardName) {
+          const { data: reward } = await db.from('loyalty_rewards').select('*')
+            .eq('broadcaster_id', broadcasterId).eq('active', true).ilike('name', `%${rewardName}%`).limit(1).maybeSingle()
+          if (!reward) {
+            await sendChat(broadcasterId, `❌ @${chatter} Recompensa não encontrada`)
+          } else {
+            const { data: lp } = await db.from('loyalty_points').select('id, points').eq('broadcaster_id', broadcasterId).eq('viewer_login', chatter.toLowerCase()).maybeSingle()
+            const pts = lp?.points ?? 0
+            const currency = (lcfg as { currency_name?: string } | null)?.currency_name ?? 'pontos'
+            if (pts < reward.cost) {
+              await sendChat(broadcasterId, `❌ @${chatter} Você precisa de ${reward.cost} ${currency} (você tem ${pts})`)
+            } else {
+              await db.from('loyalty_points').upsert({ broadcaster_id: broadcasterId, viewer_login: chatter.toLowerCase(), points: pts - reward.cost, updated_at: new Date().toISOString() }, { onConflict: 'broadcaster_id,viewer_login' })
+              await db.from('loyalty_redemptions').insert({ reward_id: reward.id, broadcaster_id: broadcasterId, viewer_login: chatter.toLowerCase(), status: 'pending' })
+              await sendChat(broadcasterId, `✅ @${chatter} resgatou "${reward.name}" por ${reward.cost} ${currency}! Aguarde confirmação.`)
+            }
+          }
+        }
+        return
+      }
+
       const { data: cmds } = await db
         .from('comandos')
         .select('id, trigger, resposta, cooldown_s, last_used_at')
@@ -375,6 +482,18 @@ async function handleNotification(payload: { subscription: { type: string }; eve
       // Unknown command — fall through to IA
     }
 
+    // Loyalty points for chat message (non-blocking)
+    if (chatter) {
+      ;(async () => {
+        try {
+          const { data: lcfg } = await db.from('loyalty_config').select('enabled,points_per_message').eq('broadcaster_id', broadcasterId).maybeSingle()
+          if (lcfg?.enabled && lcfg.points_per_message > 0) {
+            await awardLoyaltyPoints(db, broadcasterId, chatter.toLowerCase(), lcfg.points_per_message)
+          }
+        } catch { /* ignore */ }
+      })()
+    }
+
     await handleIaChat(broadcasterId, event, rawText, chatter)
       .catch(e => console.error('[ia-chat] error:', e))
     return
@@ -385,6 +504,15 @@ async function handleNotification(payload: { subscription: { type: string }; eve
     const username = ((event.user_name ?? event.user_login) as string) ?? ''
     await fireEventCommand(broadcasterId, 'event:twitch:follow', { user: username })
       .catch(e => console.error('[eventsub] follow cmd error:', e))
+    // Loyalty points
+    ;(async () => {
+      try {
+        const { data: lcfg } = await db.from('loyalty_config').select('enabled,points_per_follow').eq('broadcaster_id', broadcasterId).maybeSingle()
+        if (lcfg?.enabled && lcfg.points_per_follow > 0 && username) {
+          await awardLoyaltyPoints(db, broadcasterId, username.toLowerCase(), lcfg.points_per_follow)
+        }
+      } catch { /* ignore */ }
+    })()
     return
   }
 
@@ -456,6 +584,16 @@ async function handleNotification(payload: { subscription: { type: string }; eve
         )
       }
     }
+
+    // Loyalty points for sub
+    if (username && eventType === 'channel.subscribe' && !isGift) {
+      ;(async () => {
+        try {
+          const { data: lcfg } = await db.from('loyalty_config').select('enabled,points_per_sub').eq('broadcaster_id', broadcasterId).maybeSingle()
+          if (lcfg?.enabled && lcfg.points_per_sub > 0) await awardLoyaltyPoints(db, broadcasterId, username.toLowerCase(), lcfg.points_per_sub)
+        } catch { /* ignore */ }
+      })()
+    }
   }
 
   // ── Gift subs ────────────────────────────────────────────────────────────
@@ -483,6 +621,16 @@ async function handleNotification(payload: { subscription: { type: string }; eve
     for (const m of metas ?? []) {
       await db.from('metas').update({ current_value: m.current_value + total }).eq('id', m.id)
     }
+
+    // Loyalty points for gift sub
+    ;(async () => {
+      try {
+        const { data: lcfg } = await db.from('loyalty_config').select('enabled,points_per_giftsub').eq('broadcaster_id', broadcasterId).maybeSingle()
+        if (lcfg?.enabled && lcfg.points_per_giftsub > 0 && username !== 'Anônimo') {
+          await awardLoyaltyPoints(db, broadcasterId, username.toLowerCase(), lcfg.points_per_giftsub * total)
+        }
+      } catch { /* ignore */ }
+    })()
   }
 
   // ── Bits ─────────────────────────────────────────────────────────────────
@@ -540,5 +688,20 @@ async function handleNotification(payload: { subscription: { type: string }; eve
         )
       }
     }
+
+    // Loyalty points for bits
+    if (!isAnon && username) {
+      ;(async () => {
+        try {
+          const { data: lcfg } = await db.from('loyalty_config').select('enabled,points_per_bits100').eq('broadcaster_id', broadcasterId).maybeSingle()
+          if (lcfg?.enabled && lcfg.points_per_bits100 > 0) {
+            const units = Math.floor(bits / 100)
+            if (units > 0) await awardLoyaltyPoints(db, broadcasterId, username.toLowerCase(), lcfg.points_per_bits100 * units)
+          }
+        } catch { /* ignore */ }
+      })()
+    }
   }
+
+  // ── Chat messages loyalty (pontos por mensagem) ──────────────────────────
 }

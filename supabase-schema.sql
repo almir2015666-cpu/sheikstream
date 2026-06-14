@@ -460,3 +460,104 @@ create table if not exists public.app_settings (
 alter table public.app_settings enable row level security;
 create policy "app_settings: leitura publica" on public.app_settings
   for select using (true);
+
+-- ==========================================
+-- SONG_REQUESTS  (fila de pedidos de música)
+-- ==========================================
+create table if not exists public.song_requests (
+  id             uuid primary key default gen_random_uuid(),
+  broadcaster_id text not null,
+  requester      text not null,
+  title          text not null,
+  artist         text,
+  spotify_uri    text,
+  spotify_url    text,
+  duration_ms    integer,
+  thumbnail      text,
+  status         text not null default 'pending', -- pending | playing | played | skipped | rejected
+  position       integer default 0,
+  created_at     timestamptz default now()
+);
+alter table public.song_requests enable row level security;
+create index if not exists song_requests_broadcaster_idx on public.song_requests(broadcaster_id);
+create index if not exists song_requests_status_idx on public.song_requests(status);
+
+create table if not exists public.song_request_config (
+  broadcaster_id   text primary key,
+  enabled          boolean default true,
+  command          text default 'sr',
+  max_queue        integer default 20,
+  allow_duplicates boolean default false,
+  announce_chat    boolean default true,
+  cooldown_s       integer default 60,
+  updated_at       timestamptz default now()
+);
+alter table public.song_request_config enable row level security;
+
+-- ==========================================
+-- LOYALTY SYSTEM  (sistema de fidelidade)
+-- ==========================================
+create table if not exists public.loyalty_config (
+  broadcaster_id     text primary key,
+  enabled            boolean default true,
+  points_per_message integer default 5,
+  points_per_follow  integer default 100,
+  points_per_sub     integer default 500,
+  points_per_giftsub integer default 300,
+  points_per_bits100 integer default 100,
+  points_per_raid    integer default 200,
+  currency_name      text default 'pontos',
+  updated_at         timestamptz default now()
+);
+alter table public.loyalty_config enable row level security;
+
+create table if not exists public.loyalty_points (
+  id             uuid primary key default gen_random_uuid(),
+  broadcaster_id text not null,
+  viewer_login   text not null,
+  points         integer not null default 0,
+  total_earned   integer not null default 0,
+  updated_at     timestamptz default now(),
+  unique(broadcaster_id, viewer_login)
+);
+alter table public.loyalty_points enable row level security;
+create index if not exists loyalty_points_broadcaster_idx on public.loyalty_points(broadcaster_id);
+create index if not exists loyalty_points_points_idx on public.loyalty_points(broadcaster_id, points desc);
+
+create table if not exists public.loyalty_rewards (
+  id               uuid primary key default gen_random_uuid(),
+  broadcaster_id   text not null,
+  name             text not null,
+  description      text,
+  cost             integer not null,
+  max_redemptions  integer,
+  active           boolean default true,
+  created_at       timestamptz default now()
+);
+alter table public.loyalty_rewards enable row level security;
+create index if not exists loyalty_rewards_broadcaster_idx on public.loyalty_rewards(broadcaster_id);
+
+create table if not exists public.loyalty_redemptions (
+  id             uuid primary key default gen_random_uuid(),
+  reward_id      uuid references public.loyalty_rewards(id) on delete cascade,
+  broadcaster_id text not null,
+  viewer_login   text not null,
+  status         text default 'pending', -- pending | fulfilled | rejected
+  created_at     timestamptz default now()
+);
+alter table public.loyalty_redemptions enable row level security;
+create index if not exists loyalty_redemptions_broadcaster_idx on public.loyalty_redemptions(broadcaster_id);
+
+-- RLS: broadcasters own their data (admin client bypasses RLS)
+create policy "song_requests: acesso proprio" on public.song_requests
+  for all using (auth.uid()::text = broadcaster_id);
+create policy "song_request_config: acesso proprio" on public.song_request_config
+  for all using (auth.uid()::text = broadcaster_id);
+create policy "loyalty_config: acesso proprio" on public.loyalty_config
+  for all using (auth.uid()::text = broadcaster_id);
+create policy "loyalty_points: acesso proprio" on public.loyalty_points
+  for all using (auth.uid()::text = broadcaster_id);
+create policy "loyalty_rewards: acesso proprio" on public.loyalty_rewards
+  for all using (auth.uid()::text = broadcaster_id);
+create policy "loyalty_redemptions: acesso proprio" on public.loyalty_redemptions
+  for all using (auth.uid()::text = broadcaster_id);
