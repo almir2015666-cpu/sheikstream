@@ -118,9 +118,12 @@ function SpotifyConnectOverlay({ onConnected }: { onConnected: () => void }) {
         <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 800, color: S.text }}>
           Conecte o Spotify
         </h2>
-        <p style={{ margin: '0 0 1.75rem', fontSize: '0.85rem', color: S.muted, lineHeight: 1.6 }}>
+        <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: S.muted, lineHeight: 1.6 }}>
           Para receber pedidos de música no chat e controlar a fila, conecte sua conta do Spotify.
         </p>
+        <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px', padding: '0.7rem 1rem', marginBottom: '1.5rem', fontSize: '0.78rem', color: 'rgba(245,158,11,0.85)', lineHeight: 1.6, textAlign: 'left' }}>
+          ⚠️ Esta integração permite até <strong>5 usuários</strong>. Se ao conectar não funcionar, solicite ao <strong>admin</strong> que cadastre seu email do Spotify para liberar o acesso.
+        </div>
 
         <button onClick={openPopup} disabled={connecting} style={{
           width: '100%', padding: '0.8rem 1.5rem',
@@ -352,6 +355,17 @@ export default function PedidosMusicaPage() {
           <code style={{ background: S.primaryBg, padding: '0 4px', borderRadius: '4px', fontSize: '0.8rem', color: S.primary }}>!{cfg.command}</code>
           {' '}no chat — integração com Spotify
         </p>
+      </div>
+
+      {/* Access limit notice */}
+      <div style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '12px', padding: '0.85rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+        <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '0.05rem' }}>⚠️</span>
+        <div>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f59e0b', marginBottom: '0.2rem' }}>Acesso limitado — máximo 5 usuários</div>
+          <div style={{ fontSize: '0.78rem', color: 'rgba(245,158,11,0.75)', lineHeight: 1.6 }}>
+            Devido a restrições do Spotify, esta integração só funciona para até 5 contas cadastradas. Para ter acesso, <strong style={{ color: '#f59e0b' }}>solicite ao admin</strong> que registre seu email do Spotify.
+          </div>
+        </div>
       </div>
 
       {/* Now playing / paused / idle */}
