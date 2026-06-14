@@ -128,7 +128,7 @@ export default function FidelidadePage() {
   )
 
   return (
-    <div style={{ background: S.bg, minHeight: '100vh', padding: '2rem 3rem', color: S.text, fontFamily: "-apple-system,'Inter',system-ui,sans-serif" }}>
+    <div style={{ background: S.bg, minHeight: '100vh', padding: '2rem 3rem', maxWidth: '1440px', margin: '0 auto', color: S.text, fontFamily: "-apple-system,'Inter',system-ui,sans-serif" }}>
       <style>{`
         input:focus, textarea:focus, select:focus { outline: none; border-color: rgba(155,48,255,0.5) !important; }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(155,48,255,0.2); border-radius: 2px; }
