@@ -370,11 +370,19 @@ function buildTtsText(ev: AlertEvent, cfg: Cfg): string {
         .replace(/\$months/g, ev.extra ? ev.extra.replace(' meses', '') : '')
         .replace(/\$count/g,  String(ev.amount ?? ''))
         .replace(/\$msg/g,    ev.extra ?? '')
-    : [
-        ev.user,
-        ev.amount ? `${ev.amount}${ev.type === 'bits' ? ' bits' : ev.type === 'donation' ? ' reais' : ''}` : '',
-        ev.extra ?? '',
-      ].filter(Boolean).join(', ')
+    : (() => {
+        const u = ev.user || 'Anônimo'
+        const a = ev.amount
+        const x = ev.extra ?? ''
+        if (ev.type === 'bits')     return `${u} enviou ${a} bits`
+        if (ev.type === 'follow')   return `${u} começou a seguir`
+        if (ev.type === 'sub')      return `${u} se inscreveu`
+        if (ev.type === 'resub')    return `${u} reinscrito${x ? ` há ${x}` : ''}`
+        if (ev.type === 'giftsub')  return `${u} presenteou ${a ?? 1} inscri${(a ?? 1) > 1 ? 'tos' : 'to'}`
+        if (ev.type === 'donation') return `${u} doou R$${a}${x ? `. ${x}` : ''}`
+        if (ev.type === 'member')   return `${u} virou membro`
+        return [u, a ? String(a) : '', x].filter(Boolean).join(', ')
+      })()
   const template = cfg.ttsText || '$title. $subtitle'
   return template
     .replace('$title',    titleLabel)
