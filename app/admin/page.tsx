@@ -327,28 +327,36 @@ export default function AdminPage() {
   const [catalogDropTarget, setCatalogDropTarget] = useState<{col: 'visible'|'hidden', idx: number} | null>(null)
   const [navDragOver, setNavDragOver] = useState<number | null>(null)
   const NAV_ITEMS_LIST = [
-    { id: 'dashboard',   label: 'Dashboard' },
-    { id: 'subathon',    label: 'Subathon' },
-    { id: 'timers',      label: 'Timers' },
-    { id: 'agenda',      label: 'Agenda' },
-    { id: 'alertas',     label: 'Alertas' },
-    { id: 'voice-fx',    label: 'Voice FX' },
-    { id: 'ia',          label: 'IA' },
-    { id: 'comandos',    label: 'Eventos/Comandos' },
-    { id: 'sorteios',    label: 'Sorteios' },
-    { id: 'plataformas', label: 'Plataformas' },
-    { id: 'metas',       label: 'Metas' },
-    { id: 'overlays',    label: 'Overlays' },
-    { id: 'banners',     label: 'Banners' },
-    { id: 'collab',      label: 'Fila de Collab' },
-    { id: 'raids',       label: 'Raids' },
-    { id: 'analytics',   label: 'Analytics' },
-    { id: 'fidelidade',      label: 'Fidelidade' },
-    { id: 'pedidos-musica',  label: 'Pedidos de Música' },
-    { id: 'notas',           label: 'Notas' },
-    { id: 'conexoes',        label: 'Conexões' },
-    { id: 'convites',        label: 'Convites' },
-    { id: 'perfil',          label: 'Meu Perfil' },
+    { id: 'dashboard',      label: 'Dashboard',           href: '/dashboard' },
+    { id: 'subathon',       label: 'Subathon',            href: '/dashboard/subathon' },
+    { id: 'timers',         label: 'Timers',              href: '/dashboard/timers' },
+    { id: 'agenda',         label: 'Agenda',              href: '/dashboard/agenda' },
+    { id: 'alertas',        label: 'Alertas',             href: '/dashboard/alertas' },
+    { id: 'voice-fx',       label: 'Voice FX',            href: '/dashboard/voice-fx' },
+    { id: 'ia',             label: 'IA',                  href: '/dashboard/ia-chat' },
+    { id: 'comandos',       label: 'Eventos/Comandos',    href: '/dashboard/comandos' },
+    { id: 'sorteios',       label: 'Sorteios',            href: '/dashboard/sorteios' },
+    { id: 'plataformas',    label: 'Plataformas',         href: '/dashboard/plataformas' },
+    { id: 'metas',          label: 'Metas',               href: '/dashboard/metas' },
+    { id: 'overlays',       label: 'Overlays',            href: '/dashboard/overlays' },
+    { id: 'banners',        label: 'Banners',             href: '/dashboard/banners' },
+    { id: 'collab',         label: 'Fila de Collab',      href: '/dashboard/collab' },
+    { id: 'raids',          label: 'Raids',               href: '/dashboard/raids' },
+    { id: 'analytics',      label: 'Analytics',           href: '/dashboard/analytics' },
+    { id: 'fidelidade',     label: 'Fidelidade',          href: '/dashboard/fidelidade' },
+    { id: 'pedidos-musica', label: 'Pedidos de Música',   href: '/dashboard/pedidos-musica' },
+    { id: 'notas',          label: 'Notas',               href: '/dashboard/notas' },
+    { id: 'conexoes',       label: 'Conexões',            href: '/dashboard/conexoes' },
+    { id: 'convites',       label: 'Convites',            href: '/dashboard/convites' },
+    { id: 'perfil',         label: 'Meu Perfil',          href: '/dashboard/perfil' },
+    { id: 'countdown',      label: 'Countdown',           href: '/dashboard/countdown' },
+    { id: 'polling',        label: 'Enquete ao vivo',     href: '/dashboard/polling' },
+    { id: 'overlay-chat',   label: 'Chat Overlay',        href: '/dashboard/overlays/chat' },
+    { id: 'overlay-goal',   label: 'Meta (Goal)',         href: '/dashboard/overlays/goal' },
+    { id: 'ia-chat',        label: 'IA de Chat',          href: '/dashboard/ia-chat' },
+    { id: 'ia-voz',         label: 'IA por Voz',          href: '/dashboard/ia-chat/voz' },
+    { id: 'ia-imagens',     label: 'IA de Imagens',       href: '/dashboard/ia-imagens' },
+    { id: 's-tickets',      label: 'Tickets (Sorteio)',   href: '/dashboard/sorteios/tickets' },
   ]
   const NAV_CHILDREN: Record<string, { id: string; label: string }[]> = {
     ia:          [{ id: 'ia-chat', label: 'IA de Chat' }, { id: 'ia-voz', label: 'IA por Voz' }, { id: 'ia-imagens', label: 'IA de Imagens' }],
@@ -2806,35 +2814,53 @@ export default function AdminPage() {
                   {renderCol('📋 No catálogo', vis, 'visible')}
                   {renderCol('🙈 Ocultos', hid, 'hidden')}
                 </div>
-                {/* Add new */}
+                {/* Page picker */}
                 <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, marginBottom: '0.65rem' }}>+ Adicionar novo overlay</div>
-                  <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                    <div style={{ flex: '1 1 140px' }}>
-                      <div style={{ fontSize: '0.68rem', color: C.muted, marginBottom: '0.25rem' }}>Nome</div>
-                      <input value={catalogNewForm.label} onChange={e => setCatalogNewForm(p => ({ ...p, label: e.target.value }))} style={inp} placeholder="Ex: Meu Overlay" />
-                    </div>
-                    <div style={{ flex: '2 1 200px' }}>
-                      <div style={{ fontSize: '0.68rem', color: C.muted, marginBottom: '0.25rem' }}>Link</div>
-                      <input value={catalogNewForm.href} onChange={e => setCatalogNewForm(p => ({ ...p, href: e.target.value }))} style={inp} placeholder="/dashboard/..." />
-                    </div>
-                    <div style={{ flex: '2 1 200px' }}>
-                      <div style={{ fontSize: '0.68rem', color: C.muted, marginBottom: '0.25rem' }}>Descrição</div>
-                      <input value={catalogNewForm.desc} onChange={e => setCatalogNewForm(p => ({ ...p, desc: e.target.value }))} style={inp} placeholder="Breve descrição…" />
-                    </div>
-                    <button
-                      disabled={!catalogNewForm.label.trim() || !catalogNewForm.href.trim()}
-                      onClick={() => {
-                        const slug = catalogNewForm.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `item-${Date.now()}`
-                        const ni: CatalogItem = { ...catalogNewForm, type: slug, badge: 'NOVO', color: '#9b30ff', live: true, hidden: false }
-                        setCatalogItems(prev => [...prev.filter(i => !i.hidden), ni, ...prev.filter(i => i.hidden)])
-                        setCatalogNewForm(CATALOG_BLANK)
-                      }}
-                      style={{ padding: '0.42rem 1.1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, opacity: !catalogNewForm.label.trim() || !catalogNewForm.href.trim() ? 0.4 : 1 }}>
-                      + Adicionar
-                    </button>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, marginBottom: '0.3rem' }}>Páginas disponíveis — clique para adicionar ao catálogo</div>
+                  <div style={{ fontSize: '0.7rem', color: C.muted, marginBottom: '0.75rem' }}>Itens já no catálogo aparecem marcados. Clique novamente para remover.</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                    {NAV_ITEMS_LIST.map(page => {
+                      const inCatalog = catalogItems.some(c => c.type === page.id && !c.hidden)
+                      const inHidden  = catalogItems.some(c => c.type === page.id && c.hidden)
+                      return (
+                        <button key={page.id}
+                          onClick={() => {
+                            if (inCatalog) {
+                              setCatalogItems(prev => prev.map(c => c.type === page.id ? { ...c, hidden: true } : c))
+                            } else if (inHidden) {
+                              setCatalogItems(prev => prev.map(c => c.type === page.id ? { ...c, hidden: false } : c))
+                            } else {
+                              const ni: CatalogItem = { type: page.id, label: page.label, href: page.href, desc: '', badge: 'NOVO', color: '#9b30ff', live: true, hidden: false }
+                              setCatalogItems(prev => [...prev.filter(i => !i.hidden), ni, ...prev.filter(i => i.hidden)])
+                            }
+                          }}
+                          style={{ padding: '0.35rem 0.8rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${inCatalog ? C.primary : inHidden ? C.border : C.border}`, background: inCatalog ? C.primaryBg : 'transparent', color: inCatalog ? C.primary : inHidden ? C.vdim : C.muted, display: 'flex', alignItems: 'center', gap: '0.3rem', transition: 'all 0.12s' }}>
+                          {inCatalog && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="1,5 3.5,8 9,2" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          {page.label}
+                        </button>
+                      )
+                    })}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: C.vdim, marginTop: '0.55rem' }}>Após adicionar, clique "✓ Salvar" para publicar.</div>
+                  {/* Custom item form */}
+                  <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: C.muted, marginBottom: '0.5rem' }}>Ou adicione uma página personalizada:</div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <input value={catalogNewForm.label} onChange={e => setCatalogNewForm(p => ({ ...p, label: e.target.value }))} style={{ ...inp, flex: '1 1 130px' }} placeholder="Nome" />
+                      <input value={catalogNewForm.href} onChange={e => setCatalogNewForm(p => ({ ...p, href: e.target.value }))} style={{ ...inp, flex: '2 1 180px' }} placeholder="/dashboard/minha-pagina" />
+                      <input value={catalogNewForm.desc} onChange={e => setCatalogNewForm(p => ({ ...p, desc: e.target.value }))} style={{ ...inp, flex: '2 1 180px' }} placeholder="Descrição (opcional)" />
+                      <button disabled={!catalogNewForm.label.trim() || !catalogNewForm.href.trim()}
+                        onClick={() => {
+                          const slug = catalogNewForm.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `item-${Date.now()}`
+                          const ni: CatalogItem = { ...catalogNewForm, type: slug, badge: 'NOVO', color: '#9b30ff', live: true, hidden: false }
+                          setCatalogItems(prev => [...prev.filter(i => !i.hidden), ni, ...prev.filter(i => i.hidden)])
+                          setCatalogNewForm(CATALOG_BLANK)
+                        }}
+                        style={{ padding: '0.42rem 0.9rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, opacity: !catalogNewForm.label.trim() || !catalogNewForm.href.trim() ? 0.4 : 1 }}>
+                        + Adicionar
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.6rem' }}>Após qualquer mudança, clique "✓ Salvar" no topo para publicar.</div>
                 </div>
               </div>
             )
