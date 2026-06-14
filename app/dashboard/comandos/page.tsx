@@ -165,6 +165,7 @@ type OvCfg = {
   icon: string
   customArt: string
   soundEnabled: boolean; soundDataUrl: string; soundVolume: number
+  ttsEnabled: boolean; ttsVoice: string; ttsRate: number; ttsPitch: number; ttsVol: number; ttsText: string
 }
 const OV_DEF: OvCfg = {
   animIn: 'slide-right', animOut: 'fade', animSpeed: 5, duration: 6, font: 'Inter',
@@ -175,6 +176,7 @@ const OV_DEF: OvCfg = {
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
   icon: '', customArt: '',
   soundEnabled: true, soundDataUrl: '', soundVolume: 70,
+  ttsEnabled: false, ttsVoice: '', ttsRate: 0.95, ttsPitch: 1, ttsVol: 1, ttsText: '',
 }
 const OV_ANIMS = [
   { id: 'slide-right', label: 'Slide →',   dur: '0.45s' }, { id: 'slide-left',  label: 'Slide ←',  dur: '0.45s' },
@@ -418,7 +420,13 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
 
   const [uid, setUid] = useState('')
   const [cfg, setCfg] = useState<OvCfg>(() => slugDefault)
-  const [tab, setTab] = useState<'efeitos'|'estilo'|'texto'>('efeitos')
+  const [tab, setTab] = useState<'efeitos'|'estilo'|'texto'|'tts'>('efeitos')
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+    const load = () => { const v = window.speechSynthesis.getVoices(); if (v.length) setVoices(v) }
+    load(); window.speechSynthesis.onvoiceschanged = load
+  }, [])
   const [animKey, setAnimKey] = useState(0)
   const [savedOk, setSavedOk] = useState(false)
   const [testOk, setTestOk] = useState(false)
@@ -562,6 +570,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
     { id: 'efeitos', label: '✨ Efeitos' },
     { id: 'estilo',  label: '🎨 Estilo'  },
     { id: 'texto',   label: '✏️ Texto'   },
+    { id: 'tts',     label: '🔊 TTS'     },
   ] as const
 
   return (
@@ -946,6 +955,48 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
               <div style={{ fontSize:'0.66rem',color:DIM,background:'rgba(155,48,255,0.06)',border:'1px solid rgba(155,48,255,0.15)',borderRadius:6,padding:'0.4rem 0.6rem',lineHeight:1.5 }}>
                 Deixe em branco para usar o texto padrão do evento. Use <span style={{ color:MUT,fontFamily:'monospace' }}>$user</span>, <span style={{ color:MUT,fontFamily:'monospace' }}>$valor</span> etc.
               </div>
+            </div>
+          )}
+
+          {tab === 'tts' && (
+            <div style={{ display:'flex',flexDirection:'column',gap:'0.5rem' }}>
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+                <span style={{ fontSize:'0.75rem',fontWeight:700,color:TXT }}>Leitura em voz (TTS)</span>
+                <div onClick={() => up('ttsEnabled', !cfg.ttsEnabled)} style={{ width:34,height:19,background:cfg.ttsEnabled?P:'rgba(255,255,255,0.12)',borderRadius:10,position:'relative',cursor:'pointer',transition:'background 0.2s',flexShrink:0 }}>
+                  <div style={{ position:'absolute',top:2,left:cfg.ttsEnabled?16:2,width:15,height:15,background:'#fff',borderRadius:'50%',transition:'left 0.2s' }} />
+                </div>
+              </div>
+              {cfg.ttsEnabled && (<>
+                <div>
+                  <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.22rem' }}>Voz</div>
+                  <select value={cfg.ttsVoice} onChange={e => up('ttsVoice', e.target.value)} style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }}>
+                    <option value="">Padrão (pt-BR)</option>
+                    {voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}
+                  </select>
+                  {voices.length === 0 && <div style={{ fontSize:'0.62rem',color:DIM,marginTop:'0.2rem' }}>Recarregue a página para carregar as vozes</div>}
+                </div>
+                <div>
+                  <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.22rem' }}>Texto (vazio = lê título + subtítulo)</div>
+                  <input value={cfg.ttsText} onChange={e => up('ttsText', e.target.value)} placeholder="$user se inscreveu!" style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }} />
+                  <div style={{ fontSize:'0.62rem',color:DIM,marginTop:'0.2rem' }}>Variáveis: $user $valor $msg $months</div>
+                </div>
+                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.4rem' }}>
+                  {([['ttsRate','Velocidade',0.5,2,0.05,'x'],['ttsPitch','Tom',0,2,0.1,''],['ttsVol','Volume',0,1,0.05,'']] as const).map(([k,lbl,mn,mx,st,un]) => (
+                    <div key={k}>
+                      <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.15rem' }}>
+                        <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.05em' }}>{lbl}</span>
+                        <span style={{ fontSize:'0.65rem',color:MUT }}>{Number(cfg[k]).toFixed(2)}{un}</span>
+                      </div>
+                      <input type="range" min={mn} max={mx} step={st} value={cfg[k]} onChange={e => up(k, Number(e.target.value))} style={{ width:'100%',accentColor:P,cursor:'pointer' }} />
+                    </div>
+                  ))}
+                </div>
+              </>)}
+              {!cfg.ttsEnabled && (
+                <div style={{ fontSize:'0.7rem',color:DIM,background:'rgba(255,255,255,0.03)',border:`1px solid ${BD}`,borderRadius:6,padding:'0.5rem 0.7rem',lineHeight:1.5 }}>
+                  Quando ativado, o overlay lê o texto do alerta em voz alta no OBS ao disparar este evento.
+                </div>
+              )}
             </div>
           )}
         </div>
