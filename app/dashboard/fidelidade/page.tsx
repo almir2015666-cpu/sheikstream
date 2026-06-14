@@ -67,6 +67,8 @@ export default function FidelidadePage() {
 
   const [newReward, setNewReward] = useState({ name: '', description: '', cost: '' })
   const [addingReward, setAddingReward] = useState(false)
+  const [editingReward, setEditingReward] = useState<{ id: string; name: string; description: string; cost: string } | null>(null)
+  const [savingReward, setSavingReward] = useState(false)
 
   const [totalViewers, setTotalViewers] = useState(0)
   const [totalPending, setTotalPending] = useState(0)
@@ -123,6 +125,18 @@ export default function FidelidadePage() {
     if (!confirm('Remover esta recompensa?')) return
     await fetch(`/api/loyalty/rewards?id=${id}`, { method: 'DELETE' })
     setRewards(rs => rs.filter(r => r.id !== id))
+  }
+
+  const saveRewardEdit = async () => {
+    if (!editingReward) return
+    setSavingReward(true)
+    await fetch('/api/loyalty/rewards', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editingReward.id, name: editingReward.name, description: editingReward.description, cost: Number(editingReward.cost) }),
+    }).finally(() => setSavingReward(false))
+    setRewards(rs => rs.map(r => r.id === editingReward.id ? { ...r, name: editingReward.name, description: editingReward.description, cost: Number(editingReward.cost) } : r))
+    setEditingReward(null)
   }
 
   const handleRedemption = async (id: string, status: 'approved' | 'rejected') => {
@@ -311,21 +325,56 @@ export default function FidelidadePage() {
                 <div style={{ fontSize: '0.83rem', color: S.muted }}>Nenhuma recompensa criada</div>
               </div>
             ) : rewards.map((r, idx) => (
-              <div key={r.id} style={{ padding: '1rem 2rem', borderBottom: idx < rewards.length - 1 ? `1px solid ${S.border}` : 'none', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: r.description ? '0.15rem' : 0 }}>
-                    <span style={{ fontWeight: 700, color: S.text, fontSize: '0.875rem' }}>{r.name}</span>
-                    <span style={{ fontSize: '0.73rem', fontWeight: 700, color: S.yellow, background: 'rgba(245,158,11,0.1)', padding: '0.1rem 0.45rem', borderRadius: '99px', border: '1px solid rgba(245,158,11,0.2)' }}>
-                      {r.cost.toLocaleString('pt-BR')} {cfg.currency_name || 'pts'}
-                    </span>
+              <div key={r.id} style={{ borderBottom: idx < rewards.length - 1 ? `1px solid ${S.border}` : 'none' }}>
+                {editingReward?.id === r.id ? (
+                  /* Edit mode */
+                  <div style={{ padding: '1rem 2rem', background: 'rgba(155,48,255,0.04)', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '0.6rem' }}>
+                      <div>
+                        <label style={lbl}>Nome</label>
+                        <input value={editingReward.name} onChange={e => setEditingReward(v => v && ({ ...v, name: e.target.value }))} style={inp} />
+                      </div>
+                      <div>
+                        <label style={lbl}>Custo</label>
+                        <input type="number" min="1" value={editingReward.cost} onChange={e => setEditingReward(v => v && ({ ...v, cost: e.target.value }))} style={inp} />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={lbl}>Descrição</label>
+                      <input value={editingReward.description} onChange={e => setEditingReward(v => v && ({ ...v, description: e.target.value }))} placeholder="Opcional..." style={inp} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={saveRewardEdit} disabled={savingReward || !editingReward.name.trim() || !editingReward.cost}
+                        style={{ padding: '0.45rem 1.1rem', background: S.primary, border: 'none', borderRadius: '7px', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', opacity: savingReward ? 0.6 : 1 }}>
+                        {savingReward ? 'Salvando...' : '✓ Salvar'}
+                      </button>
+                      <button onClick={() => setEditingReward(null)}
+                        style={{ padding: '0.45rem 0.85rem', background: 'transparent', border: `1px solid ${S.border}`, borderRadius: '7px', color: S.muted, fontSize: '0.82rem', cursor: 'pointer' }}>
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
-                  {r.description && <div style={{ fontSize: '0.75rem', color: S.muted }}>{r.description}</div>}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                  <Toggle on={r.enabled} onChange={v => toggleReward(r.id, v)} />
-                  <button onClick={() => deleteReward(r.id)}
-                    style={{ padding: '0.3rem 0.65rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: '6px', color: 'rgba(239,68,68,0.7)', cursor: 'pointer', fontSize: '0.78rem' }}>✕</button>
-                </div>
+                ) : (
+                  /* View mode */
+                  <div style={{ padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: r.description ? '0.15rem' : 0 }}>
+                        <span style={{ fontWeight: 700, color: S.text, fontSize: '0.875rem' }}>{r.name}</span>
+                        <span style={{ fontSize: '0.73rem', fontWeight: 700, color: S.yellow, background: 'rgba(245,158,11,0.1)', padding: '0.1rem 0.45rem', borderRadius: '99px', border: '1px solid rgba(245,158,11,0.2)' }}>
+                          {r.cost.toLocaleString('pt-BR')} {cfg.currency_name || 'pts'}
+                        </span>
+                      </div>
+                      {r.description && <div style={{ fontSize: '0.75rem', color: S.muted }}>{r.description}</div>}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                      <button onClick={() => setEditingReward({ id: r.id, name: r.name, description: r.description || '', cost: String(r.cost) })}
+                        style={{ padding: '0.3rem 0.65rem', background: 'rgba(255,255,255,0.04)', border: `1px solid ${S.border}`, borderRadius: '6px', color: S.muted, cursor: 'pointer', fontSize: '0.78rem' }}>✏</button>
+                      <Toggle on={r.enabled} onChange={v => toggleReward(r.id, v)} />
+                      <button onClick={() => deleteReward(r.id)}
+                        style={{ padding: '0.3rem 0.65rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: '6px', color: 'rgba(239,68,68,0.7)', cursor: 'pointer', fontSize: '0.78rem' }}>✕</button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
