@@ -242,7 +242,7 @@ export default function PedidosMusicaPage() {
   )
 
   return (
-    <div style={{ background: S.bg, minHeight: '100vh', padding: '2.5rem 3.5rem', color: S.text, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", position: 'relative' }}>
+    <div style={{ background: S.bg, minHeight: '100vh', padding: '2.5rem 5rem', color: S.text, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", position: 'relative' }}>
       <style>{`
         input:focus, textarea:focus, select:focus { outline: none; border-color: rgba(155,48,255,0.5) !important; }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(155,48,255,0.2); border-radius: 2px; }
