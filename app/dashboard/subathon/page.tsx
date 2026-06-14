@@ -159,7 +159,7 @@ export default function SubathonPage() {
   /* ─── ACTIVE VIEW ────────────────────────────────────────────────────────────── */
   if (state?.is_active) {
     return (
-      <div style={{ background: C.bg, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+      <div style={{ background: C.bg, minHeight: '100vh', padding: '2rem 3rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{state.title || 'Subathon'}</h2>
@@ -225,7 +225,7 @@ export default function SubathonPage() {
 
   /* ─── CREATE VIEW ────────────────────────────────────────────────────────────── */
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '2rem 3rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
       <style>{`input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}`}</style>
 
       <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

@@ -331,10 +331,12 @@ export default function AdminPage() {
     { id: 'collab',      label: 'Fila de Collab' },
     { id: 'raids',       label: 'Raids' },
     { id: 'analytics',   label: 'Analytics' },
-    { id: 'notas',       label: 'Notas' },
-    { id: 'conexoes',    label: 'Conexões' },
-    { id: 'convites',    label: 'Convites' },
-    { id: 'perfil',      label: 'Meu Perfil' },
+    { id: 'fidelidade',      label: 'Fidelidade' },
+    { id: 'pedidos-musica',  label: 'Pedidos de Música' },
+    { id: 'notas',           label: 'Notas' },
+    { id: 'conexoes',        label: 'Conexões' },
+    { id: 'convites',        label: 'Convites' },
+    { id: 'perfil',          label: 'Meu Perfil' },
   ]
   const NAV_CHILDREN: Record<string, { id: string; label: string }[]> = {
     ia:          [{ id: 'ia-chat', label: 'IA de Chat' }, { id: 'ia-voz', label: 'IA por Voz' }, { id: 'ia-imagens', label: 'IA de Imagens' }],
@@ -344,6 +346,7 @@ export default function AdminPage() {
   const [navOrder, setNavOrder]           = useState<string[]>(NAV_ITEMS_LIST.map(i => i.id))
   const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon' | ''>>({})
   const [navStatusLoaded, setNavStatusLoaded] = useState(false)
+  const [navParents, setNavParents]       = useState<Record<string, string>>({})
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -672,6 +675,13 @@ export default function AdminPage() {
         if (d?.order && Array.isArray(d.order) && d.order.length > 0) setNavOrder(d.order)
         else { try { const s = localStorage.getItem('sk-nav-order'); if (s) setNavOrder(JSON.parse(s)) } catch {} }
         if (d?.itemStatus && typeof d.itemStatus === 'object') setNavItemStatus(d.itemStatus)
+        if (d?.children && typeof d.children === 'object') {
+          const parents: Record<string, string> = {}
+          Object.entries(d.children as Record<string, string[]>).forEach(([parentId, childIds]) => {
+            childIds.forEach(childId => { parents[childId] = parentId })
+          })
+          setNavParents(parents)
+        }
       })
       .catch(() => {})
       .finally(() => setNavStatusLoaded(true))
@@ -2434,14 +2444,24 @@ export default function AdminPage() {
             const cleanStatus: Record<string, 'maintenance' | 'soon'> = {}
             Object.entries(navItemStatus).forEach(([k, v]) => { if (v === 'maintenance' || v === 'soon') cleanStatus[k] = v })
 
+            const childSet = new Set(Object.keys(navParents).filter(id => navParents[id]))
+            const childrenMap: Record<string, string[]> = {}
+            Object.entries(navParents).forEach(([id, parentId]) => {
+              if (parentId) {
+                if (!childrenMap[parentId]) childrenMap[parentId] = []
+                childrenMap[parentId].push(id)
+              }
+            })
+            const rootOrdered = ordered.filter(i => !childSet.has(i.id))
+
             const saveNav = async () => {
-              const arr = ordered.map(i => i.id)
+              const arr = rootOrdered.map(i => i.id)
               try { localStorage.setItem('sk-nav-order', JSON.stringify(arr)) } catch {}
               try {
                 const res = await fetch('/api/admin/nav-order', {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-                  body: JSON.stringify({ order: arr, itemStatus: cleanStatus }),
+                  body: JSON.stringify({ order: arr, itemStatus: cleanStatus, children: childrenMap }),
                 })
                 if (res.ok) alert('Salvo! Vai refletir para todos os usuários.')
                 else alert('Salvo localmente. Erro ao salvar no banco.')
@@ -2453,12 +2473,13 @@ export default function AdminPage() {
             const resetNav = async () => {
               setNavOrder(NAV_ITEMS_LIST.map(i => i.id))
               setNavItemStatus({})
+              setNavParents({})
               try { localStorage.removeItem('sk-nav-order') } catch {}
               try {
                 await fetch('/api/admin/nav-order', {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-                  body: JSON.stringify({ order: NAV_ITEMS_LIST.map(i => i.id), itemStatus: {} }),
+                  body: JSON.stringify({ order: NAV_ITEMS_LIST.map(i => i.id), itemStatus: {}, children: {} }),
                 })
               } catch {}
             }
@@ -2474,9 +2495,9 @@ export default function AdminPage() {
                   <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Reordene com ▲/▼ e defina o status de cada item. Em manutenção ou Em breve aparecem desativados na sidebar.</p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
-                    {ordered.map((item, idx) => {
-                      const st = navItemStatus[item.id] ?? ''
-                      const children = NAV_CHILDREN[item.id] ?? []
+                    {rootOrdered.map((item, idx) => {
+                      const hardcodedKids = NAV_CHILDREN[item.id] ?? []
+                      const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
                       const statusRow = (id: string, label: string, isChild: boolean) => {
                         const s = navItemStatus[id] ?? ''
                         return (
@@ -2503,8 +2524,8 @@ export default function AdminPage() {
                               <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
                                 <button disabled={idx === 0} onClick={() => moveNav(item.id, 'up')}
                                   style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
-                                <button disabled={idx === ordered.length - 1} onClick={() => moveNav(item.id, 'down')}
-                                  style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === ordered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === ordered.length - 1 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
+                                <button disabled={idx === rootOrdered.length - 1} onClick={() => moveNav(item.id, 'down')}
+                                  style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === rootOrdered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === rootOrdered.length - 1 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
                               </div>
                             )}
                           </div>
@@ -2513,7 +2534,8 @@ export default function AdminPage() {
                       return (
                         <React.Fragment key={item.id}>
                           {statusRow(item.id, item.label, false)}
-                          {children.map(ch => statusRow(ch.id, ch.label, true))}
+                          {hardcodedKids.map(ch => statusRow(ch.id, ch.label, true))}
+                          {dbKids.map(ch => statusRow(ch.id, ch.label, true))}
                         </React.Fragment>
                       )
                     })}
@@ -2529,6 +2551,41 @@ export default function AdminPage() {
                       ↺ Reset
                     </button>
                   </div>
+                </div>
+
+                {/* Sub-folder configuration */}
+                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
+                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>📂 Configurar Sub-pastas</h3>
+                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Defina quais itens aparecem como sub-pastas de outros no menu lateral. Itens com pai saem da lista principal e ficam aninhados.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {NAV_ITEMS_LIST.map(item => {
+                      const currentParent = navParents[item.id] ?? ''
+                      return (
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 1rem', background: currentParent ? C.primaryBg : C.cardBgAlt, border: `1px solid ${currentParent ? C.borderStrong : C.border}`, borderRadius: '8px' }}>
+                          <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: currentParent ? 500 : 600, color: C.text }}>{item.label}</span>
+                          {currentParent && <span style={{ fontSize: '0.65rem', color: C.vdim }}>↳ filho de</span>}
+                          <select
+                            value={currentParent}
+                            onChange={e => setNavParents(prev => {
+                              const n = { ...prev }
+                              if (e.target.value) n[item.id] = e.target.value
+                              else delete n[item.id]
+                              return n
+                            })}
+                            style={{ padding: '0.3rem 0.5rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer' }}
+                          >
+                            <option value="">Raiz (item principal)</option>
+                            {NAV_ITEMS_LIST.filter(i => i.id !== item.id && !(navParents[i.id])).map(i => (
+                              <option key={i.id} value={i.id}>{i.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <button onClick={saveNav} style={{ marginTop: '1rem', width: '100%', padding: '0.55rem 0', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+                    ✓ Salvar Sub-pastas
+                  </button>
                 </div>
               </div>
             )

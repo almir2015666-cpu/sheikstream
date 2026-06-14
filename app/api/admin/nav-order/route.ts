@@ -15,7 +15,8 @@ export async function GET() {
       .single()
     const order      = data?.config?.order      ?? null
     const itemStatus = data?.config?.itemStatus ?? {}
-    return NextResponse.json({ order, itemStatus })
+    const children   = data?.config?.children   ?? {}
+    return NextResponse.json({ order, itemStatus, children })
   } catch {
     return NextResponse.json({ order: null, itemStatus: {} })
   }
@@ -26,14 +27,14 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const body = await req.json()
-    const { order, itemStatus } = body
+    const { order, itemStatus, children } = body
     if (!Array.isArray(order)) return NextResponse.json({ error: 'Invalid' }, { status: 400 })
     const { error } = await getSupabaseAdmin()
       .from('overlay_configs')
       .upsert({
         broadcaster_id: GLOBAL_ID,
         type: NAV_TYPE,
-        config: { order, itemStatus: itemStatus ?? {} },
+        config: { order, itemStatus: itemStatus ?? {}, children: children ?? {} },
         updated_at: new Date().toISOString(),
       }, { onConflict: 'broadcaster_id,type' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

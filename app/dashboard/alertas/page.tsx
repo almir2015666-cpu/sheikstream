@@ -203,7 +203,7 @@ export default function AlertasPage() {
   ]
 
   return (
-    <div style={{ padding: '2.5rem 5rem', maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ padding: '2rem 3rem', maxWidth: 1100, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
         <div>

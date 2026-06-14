@@ -116,6 +116,9 @@ const NAV_GROUPS: Group[] = [
   ]},
 ]
 const NAV_ALL: Item[] = NAV_GROUPS.flatMap(g => g.items)
+const NAV_ALL_FLAT = new Map<string, Item | Child>(
+  NAV_ALL.flatMap(item => [[item.id, item] as [string, Item], ...(item.children ?? []).map(ch => [ch.id, ch] as [string, Child])])
+)
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -224,6 +227,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isAdmin, setIsAdmin] = useState(false)
   const [navOrder, setNavOrder] = useState<string[]>([])
   const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon'>>({})
+  const [navChildrenDB, setNavChildrenDB] = useState<Record<string, string[]> | null>(null)
   // Suggestion/bug form (global — all pages)
   const [showSugg, setShowSugg] = useState(false)
   const [suggType, setSuggType] = useState<'suggestion' | 'bug'>('suggestion')
@@ -293,6 +297,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
           if (d?.itemStatus && typeof d.itemStatus === 'object') {
             setNavItemStatus(d.itemStatus)
+          }
+          if (d?.children && typeof d.children === 'object' && Object.keys(d.children).length > 0) {
+            setNavChildrenDB(d.children as Record<string, string[]>)
+          } else {
+            setNavChildrenDB(null)
           }
         })
         .catch(() => {/* network error — keep current order */})
@@ -486,6 +495,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return [...NAV_ALL].sort((a, b) => getScore(a) - getScore(b))
   })()
 
+  const effectiveNavItems = (() => {
+    if (!navChildrenDB || Object.keys(navChildrenDB).length === 0) return orderedItems
+    const dbChildSet = new Set(Object.values(navChildrenDB).flat())
+    return orderedItems
+      .filter(item => !dbChildSet.has(item.id))
+      .map(item => {
+        const dbKids = navChildrenDB[item.id]
+        if (!dbKids || dbKids.length === 0) return item
+        const newKids = dbKids.map(id => NAV_ALL_FLAT.get(id)).filter(Boolean) as Child[]
+        const existingIds = new Set((item.children ?? []).map(c => c.id))
+        const extra = newKids.filter(c => !existingIds.has(c.id))
+        return { ...item, children: [...(item.children ?? []), ...extra] }
+      })
+  })()
+
   if (status === 'loading') return <div style={{ background: DARK_S.bg, minHeight: '100vh' }} />
   if (!user) return null
 
@@ -666,7 +690,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })()
         ) : (
           /* Flat nav — orderable by admin */
-          orderedItems.map((item, idx) => {
+          effectiveNavItems.map((item, idx) => {
             const isAct = active(item)
             const isExp = open.has(item.id)
             const hasCh = !!item.children
