@@ -321,14 +321,22 @@ function AlertCard({ ev, cfg, onDone, debug }: { ev: AlertEvent; cfg: Cfg; onDon
             {cfg.subtitleText ? cfg.subtitleText
               .replace(/\$user/g, ev.user || 'Anônimo')
               .replace(/\$valor/g, String(ev.amount ?? ''))
-              .replace(/\$months/g, ev.extra ? ev.extra.replace(' meses','') : '')
+              .replace(/\$months/g, ev.extra ? ev.extra.replace(/ meses?$/, '') : '')
               .replace(/\$count/g, String(ev.amount ?? ''))
               .replace(/\$msg/g, ev.extra ?? '') : (
-              <>
-                <strong>{ev.user}</strong>
-                {ev.amount ? ` · ${ev.amount}${ev.type === 'bits' ? ' bits' : ev.type === 'donation' ? ' R$' : '×'}` : ''}
-                {ev.extra ? ` · ${ev.extra}` : ''}
-              </>
+              (() => {
+                const u = ev.user || 'Anônimo'
+                const a = ev.amount
+                const x = ev.extra
+                if (ev.type === 'bits')     return <><strong>{u}</strong>{` enviou ${a} ${a === 1 ? 'bit' : 'bits'}`}</>
+                if (ev.type === 'follow')   return <><strong>{u}</strong>{' começou a seguir'}</>
+                if (ev.type === 'sub')      return <><strong>{u}</strong>{' se inscreveu'}</>
+                if (ev.type === 'resub')    return <><strong>{u}</strong>{x ? ` reinscrito há ${x}` : ' reinscrito'}</>
+                if (ev.type === 'giftsub')  return <><strong>{u}</strong>{` presenteou ${a ?? 1} inscri${(a ?? 1) > 1 ? 'tos' : 'to'}`}</>
+                if (ev.type === 'donation') return <><strong>{u}</strong>{` doou R$${a}${x ? `. ${x}` : ''}`}</>
+                if (ev.type === 'member')   return <><strong>{u}</strong>{' virou membro'}</>
+                return <><strong>{u}</strong>{a ? ` · ${a}` : ''}{x ? ` · ${x}` : ''}</>
+              })()
             )}
           </div>
         </div>
@@ -373,7 +381,7 @@ function buildTtsText(ev: AlertEvent, cfg: Cfg): string {
         const u = ev.user || 'Anônimo'
         const a = ev.amount
         const x = ev.extra ?? ''
-        if (ev.type === 'bits')     return `${u} enviou ${a} bits`
+        if (ev.type === 'bits')     return `${u} enviou ${a} ${a === 1 ? 'bit' : 'bits'}`
         if (ev.type === 'follow')   return `${u} começou a seguir`
         if (ev.type === 'sub')      return `${u} se inscreveu`
         if (ev.type === 'resub')    return `${u} reinscrito${x ? ` há ${x}` : ''}`

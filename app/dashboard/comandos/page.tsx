@@ -467,7 +467,13 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
       fetch(`/api/overlay-config/${cfgKey}?uid=${d.id}`)
         .then(r => r.ok ? r.json() : null)
         .then(c => {
-          const resolved = c?.style ? { ...slugDefault, ...c.style } : slugDefault
+          const merged = c?.style ? { ...slugDefault, ...c.style } : slugDefault
+          // If text fields are empty in saved config, fall back to slug defaults
+          const resolved = {
+            ...merged,
+            titleText:    merged.titleText    || slugDefault.titleText    || '',
+            subtitleText: merged.subtitleText || slugDefault.subtitleText || '',
+          }
           setCfg(resolved)
           lastSavedRef.current = JSON.stringify(resolved)
         })

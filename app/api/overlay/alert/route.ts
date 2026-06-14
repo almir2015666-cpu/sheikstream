@@ -113,8 +113,9 @@ function extractAmount(eventType: string, d: Record<string, unknown>): number | 
 
 function extractExtra(eventType: string, d: Record<string, unknown>): string | undefined {
   if (eventType === 'channel.subscription.message') {
-    const months = d.cumulative_months
-    return months ? `${months} meses` : undefined
+    const months = Number(d.cumulative_months ?? 0)
+    if (!months) return undefined
+    return `${months} ${months === 1 ? 'mês' : 'meses'}`
   }
   if (d.message) {
     const msg = d.message as Record<string, unknown>
