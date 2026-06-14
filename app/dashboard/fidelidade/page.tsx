@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 
 const S = {
   bg: '#08090d', card: '#111219', text: '#e8e6f8',
@@ -38,7 +39,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 }
 
 type LoyaltyConfig = {
-  currency_name: string
+  enabled: boolean; currency_name: string
   points_per_follow: number; points_per_sub: number; points_per_giftsub: number
   points_per_bits_100: number; points_per_message: number
 }
@@ -48,18 +49,20 @@ type Redemption = { id: string; viewer_login: string; status: 'pending' | 'appro
 type LeaderEntry = { viewer_login: string; points: number }
 
 const DEFAULT_CFG: LoyaltyConfig = {
-  currency_name: 'pontos',
+  enabled: true, currency_name: 'pontos',
   points_per_follow: 50, points_per_sub: 500, points_per_giftsub: 200,
   points_per_bits_100: 100, points_per_message: 1,
 }
 
 export default function FidelidadePage() {
+  const router = useRouter()
   const [cfg, setCfg] = useState<LoyaltyConfig>(DEFAULT_CFG)
   const [rewards, setRewards] = useState<Reward[]>([])
   const [redemptions, setRedemptions] = useState<Redemption[]>([])
   const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [togglingEnabled, setTogglingEnabled] = useState(false)
   const [tab, setTab] = useState<'config' | 'recompensas' | 'resgates' | 'ranking'>('config')
 
   const [newReward, setNewReward] = useState({ name: '', description: '', cost: '' })
@@ -91,6 +94,13 @@ export default function FidelidadePage() {
   const saveCfg = async () => {
     setSaving(true)
     await fetch('/api/loyalty/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) }).finally(() => setSaving(false))
+  }
+
+  const handleToggleEnabled = async () => {
+    const next = !cfg.enabled
+    setTogglingEnabled(true)
+    setCfg(c => ({ ...c, enabled: next }))
+    await fetch('/api/loyalty/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cfg, enabled: next }) }).finally(() => setTogglingEnabled(false))
   }
 
   const addReward = async () => {
@@ -137,8 +147,18 @@ export default function FidelidadePage() {
       {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.3rem' }}>
+          <button onClick={() => router.back()}
+            style={{ width: 32, height: 32, background: 'rgba(255,255,255,0.04)', border: `1px solid ${S.border}`, borderRadius: '8px', color: S.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}
+            title="Voltar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
           <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: S.text }}>Sistema de Fidelidade</h1>
           <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '0.15rem 0.5rem', background: 'rgba(59,130,246,0.15)', color: '#60a5fa', borderRadius: '99px', border: '1px solid rgba(59,130,246,0.25)', letterSpacing: '0.3px' }}>NOVO</span>
+          <button onClick={handleToggleEnabled} disabled={togglingEnabled}
+            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.3rem 0.8rem 0.3rem 0.55rem', background: cfg.enabled ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.08)', border: `1px solid ${cfg.enabled ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.2)'}`, borderRadius: '99px', color: cfg.enabled ? S.green : S.red, cursor: togglingEnabled ? 'wait' : 'pointer', fontSize: '0.75rem', fontWeight: 700, transition: 'all 0.2s', opacity: togglingEnabled ? 0.6 : 1, flexShrink: 0 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.enabled ? S.green : S.red, display: 'inline-block', flexShrink: 0 }} />
+            {cfg.enabled ? 'Sistema ativo' : 'Sistema desativado'}
+          </button>
         </div>
         <p style={{ margin: 0, color: S.muted, fontSize: '0.82rem' }}>Recompense viewers fiéis com {cfg.currency_name} ganhos por interagir com a stream</p>
       </div>
