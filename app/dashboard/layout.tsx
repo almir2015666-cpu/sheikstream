@@ -228,7 +228,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [navOrder, setNavOrder] = useState<string[]>([])
   const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon'>>({})
   const [navChildrenDB, setNavChildrenDB] = useState<Record<string, string[]> | null>(null)
-  const [catalogHrefs, setCatalogHrefs] = useState<Set<string>>(new Set())
+  const [catalogTypes, setCatalogTypes] = useState<Set<string>>(new Set())
   // Suggestion/bug form (global — all pages)
   const [showSugg, setShowSugg] = useState(false)
   const [suggType, setSuggType] = useState<'suggestion' | 'bug'>('suggestion')
@@ -310,12 +310,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       fetch('/api/admin/overlays-catalog')
         .then(r => r.ok ? r.json() : null)
         .then(d => {
-          const hrefs = new Set<string>(
-            ((d?.items ?? []) as { href: string; hidden: boolean }[])
-              .filter(i => !i.hidden)
-              .map(i => i.href)
+          const types = new Set<string>(
+            ((d?.items ?? []) as { type: string }[]).map(i => i.type)
           )
-          setCatalogHrefs(hrefs)
+          setCatalogTypes(types)
         })
         .catch(() => {})
     fetchNavOrder()
@@ -513,7 +511,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // Remove from sidebar any item whose href is in the visible overlays catalog
     // (except 'overlays' itself — the catalog page must always stay)
     const inCatalog = (item: Item) =>
-      item.id !== 'overlays' && catalogHrefs.size > 0 && catalogHrefs.has(item.href)
+      item.id !== 'overlays' && catalogTypes.size > 0 && catalogTypes.has(item.id)
     const baseItems = orderedItems.filter(item => !inCatalog(item))
 
     if (!navChildrenDB || Object.keys(navChildrenDB).length === 0) return baseItems
