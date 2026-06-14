@@ -51,17 +51,23 @@ async function spotifyFetch(
   const { data: tok } = await db.from('user_tokens')
     .select('spotify_token, spotify_refresh_token')
     .eq('user_id', broadcasterId)
-    .single()
+    .maybeSingle()
 
   if (!tok?.spotify_token) return { ok: false, status: 401, data: null }
 
+  const isWrite = options.method && options.method !== 'GET'
   const doFetch = async (token: string) => {
     const res = await fetch(`https://api.spotify.com${path}`, {
       ...options,
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...((options.headers as Record<string, string>) ?? {}) },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(isWrite ? { 'Content-Type': 'application/json' } : {}),
+        ...((options.headers as Record<string, string>) ?? {}),
+      },
     })
     const text = await res.text()
-    const data = text ? JSON.parse(text) : null
+    let data: unknown = null
+    if (text) { try { data = JSON.parse(text) } catch { data = null } }
     return { ok: res.ok, status: res.status, data }
   }
 
