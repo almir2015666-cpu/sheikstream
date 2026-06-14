@@ -167,25 +167,21 @@ export default function PedidosMusicaPage() {
   const [adding, setAdding] = useState<string | null>(null)
   const [spotifyConnected, setSpotifyConnected] = useState(false)
 
-  const loadAll = useCallback(async () => {
-    const [qRes, cfgRes, npRes, tokRes] = await Promise.all([
+  const pollLive = useCallback(async () => {
+    const [qRes, npRes, tokRes] = await Promise.all([
       fetch('/api/song-requests').then(r => r.ok ? r.json() : []),
-      fetch('/api/song-requests/config').then(r => r.ok ? r.json() : null),
       fetch('/api/spotify/now-playing').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/tokens/status').then(r => r.ok ? r.json() : null).catch(() => null),
     ])
     const q: SongRequest[] = qRes ?? []
-    if (cfgRes) setCfg(cfgRes)
     setNowPlaying(npRes)
     setSpotifyConnected(!!tokRes?.spotify)
-    setLoading(false)
 
     if (npRes?.spotify_url && q.length > 0) {
       const spUrl = npRes.spotify_url.split('?')[0].toLowerCase()
       const matchIdx = q.findIndex(i => i.spotify_url && i.spotify_url.split('?')[0].toLowerCase() === spUrl)
 
       if (matchIdx >= 0) {
-        // Items before the match should be marked as played; match should be 'playing'
         const updates: Promise<unknown>[] = []
         q.slice(0, matchIdx).forEach(i => {
           updates.push(fetch('/api/song-requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: i.id, status: 'played' }) }))
@@ -200,7 +196,6 @@ export default function PedidosMusicaPage() {
           return
         }
       } else {
-        // Spotify playing something not in our queue — mark any 'playing' item as played
         const playingItem = q.find(i => i.status === 'playing')
         if (playingItem) {
           await fetch('/api/song-requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: playingItem.id, status: 'played' }) })
@@ -212,11 +207,18 @@ export default function PedidosMusicaPage() {
     setQueue(q)
   }, [])
 
+  const loadAll = useCallback(async () => {
+    const cfgRes = await fetch('/api/song-requests/config').then(r => r.ok ? r.json() : null)
+    if (cfgRes) setCfg(cfgRes)
+    await pollLive()
+    setLoading(false)
+  }, [pollLive])
+
   useEffect(() => {
     loadAll()
-    const iv = setInterval(loadAll, 5000)
+    const iv = setInterval(pollLive, 5000)
     return () => clearInterval(iv)
-  }, [loadAll])
+  }, [loadAll, pollLive])
 
   const handleSearch = async (q: string) => {
     setSearch(q)
@@ -237,7 +239,7 @@ export default function PedidosMusicaPage() {
         body: JSON.stringify({ broadcaster_id: uid, requester: 'streamer', query: `${track.title} ${track.artist}` }),
       })
       setSearch(''); setSearchResults([])
-      await loadAll()
+      await pollLive()
     } finally { setAdding(null) }
   }
 
@@ -249,13 +251,13 @@ export default function PedidosMusicaPage() {
   const handleClear = async () => {
     if (!confirm('Limpar toda a fila?')) return
     await fetch('/api/song-requests?mode=all', { method: 'DELETE' })
-    await loadAll()
+    await pollLive()
   }
 
   const handleSkip = async () => {
     setSkipping(true)
     await fetch('/api/song-requests/skip', { method: 'POST' }).finally(() => setSkipping(false))
-    await loadAll()
+    await pollLive()
   }
 
   const handlePrevious = async () => {
@@ -265,7 +267,7 @@ export default function PedidosMusicaPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'previous' }),
     }).finally(() => setGoingPrev(false))
-    setTimeout(loadAll, 400)
+    setTimeout(pollLive, 400)
   }
 
   const handleTogglePlay = async () => {
@@ -277,12 +279,12 @@ export default function PedidosMusicaPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action }),
     }).finally(() => setTogglingPlay(false))
-    setTimeout(loadAll, 400)
+    setTimeout(pollLive, 400)
   }
 
   const handleMarkPlaying = async (id: string) => {
     await fetch('/api/song-requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: 'playing' }) })
-    await loadAll()
+    await pollLive()
   }
 
   const saveCfg = async () => {
