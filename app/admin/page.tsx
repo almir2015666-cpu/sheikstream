@@ -157,7 +157,7 @@ export default function AdminPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [dbError, setDbError] = useState('')
-  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens' | 'notas' | 'iachat' | 'iavoz'>('users')
+  const [view, setView] = useState<'users' | 'logs' | 'banner' | 'passwords' | 'roles' | 'tickets' | 'online' | 'notify' | 'navorder' | 'invites' | 'iaimagens' | 'notas' | 'iachat' | 'iavoz' | 'overlays-catalog'>('users')
   type AiImgCfg = { enabled: boolean; cooldown_seconds: number; max_per_day: number; allowed_roles: string[]; role_limits: Record<string, number>; role_delays: Record<string, number> }
   type AiGen = { id: string; user_name: string; user_role: string; prompt: string; status: string; created_at: string }
   const [aiCfg, setAiCfg] = useState<AiImgCfg>({ enabled: true, cooldown_seconds: 300, max_per_day: 10, allowed_roles: ['admin', 'moderador', 'vip'], role_limits: {}, role_delays: {} })
@@ -319,6 +319,20 @@ export default function AdminPage() {
   const [inviteVetoLoading, setInviteVetoLoading] = useState<string | null>(null)
   const [quotaEdits, setQuotaEdits] = useState<Record<string, number>>({})
   const [quotaSaving, setQuotaSaving] = useState<string | null>(null)
+  const [catalogHidden, setCatalogHidden] = useState<string[]>([])
+  const [catalogSaving, setCatalogSaving] = useState(false)
+  const OVERLAY_CATALOG_ALL = [
+    { type: 'subathon',       label: 'Subathon' },
+    { type: 'meta-subs',      label: 'Meta de Subs' },
+    { type: 'sorteio',        label: 'Meta de Sorteio' },
+    { type: 'meta',           label: 'Meta' },
+    { type: 'countdown',      label: 'Countdown' },
+    { type: 'polling',        label: 'Enquete ao vivo' },
+    { type: 'chat',           label: 'Chat Overlay' },
+    { type: 'goal',           label: 'Meta (Goal)' },
+    { type: 'patrocinadores', label: 'Patrocinadores' },
+    { type: 'pedidos-musica', label: 'Pedidos de Música' },
+  ]
   const NAV_ITEMS_LIST = [
     { id: 'dashboard',   label: 'Dashboard' },
     { id: 'subathon',    label: 'Subathon' },
@@ -717,6 +731,14 @@ export default function AdminPage() {
       .finally(() => setNavStatusLoaded(true))
   }, [view])
 
+  useEffect(() => {
+    if (view !== 'overlays-catalog') return
+    fetch('/api/admin/overlays-catalog')
+      .then(r => r.json())
+      .then(d => setCatalogHidden(d?.hidden ?? []))
+      .catch(() => {})
+  }, [view])
+
   const fetchOnlineUsers = useCallback(async (pw: string) => {
     setOnlineLoading(true)
     try {
@@ -999,6 +1021,8 @@ export default function AdminPage() {
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> },
       { v: 'navorder'  as const, label: 'Ordem do Menu',
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg> },
+      { v: 'overlays-catalog' as const, label: 'Catálogo Overlays',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> },
       { v: 'iaimagens' as const, label: 'IA de Imagens',
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
       { v: 'iachat' as const, label: 'IA de Chat',
@@ -1015,7 +1039,7 @@ export default function AdminPage() {
     notify: 'Avisos', invites: 'Convites', logs: 'Logs', banner: 'Banner',
     passwords: 'Senhas Admin', navorder: 'Ordem do Menu', iaimagens: 'IA de Imagens',
     iachat: 'IA de Chat', iavoz: 'IA por Voz',
-    notas: 'Notas',
+    notas: 'Notas', 'overlays-catalog': 'Catálogo Overlays',
   }
 
   return (
@@ -2673,6 +2697,55 @@ export default function AdminPage() {
               </div>
             )
           })()}
+
+          {view === 'overlays-catalog' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>🖥 Catálogo de Overlays</div>
+                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.15rem' }}>Escolha quais overlays aparecem na página /overlays para os usuários.</div>
+                  </div>
+                  <button
+                    disabled={catalogSaving}
+                    onClick={async () => {
+                      setCatalogSaving(true)
+                      try {
+                        const res = await fetch('/api/admin/overlays-catalog', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+                          body: JSON.stringify({ hidden: catalogHidden }),
+                        })
+                        if (res.ok) alert('Salvo! Vai refletir para todos os usuários.')
+                        else alert('Erro ao salvar.')
+                      } catch { alert('Sem conexão.') }
+                      finally { setCatalogSaving(false) }
+                    }}
+                    style={{ padding: '0.45rem 1.1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: catalogSaving ? 'default' : 'pointer', opacity: catalogSaving ? 0.6 : 1 }}>
+                    {catalogSaving ? 'Salvando…' : '✓ Salvar'}
+                  </button>
+                </div>
+                <div>
+                  {OVERLAY_CATALOG_ALL.map((item, idx) => {
+                    const isHidden = catalogHidden.includes(item.type)
+                    return (
+                      <div key={item.type} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', padding: '0.75rem 1.5rem', borderBottom: idx < OVERLAY_CATALOG_ALL.length - 1 ? `1px solid ${C.border}` : 'none', background: isHidden ? 'transparent' : `rgba(155,48,255,0.03)` }}>
+                        <button
+                          onClick={() => setCatalogHidden(prev => isHidden ? prev.filter(t => t !== item.type) : [...prev, item.type])}
+                          style={{ width: 22, height: 22, borderRadius: '6px', border: `2px solid ${isHidden ? C.border : C.primary}`, background: isHidden ? 'transparent' : C.primaryBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                          {!isHidden && <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><polyline points="1.5,6 4.5,9 10.5,3" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </button>
+                        <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600, color: isHidden ? C.muted : C.text }}>{item.label}</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '999px', border: `1px solid ${isHidden ? C.border : C.borderStrong}`, background: isHidden ? 'transparent' : C.primaryBg, color: isHidden ? C.vdim : C.primary }}>
+                          {isHidden ? 'Oculto' : 'Visível'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {view === 'invites' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

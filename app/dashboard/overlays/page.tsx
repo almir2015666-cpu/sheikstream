@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useLang } from '@/lib/i18n'
 
 const C = {
@@ -53,6 +54,11 @@ const CATALOG: { type: string; label: string; badge: string | null; color: strin
 
 export default function OverlaysPage() {
   const { t } = useLang()
+  const [hidden, setHidden] = useState<string[]>([])
+  useEffect(() => {
+    fetch('/api/admin/overlays-catalog').then(r => r.json()).then(d => setHidden(d?.hidden ?? [])).catch(() => {})
+  }, [])
+  const visible = CATALOG.filter(item => !hidden.includes(item.type))
   return (
     <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
       <div style={{ marginBottom: '1.75rem' }}>
@@ -66,7 +72,7 @@ export default function OverlaysPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.9rem' }}>
-        {CATALOG.map(item => (
+        {visible.map(item => (
           <div key={item.type} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: 12, padding: '1.1rem 1.2rem', position: 'relative' }}>
             <Link
               href={item.href ?? `/dashboard/overlays/${item.type}`}
