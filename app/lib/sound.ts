@@ -70,11 +70,12 @@ function playNotes(ctx: AudioContext, notes: Note[], vol: number): Promise<void>
   return new Promise(resolve => setTimeout(resolve, maxEnd * 1000 + 100))
 }
 
-function tryWebSpeech(text: string, lang: string, rate: number, vol: number) {
+function tryWebSpeech(text: string, lang: string, rate: number, pitch: number, vol: number) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return
   const utt = new SpeechSynthesisUtterance(text)
   utt.lang = lang === 'pt-BR' ? 'pt-BR' : lang === 'pt-PT' ? 'pt-PT' : lang
   utt.rate = Math.max(0.5, Math.min(2, rate))
+  utt.pitch = Math.max(0, Math.min(2, pitch))
   utt.volume = Math.max(0, Math.min(1, vol))
   window.speechSynthesis.cancel()
   window.speechSynthesis.speak(utt)
@@ -84,12 +85,13 @@ export async function playTts(
   text: string,
   lang: string,
   rate: number,
+  pitch: number,
   vol: number,
 ): Promise<void> {
   if (!text.trim()) return
   const ctx = getCtx()
   if (!ctx) {
-    tryWebSpeech(text, lang, rate, vol)
+    tryWebSpeech(text, lang, rate, pitch, vol)
     return
   }
   try {
@@ -101,21 +103,21 @@ export async function playTts(
     const res = await fetch(url)
     if (!res.ok) throw new Error('tts_api_failed')
     const decoded = await ctx.decodeAudioData(await res.arrayBuffer())
+    // rate * pitch: both affect playbackRate (no true pitch-shift without DSP)
+    const pbRate = Math.max(0.5, Math.min(2, rate * pitch))
     await new Promise<void>(resolve => {
       const src = ctx.createBufferSource()
       const gain = ctx.createGain()
       gain.gain.value = Math.max(0, Math.min(1, vol))
       src.buffer = decoded
-      src.playbackRate.value = Math.max(0.5, Math.min(2, rate))
+      src.playbackRate.value = pbRate
       src.connect(gain); gain.connect(ctx.destination)
       src.onended = () => resolve()
       src.start(0)
-      // Safety: if onended never fires, resolve after duration + 1s
-      setTimeout(resolve, (decoded.duration + 1) * 1000)
+      setTimeout(resolve, (decoded.duration / pbRate + 1) * 1000)
     })
   } catch {
-    // API unavailable — fall back to browser TTS (works in regular browsers, not OBS)
-    tryWebSpeech(text, lang, rate, vol)
+    tryWebSpeech(text, lang, rate, pitch, vol)
   }
 }
 
