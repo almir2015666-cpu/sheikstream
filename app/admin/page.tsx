@@ -325,6 +325,7 @@ export default function AdminPage() {
   const [catalogSaving, setCatalogSaving] = useState(false)
   const [catalogNewForm, setCatalogNewForm] = useState<CatalogItem>(CATALOG_BLANK)
   const [catalogDropTarget, setCatalogDropTarget] = useState<{col: 'visible'|'hidden', idx: number} | null>(null)
+  const [navDragOver, setNavDragOver] = useState<number | null>(null)
   const NAV_ITEMS_LIST = [
     { id: 'dashboard',   label: 'Dashboard' },
     { id: 'subathon',    label: 'Subathon' },
@@ -2562,12 +2563,21 @@ export default function AdminPage() {
             const ST_COLOR: Record<string, string> = { '': '#22c55e', maintenance: '#f59e0b', soon: '#818cf8' }
             const ST_LABEL: Record<string, string> = { '': '● Ativo', maintenance: '🔧 Manutenção', soon: '⏳ Em breve' }
 
-            const colGrid = '32px 1fr 148px 180px 64px'
+            const colGrid = '28px 32px 1fr 148px 180px 64px'
+
+            const reorderByDrag = (srcIdx: number, tgtIdx: number) => {
+              if (srcIdx === tgtIdx) return
+              const arr = [...rootOrdered.map(i => i.id)]
+              const [moved] = arr.splice(srcIdx, 1)
+              arr.splice(srcIdx < tgtIdx ? tgtIdx - 1 : tgtIdx, 0, moved)
+              setNavOrder(arr)
+            }
 
             const renderChildRow = (chId: string, chLabel: string, parentLabel: string, isDb: boolean) => {
               const cs = navItemStatus[chId] ?? ''
               return (
-                <div key={chId} style={{ display: 'grid', gridTemplateColumns: colGrid, alignItems: 'center', gap: '0.6rem', padding: '0.55rem 1.2rem 0.55rem 2.6rem', borderBottom: `1px solid ${C.border}`, background: isDb ? `rgba(155,48,255,0.04)` : C.vvdim }}>
+                <div key={chId} style={{ display: 'grid', gridTemplateColumns: colGrid, alignItems: 'center', gap: '0.6rem', padding: '0.55rem 1.2rem 0.55rem 1.2rem', borderBottom: `1px solid ${C.border}`, background: isDb ? `rgba(155,48,255,0.04)` : C.vvdim }}>
+                  <span />
                   <span style={{ fontSize: '0.62rem', color: isDb ? C.primary : C.vdim }}>↳</span>
                   <span style={{ fontSize: '0.82rem', color: C.muted, fontWeight: 500 }}>{chLabel}</span>
                   <select value={cs} onChange={e => setStatus(chId, e.target.value as any)}
@@ -2592,7 +2602,7 @@ export default function AdminPage() {
                   <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
                     <div>
                       <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>⠿ Ordem e Status do Menu</div>
-                      <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.15rem' }}>Reordene com ▲/▼. Itens em pasta ficam abaixo do pai.</div>
+                      <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.15rem' }}>Arraste as linhas pelo ⠿ ou use ▲/▼. Itens em pasta ficam abaixo do pai.</div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                       <button onClick={saveNav} style={{ padding: '0.45rem 1.1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>✓ Salvar</button>
@@ -2602,21 +2612,28 @@ export default function AdminPage() {
 
                   {/* Column headers */}
                   <div style={{ display: 'grid', gridTemplateColumns: colGrid, gap: '0.6rem', padding: '0.4rem 1.2rem', background: C.vvdim, borderBottom: `1px solid ${C.border}` }}>
-                    {['#', 'ITEM DO MENU', 'STATUS', 'PASTA', 'ORDEM'].map(h => (
+                    {['', '#', 'ITEM DO MENU', 'STATUS', 'PASTA', 'ORDEM'].map(h => (
                       <span key={h} style={{ fontSize: '0.58rem', fontWeight: 800, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</span>
                     ))}
                   </div>
 
                   {/* Rows */}
-                  <div>
+                  <div onDragEnd={() => setNavDragOver(null)}>
                     {rootOrdered.map((item, idx) => {
                       const st = navItemStatus[item.id] ?? ''
                       const hardKids = NAV_CHILDREN[item.id] ?? []
                       const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
                       const hasKids = hardKids.length > 0 || dbKids.length > 0
+                      const isDragOver = navDragOver === idx
                       return (
                         <React.Fragment key={item.id}>
-                          <div style={{ display: 'grid', gridTemplateColumns: colGrid, alignItems: 'center', gap: '0.6rem', padding: '0.7rem 1.2rem', borderBottom: `1px solid ${C.border}`, background: hasKids ? `rgba(155,48,255,0.03)` : 'transparent' }}>
+                          <div
+                            draggable
+                            onDragStart={e => { e.dataTransfer.setData('text/plain', String(idx)); e.dataTransfer.effectAllowed = 'move' }}
+                            onDragOver={e => { e.preventDefault(); if (navDragOver !== idx) setNavDragOver(idx) }}
+                            onDrop={e => { e.preventDefault(); setNavDragOver(null); const src = parseInt(e.dataTransfer.getData('text/plain')); reorderByDrag(src, idx) }}
+                            style={{ display: 'grid', gridTemplateColumns: colGrid, alignItems: 'center', gap: '0.6rem', padding: '0.7rem 1.2rem', borderBottom: `1px solid ${C.border}`, background: isDragOver ? C.primaryBg : hasKids ? `rgba(155,48,255,0.03)` : 'transparent', borderTop: isDragOver ? `2px solid ${C.primary}` : undefined, cursor: 'grab', transition: 'background 0.1s' }}>
+                            <svg width="8" height="14" viewBox="0 0 8 14" fill={C.vdim} style={{ cursor: 'grab' }}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
                             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.vdim }}>{idx + 1}</span>
                             <span style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                               {item.label}
