@@ -70,6 +70,16 @@ function playNotes(ctx: AudioContext, notes: Note[], vol: number): Promise<void>
   return new Promise(resolve => setTimeout(resolve, maxEnd * 1000 + 100))
 }
 
+function tryWebSpeech(text: string, lang: string, rate: number, vol: number) {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return
+  const utt = new SpeechSynthesisUtterance(text)
+  utt.lang = lang === 'pt-BR' ? 'pt-BR' : lang === 'pt-PT' ? 'pt-PT' : lang
+  utt.rate = Math.max(0.5, Math.min(2, rate))
+  utt.volume = Math.max(0, Math.min(1, vol))
+  window.speechSynthesis.cancel()
+  window.speechSynthesis.speak(utt)
+}
+
 export async function playTts(
   text: string,
   lang: string,
@@ -78,12 +88,18 @@ export async function playTts(
 ): Promise<void> {
   if (!text.trim()) return
   const ctx = getCtx()
-  if (!ctx) return
+  if (!ctx) {
+    tryWebSpeech(text, lang, rate, vol)
+    return
+  }
   try {
-    if (ctx.state !== 'running') await ctx.resume()
+    // resume with timeout so it doesn't hang forever
+    if (ctx.state !== 'running') {
+      await Promise.race([ctx.resume(), new Promise<void>(r => setTimeout(r, 2000))])
+    }
     const url = `/api/tts?lang=${encodeURIComponent(lang || 'pt-BR')}&text=${encodeURIComponent(text)}`
     const res = await fetch(url)
-    if (!res.ok) return
+    if (!res.ok) throw new Error('tts_api_failed')
     const decoded = await ctx.decodeAudioData(await res.arrayBuffer())
     await new Promise<void>(resolve => {
       const src = ctx.createBufferSource()
@@ -94,8 +110,13 @@ export async function playTts(
       src.connect(gain); gain.connect(ctx.destination)
       src.onended = () => resolve()
       src.start(0)
+      // Safety: if onended never fires, resolve after duration + 1s
+      setTimeout(resolve, (decoded.duration + 1) * 1000)
     })
-  } catch {}
+  } catch {
+    // API unavailable — fall back to browser TTS (works in regular browsers, not OBS)
+    tryWebSpeech(text, lang, rate, vol)
+  }
 }
 
 export async function playAlertSound(
@@ -118,6 +139,8 @@ export async function playAlertSound(
         src.connect(gain); gain.connect(ctx.destination)
         src.onended = () => resolve()
         src.start(0)
+        // Safety: resolve after audio duration + 500ms so TTS always fires
+        setTimeout(resolve, (decoded.duration + 0.5) * 1000)
       })
 
     if (cfg.soundDataUrl) {

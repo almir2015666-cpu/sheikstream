@@ -386,6 +386,15 @@ function AlertOverlayContent() {
   const uid = sp.get('uid') ?? ''
   const eventSlug = sp.get('event') ?? ''
   const debug = sp.get('debug') === '1'
+  const ttsTest = sp.get('tts_test') === '1'
+
+  // Quick TTS smoke test: open overlay with ?tts_test=1 to verify audio chain
+  useEffect(() => {
+    if (!ttsTest) return
+    const t = setTimeout(() => playTts('teste de leitura em voz', 'pt-BR', 1, 1), 1000)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ttsTest])
 
   // cfgMap holds one config per event slug (+ '' for the generic fallback)
   // Each entry may also have `variations: Cfg[]` for random selection
