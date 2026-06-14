@@ -2507,10 +2507,12 @@ export default function AdminPage() {
           })()}
 
           {view === 'navorder' && (() => {
-            const ordered = navOrder.length > 0
+            const catalogVisible = new Set(catalogItems.filter(c => !c.hidden).map(c => c.type))
+            const ordered = (navOrder.length > 0
               ? [...navOrder.filter(id => NAV_ITEMS_LIST.some(i => i.id === id)).map(id => NAV_ITEMS_LIST.find(i => i.id === id)!),
                  ...NAV_ITEMS_LIST.filter(i => !navOrder.includes(i.id))]
               : NAV_ITEMS_LIST
+            ).filter(i => !catalogVisible.has(i.id))
 
             const moveNav = (id: string, dir: 'up' | 'down') => {
               const arr = [...ordered.map(i => i.id)]
@@ -2679,11 +2681,11 @@ export default function AdminPage() {
                     ))}
                   </div>
                   <div>
-                    {NAV_ITEMS_LIST.map((item, idx) => {
+                    {NAV_ITEMS_LIST.filter(i => !catalogVisible.has(i.id)).map((item, idx, arr) => {
                       const cur = navParents[item.id] ?? ''
                       const curLabel = cur ? (NAV_ITEMS_LIST.find(i => i.id === cur)?.label ?? cur) : ''
                       return (
-                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.62rem 1.5rem', borderBottom: idx < NAV_ITEMS_LIST.length - 1 ? `1px solid ${C.border}` : 'none', background: cur ? `rgba(155,48,255,0.04)` : 'transparent' }}>
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.62rem 1.5rem', borderBottom: idx < arr.length - 1 ? `1px solid ${C.border}` : 'none', background: cur ? `rgba(155,48,255,0.04)` : 'transparent' }}>
                           <span style={{ fontSize: '0.65rem', color: cur ? C.primary : C.vdim, width: 16, flexShrink: 0 }}>{cur ? '↳' : '·'}</span>
                           <span style={{ flex: 1, fontSize: '0.86rem', fontWeight: cur ? 500 : 600, color: C.text }}>{item.label}</span>
                           {cur && <span style={{ fontSize: '0.72rem', color: C.primary, background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: '6px', padding: '0.15rem 0.5rem', whiteSpace: 'nowrap' }}>📂 {curLabel}</span>}
