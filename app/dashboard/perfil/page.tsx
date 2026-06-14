@@ -118,6 +118,7 @@ export default function PerfilPage() {
   const [platforms, setPlatforms] = useState({ twitch: false, youtube: false, discord: false })
   const [saved, setSaved] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [userRoles, setUserRoles] = useState<string[]>([])
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const C = theme === 'dark' ? DARK_C : LIGHT_C
 
@@ -136,7 +137,7 @@ export default function PerfilPage() {
   function fetchRole() {
     fetch('/api/me/role')
       .then(r => r.ok ? r.json() : null)
-      .then(d => { setUserRole(d?.role ?? null) })
+      .then(d => { setUserRole(d?.role ?? null); setUserRoles(d?.roles ?? (d?.role ? [d.role] : [])) })
       .catch(() => {})
   }
 
@@ -303,9 +304,13 @@ export default function PerfilPage() {
               />
               <SummaryRow colors={C}
                 label={t('profile_role')}
-                value={userRole ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: `${ROLE_COLORS[userRole] ?? C.primaryBg}22`, border: `1px solid ${ROLE_COLORS[userRole] ?? C.primaryBg}44`, color: ROLE_COLORS[userRole] ?? C.primary, fontSize: '0.74rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '999px', textTransform: 'capitalize' }}>
-                    {userRole}
+                value={userRoles.length > 0 ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
+                    {userRoles.map(r => (
+                      <span key={r} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: `${ROLE_COLORS[r] ?? C.primaryBg}22`, border: `1px solid ${ROLE_COLORS[r] ?? C.primaryBg}44`, color: ROLE_COLORS[r] ?? C.primary, fontSize: '0.74rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '999px', textTransform: 'capitalize' }}>
+                        {r}
+                      </span>
+                    ))}
                   </span>
                 ) : <span style={{ color: C.dim }}>Usuário</span>}
               />
