@@ -165,19 +165,34 @@ export default function FidelidadePage() {
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-        {[
-          { label: 'Viewers no ranking', value: totalViewers, color: S.primary, icon: '👥' },
-          { label: 'Maior pontuação', value: topPoints.toLocaleString('pt-BR'), color: S.yellow, icon: '🏆' },
-          { label: 'Resgates pendentes', value: totalPending, color: totalPending > 0 ? S.yellow : S.green, icon: '🎁' },
-        ].map(stat => (
-          <div key={stat.label} style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.25rem 1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
-              <span style={{ fontSize: '1rem' }}>{stat.icon}</span>
-              <span style={{ fontSize: '0.73rem', color: S.muted, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.4px' }}>{stat.label}</span>
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
+        <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.25rem 1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+            <span style={{ fontSize: '1rem' }}>👥</span>
+            <span style={{ fontSize: '0.73rem', color: S.muted, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.4px' }}>Viewers no ranking</span>
           </div>
-        ))}
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: S.primary }}>{totalViewers}</div>
+        </div>
+
+        <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.25rem 1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+            <span style={{ fontSize: '1rem' }}>🏆</span>
+            <span style={{ fontSize: '0.73rem', color: S.muted, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.4px' }}>Maior pontuação</span>
+          </div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: S.yellow }}>{topPoints.toLocaleString('pt-BR')}</div>
+          {leaderboard[0] && (
+            <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: S.muted, fontWeight: 600 }}>
+              @{leaderboard[0].viewer_login}
+            </div>
+          )}
+        </div>
+
+        <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.25rem 1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+            <span style={{ fontSize: '1rem' }}>🎁</span>
+            <span style={{ fontSize: '0.73rem', color: S.muted, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.4px' }}>Resgates pendentes</span>
+          </div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: totalPending > 0 ? S.yellow : S.green }}>{totalPending}</div>
+        </div>
       </div>
 
       {/* Tabs */}
