@@ -2422,7 +2422,7 @@ export default function AdminPage() {
                     <input type="color" value={newGroupColor} onChange={e => setNewGroupColor(e.target.value)}
                       style={{ width: 36, height: 36, border: `1px solid ${C.inputBorder}`, borderRadius: 8, background: C.inputBg, cursor: 'pointer', padding: 2 }} />
                     <button onClick={addCustomGroup} disabled={groupSaving || !newGroupName.trim()}
-                      style={{ padding: '0.38rem 0.9rem', background: C.primaryBg, border: `1px solid ${C.primaryBorder}`, color: C.primary, borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: groupSaving || !newGroupName.trim() ? 0.5 : 1 }}>
+                      style={{ padding: '0.38rem 0.9rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: groupSaving || !newGroupName.trim() ? 0.5 : 1 }}>
                       {groupSaving ? '...' : '+ Criar grupo'}
                     </button>
                   </div>
