@@ -180,19 +180,33 @@ export default function PedidosMusicaPage() {
     setSpotifyConnected(!!tokRes?.spotify)
     setLoading(false)
 
-    // Auto-mark 'playing' item as played if Spotify moved on to a different track
-    const playingItem = q.find(i => i.status === 'playing')
-    if (playingItem && npRes?.spotify_url && playingItem.spotify_url) {
-      const qUrl = playingItem.spotify_url.split('?')[0].toLowerCase()
+    if (npRes?.spotify_url && q.length > 0) {
       const spUrl = npRes.spotify_url.split('?')[0].toLowerCase()
-      if (qUrl !== spUrl) {
-        await fetch('/api/song-requests', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: playingItem.id, status: 'played' }),
+      const matchIdx = q.findIndex(i => i.spotify_url && i.spotify_url.split('?')[0].toLowerCase() === spUrl)
+
+      if (matchIdx >= 0) {
+        // Items before the match should be marked as played; match should be 'playing'
+        const updates: Promise<unknown>[] = []
+        q.slice(0, matchIdx).forEach(i => {
+          updates.push(fetch('/api/song-requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: i.id, status: 'played' }) }))
         })
-        setQueue(q.filter(i => i.id !== playingItem.id))
-        return
+        if (q[matchIdx].status !== 'playing') {
+          updates.push(fetch('/api/song-requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: q[matchIdx].id, status: 'playing' }) }))
+        }
+        if (updates.length > 0) {
+          await Promise.all(updates)
+          const fresh = await fetch('/api/song-requests').then(r => r.ok ? r.json() : q)
+          setQueue(fresh)
+          return
+        }
+      } else {
+        // Spotify playing something not in our queue — mark any 'playing' item as played
+        const playingItem = q.find(i => i.status === 'playing')
+        if (playingItem) {
+          await fetch('/api/song-requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: playingItem.id, status: 'played' }) })
+          setQueue(q.filter(i => i.id !== playingItem.id))
+          return
+        }
       }
     }
     setQueue(q)
