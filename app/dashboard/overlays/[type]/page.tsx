@@ -570,6 +570,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
     if (type === 'alert') {
       if (eventSlug && evMeta) {
         return (
+          <>
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', padding: '0.75rem', background: `${evMeta.color}10`, border: `1px solid ${evMeta.color}33`, borderRadius: 10 }}>
               <span style={{ fontSize: '1.6rem' }}>{evMeta.icon}</span>
@@ -589,9 +590,11 @@ export default function OverlayEditorPage({ params }: Ctx) {
             </div>
           </Card>
           {renderTtsCard()}
+          </>
         )
       }
       return (
+        <>
         <Card>
           <Label>Configuração do overlay</Label>
           <p style={{ margin: '0 0 0.75rem', fontSize: '0.76rem', color: C.dim, lineHeight: 1.5 }}>
@@ -607,6 +610,7 @@ export default function OverlayEditorPage({ params }: Ctx) {
           </div>
         </Card>
         {renderTtsCard()}
+        </>
       )
     }
 
