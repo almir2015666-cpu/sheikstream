@@ -2718,9 +2718,6 @@ export default function AdminPage() {
           })()}
 
           {view === 'overlays-catalog' && (() => {
-            const vis = catalogItems.filter(i => !i.hidden)
-            const hid = catalogItems.filter(i => i.hidden)
-
             const saveCat = async (items: CatalogItem[]) => {
               setCatalogSaving(true)
               try {
@@ -2732,77 +2729,25 @@ export default function AdminPage() {
               } catch { alert('Sem conexão.') } finally { setCatalogSaving(false) }
             }
 
-            const applyDrop = (srcCol: 'visible'|'hidden', srcIdx: number, tgtCol: 'visible'|'hidden', tgtIdx: number) => {
-              const v = [...vis], h = [...hid]
-              let item: CatalogItem
-              if (srcCol === 'visible') [item] = v.splice(srcIdx, 1)
-              else [item] = h.splice(srcIdx, 1)
-              if (tgtCol === 'visible') {
-                item = { ...item, hidden: false }
-                const ins = srcCol === 'visible' && srcIdx < tgtIdx ? tgtIdx - 1 : tgtIdx
-                v.splice(Math.max(0, Math.min(ins, v.length)), 0, item)
-              } else {
-                item = { ...item, hidden: true }
-                h.push(item)
-              }
-              setCatalogItems([...v, ...h])
+            const reorder = (srcIdx: number, tgtIdx: number) => {
+              const arr = [...catalogItems]
+              const [moved] = arr.splice(srcIdx, 1)
+              arr.splice(srcIdx < tgtIdx ? tgtIdx - 1 : tgtIdx, 0, moved)
+              setCatalogItems(arr)
             }
 
-            const onDragStart = (e: React.DragEvent, col: 'visible'|'hidden', idx: number) => {
-              e.dataTransfer.setData('text/plain', JSON.stringify({ col, idx }))
+            const onDragStart = (e: React.DragEvent, idx: number) => {
+              e.dataTransfer.setData('text/plain', String(idx))
               e.dataTransfer.effectAllowed = 'move'
             }
-            const onDrop = (e: React.DragEvent, tgtCol: 'visible'|'hidden', tgtIdx: number) => {
+            const onDrop = (e: React.DragEvent, tgtIdx: number) => {
               e.preventDefault(); e.stopPropagation(); setCatalogDropTarget(null)
-              try { const { col, idx } = JSON.parse(e.dataTransfer.getData('text/plain')); applyDrop(col, idx, tgtCol, tgtIdx) } catch {}
+              const src = parseInt(e.dataTransfer.getData('text/plain'), 10)
+              if (!isNaN(src) && src !== tgtIdx) reorder(src, tgtIdx)
             }
 
             const inp = { padding: '0.42rem 0.65rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: '7px', fontSize: '0.82rem', width: '100%', boxSizing: 'border-box' as const }
-
-            const renderCol = (title: string, items: CatalogItem[], colKey: 'visible'|'hidden') => {
-              const isOver = catalogDropTarget?.col === colKey
-              return (
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 800, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>{title} ({items.length})</div>
-                  <div
-                    onDragOver={e => { e.preventDefault(); if (!catalogDropTarget || catalogDropTarget.col !== colKey || catalogDropTarget.idx !== items.length) setCatalogDropTarget({ col: colKey, idx: items.length }) }}
-                    onDrop={e => onDrop(e, colKey, items.length)}
-                    style={{ minHeight: 140, borderRadius: '12px', border: `2px dashed ${isOver ? C.primary : C.border}`, padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', background: isOver ? `rgba(155,48,255,0.04)` : 'transparent', transition: 'all 0.12s' }}>
-                    {items.map((item, idx) => {
-                      const isTgt = catalogDropTarget?.col === colKey && catalogDropTarget?.idx === idx
-                      return (
-                        <div key={item.type + idx}
-                          draggable
-                          onDragStart={e => onDragStart(e, colKey, idx)}
-                          onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (!isTgt) setCatalogDropTarget({ col: colKey, idx }) }}
-                          onDrop={e => onDrop(e, colKey, idx)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.55rem 0.75rem', borderRadius: '8px', background: isTgt ? C.primaryBg : C.cardBgAlt, border: `1px solid ${isTgt ? C.borderStrong : C.border}`, cursor: 'grab', userSelect: 'none', opacity: colKey === 'hidden' ? 0.5 : 1, transition: 'all 0.1s' }}>
-                          <svg width="8" height="14" viewBox="0 0 8 14" fill={C.vdim}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
-                          <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 600, color: C.text }}>{item.label}</span>
-                          {colKey === 'visible' && (
-                            <button onClick={() => { const arr = catalogItems.map(x => x.type === item.type ? { ...x, live: !x.live } : x); setCatalogItems(arr) }}
-                              title={item.live ? 'Marcar como Em breve' : 'Marcar como Live'}
-                              style={{ padding: '0.1rem 0.45rem', background: item.live ? 'rgba(29,185,84,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${item.live ? 'rgba(29,185,84,0.3)' : C.border}`, color: item.live ? '#1DB954' : C.vdim, borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                              {item.live ? '● Live' : '○ Em breve'}
-                            </button>
-                          )}
-                          {colKey === 'visible'
-                            ? <button onClick={() => { const arr = catalogItems.map(x => x.type === item.type ? { ...x, hidden: true } : x); setCatalogItems(arr) }} title="Ocultar" style={{ width: 20, height: 20, background: 'transparent', border: `1px solid ${C.border}`, color: C.vdim, borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
-                            : <button onClick={() => { const arr = catalogItems.map(x => x.type === item.type ? { ...x, hidden: false } : x); setCatalogItems(arr) }} title="Mostrar" style={{ padding: '0.1rem 0.4rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '4px', fontSize: '0.62rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>＋</button>
-                          }
-                        </div>
-                      )
-                    })}
-                    {items.length === 0 && (
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.vdim, fontSize: '0.76rem', minHeight: 80 }}>
-                        {colKey === 'visible' ? '← Arraste aqui para mostrar' : '→ Arraste aqui para ocultar'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            }
+            const isListOver = catalogDropTarget?.col === 'visible' && catalogDropTarget?.idx === catalogItems.length
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
@@ -2811,39 +2756,64 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
                   <div>
                     <div style={{ fontSize: '1rem', fontWeight: 800, color: C.text }}>Catálogo de Overlays</div>
-                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.1rem' }}>Arraste entre colunas para mostrar/ocultar. Arraste dentro do catálogo para reordenar.</div>
+                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.1rem' }}>Arraste para reordenar. Clique ✕ para remover.</div>
                   </div>
                   <button disabled={catalogSaving} onClick={() => saveCat(catalogItems)}
                     style={{ padding: '0.5rem 1.2rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: catalogSaving ? 'default' : 'pointer', flexShrink: 0 }}>
                     {catalogSaving ? 'Salvando…' : '✓ Salvar'}
                   </button>
                 </div>
-                {/* Two columns */}
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  {renderCol('📋 No catálogo', vis, 'visible')}
-                  {renderCol('🙈 Ocultos', hid, 'hidden')}
+                {/* Single list */}
+                <div
+                  onDragOver={e => { e.preventDefault(); if (!isListOver) setCatalogDropTarget({ col: 'visible', idx: catalogItems.length }) }}
+                  onDrop={e => onDrop(e, catalogItems.length)}
+                  style={{ minHeight: 80, borderRadius: '12px', border: `2px dashed ${isListOver ? C.primary : C.border}`, padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', background: isListOver ? 'rgba(155,48,255,0.04)' : 'transparent', transition: 'all 0.12s' }}>
+                  {catalogItems.map((item, idx) => {
+                    const isTgt = catalogDropTarget?.col === 'visible' && catalogDropTarget?.idx === idx
+                    return (
+                      <div key={item.type + idx}
+                        draggable
+                        onDragStart={e => onDragStart(e, idx)}
+                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (!isTgt) setCatalogDropTarget({ col: 'visible', idx }) }}
+                        onDrop={e => onDrop(e, idx)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.55rem 0.75rem', borderRadius: '8px', background: isTgt ? C.primaryBg : C.cardBgAlt, border: `1px solid ${isTgt ? C.borderStrong : C.border}`, cursor: 'grab', userSelect: 'none', transition: 'all 0.1s' }}>
+                        <svg width="8" height="14" viewBox="0 0 8 14" fill={C.vdim}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 600, color: C.text }}>{item.label}</span>
+                        <button onClick={() => { const arr = catalogItems.map(x => x.type === item.type ? { ...x, live: !x.live } : x); setCatalogItems(arr) }}
+                          title={item.live ? 'Marcar como Em breve' : 'Marcar como Live'}
+                          style={{ padding: '0.1rem 0.45rem', background: item.live ? 'rgba(29,185,84,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${item.live ? 'rgba(29,185,84,0.3)' : C.border}`, color: item.live ? '#1DB954' : C.vdim, borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                          {item.live ? '● Live' : '○ Em breve'}
+                        </button>
+                        <button onClick={() => setCatalogItems(prev => prev.filter(x => x.type !== item.type))}
+                          title="Remover" style={{ width: 20, height: 20, background: 'transparent', border: `1px solid ${C.border}`, color: C.vdim, borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+                      </div>
+                    )
+                  })}
+                  {catalogItems.length === 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.vdim, fontSize: '0.76rem', minHeight: 60 }}>
+                      Clique nas páginas abaixo para adicionar ao catálogo
+                    </div>
+                  )}
                 </div>
                 {/* Page picker */}
                 <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, marginBottom: '0.3rem' }}>Páginas disponíveis — clique para adicionar ao catálogo</div>
-                  <div style={{ fontSize: '0.7rem', color: C.muted, marginBottom: '0.75rem' }}>Itens já no catálogo aparecem marcados. Clique novamente para remover.</div>
+                  <div style={{ fontSize: '0.7rem', color: C.muted, marginBottom: '0.75rem' }}>Itens marcados já estão no catálogo. Clique novamente para remover.</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
                     {NAV_ITEMS_LIST.map(page => {
-                      const inCatalog = catalogItems.some(c => c.type === page.id && !c.hidden)
-                      const inHidden  = catalogItems.some(c => c.type === page.id && c.hidden)
+                      const inCatalog = catalogItems.some(c => c.type === page.id)
                       return (
                         <button key={page.id}
                           onClick={() => {
                             if (inCatalog) {
-                              setCatalogItems(prev => prev.map(c => c.type === page.id ? { ...c, hidden: true } : c))
-                            } else if (inHidden) {
-                              setCatalogItems(prev => prev.map(c => c.type === page.id ? { ...c, hidden: false } : c))
+                              setCatalogItems(prev => prev.filter(c => c.type !== page.id))
                             } else {
                               const ni: CatalogItem = { type: page.id, label: page.label, href: page.href, desc: '', badge: 'NOVO', color: '#9b30ff', live: false, hidden: false }
-                              setCatalogItems(prev => [...prev.filter(i => !i.hidden), ni, ...prev.filter(i => i.hidden)])
+                              setCatalogItems(prev => [...prev, ni])
                             }
                           }}
-                          style={{ padding: '0.35rem 0.8rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${inCatalog ? C.primary : inHidden ? C.border : C.border}`, background: inCatalog ? C.primaryBg : 'transparent', color: inCatalog ? C.primary : inHidden ? C.vdim : C.muted, display: 'flex', alignItems: 'center', gap: '0.3rem', transition: 'all 0.12s' }}>
+                          style={{ padding: '0.35rem 0.8rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${inCatalog ? C.primary : C.border}`, background: inCatalog ? C.primaryBg : 'transparent', color: inCatalog ? C.primary : C.muted, display: 'flex', alignItems: 'center', gap: '0.3rem', transition: 'all 0.12s' }}>
                           {inCatalog && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="1,5 3.5,8 9,2" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                           {page.label}
                         </button>
@@ -2861,7 +2831,7 @@ export default function AdminPage() {
                         onClick={() => {
                           const slug = catalogNewForm.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `item-${Date.now()}`
                           const ni: CatalogItem = { ...catalogNewForm, type: slug, badge: 'NOVO', color: '#9b30ff', live: false, hidden: false }
-                          setCatalogItems(prev => [...prev.filter(i => !i.hidden), ni, ...prev.filter(i => i.hidden)])
+                          setCatalogItems(prev => [...prev, ni])
                           setCatalogNewForm(CATALOG_BLANK)
                         }}
                         style={{ padding: '0.42rem 0.9rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, opacity: !catalogNewForm.label.trim() || !catalogNewForm.href.trim() ? 0.4 : 1 }}>
