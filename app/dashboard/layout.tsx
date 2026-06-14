@@ -228,6 +228,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [navOrder, setNavOrder] = useState<string[]>([])
   const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon'>>({})
   const [navChildrenDB, setNavChildrenDB] = useState<Record<string, string[]> | null>(null)
+  const [catalogHrefs, setCatalogHrefs] = useState<Set<string>>(new Set())
   // Suggestion/bug form (global — all pages)
   const [showSugg, setShowSugg] = useState(false)
   const [suggType, setSuggType] = useState<'suggestion' | 'bug'>('suggestion')
@@ -305,8 +306,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
         })
         .catch(() => {/* network error — keep current order */})
+    const fetchCatalog = () =>
+      fetch('/api/admin/overlays-catalog')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          const hrefs = new Set<string>(
+            ((d?.items ?? []) as { href: string; hidden: boolean }[])
+              .filter(i => !i.hidden)
+              .map(i => i.href)
+          )
+          setCatalogHrefs(hrefs)
+        })
+        .catch(() => {})
     fetchNavOrder()
-    const navIv = setInterval(fetchNavOrder, 15_000)
+    fetchCatalog()
+    const navIv = setInterval(() => { fetchNavOrder(); fetchCatalog() }, 15_000)
     const fetchBanner = () => fetch('/api/dev-banner').then(r => r.json()).then(d => setBanner(d?.active ? d : null)).catch(() => {})
     fetchBanner()
     const iv = setInterval(fetchBanner, 30000)
@@ -496,9 +510,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   })()
 
   const effectiveNavItems = (() => {
-    if (!navChildrenDB || Object.keys(navChildrenDB).length === 0) return orderedItems
+    // Remove from sidebar any item whose href is in the visible overlays catalog
+    // (except 'overlays' itself — the catalog page must always stay)
+    const inCatalog = (item: Item) =>
+      item.id !== 'overlays' && catalogHrefs.size > 0 && catalogHrefs.has(item.href)
+    const baseItems = orderedItems.filter(item => !inCatalog(item))
+
+    if (!navChildrenDB || Object.keys(navChildrenDB).length === 0) return baseItems
     const dbChildSet = new Set(Object.values(navChildrenDB).flat())
-    return orderedItems
+    return baseItems
       .filter(item => !dbChildSet.has(item.id))
       .map(item => {
         const dbKids = navChildrenDB[item.id]
