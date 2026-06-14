@@ -156,7 +156,6 @@ export default function PedidosMusicaPage() {
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [togglingEnabled, setTogglingEnabled] = useState(false)
   const [skipping, setSkipping] = useState(false)
   const [togglingPlay, setTogglingPlay] = useState(false)
   const [goingPrev, setGoingPrev] = useState(false)
@@ -166,6 +165,7 @@ export default function PedidosMusicaPage() {
   const [searching, setSearching] = useState(false)
   const [adding, setAdding] = useState<string | null>(null)
   const [spotifyConnected, setSpotifyConnected] = useState(false)
+  const [uid, setUid] = useState('')
 
   const pollLive = useCallback(async () => {
     const [qRes, npRes, tokRes] = await Promise.all([
@@ -208,8 +208,12 @@ export default function PedidosMusicaPage() {
   }, [])
 
   const loadAll = useCallback(async () => {
-    const cfgRes = await fetch('/api/song-requests/config').then(r => r.ok ? r.json() : null)
+    const [cfgRes, meRes] = await Promise.all([
+      fetch('/api/song-requests/config').then(r => r.ok ? r.json() : null),
+      fetch('/api/me').then(r => r.ok ? r.json() : null).catch(() => null),
+    ])
     if (cfgRes) setCfg(cfgRes)
+    if (meRes?.id) setUid(meRes.id)
     await pollLive()
     setLoading(false)
   }, [pollLive])
@@ -292,11 +296,8 @@ export default function PedidosMusicaPage() {
     await fetch('/api/song-requests/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) }).finally(() => setSaving(false))
   }
 
-  const handleToggleEnabled = async () => {
-    const next = !cfg.enabled
-    setTogglingEnabled(true)
-    setCfg(c => ({ ...c, enabled: next }))
-    await fetch('/api/song-requests/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cfg, enabled: next }) }).finally(() => setTogglingEnabled(false))
+  const handleToggleEnabled = () => {
+    setCfg(c => ({ ...c, enabled: !c.enabled }))
   }
 
   const playing = queue.find(q => q.status === 'playing')
@@ -338,8 +339,8 @@ export default function PedidosMusicaPage() {
             </span>
           )}
           {/* Enable / disable quick toggle */}
-          <button onClick={handleToggleEnabled} disabled={togglingEnabled}
-            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.3rem 0.8rem 0.3rem 0.55rem', background: cfg.enabled ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.08)', border: `1px solid ${cfg.enabled ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.2)'}`, borderRadius: '99px', color: cfg.enabled ? S.green : S.red, cursor: togglingEnabled ? 'wait' : 'pointer', fontSize: '0.75rem', fontWeight: 700, transition: 'all 0.2s', opacity: togglingEnabled ? 0.6 : 1, flexShrink: 0 }}>
+          <button onClick={handleToggleEnabled}
+            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.3rem 0.8rem 0.3rem 0.55rem', background: cfg.enabled ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.08)', border: `1px solid ${cfg.enabled ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.2)'}`, borderRadius: '99px', color: cfg.enabled ? S.green : S.red, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, transition: 'all 0.2s', flexShrink: 0 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.enabled ? S.green : S.red, display: 'inline-block', flexShrink: 0 }} />
             {cfg.enabled ? 'Pedidos ativos' : 'Pedidos desativados'}
           </button>
