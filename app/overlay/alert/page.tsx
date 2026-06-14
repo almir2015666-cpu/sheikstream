@@ -19,6 +19,19 @@ const ALL_EVENT_SLUGS = [
   'youtube-member','youtube-giftmember',
 ]
 
+// Higher number = higher priority (raid/giftsub jump the queue)
+const PRIORITY: Record<string, number> = {
+  'twitch-giftsub': 5, 'kick-giftsub': 5, 'youtube-giftmember': 5,
+  'twitch-sub': 4, 'kick-sub': 4, 'youtube-member': 4,
+  'twitch-resub': 3,
+  'twitch-bits': 2, 'livepix': 2, 'paypal': 2,
+  'twitch-follow': 1, 'kick-follow': 1,
+}
+
+function isVideoUrl(url: string) {
+  return /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || url.startsWith('data:video/')
+}
+
 type Cfg = {
   bgColor: string; bgOpacity: number; textColor: string; accentColor: string
   borderRadius: number; border: boolean; borderColor: string; borderThick: number
@@ -217,22 +230,24 @@ function AlertCard({ ev, cfg, onDone, debug }: { ev: AlertEvent; cfg: Cfg; onDon
     @keyframes sk-keep-awake{from{opacity:0.001}to{opacity:0.002}}
   `
 
-  // Custom art: replace entire card with image
+  // Custom art: replace entire card with image or video
   if (cfg.customArt) return (
     <>
       <style>{ANIM_CSS}</style>
       <div style={{ display: 'inline-block', position: 'relative' }}>
-        <img
-          src={cfg.customArt}
-          alt=""
-          style={{
-            width: cfg.width,
-            maxHeight: 200,
-            objectFit: 'contain',
-            borderRadius: cfg.borderRadius,
-            ...wrapperStyle,
-          }}
-        />
+        {isVideoUrl(cfg.customArt) ? (
+          <video
+            src={cfg.customArt}
+            autoPlay loop muted playsInline
+            style={{ width: cfg.width, maxHeight: 300, objectFit: 'contain', borderRadius: cfg.borderRadius, display: 'block', ...wrapperStyle }}
+          />
+        ) : (
+          <img
+            src={cfg.customArt}
+            alt=""
+            style={{ width: cfg.width, maxHeight: 200, objectFit: 'contain', borderRadius: cfg.borderRadius, display: 'block', ...wrapperStyle }}
+          />
+        )}
       </div>
     </>
   )
@@ -427,7 +442,11 @@ function AlertOverlayContent() {
               seenIds.current.add(e.id)
               if (e.createdAt && e.createdAt > lastSeenTs) lastSeenTs = e.createdAt
             })
-            return newEvents.length > 0 ? [...prev, ...newEvents] : prev
+            if (newEvents.length === 0) return prev
+            // Sort queue by priority so higher-priority alerts (raid, giftsub) jump ahead
+            return [...prev, ...newEvents].sort((a, b) =>
+              (PRIORITY[b.slug ?? ''] ?? 0) - (PRIORITY[a.slug ?? ''] ?? 0)
+            )
           })
         })
         .catch(() => { if (!watermarked) watermarked = true })

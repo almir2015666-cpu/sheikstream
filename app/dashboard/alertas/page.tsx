@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLang } from '@/lib/i18n'
 
 const S = {
@@ -25,6 +25,77 @@ type Alert = {
 }
 
 type FilterTab = 'all' | 'pending' | 'failed'
+
+const PREVIEW_EVENTS = [
+  { slug: 'twitch-follow',   label: 'Follow',    emoji: '❤️'  },
+  { slug: 'twitch-sub',      label: 'Sub',       emoji: '⭐'  },
+  { slug: 'twitch-giftsub',  label: 'Gift Sub',  emoji: '🎁'  },
+  { slug: 'twitch-resub',    label: 'Re-sub',    emoji: '🔁'  },
+  { slug: 'twitch-bits',     label: 'Bits',      emoji: '💎'  },
+  { slug: 'livepix',         label: 'Doação',    emoji: '💸'  },
+]
+
+function LivePreview({ uid }: { uid: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [firing, setFiring] = useState<string | null>(null)
+  const [overlayUrl, setOverlayUrl] = useState('')
+
+  useEffect(() => {
+    setOverlayUrl(`${window.location.origin}/overlay/alert?uid=${uid}`)
+  }, [uid])
+
+  const fireTest = async (slug: string) => {
+    setFiring(slug)
+    await fetch('/api/overlay/alert/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventSlug: slug }),
+    }).finally(() => setTimeout(() => setFiring(null), 800))
+  }
+
+  return (
+    <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '1.25rem' }}>
+      <div style={{ padding: '0.85rem 1rem', borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontWeight: 700, fontSize: '0.87rem', color: S.text }}>Pré-visualização ao vivo</span>
+        <span style={{ fontSize: '0.72rem', color: S.muted }}>Clique em um tipo para disparar um alerta de teste</span>
+      </div>
+
+      {/* Test buttons */}
+      <div style={{ padding: '0.75rem 1rem', borderBottom: `1px solid ${S.border}`, display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+        {PREVIEW_EVENTS.map(ev => (
+          <button key={ev.slug} onClick={() => fireTest(ev.slug)} disabled={firing !== null}
+            style={{
+              padding: '0.35rem 0.8rem', borderRadius: '7px', border: `1px solid ${S.border}`,
+              background: firing === ev.slug ? S.primaryBg : 'rgba(255,255,255,0.04)',
+              color: firing === ev.slug ? S.primary : S.muted,
+              fontWeight: 600, fontSize: '0.78rem', cursor: firing !== null ? 'wait' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: '0.3rem', transition: 'all 0.15s',
+              opacity: firing !== null && firing !== ev.slug ? 0.5 : 1,
+            }}>
+            <span>{ev.emoji}</span> {ev.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Preview iframe */}
+      <div style={{ background: '#000', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', overflow: 'hidden', position: 'relative', padding: '0 12px' }}>
+        {overlayUrl ? (
+          <iframe
+            ref={iframeRef}
+            src={overlayUrl}
+            style={{ border: 'none', width: '600px', height: '160px', background: 'transparent', flexShrink: 0 }}
+            allow="autoplay"
+          />
+        ) : (
+          <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.8rem' }}>Carregando pré-visualização...</div>
+        )}
+        <div style={{ position: 'absolute', bottom: 8, right: 12, fontSize: '0.68rem', color: 'rgba(255,255,255,0.2)' }}>
+          Simulação OBS
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const TYPE_META: Record<AlertType, { emoji: string; color: string }> = {
   donation: { emoji: '💰', color: '#f59e0b' },
@@ -64,6 +135,11 @@ export default function AlertasPage() {
   const [filter, setFilter] = useState<FilterTab>('all')
   const [replaying, setReplaying] = useState<string | null>(null)
   const [isDemo, setIsDemo] = useState(false)
+  const [uid, setUid] = useState('')
+
+  useEffect(() => {
+    fetch('/api/me').then(r => r.ok ? r.json() : null).then(u => { if (u?.id) setUid(u.id) })
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -146,6 +222,9 @@ export default function AlertasPage() {
           </button>
         </div>
       </div>
+
+      {/* Live preview */}
+      {uid && <LivePreview uid={uid} />}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
