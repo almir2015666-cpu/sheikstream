@@ -1638,26 +1638,7 @@ export default function ComandosPage() {
             )}
           </div>
 
-          {/* 5 · Responder como */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.8rem' }}>Responder como</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-              {[
-                { id: 'canal' as const, label: 'Conta do canal',  desc: 'Responde como o dono da live' },
-                { id: 'bot'   as const, label: 'SheikSTREAM',     desc: 'Responde pela conta bot da plataforma' },
-              ].map(opt => {
-                const sel = form.responderComo === opt.id
-                return (
-                  <button key={opt.id} type="button" onClick={() => setForm(p => ({ ...p, responderComo: opt.id }))} style={{ padding: '0.75rem 1rem', background: sel ? C.blueBg : 'transparent', border: `1px solid ${sel ? C.blue + '55' : 'rgba(255,255,255,0.08)'}`, borderRadius: '10px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: sel ? C.blue : C.text }}>{opt.label}</div>
-                    <div style={{ fontSize: '0.73rem', color: C.dim, marginTop: '0.18rem' }}>{opt.desc}</div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* 6 · Notificação no overlay */}
+          {/* 5 · Notificação no overlay */}
           <div style={{ background: C.card, border: `1px solid ${form.notifOverlay ? C.green + '40' : C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
