@@ -1206,23 +1206,32 @@ export default function ComandosPage() {
       })
     : cmds
 
-  const moveCmd = (id: string, dir: 'up' | 'down', sectionIds: string[]) => {
-    const sIdx = sectionIds.indexOf(id)
-    if (dir === 'up' && sIdx === 0) return
-    if (dir === 'down' && sIdx === sectionIds.length - 1) return
-    const swapId = sectionIds[dir === 'up' ? sIdx - 1 : sIdx + 1]
+  const dragRef = useRef<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [dragOverPos, setDragOverPos] = useState<'above' | 'below'>('below')
+
+  const onDragStart = (id: string) => { dragRef.current = id }
+  const onDragEnd = () => { dragRef.current = null; setDragOverId(null) }
+  const onDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault()
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setDragOverId(id)
+    setDragOverPos(e.clientY < rect.top + rect.height / 2 ? 'above' : 'below')
+  }
+  const onDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    const sourceId = dragRef.current
+    if (!sourceId || sourceId === targetId) { setDragOverId(null); return }
     const base = cmdOrder.length > 0 ? [...cmdOrder] : orderedCmds.map(c => c.id)
-    const ai = base.indexOf(id), bi = base.indexOf(swapId)
-    if (ai !== -1 && bi !== -1) {
-      ;[base[ai], base[bi]] = [base[bi], base[ai]]
-      setCmdOrder(base)
-    } else {
-      const rebuilt = orderedCmds.map(c => c.id)
-      const ri = rebuilt.indexOf(id), rj = rebuilt.indexOf(swapId)
-      ;[rebuilt[ri], rebuilt[rj]] = [rebuilt[rj], rebuilt[ri]]
-      setCmdOrder(rebuilt)
-    }
+    const fromIdx = base.indexOf(sourceId)
+    if (fromIdx === -1) { setDragOverId(null); return }
+    base.splice(fromIdx, 1)
+    const toIdx = base.indexOf(targetId)
+    if (toIdx === -1) { setDragOverId(null); return }
+    base.splice(dragOverPos === 'above' ? toIdx : toIdx + 1, 0, sourceId)
+    setCmdOrder(base)
     setOrderDirty(true)
+    setDragOverId(null)
   }
 
   const saveOrder = async () => {
@@ -1328,18 +1337,22 @@ export default function ComandosPage() {
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.primary, display: 'inline-block', flexShrink: 0 }} />
               <span style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Eventos automáticos</span>
             </div>
-            {filtered.filter(c => c.isEvento).map((cmd, i, arr) => {
+            {filtered.filter(c => c.isEvento).map((cmd) => {
               const platColor = PLAT_COLOR[cmd.platform] ?? C.primary
-              const sectionIds = arr.map(c => c.id)
+              const isOver = dragOverId === cmd.id
               return (
                 <div key={cmd.id}
-                  style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s' }}
+                  draggable
+                  onDragStart={() => onDragStart(cmd.id)}
+                  onDragEnd={onDragEnd}
+                  onDragOver={e => onDragOver(e, cmd.id)}
+                  onDrop={e => onDrop(e, cmd.id)}
+                  style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s', boxShadow: isOver ? (dragOverPos === 'above' ? 'inset 0 2px 0 #9b30ff' : 'inset 0 -2px 0 #9b30ff') : 'none', opacity: dragRef.current === cmd.id ? 0.4 : 1 }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.rowHover }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
-                    <button onClick={() => moveCmd(cmd.id, 'up', sectionIds)} disabled={i === 0} style={{ background: 'none', border: 'none', color: i === 0 ? C.dim : C.text, cursor: i === 0 ? 'default' : 'pointer', padding: '1px', lineHeight: 1, opacity: i === 0 ? 0.25 : 0.7 }}>▲</button>
-                    <button onClick={() => moveCmd(cmd.id, 'down', sectionIds)} disabled={i === arr.length - 1} style={{ background: 'none', border: 'none', color: i === arr.length - 1 ? C.dim : C.text, cursor: i === arr.length - 1 ? 'default' : 'pointer', padding: '1px', lineHeight: 1, opacity: i === arr.length - 1 ? 0.25 : 0.7 }}>▼</button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', color: C.dim, opacity: 0.5 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
@@ -1383,18 +1396,22 @@ export default function ComandosPage() {
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.blue, display: 'inline-block', flexShrink: 0 }} />
               <span style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Meus comandos</span>
             </div>
-            {filtered.filter(c => !c.isEvento).map((cmd, i, arr) => {
+            {filtered.filter(c => !c.isEvento).map((cmd) => {
               const platColor = PLAT_COLOR[cmd.platform] ?? C.blue
-              const sectionIds = arr.map(c => c.id)
+              const isOver = dragOverId === cmd.id
               return (
                 <div key={cmd.id}
-                  style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s' }}
+                  draggable
+                  onDragStart={() => onDragStart(cmd.id)}
+                  onDragEnd={onDragEnd}
+                  onDragOver={e => onDragOver(e, cmd.id)}
+                  onDrop={e => onDrop(e, cmd.id)}
+                  style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s', boxShadow: isOver ? (dragOverPos === 'above' ? 'inset 0 2px 0 #9b30ff' : 'inset 0 -2px 0 #9b30ff') : 'none', opacity: dragRef.current === cmd.id ? 0.4 : 1 }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.rowHover }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
-                    <button onClick={() => moveCmd(cmd.id, 'up', sectionIds)} disabled={i === 0} style={{ background: 'none', border: 'none', color: i === 0 ? C.dim : C.text, cursor: i === 0 ? 'default' : 'pointer', padding: '1px', lineHeight: 1, opacity: i === 0 ? 0.25 : 0.7 }}>▲</button>
-                    <button onClick={() => moveCmd(cmd.id, 'down', sectionIds)} disabled={i === arr.length - 1} style={{ background: 'none', border: 'none', color: i === arr.length - 1 ? C.dim : C.text, cursor: i === arr.length - 1 ? 'default' : 'pointer', padding: '1px', lineHeight: 1, opacity: i === arr.length - 1 ? 0.25 : 0.7 }}>▼</button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', color: C.dim, opacity: 0.5 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
