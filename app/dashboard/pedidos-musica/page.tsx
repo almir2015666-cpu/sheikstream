@@ -155,6 +155,7 @@ export default function PedidosMusicaPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [skipping, setSkipping] = useState(false)
+  const [togglingPlay, setTogglingPlay] = useState(false)
   const [tab, setTab] = useState<'fila' | 'config'>('fila')
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState<SearchTrack[]>([])
@@ -222,6 +223,18 @@ export default function PedidosMusicaPage() {
     await loadAll()
   }
 
+  const handleTogglePlay = async () => {
+    if (!nowPlaying) return
+    setTogglingPlay(true)
+    const action = nowPlaying.is_playing ? 'pause' : 'resume'
+    await fetch('/api/spotify/playback', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    }).finally(() => setTogglingPlay(false))
+    setTimeout(loadAll, 400)
+  }
+
   const handleMarkPlaying = async (id: string) => {
     await fetch('/api/song-requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: 'playing' }) })
     await loadAll()
@@ -272,24 +285,34 @@ export default function PedidosMusicaPage() {
         </p>
       </div>
 
-      {/* Now playing */}
-      {nowPlaying?.is_playing && (
-        <div style={{ background: S.spotifyBg, border: `1px solid ${S.spotifyBorder}`, borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      {/* Now playing / paused */}
+      {nowPlaying && (
+        <div style={{ background: nowPlaying.is_playing ? S.spotifyBg : 'rgba(255,255,255,0.03)', border: `1px solid ${nowPlaying.is_playing ? S.spotifyBorder : S.border}`, borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', transition: 'all 0.3s' }}>
           {nowPlaying.thumbnail && (
-            <img src={nowPlaying.thumbnail} alt="" style={{ width: '52px', height: '52px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
+            <img src={nowPlaying.thumbnail} alt="" style={{ width: '52px', height: '52px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, opacity: nowPlaying.is_playing ? 1 : 0.5 }} />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: S.spotify, letterSpacing: '0.5px', marginBottom: '0.2rem', textTransform: 'uppercase' }}>▶ Tocando agora</div>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: nowPlaying.is_playing ? S.spotify : S.vdim, letterSpacing: '0.5px', marginBottom: '0.2rem', textTransform: 'uppercase' }}>
+              {nowPlaying.is_playing ? '▶ Tocando agora' : '⏸ Pausado'}
+            </div>
             <div style={{ fontSize: '0.93rem', fontWeight: 700, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nowPlaying.title}</div>
             <div style={{ fontSize: '0.78rem', color: S.muted }}>{nowPlaying.artist}</div>
             <div style={{ marginTop: '0.5rem', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', background: S.spotify, width: `${(nowPlaying.progress_ms / nowPlaying.duration_ms) * 100}%`, borderRadius: '99px', transition: 'width 3s linear' }} />
+              <div style={{ height: '100%', background: nowPlaying.is_playing ? S.spotify : S.vdim, width: `${(nowPlaying.progress_ms / nowPlaying.duration_ms) * 100}%`, borderRadius: '99px', transition: 'width 3s linear' }} />
             </div>
           </div>
-          <button onClick={handleSkip} disabled={skipping}
-            style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)', border: `1px solid ${S.border}`, borderRadius: '8px', color: S.muted, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, flexShrink: 0, opacity: skipping ? 0.5 : 1 }}>
-            ⏭ Skip
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+            {/* Pause / Resume */}
+            <button onClick={handleTogglePlay} disabled={togglingPlay}
+              style={{ width: 40, height: 40, background: nowPlaying.is_playing ? S.spotifyBg : 'rgba(29,185,84,0.15)', border: `1px solid ${S.spotifyBorder}`, borderRadius: '8px', color: S.spotify, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: togglingPlay ? 0.5 : 1, transition: 'all 0.15s' }}>
+              {nowPlaying.is_playing ? '⏸' : '▶'}
+            </button>
+            {/* Skip */}
+            <button onClick={handleSkip} disabled={skipping}
+              style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)', border: `1px solid ${S.border}`, borderRadius: '8px', color: S.muted, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, opacity: skipping ? 0.5 : 1 }}>
+              ⏭ Skip
+            </button>
+          </div>
         </div>
       )}
 

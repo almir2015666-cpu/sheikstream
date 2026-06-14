@@ -103,6 +103,16 @@ export async function skipSpotifyTrack(broadcasterId: string): Promise<boolean> 
   return result.ok
 }
 
+export async function pauseSpotify(broadcasterId: string): Promise<boolean> {
+  const result = await spotifyFetch(broadcasterId, '/v1/me/player/pause', { method: 'PUT' })
+  return result.ok
+}
+
+export async function resumeSpotify(broadcasterId: string): Promise<boolean> {
+  const result = await spotifyFetch(broadcasterId, '/v1/me/player/play', { method: 'PUT' })
+  return result.ok
+}
+
 export async function getNowPlaying(broadcasterId: string): Promise<{ title: string; artist: string; thumbnail: string; progress_ms: number; duration_ms: number; is_playing: boolean } | null> {
   const result = await spotifyFetch(broadcasterId, '/v1/me/player/currently-playing')
   if (!result.ok || !result.data) return null
