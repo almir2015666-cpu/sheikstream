@@ -261,10 +261,15 @@ export default function AdminPage() {
   type LoginLog = { id: string; ip: string; user_agent: string; success: boolean; created_at: string }
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([])
   const [loginLogsLoading, setLoginLogsLoading] = useState(false)
-  type UserRole = { id: string; user_id: string; role: string; created_at: string }
+  type UserRole = { id: string; user_id: string; role: string; roles: string[]; created_at: string }
+  type CustomGroup = { id: string; name: string; color: string }
   const [roles, setRoles] = useState<UserRole[]>([])
   const [rolesLoading, setRolesLoading] = useState(false)
   const [rolesSaving, setRolesSaving] = useState<string | null>(null)
+  const [customGroups, setCustomGroups] = useState<CustomGroup[]>([])
+  const [newGroupName, setNewGroupName] = useState('')
+  const [newGroupColor, setNewGroupColor] = useState('#9b30ff')
+  const [groupSaving, setGroupSaving] = useState(false)
   type AdminPw = { id: string; label: string; password: string; type: 'temporary' | 'permanent'; active: boolean; expires_at: string | null; created_at: string }
   const [passwords, setPasswords] = useState<AdminPw[]>([])
   const [pwLoading, setPwLoading] = useState(false)
@@ -460,35 +465,60 @@ export default function AdminPage() {
   const fetchRoles = useCallback(async (pw: string) => {
     setRolesLoading(true)
     try {
-      const res = await fetch('/api/admin/roles', { headers: { 'x-admin-password': pw } })
-      if (res.ok) setRoles(await res.json())
+      const [rolesRes, groupsRes] = await Promise.all([
+        fetch('/api/admin/roles', { headers: { 'x-admin-password': pw } }),
+        fetch('/api/admin/custom-groups', { headers: { 'x-admin-password': pw } }),
+      ])
+      if (rolesRes.ok) setRoles(await rolesRes.json())
+      if (groupsRes.ok) { const g = await groupsRes.json(); setCustomGroups(g.groups ?? []) }
     } catch { /* ignore */ } finally {
       setRolesLoading(false)
     }
   }, [])
 
-  async function assignRole(userId: string, role: string) {
+  async function toggleUserRole(userId: string, currentRoles: string[], roleId: string) {
+    const next = currentRoles.includes(roleId)
+      ? currentRoles.filter(r => r !== roleId)
+      : [...currentRoles, roleId]
     setRolesSaving(userId)
     try {
       const res = await fetch('/api/admin/roles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-        body: JSON.stringify({ user_id: userId, role }),
+        body: JSON.stringify({ user_id: userId, roles: next }),
       })
-      if (res.ok) await fetchRoles(storedPw)
+      if (res.ok) {
+        const updated = await res.json()
+        setRoles(prev => {
+          if (next.length === 0) return prev.filter(r => r.user_id !== userId)
+          const exists = prev.find(r => r.user_id === userId)
+          if (exists) return prev.map(r => r.user_id === userId ? { ...r, roles: next, role: JSON.stringify(next) } : r)
+          return [...prev, { ...updated, roles: next }]
+        })
+      }
     } finally {
       setRolesSaving(null)
     }
   }
 
-  async function removeRole(userId: string) {
-    setRolesSaving(userId)
+  async function addCustomGroup() {
+    if (!newGroupName.trim()) return
+    setGroupSaving(true)
     try {
-      await fetch(`/api/admin/roles?user_id=${userId}`, { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
-      setRoles(r => r.filter(x => x.user_id !== userId))
+      const res = await fetch('/api/admin/custom-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+        body: JSON.stringify({ name: newGroupName.trim(), color: newGroupColor }),
+      })
+      if (res.ok) { const d = await res.json(); setCustomGroups(d.groups ?? []); setNewGroupName('') }
     } finally {
-      setRolesSaving(null)
+      setGroupSaving(false)
     }
+  }
+
+  async function deleteCustomGroup(id: string) {
+    const res = await fetch(`/api/admin/custom-groups?id=${id}`, { method: 'DELETE', headers: { 'x-admin-password': storedPw } })
+    if (res.ok) { const d = await res.json(); setCustomGroups(d.groups ?? []) }
   }
 
   async function createPassword() {
@@ -2331,41 +2361,71 @@ export default function AdminPage() {
           )}
 
           {view === 'roles' && (() => {
-            const ROLES = ['admin', 'moderador', 'vip', 'streamer', 'parceiro', 'editor']
-            const RC: Record<string, { color: string; bg: string; border: string }> = {
-              admin:     { color: '#ff4444', bg: 'rgba(255,68,68,.1)',   border: 'rgba(255,68,68,.28)' },
-              moderador: { color: '#9147ff', bg: 'rgba(145,71,255,.1)',  border: 'rgba(145,71,255,.28)' },
-              vip:       { color: '#fbbf24', bg: 'rgba(251,191,36,.1)',  border: 'rgba(251,191,36,.28)' },
-              streamer:  { color: '#39ff14', bg: 'rgba(57,255,20,.08)',  border: 'rgba(57,255,20,.25)' },
-              parceiro:  { color: '#3b82f6', bg: 'rgba(59,130,246,.1)',  border: 'rgba(59,130,246,.28)' },
-              editor:    { color: '#f97316', bg: 'rgba(249,115,22,.1)',  border: 'rgba(249,115,22,.28)' },
+            const BUILTIN_ROLES = [
+              { id: 'admin',     name: 'admin',     color: '#ff4444' },
+              { id: 'moderador', name: 'moderador', color: '#9147ff' },
+              { id: 'vip',       name: 'vip',       color: '#fbbf24' },
+              { id: 'streamer',  name: 'streamer',  color: '#39ff14' },
+              { id: 'parceiro',  name: 'parceiro',  color: '#3b82f6' },
+              { id: 'editor',    name: 'editor',    color: '#f97316' },
+            ]
+            const ALL_ROLES = [...BUILTIN_ROLES, ...customGroups.map(g => ({ id: g.id, name: g.name, color: g.color }))]
+            function hexToRgb(hex: string) {
+              const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16)
+              return `${r},${g},${b}`
             }
-            const roleMap = Object.fromEntries(roles.map(r => [r.user_id, r]))
+            function rc(color: string) {
+              const rgb = hexToRgb(color.startsWith('#') ? color : '#9b30ff')
+              return { color, bg: `rgba(${rgb},.1)`, border: `rgba(${rgb},.28)` }
+            }
+            const roleMap = Object.fromEntries(roles.map(r => [r.user_id, r.roles ?? []]))
             const allUsers = users.filter(u => u.status === 'approved')
-            const roleCount = Object.fromEntries(ROLES.map(r => [r, roles.filter(x => x.role === r).length]))
             return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
                 {/* ── Header ── */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <div>
-                    <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: 800, color: C.text }}>Funções dos Usuários</h3>
-                    <div style={{ fontSize: '0.72rem', color: C.muted }}>Atribua funções para controlar o acesso a recursos da plataforma</div>
-                  </div>
+                <div>
+                  <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: 800, color: C.text }}>Funções dos Usuários</h3>
+                  <div style={{ fontSize: '0.72rem', color: C.muted }}>Clique nos grupos para adicionar ou remover de cada usuário. Um usuário pode ter múltiplos grupos.</div>
                 </div>
 
-                {/* ── Role legend ── */}
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {ROLES.map(r => {
-                    const rc = RC[r]
-                    return (
-                      <div key={r} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.85rem', borderRadius: '99px', background: rc.bg, border: `1px solid ${rc.border}` }}>
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: rc.color, display: 'inline-block', flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: rc.color }}>{r}</span>
-                        {roleCount[r] > 0 && <span style={{ fontSize: '0.62rem', color: rc.color, opacity: 0.7 }}>{roleCount[r]}</span>}
-                      </div>
-                    )
-                  })}
+                {/* ── Custom groups manager ── */}
+                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 14, padding: '1rem 1.15rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.82rem', color: C.text, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                    Grupos personalizados
+                  </div>
+                  {/* Existing custom groups */}
+                  {customGroups.length > 0 && (
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                      {customGroups.map(g => {
+                        const s = rc(g.color)
+                        return (
+                          <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.28rem 0.5rem 0.28rem 0.7rem', borderRadius: 99, background: s.bg, border: `1px solid ${s.border}` }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: g.color, flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: g.color }}>{g.name}</span>
+                            <button onClick={() => deleteCustomGroup(g.id)} style={{ background: 'none', border: 'none', color: g.color, opacity: 0.5, cursor: 'pointer', padding: '0 2px', fontSize: '0.8rem', lineHeight: 1, display: 'flex' }}>×</button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {/* Create new group */}
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      value={newGroupName}
+                      onChange={e => setNewGroupName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') addCustomGroup() }}
+                      placeholder="Nome do grupo (ex: vip2, squad...)"
+                      style={{ flex: 1, minWidth: 160, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: 8, padding: '0.38rem 0.7rem', fontSize: '0.78rem', outline: 'none', fontFamily: 'inherit' }}
+                    />
+                    <input type="color" value={newGroupColor} onChange={e => setNewGroupColor(e.target.value)}
+                      style={{ width: 36, height: 36, border: `1px solid ${C.inputBorder}`, borderRadius: 8, background: C.inputBg, cursor: 'pointer', padding: 2 }} />
+                    <button onClick={addCustomGroup} disabled={groupSaving || !newGroupName.trim()}
+                      style={{ padding: '0.38rem 0.9rem', background: C.primaryBg, border: `1px solid ${C.primaryBorder}`, color: C.primary, borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: groupSaving || !newGroupName.trim() ? 0.5 : 1 }}>
+                      {groupSaving ? '...' : '+ Criar grupo'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* ── User list ── */}
@@ -2374,48 +2434,43 @@ export default function AdminPage() {
                 ) : allUsers.length === 0 ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140, color: C.vdim, fontSize: '0.85rem', background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}` }}>Nenhum usuário aprovado</div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {allUsers.map(u => {
                       const uname = u.platform_username || u.email || u.id.slice(0, 8)
-                      const currentRole = roleMap[u.id]?.role
+                      const userRoles = roleMap[u.id] ?? []
                       const isSaving = rolesSaving === u.id
-                      const rc = currentRole ? RC[currentRole] : null
                       const pcol = PLATFORM_COLORS[u.platform] || C.primary
+                      const hasBorder = userRoles.length > 0 ? ALL_ROLES.find(r => userRoles[0] === r.id) : null
                       return (
-                        <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem 1.15rem', background: C.cardBg, borderRadius: '12px', border: `1px solid ${rc ? rc.border : C.border}`, transition: 'border-color .15s', flexWrap: 'wrap' }}>
-                          {/* Avatar */}
-                          {u.image_url
-                            ? <img src={u.image_url} alt={uname} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${pcol}40` }} />
-                            : <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${pcol}20`, border: `2px solid ${pcol}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 800, color: pcol, flexShrink: 0 }}>{uname[0].toUpperCase()}</div>
-                          }
-                          {/* Info */}
-                          <div style={{ flex: 1, minWidth: 120 }}>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, marginBottom: '0.1rem' }}>{uname}</div>
-                            <div style={{ fontSize: '0.68rem', color: C.dim, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: pcol, display: 'inline-block' }} />
-                              {u.platform}
+                        <div key={u.id} style={{ padding: '0.85rem 1.15rem', background: C.cardBg, borderRadius: '12px', border: `1px solid ${hasBorder ? rc(hasBorder.color).border : C.border}`, transition: 'border-color .15s' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: userRoles.length > 0 ? '0.65rem' : 0 }}>
+                            {/* Avatar */}
+                            {u.image_url
+                              ? <img src={u.image_url} alt={uname} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${pcol}40` }} />
+                              : <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${pcol}20`, border: `2px solid ${pcol}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 800, color: pcol, flexShrink: 0 }}>{uname[0].toUpperCase()}</div>
+                            }
+                            {/* Info */}
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text }}>{uname}</div>
+                              <div style={{ fontSize: '0.67rem', color: C.dim, display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.1rem' }}>
+                                <span style={{ width: 5, height: 5, borderRadius: '50%', background: pcol, display: 'inline-block' }} />
+                                {u.platform}
+                              </div>
                             </div>
+                            {isSaving && <svg className="sk-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>}
                           </div>
-                          {/* Current role badge */}
-                          {currentRole && rc && (
-                            <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.22rem 0.75rem', borderRadius: '99px', background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`, flexShrink: 0 }}>
-                              {currentRole}
-                            </span>
-                          )}
-                          {/* Role selector */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                            <select
-                              value={currentRole ?? ''}
-                              disabled={isSaving}
-                              onChange={e => { if (e.target.value) assignRole(u.id, e.target.value); else removeRole(u.id) }}
-                              style={{ background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: '8px', padding: '0.38rem 0.75rem', fontSize: '0.78rem', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}
-                            >
-                              <option value="">— sem função —</option>
-                              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                            {isSaving && (
-                              <svg className="sk-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                            )}
+                          {/* Role toggles */}
+                          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', paddingLeft: '2.6rem' }}>
+                            {ALL_ROLES.map(role => {
+                              const active = userRoles.includes(role.id)
+                              const s = rc(role.color)
+                              return (
+                                <button key={role.id} onClick={() => toggleUserRole(u.id, userRoles, role.id)} disabled={isSaving}
+                                  style={{ padding: '0.22rem 0.65rem', borderRadius: 99, fontSize: '0.7rem', fontWeight: 700, cursor: isSaving ? 'default' : 'pointer', border: `1px solid ${active ? s.border : C.border}`, background: active ? s.bg : 'transparent', color: active ? role.color : C.dim, transition: 'all 0.12s', opacity: isSaving ? 0.6 : 1 }}>
+                                  {active && <span style={{ marginRight: '0.3rem' }}>✓</span>}{role.name}
+                                </button>
+                              )
+                            })}
                           </div>
                         </div>
                       )

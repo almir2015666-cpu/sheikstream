@@ -32,8 +32,12 @@ export async function GET(req: NextRequest) {
 
   const { data: roleRow } = await db.from('user_roles').select('role')
     .in('user_id', ids).order('created_at', { ascending: false }).limit(1).maybeSingle()
-  const userRole = roleRow?.role ?? null
 
-  const canAccess = userRole !== null && allowed.includes(userRole.toLowerCase())
-  return NextResponse.json({ canAccess, userRole })
+  let userRoles: string[] = []
+  if (roleRow?.role) {
+    try { const p = JSON.parse(roleRow.role); userRoles = Array.isArray(p) ? p.map(String) : [roleRow.role] } catch { userRoles = [roleRow.role] }
+  }
+
+  const canAccess = userRoles.length > 0 && userRoles.some(r => allowed.includes(r.toLowerCase()))
+  return NextResponse.json({ canAccess, userRole: userRoles[0] ?? null, userRoles })
 }

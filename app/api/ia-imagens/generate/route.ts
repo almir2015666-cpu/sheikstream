@@ -28,7 +28,11 @@ export async function POST(req: NextRequest) {
 
   const ids = [wlRow?.id, session.id].filter(Boolean) as string[]
   const { data: roleRow } = await db.from('user_roles').select('role').in('user_id', ids).maybeSingle()
-  const userRole = roleRow?.role ?? null
+  let userRoles: string[] = []
+  if (roleRow?.role) {
+    try { const p = JSON.parse(roleRow.role); userRoles = Array.isArray(p) ? p.map(String) : [roleRow.role] } catch { userRoles = [roleRow.role] }
+  }
+  const userRole = userRoles[0] ?? null
 
   const cfgRes = await db.from('ai_image_config').select('*').maybeSingle()
   const cfg = cfgRes.data ?? DEFAULT_CFG
@@ -47,7 +51,7 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
   const cleanRoles = rawRoles.filter(r => typeof r === 'string' && !r.startsWith('__ext__:'))
-  const roleOk = cleanRoles.includes('todos') || (userRole && cleanRoles.includes(userRole))
+  const roleOk = cleanRoles.includes('todos') || userRoles.some(r => cleanRoles.includes(r))
   if (!roleOk) return NextResponse.json({ error: `Seu grupo (${userRole ?? 'sem grupo'}) não tem acesso. Grupos permitidos: ${cleanRoles.join(', ')}`, requiredRoles: cleanRoles }, { status: 403 })
 
   const userId = wlRow?.id ?? session.id

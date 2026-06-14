@@ -1,27 +1,42 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { isAdminPassword } from '@/app/lib/adminAuth'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
+
+function parseRoles(role: string | null): string[] {
+  if (!role) return []
+  try {
+    const parsed = JSON.parse(role)
+    if (Array.isArray(parsed)) return parsed.map(String)
+  } catch {}
+  return [role]
+}
 
 export async function GET(req: NextRequest) {
   if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   const db = getSupabaseAdmin()
   const { data, error } = await db.from('user_roles').select('*').order('created_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data ?? [])
+  const normalized = (data ?? []).map(r => ({ ...r, roles: parseRoles(r.role) }))
+  return NextResponse.json(normalized)
 }
 
 export async function POST(req: NextRequest) {
   if (!await isAdminPassword(req.headers.get('x-admin-password') ?? '')) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  const { user_id, role } = await req.json()
-  if (!user_id || !role) return NextResponse.json({ error: 'user_id e role são obrigatórios' }, { status: 400 })
+  const { user_id, roles } = await req.json()
+  if (!user_id || !Array.isArray(roles)) return NextResponse.json({ error: 'user_id e roles[] são obrigatórios' }, { status: 400 })
   const db = getSupabaseAdmin()
+  if (roles.length === 0) {
+    await db.from('user_roles').delete().eq('user_id', user_id)
+    return NextResponse.json({ ok: true })
+  }
+  const role = JSON.stringify(roles)
   const { data, error } = await db
     .from('user_roles')
     .upsert({ user_id, role }, { onConflict: 'user_id' })
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json({ ...data, roles })
 }
 
 export async function DELETE(req: NextRequest) {
