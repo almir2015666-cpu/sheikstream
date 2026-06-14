@@ -156,6 +156,7 @@ export default function PedidosMusicaPage() {
   const [saving, setSaving] = useState(false)
   const [skipping, setSkipping] = useState(false)
   const [togglingPlay, setTogglingPlay] = useState(false)
+  const [goingPrev, setGoingPrev] = useState(false)
   const [tab, setTab] = useState<'fila' | 'config'>('fila')
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState<SearchTrack[]>([])
@@ -221,6 +222,16 @@ export default function PedidosMusicaPage() {
     setSkipping(true)
     await fetch('/api/song-requests/skip', { method: 'POST' }).finally(() => setSkipping(false))
     await loadAll()
+  }
+
+  const handlePrevious = async () => {
+    setGoingPrev(true)
+    await fetch('/api/spotify/playback', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'previous' }),
+    }).finally(() => setGoingPrev(false))
+    setTimeout(loadAll, 400)
   }
 
   const handleTogglePlay = async () => {
@@ -302,6 +313,11 @@ export default function PedidosMusicaPage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+            {/* Previous */}
+            <button onClick={handlePrevious} disabled={goingPrev}
+              style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.04)', border: `1px solid ${S.border}`, borderRadius: '8px', color: S.muted, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: goingPrev ? 0.5 : 1, transition: 'all 0.15s' }}>
+              ⏮
+            </button>
             {/* Pause / Resume */}
             <button onClick={handleTogglePlay} disabled={togglingPlay}
               style={{ width: 40, height: 40, background: nowPlaying.is_playing ? S.spotifyBg : 'rgba(29,185,84,0.15)', border: `1px solid ${S.spotifyBorder}`, borderRadius: '8px', color: S.spotify, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: togglingPlay ? 0.5 : 1, transition: 'all 0.15s' }}>

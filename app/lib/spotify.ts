@@ -103,6 +103,11 @@ export async function skipSpotifyTrack(broadcasterId: string): Promise<boolean> 
   return result.ok
 }
 
+export async function previousSpotify(broadcasterId: string): Promise<boolean> {
+  const result = await spotifyFetch(broadcasterId, '/v1/me/player/previous', { method: 'POST' })
+  return result.ok
+}
+
 export async function pauseSpotify(broadcasterId: string): Promise<boolean> {
   const result = await spotifyFetch(broadcasterId, '/v1/me/player/pause', { method: 'PUT' })
   return result.ok
