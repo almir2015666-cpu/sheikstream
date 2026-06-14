@@ -2616,7 +2616,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
                   <div>
                     <div style={{ fontSize: '0.95rem', fontWeight: 800, color: C.text }}>Ordem e Status do Menu</div>
-                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.1rem' }}>Arraste para reordenar · Clique no status para alternar · Use ▲▼ para ajuste fino</div>
+                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.1rem' }}>Arraste para reordenar · Clique no status para alternar</div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                     <button onClick={saveNav} style={{ padding: '0.45rem 1.1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>✓ Salvar</button>
@@ -2624,8 +2624,8 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* List */}
-                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}
+                {/* 2-column grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}
                   onDragEnd={() => setNavDragOver(null)}>
                   {rootOrdered.map((item, idx) => {
                     const st = navItemStatus[item.id] ?? ''
@@ -2633,56 +2633,67 @@ export default function AdminPage() {
                     const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
                     const hasKids = hardKids.length > 0 || dbKids.length > 0
                     const isDragOver = navDragOver === idx
-                    const curParent = navParents[item.id] ?? ''
-                    const isChild = !!curParent
                     return (
-                      <React.Fragment key={item.id}>
-                        <div
-                          draggable={!isChild}
-                          onDragStart={e => { e.dataTransfer.setData('text/plain', String(idx)); e.dataTransfer.effectAllowed = 'move' }}
-                          onDragOver={e => { e.preventDefault(); if (navDragOver !== idx) setNavDragOver(idx) }}
-                          onDrop={e => { e.preventDefault(); setNavDragOver(null); const src = parseInt(e.dataTransfer.getData('text/plain')); reorderByDrag(src, idx) }}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.7rem 1.25rem', borderBottom: `1px solid ${C.border}`, background: isDragOver ? C.primaryBg : 'transparent', borderLeft: isDragOver ? `3px solid ${C.primary}` : '3px solid transparent', cursor: isChild ? 'default' : 'grab', transition: 'background 0.1s, border-color 0.1s' }}>
+                      <div key={item.id}
+                        draggable
+                        onDragStart={e => { e.dataTransfer.setData('text/plain', String(idx)); e.dataTransfer.effectAllowed = 'move' }}
+                        onDragOver={e => { e.preventDefault(); if (navDragOver !== idx) setNavDragOver(idx) }}
+                        onDrop={e => { e.preventDefault(); setNavDragOver(null); const src = parseInt(e.dataTransfer.getData('text/plain')); reorderByDrag(src, idx) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.6rem 0.85rem', background: isDragOver ? C.primaryBg : C.cardBg, border: `1px solid ${isDragOver ? C.borderStrong : C.border}`, borderLeft: `3px solid ${isDragOver ? C.primary : 'transparent'}`, borderRadius: '10px', cursor: 'grab', transition: 'all 0.1s', userSelect: 'none' }}>
+                        <svg width="8" height="14" viewBox="0 0 8 14" fill={C.vdim} style={{ flexShrink: 0 }}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
+                        <span style={{ flex: 1, fontSize: '0.86rem', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          {item.label}
+                          {hasKids && <span style={{ fontSize: '0.52rem', fontWeight: 800, padding: '0.08rem 0.35rem', background: C.primaryBg, color: C.primary, borderRadius: '99px', border: `1px solid ${C.borderStrong}`, flexShrink: 0 }}>PASTA</span>}
+                        </span>
+                        <button onClick={() => cycleStatus(item.id)}
+                          style={{ padding: '0.18rem 0.5rem', borderRadius: '999px', border: `1px solid ${stColor(st)}55`, background: `${stColor(st)}15`, color: stColor(st), fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          {stLabel(st)}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
 
-                          {/* Grip */}
-                          <svg width="8" height="14" viewBox="0 0 8 14" fill={isChild ? 'transparent' : C.vdim} style={{ flexShrink: 0 }}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
+                {/* Children */}
+                {rootOrdered.some(item => (NAV_CHILDREN[item.id] ?? []).length > 0 || (childrenMap[item.id] ?? []).length > 0) && (
+                  <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
+                    <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid ${C.border}`, fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sub-itens</div>
+                    {rootOrdered.map(item => {
+                      const hardKids = NAV_CHILDREN[item.id] ?? []
+                      const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
+                      if (!hardKids.length && !dbKids.length) return null
+                      return (
+                        <React.Fragment key={item.id}>
+                          {hardKids.map(ch => renderChildRow(ch.id, ch.label, false))}
+                          {dbKids.map(ch => renderChildRow(ch.id, ch.label, true))}
+                        </React.Fragment>
+                      )
+                    })}
+                  </div>
+                )}
 
-                          {/* Label */}
-                          <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600, color: C.text, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            {item.label}
-                            {hasKids && <span style={{ fontSize: '0.55rem', fontWeight: 800, padding: '0.1rem 0.4rem', background: C.primaryBg, color: C.primary, borderRadius: '99px', border: `1px solid ${C.borderStrong}`, letterSpacing: '0.04em' }}>PASTA</span>}
-                          </span>
-
-                          {/* Status pill — click to cycle */}
-                          <button onClick={() => cycleStatus(item.id)}
-                            title="Clique para alternar status"
-                            style={{ padding: '0.22rem 0.65rem', borderRadius: '999px', border: `1px solid ${stColor(st)}55`, background: `${stColor(st)}15`, color: stColor(st), fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                            {stLabel(st)}
-                          </button>
-
-                          {/* Folder select — move item to be child of another */}
+                {/* Folder assignment */}
+                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
+                  <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid ${C.border}`, fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pasta pai</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
+                    {rootOrdered.map((item, idx, arr) => {
+                      const curParent = navParents[item.id] ?? ''
+                      const isLast = idx >= arr.length - 2
+                      return (
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.48rem 0.85rem', borderBottom: isLast ? 'none' : `1px solid ${C.border}`, borderRight: idx % 2 === 0 ? `1px solid ${C.border}` : 'none', background: curParent ? 'rgba(155,48,255,0.04)' : 'transparent' }}>
+                          <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, color: curParent ? C.text : C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
                           <select value={curParent}
                             onChange={e => setNavParents(prev => { const n = { ...prev }; if (e.target.value) n[item.id] = e.target.value; else delete n[item.id]; return n })}
-                            style={{ padding: '0.22rem 0.4rem', background: curParent ? C.primaryBg : 'transparent', border: `1px solid ${curParent ? C.borderStrong : C.border}`, color: curParent ? C.primary : C.vdim, borderRadius: '6px', fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0, maxWidth: 130 }}>
-                            <option value="">📂 Pasta pai</option>
+                            style={{ padding: '0.2rem 0.35rem', background: curParent ? C.primaryBg : 'transparent', border: `1px solid ${curParent ? C.borderStrong : C.border}`, color: curParent ? C.primary : C.vdim, borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', flexShrink: 0, maxWidth: 110 }}>
+                            <option value="">—</option>
                             {rootOrdered.filter(i => i.id !== item.id && !navParents[i.id]).map(i => (
                               <option key={i.id} value={i.id}>{i.label}</option>
                             ))}
                           </select>
-
-                          {/* ▲▼ */}
-                          <div style={{ display: 'flex', gap: '0.2rem', flexShrink: 0 }}>
-                            <button disabled={idx === 0} onClick={() => moveNav(item.id, 'up')}
-                              style={{ width: 26, height: 26, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
-                            <button disabled={idx === rootOrdered.length - 1} onClick={() => moveNav(item.id, 'down')}
-                              style={{ width: 26, height: 26, background: 'transparent', border: `1px solid ${C.border}`, color: idx === rootOrdered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === rootOrdered.length - 1 ? 'default' : 'pointer', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
-                          </div>
                         </div>
-                        {hardKids.map(ch => renderChildRow(ch.id, ch.label, false))}
-                        {dbKids.map(ch => renderChildRow(ch.id, ch.label, true))}
-                      </React.Fragment>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )
