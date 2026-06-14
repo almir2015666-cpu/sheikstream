@@ -591,6 +591,9 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
         <div style={{ display:'flex',alignItems:'center',gap:'0.5rem',background:'#08090d',border:`1px solid ${PB}`,borderRadius:8,padding:'0.45rem 0.7rem' }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={P} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           <span style={{ flex:1,fontSize:'0.7rem',color:MUT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace' }}>{overlayUrl}</span>
+          <button type="button" onClick={() => { navigator.clipboard.writeText(overlayUrl).catch(()=>{}); setCopied(true); notify('URL copiada!','success'); setTimeout(()=>setCopied(false),2000) }} style={{ flexShrink:0,padding:'0.18rem 0.45rem',background:copied?'rgba(34,197,94,0.15)':'rgba(255,255,255,0.05)',border:`1px solid ${copied?'rgba(34,197,94,0.35)':BD}`,borderRadius:5,color:copied?GR:DIM,fontSize:'0.68rem',fontWeight:700,cursor:'pointer',transition:'all 0.15s' }}>
+            {copied ? '✓' : '⧉'}
+          </button>
         </div>
       </div>
 
