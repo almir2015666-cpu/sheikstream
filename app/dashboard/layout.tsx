@@ -227,7 +227,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isAdmin, setIsAdmin] = useState(false)
   const [navOrder, setNavOrder] = useState<string[]>([])
   const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon'>>({})
-  const [navChildrenDB, setNavChildrenDB] = useState<Record<string, string[]> | null>(null)
+  const DEFAULT_NAV_CHILDREN: Record<string, string[]> = { overlays: ['pedidos-musica'] }
+  const [navChildrenDB, setNavChildrenDB] = useState<Record<string, string[]>>(DEFAULT_NAV_CHILDREN)
   // Suggestion/bug form (global — all pages)
   const [showSugg, setShowSugg] = useState(false)
   const [suggType, setSuggType] = useState<'suggestion' | 'bug'>('suggestion')
@@ -301,7 +302,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           if (d?.children && typeof d.children === 'object' && Object.keys(d.children).length > 0) {
             setNavChildrenDB(d.children as Record<string, string[]>)
           } else {
-            setNavChildrenDB(null)
+            setNavChildrenDB(DEFAULT_NAV_CHILDREN)
           }
         })
         .catch(() => {/* network error — keep current order */})
