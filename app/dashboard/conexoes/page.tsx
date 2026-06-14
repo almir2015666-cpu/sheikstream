@@ -523,57 +523,6 @@ export default function ConexoesPage() {
         <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Conexões das plataformas</h2>
       </div>
 
-      {/* Bot banner */}
-      <div style={{
-        background: C.card, border: `1px solid ${C.border}`,
-        borderRadius: '12px', padding: '1rem 1.3rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '1rem',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(145,71,255,0.12)', border: '1px solid rgba(145,71,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9147ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>Bot no Chat da Twitch</span>
-              {tokenStatus.twitch
-                ? <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.45rem', background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderRadius: '999px', border: '1px solid rgba(34,197,94,0.2)' }}>conectado</span>
-                : <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.45rem', background: 'rgba(251,191,36,0.12)', color: '#fbbf24', borderRadius: '999px', border: '1px solid rgba(251,191,36,0.2)' }}>pendente</span>
-              }
-            </div>
-            <div style={{ fontSize: '0.76rem', color: C.dim, marginTop: '0.15rem' }}>
-              {tokenStatus.twitch
-                ? 'Token salvo. O bot está autorizado a enviar mensagens no seu chat.'
-                : 'Conecte sua conta Twitch para que o bot opere no seu chat com comandos e sorteios.'
-              }
-            </div>
-          </div>
-        </div>
-        {tokenStatus.twitch ? (
-          <button
-            onClick={() => handleDisconnect('twitch')}
-            disabled={disconnecting}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.1rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: disconnecting ? 'default' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0, opacity: disconnecting ? 0.6 : 1 }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
-            </svg>
-            {disconnecting ? 'Desconectando...' : 'Desconectar'}
-          </button>
-        ) : (
-          <button
-            onClick={openTwitchPopup}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.1rem', background: '#9147ff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            <PlatIcon id="twitch" color="#fff" />
-            Conectar Twitch
-          </button>
-        )}
-      </div>
-
       {/* Conta bot do chat */}
       <div style={{
         background: C.card, border: `1px solid ${C.border}`,

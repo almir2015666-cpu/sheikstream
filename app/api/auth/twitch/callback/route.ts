@@ -19,7 +19,10 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams
   const code = searchParams.get('code')
   const error = searchParams.get('error')
-  const isPopup = searchParams.get('state') === 'popup'
+  const stateParam = searchParams.get('state') ?? ''
+  const isBot = stateParam.startsWith('bot:popup:')
+  const botBroadcasterId = isBot ? stateParam.replace('bot:popup:', '') : ''
+  const isPopup = stateParam === 'popup' || isBot
 
   if (error || !code) {
     if (isPopup) return new NextResponse(makePopupHtml(false, error ?? 'oauth_failed'), { headers: { 'Content-Type': 'text/html' } })
@@ -64,6 +67,23 @@ export async function GET(req: NextRequest) {
     tw = data[0]
   } catch {
     return NextResponse.redirect(`${BASE}/login?error=user_failed`)
+  }
+
+  // ── 3a. Bot account flow — store token and return popup without full login ──
+  if (isBot && botBroadcasterId) {
+    const db = getSupabaseAdmin()
+    const { error } = await db.from('user_tokens').upsert({
+      user_id: `${botBroadcasterId}:bot`,
+      twitch_token: access_token,
+      twitch_refresh_token: refresh_token || '',
+      twitch_channel_id: tw.id,
+      twitch_username: tw.display_name,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
+    const html = error
+      ? `<!DOCTYPE html><html><body style="background:#0f172a;color:#ef4444;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><p>Erro: ${error.message}</p><script>try{window.opener&&window.opener.postMessage({type:'twitch_bot_error'},'*')}catch(e){}setTimeout(()=>window.close(),800)</script></body></html>`
+      : `<!DOCTYPE html><html><body style="background:#0f172a;color:#22c55e;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><p>✓ Conta bot <b>${tw.display_name}</b> conectada!</p><script>try{window.opener&&window.opener.postMessage({type:'twitch_bot_connected',botName:${JSON.stringify(tw.display_name)}},'*')}catch(e){}setTimeout(()=>window.close(),800)</script></body></html>`
+    return new NextResponse(html, { headers: { 'Content-Type': 'text/html' } })
   }
 
   // ── 3. Waitlist gate (DB errors default to /pending, never block completely) ──
