@@ -930,14 +930,14 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                   <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Título</span>
                   {cfg.titleText && <button type="button" onClick={() => up('titleText','')} style={{ fontSize:'0.6rem',color:DIM,background:'none',border:'none',cursor:'pointer',padding:0 }}>↺ limpar</button>}
                 </div>
-                <input value={cfg.titleText} onChange={e => up('titleText', e.target.value)} placeholder="Ex: Novo inscrito!" style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }} />
+                <input value={cfg.titleText} onChange={e => up('titleText', e.target.value)} placeholder={`Ex: ${(SLUG_PREVIEW[slug] ?? SLUG_PREVIEW_DEFAULT).title}`} style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }} />
               </div>
               <div>
                 <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.22rem' }}>
                   <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Subtítulo</span>
                   {cfg.subtitleText && <button type="button" onClick={() => up('subtitleText','')} style={{ fontSize:'0.6rem',color:DIM,background:'none',border:'none',cursor:'pointer',padding:0 }}>↺ limpar</button>}
                 </div>
-                <input value={cfg.subtitleText} onChange={e => up('subtitleText', e.target.value)} placeholder="Ex: $user se inscreveu!" style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }} />
+                <input value={cfg.subtitleText} onChange={e => up('subtitleText', e.target.value)} placeholder={`Ex: ${(SLUG_PREVIEW[slug] ?? SLUG_PREVIEW_DEFAULT).sub}`} style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }} />
               </div>
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.45rem' }}>
                 <ColorPicker label="Cor do título"    value={cfg.titleColor}    onChange={v => up('titleColor',v)} />
@@ -972,9 +972,12 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                   </select>
                 </div>
                 <div>
-                  <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.22rem' }}>Texto (vazio = lê título + subtítulo)</div>
-                  <input value={cfg.ttsText} onChange={e => up('ttsText', e.target.value)} placeholder="$user se inscreveu!" style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }} />
-                  <div style={{ fontSize:'0.62rem',color:DIM,marginTop:'0.2rem' }}>Variáveis: $user $valor $msg $months</div>
+                  <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.22rem' }}>
+                    <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em' }}>Texto (vazio = lê o alerta automaticamente)</span>
+                    {cfg.ttsText && <button type="button" onClick={() => up('ttsText','')} style={{ fontSize:'0.6rem',color:DIM,background:'none',border:'none',cursor:'pointer',padding:0 }}>↺ limpar</button>}
+                  </div>
+                  <input value={cfg.ttsText} onChange={e => up('ttsText', e.target.value)} placeholder={`Ex: ${(SLUG_PREVIEW[slug] ?? SLUG_PREVIEW_DEFAULT).sub}`} style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }} />
+                  <div style={{ fontSize:'0.62rem',color:DIM,marginTop:'0.2rem' }}>Variáveis: $user $valor $msg $months · Deixe vazio para ler título + subtítulo</div>
                 </div>
                 <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.4rem' }}>
                   {([['ttsRate','Velocidade',0.5,2,0.05,'x'],['ttsPitch','Tom',0,2,0.1,''],['ttsVol','Volume',0,1,0.05,'']] as const).map(([k,lbl,mn,mx,st,un]) => (
