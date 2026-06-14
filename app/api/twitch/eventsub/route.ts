@@ -345,12 +345,14 @@ async function awardLoyaltyPoints(
       updated_at: new Date().toISOString(),
     }).eq('id', existing.id)
   } else {
-    await db.from('loyalty_points').insert({
-      broadcaster_id: broadcasterId,
-      viewer_login: viewerLogin,
-      points,
-      total_earned: points,
-    }).catch(() => { /* may already exist */ })
+    try {
+      await db.from('loyalty_points').insert({
+        broadcaster_id: broadcasterId,
+        viewer_login: viewerLogin,
+        points,
+        total_earned: points,
+      })
+    } catch { /* may already exist due to unique constraint race */ }
   }
 }
 
