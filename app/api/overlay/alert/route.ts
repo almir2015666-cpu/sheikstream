@@ -118,7 +118,11 @@ function extractExtra(eventType: string, d: Record<string, unknown>): string | u
   }
   if (d.message) {
     const msg = d.message as Record<string, unknown>
-    const text = typeof msg === 'string' ? msg : String(msg.text ?? '')
+    const raw = typeof msg === 'string' ? msg : String(msg.text ?? '')
+    // For bits, strip cheermote tokens (e.g. "Cheer1", "Cheer100", "BitsCheer500")
+    const text = eventType === 'channel.cheer'
+      ? raw.replace(/\b[A-Za-z]+\d+\b/g, '').trim()
+      : raw
     return text.length > 0 ? text.slice(0, 60) : undefined
   }
   return undefined
