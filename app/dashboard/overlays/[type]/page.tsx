@@ -1,5 +1,5 @@
 'use client'
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { notify } from '@/app/lib/notify'
@@ -22,6 +22,7 @@ type StyleCfg = {
   entryAnim: string; barAnim: string
   iconShape: 'circle' | 'square' | 'none'
   titleText: string; subtitleText: string; titleColor: string; subtitleColor: string
+  ttsEnabled: boolean; ttsVoice: string; ttsRate: number; ttsPitch: number; ttsVol: number; ttsText: string
 }
 type VisCfg = Record<string, boolean>
 type FontesCfg = Record<string, boolean>
@@ -38,6 +39,7 @@ const DEF: StyleCfg = {
   entryAnim: 'fade', barAnim: 'ease',
   iconShape: 'circle',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
+  ttsEnabled: false, ttsVoice: '', ttsRate: 0.95, ttsPitch: 1, ttsVol: 1, ttsText: '',
 }
 
 const TEXT_EFFECTS = [
@@ -424,6 +426,18 @@ export default function OverlayEditorPage({ params }: Ctx) {
   const [newBannerUrl, setNewBannerUrl] = useState('')
   const [subathonActive, setSubathonActive] = useState<boolean | null>(null)
   const [previewAnimKey, setPreviewAnimKey] = useState(0)
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+  const voicesLoaded = useRef(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+    const load = () => {
+      const v = window.speechSynthesis.getVoices()
+      if (v.length > 0 && !voicesLoaded.current) { voicesLoaded.current = true; setVoices(v) }
+    }
+    load()
+    window.speechSynthesis.onvoiceschanged = load
+  }, [])
 
   // Auto-loop preview animation when in Efeitos tab
   useEffect(() => {
@@ -829,6 +843,43 @@ export default function OverlayEditorPage({ params }: Ctx) {
               <ColorIn label="Cor do título" value={style.titleColor} onChange={v => upS('titleColor', v)} />
               <ColorIn label="Cor do subtítulo" value={style.subtitleColor} onChange={v => upS('subtitleColor', v)} />
             </div>
+          </Card>
+
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: style.ttsEnabled ? '0.9rem' : 0 }}>
+              <Label sub="Lê o alerta em voz alta no OBS">TTS — Leitura em voz</Label>
+              <div onClick={() => upS('ttsEnabled', !style.ttsEnabled)} style={{ width: 34, height: 19, background: style.ttsEnabled ? C.primary : 'rgba(255,255,255,0.12)', borderRadius: 10, position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: 2, left: style.ttsEnabled ? 16 : 2, width: 15, height: 15, background: '#fff', borderRadius: '50%', transition: 'left 0.2s' }} />
+              </div>
+            </div>
+            {style.ttsEnabled && (
+              <>
+                <div style={{ marginBottom: '0.6rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Voz</div>
+                  <select
+                    value={style.ttsVoice}
+                    onChange={e => upS('ttsVoice', e.target.value)}
+                    style={{ width: '100%', background: C.inner, border: `1px solid ${C.cardB}`, borderRadius: 7, padding: '0.45rem 0.7rem', color: C.text, fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' as const }}
+                  >
+                    <option value="">Padrão do sistema (pt-BR)</option>
+                    {voices.map(v => (
+                      <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
+                    ))}
+                  </select>
+                  {voices.length === 0 && <div style={{ fontSize: '0.65rem', color: C.dim, marginTop: '0.25rem' }}>Abra esta página no mesmo browser que o OBS para ver as vozes disponíveis</div>}
+                </div>
+                <div style={{ marginBottom: '0.6rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Texto do TTS (deixe vazio para ler título + subtítulo)</div>
+                  <input value={style.ttsText} onChange={e => upS('ttsText', e.target.value)} placeholder="Ex: $user se inscreveu!" style={{ width: '100%', background: C.inner, border: `1px solid ${C.cardB}`, borderRadius: 7, padding: '0.45rem 0.7rem', color: C.text, fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' as const }} />
+                  <div style={{ fontSize: '0.62rem', color: C.dim, marginTop: '0.2rem' }}>Variáveis: $user $valor $msg $months</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                  <RangeInput label="Velocidade" value={style.ttsRate} min={0.5} max={2} step={0.05} unit="x" onChange={v => upS('ttsRate', v)} />
+                  <RangeInput label="Tom" value={style.ttsPitch} min={0} max={2} step={0.1} unit="" onChange={v => upS('ttsPitch', v)} />
+                  <RangeInput label="Volume" value={style.ttsVol} min={0} max={1} step={0.05} unit="" onChange={v => upS('ttsVol', v)} />
+                </div>
+              </>
+            )}
           </Card>
         )}
 
