@@ -19,6 +19,7 @@ function Icon({ type, color }: { type: string; color: string }) {
   if (type === 'polling')        return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
   if (type === 'chat')           return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   if (type === 'goal')           return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill={color}/></svg>
+  if (type === 'pedidos-musica') return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
   return                                <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
 }
 
@@ -45,6 +46,9 @@ const CATALOG: { type: string; label: string; badge: string | null; color: strin
     href: '/dashboard/overlays/goal' },
   { type: 'patrocinadores',label: 'Patrocinadores',  badge: 'NOVO', color: '#a78bfa', live: false,
     desc: 'Carrossel de banners de patrocinadores com timing e layout configurável.' },
+  { type: 'pedidos-musica', label: 'Pedidos de Música', badge: 'NOVO', color: '#f472b6', live: true,
+    desc: 'Viewers pedem músicas pelo chat — aprovação manual e fila de reprodução em tempo real.',
+    href: '/dashboard/pedidos-musica' },
 ]
 
 export default function OverlaysPage() {

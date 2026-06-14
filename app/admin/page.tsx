@@ -705,15 +705,13 @@ export default function AdminPage() {
         if (d?.order && Array.isArray(d.order) && d.order.length > 0) setNavOrder(d.order)
         else { try { const s = localStorage.getItem('sk-nav-order'); if (s) setNavOrder(JSON.parse(s)) } catch {} }
         if (d?.itemStatus && typeof d.itemStatus === 'object') setNavItemStatus(d.itemStatus)
-        const DEFAULT_CHILDREN: Record<string, string[]> = { overlays: ['pedidos-musica'] }
-        const src = (d?.children && typeof d.children === 'object' && Object.keys(d.children).length > 0)
-          ? d.children as Record<string, string[]>
-          : DEFAULT_CHILDREN
-        const parents: Record<string, string> = {}
-        Object.entries(src).forEach(([parentId, childIds]) => {
-          (childIds as string[]).forEach(childId => { parents[childId] = parentId })
-        })
-        setNavParents(parents)
+        if (d?.children && typeof d.children === 'object') {
+          const parents: Record<string, string> = {}
+          Object.entries(d.children as Record<string, string[]>).forEach(([parentId, childIds]) => {
+            childIds.forEach(childId => { parents[childId] = parentId })
+          })
+          setNavParents(parents)
+        }
       })
       .catch(() => {})
       .finally(() => setNavStatusLoaded(true))
