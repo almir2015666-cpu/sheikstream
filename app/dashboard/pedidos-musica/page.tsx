@@ -234,7 +234,7 @@ export default function PedidosMusicaPage() {
       await fetch('/api/song-requests/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'sheikstream-internal-2024' },
-        body: JSON.stringify({ broadcaster_id: 'me', requester: 'streamer', query: `${track.title} ${track.artist}` }),
+        body: JSON.stringify({ broadcaster_id: uid, requester: 'streamer', query: `${track.title} ${track.artist}` }),
       })
       setSearch(''); setSearchResults([])
       await loadAll()
@@ -349,7 +349,13 @@ export default function PedidosMusicaPage() {
         </p>
       </div>
 
-      {/* Now playing / paused */}
+      {/* Now playing / paused / idle */}
+      {spotifyConnected && !nowPlaying && (
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${S.border}`, borderRadius: '12px', padding: '0.75rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: 0.6 }}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill={S.spotify} style={{ flexShrink: 0 }}><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+          <span style={{ fontSize: '0.8rem', color: S.muted }}>Spotify conectado — nada tocando no momento</span>
+        </div>
+      )}
       {nowPlaying && (
         <div style={{ background: nowPlaying.is_playing ? S.spotifyBg : 'rgba(255,255,255,0.03)', border: `1px solid ${nowPlaying.is_playing ? S.spotifyBorder : S.border}`, borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', transition: 'all 0.3s' }}>
           {nowPlaying.thumbnail && (
@@ -546,7 +552,7 @@ export default function PedidosMusicaPage() {
           <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.5rem 2rem' }}>
             <div style={lbl}>URL do Overlay (OBS Browser Source)</div>
             <code style={{ fontSize: '0.78rem', color: S.muted, wordBreak: 'break-all', display: 'block', lineHeight: 1.7, marginBottom: '0.5rem' }}>
-              {typeof window !== 'undefined' ? `${window.location.origin}/overlay/song-request?uid=SEU_ID` : '/overlay/song-request?uid=SEU_ID'}
+              {typeof window !== 'undefined' && uid ? `${window.location.origin}/overlay/song-request?uid=${uid}` : '/overlay/song-request?uid=...'}
             </code>
             <div style={{ fontSize: '0.73rem', color: S.dim }}>
               Parâmetros: <code style={{ color: S.primary }}>theme=light</code> · <code style={{ color: S.primary }}>next=0</code> (ocultar próxima música)
