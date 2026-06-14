@@ -165,24 +165,36 @@ function AlertCard({ ev, cfg, onDone, debug }: { ev: AlertEvent; cfg: Cfg; onDon
       soundEnabled: cfg.soundEnabled !== false,
       soundDataUrl: cfg.soundDataUrl ?? '',
       soundVolume: cfg.soundVolume ?? 70,
-    })
-    if (cfg.ttsEnabled && typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel()
+    }).then(() => {
+      if (!cfg.ttsEnabled || typeof window === 'undefined' || !window.speechSynthesis) return
       const utt = new SpeechSynthesisUtterance(buildTtsText(ev, cfg))
       utt.lang = 'pt-BR'
       utt.rate  = cfg.ttsRate  ?? 0.95
       utt.pitch = cfg.ttsPitch ?? 1
       utt.volume = cfg.ttsVol  ?? 1
       const doSpeak = () => {
+        window.speechSynthesis.cancel()
         if (cfg.ttsVoice) {
           const match = window.speechSynthesis.getVoices().find(v => v.name === cfg.ttsVoice)
           if (match) utt.voice = match
         }
         window.speechSynthesis.speak(utt)
       }
-      if (window.speechSynthesis.getVoices().length > 0) doSpeak()
-      else { window.speechSynthesis.onvoiceschanged = doSpeak }
-    }
+      if (window.speechSynthesis.getVoices().length > 0) {
+        doSpeak()
+      } else {
+        let spoke = false
+        const trySpeak = () => {
+          if (spoke) return
+          spoke = true
+          window.speechSynthesis.onvoiceschanged = null
+          doSpeak()
+        }
+        window.speechSynthesis.onvoiceschanged = trySpeak
+        // Fallback: OBS/some browsers never fire onvoiceschanged
+        setTimeout(trySpeak, 500)
+      }
+    }).catch(() => { /* sound failed — skip TTS */ })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible])
 

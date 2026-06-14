@@ -53,7 +53,8 @@ function dataUrlToBuffer(dataUrl: string): ArrayBuffer {
   return buf
 }
 
-function playNotes(ctx: AudioContext, notes: Note[], vol: number) {
+function playNotes(ctx: AudioContext, notes: Note[], vol: number): Promise<void> {
+  let maxEnd = 0
   notes.forEach(({ f, t, d, v, w = 'sine' }) => {
     const o = ctx.createOscillator(), g = ctx.createGain()
     o.connect(g); g.connect(ctx.destination)
@@ -64,7 +65,9 @@ function playNotes(ctx: AudioContext, notes: Note[], vol: number) {
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d)
     o.start(ctx.currentTime + t)
     o.stop(ctx.currentTime + t + d + 0.05)
+    maxEnd = Math.max(maxEnd, t + d + 0.05)
   })
+  return new Promise(resolve => setTimeout(resolve, maxEnd * 1000 + 100))
 }
 
 export async function playAlertSound(
@@ -78,18 +81,20 @@ export async function playAlertSound(
   try {
     if (ctx.state !== 'running') await ctx.resume()
 
-    const playBuffer = (decoded: AudioBuffer) => {
-      const src = ctx.createBufferSource()
-      const gain = ctx.createGain()
-      gain.gain.value = vol
-      src.buffer = decoded
-      src.connect(gain); gain.connect(ctx.destination)
-      src.start(0)
-    }
+    const playBuffer = (decoded: AudioBuffer): Promise<void> =>
+      new Promise(resolve => {
+        const src = ctx.createBufferSource()
+        const gain = ctx.createGain()
+        gain.gain.value = vol
+        src.buffer = decoded
+        src.connect(gain); gain.connect(ctx.destination)
+        src.onended = () => resolve()
+        src.start(0)
+      })
 
     if (cfg.soundDataUrl) {
       const buf = dataUrlToBuffer(cfg.soundDataUrl)
-      playBuffer(await ctx.decodeAudioData(buf))
+      await playBuffer(await ctx.decodeAudioData(buf))
       return
     }
 
@@ -97,16 +102,16 @@ export async function playAlertSound(
     const url = cfg.soundUrl ?? (slug ? DEFAULT_SLUG_URLS[slug] : undefined)
     if (url) {
       if (_urlCache.has(url)) {
-        playBuffer(_urlCache.get(url)!)
+        await playBuffer(_urlCache.get(url)!)
       } else {
         const res = await fetch(url)
         const decoded = await ctx.decodeAudioData(await res.arrayBuffer())
         _urlCache.set(url, decoded)
-        playBuffer(decoded)
+        await playBuffer(decoded)
       }
       return
     }
 
-    playNotes(ctx, (slug && SLUG_SOUNDS[slug]) ? SLUG_SOUNDS[slug] : FALLBACK, vol)
+    await playNotes(ctx, (slug && SLUG_SOUNDS[slug]) ? SLUG_SOUNDS[slug] : FALLBACK, vol)
   } catch {}
 }
