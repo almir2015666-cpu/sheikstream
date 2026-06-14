@@ -118,12 +118,12 @@ export async function resumeSpotify(broadcasterId: string): Promise<boolean> {
   return result.ok
 }
 
-export async function getNowPlaying(broadcasterId: string): Promise<{ title: string; artist: string; thumbnail: string; progress_ms: number; duration_ms: number; is_playing: boolean } | null> {
+export async function getNowPlaying(broadcasterId: string): Promise<{ title: string; artist: string; thumbnail: string; progress_ms: number; duration_ms: number; is_playing: boolean; spotify_url: string } | null> {
   const result = await spotifyFetch(broadcasterId, '/v1/me/player/currently-playing')
   if (!result.ok || !result.data) return null
   const d = result.data as {
     is_playing?: boolean; progress_ms?: number
-    item?: { name?: string; artists?: { name: string }[]; duration_ms?: number; album?: { images?: { url: string }[] } }
+    item?: { name?: string; artists?: { name: string }[]; duration_ms?: number; album?: { images?: { url: string }[] }; external_urls?: { spotify?: string } }
   }
   if (!d.item) return null
   return {
@@ -133,5 +133,6 @@ export async function getNowPlaying(broadcasterId: string): Promise<{ title: str
     progress_ms: d.progress_ms ?? 0,
     duration_ms: d.item.duration_ms ?? 0,
     is_playing: d.is_playing ?? false,
+    spotify_url: d.item.external_urls?.spotify ?? '',
   }
 }

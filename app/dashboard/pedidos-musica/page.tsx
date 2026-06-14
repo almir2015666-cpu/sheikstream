@@ -52,7 +52,7 @@ type Config = {
 
 type NowPlaying = {
   title: string; artist: string; thumbnail: string
-  progress_ms: number; duration_ms: number; is_playing: boolean
+  progress_ms: number; duration_ms: number; is_playing: boolean; spotify_url: string
 } | null
 
 type SearchTrack = { uri: string; title: string; artist: string; duration_ms: number; thumbnail: string }
@@ -174,11 +174,28 @@ export default function PedidosMusicaPage() {
       fetch('/api/spotify/now-playing').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/tokens/status').then(r => r.ok ? r.json() : null).catch(() => null),
     ])
-    setQueue(qRes ?? [])
+    const q: SongRequest[] = qRes ?? []
     if (cfgRes) setCfg(cfgRes)
     setNowPlaying(npRes)
     setSpotifyConnected(!!tokRes?.spotify)
     setLoading(false)
+
+    // Auto-mark 'playing' item as played if Spotify moved on to a different track
+    const playingItem = q.find(i => i.status === 'playing')
+    if (playingItem && npRes?.spotify_url && playingItem.spotify_url) {
+      const qUrl = playingItem.spotify_url.split('?')[0].toLowerCase()
+      const spUrl = npRes.spotify_url.split('?')[0].toLowerCase()
+      if (qUrl !== spUrl) {
+        await fetch('/api/song-requests', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: playingItem.id, status: 'played' }),
+        })
+        setQueue(q.filter(i => i.id !== playingItem.id))
+        return
+      }
+    }
+    setQueue(q)
   }, [])
 
   useEffect(() => {
