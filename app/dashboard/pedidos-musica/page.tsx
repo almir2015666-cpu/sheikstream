@@ -156,6 +156,7 @@ export default function PedidosMusicaPage() {
   const [nowPlaying, setNowPlaying] = useState<NowPlaying>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savedOk, setSavedOk] = useState(false)
   const [skipping, setSkipping] = useState(false)
   const [togglingPlay, setTogglingPlay] = useState(false)
   const [goingPrev, setGoingPrev] = useState(false)
@@ -293,7 +294,8 @@ export default function PedidosMusicaPage() {
 
   const saveCfg = async () => {
     setSaving(true)
-    await fetch('/api/song-requests/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) }).finally(() => setSaving(false))
+    const r = await fetch('/api/song-requests/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) }).finally(() => setSaving(false))
+    if (r.ok) { setSavedOk(true); setTimeout(() => setSavedOk(false), 2500) }
   }
 
   const handleToggleEnabled = () => {
@@ -544,9 +546,9 @@ export default function PedidosMusicaPage() {
                 ))}
               </div>
 
-              <button onClick={saveCfg} disabled={saving}
-                style={{ padding: '0.65rem 1.5rem', background: saving ? 'rgba(255,255,255,0.05)' : S.primary, border: 'none', borderRadius: '8px', color: saving ? S.muted : '#fff', fontWeight: 700, fontSize: '0.875rem', cursor: saving ? 'not-allowed' : 'pointer', alignSelf: 'flex-start' }}>
-                {saving ? 'Salvando...' : 'Salvar configurações'}
+              <button onClick={saveCfg} disabled={saving || savedOk}
+                style={{ padding: '0.65rem 1.5rem', background: savedOk ? 'rgba(34,197,94,0.15)' : saving ? 'rgba(255,255,255,0.05)' : S.primary, border: savedOk ? `1px solid rgba(34,197,94,0.3)` : 'none', borderRadius: '8px', color: savedOk ? S.green : saving ? S.muted : '#fff', fontWeight: 700, fontSize: '0.875rem', cursor: saving || savedOk ? 'default' : 'pointer', alignSelf: 'flex-start', transition: 'all 0.2s' }}>
+                {savedOk ? '✓ Salvo!' : saving ? 'Salvando...' : 'Salvar configurações'}
               </button>
             </div>
           </div>
