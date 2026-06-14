@@ -980,7 +980,7 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                   <div style={{ fontSize:'0.62rem',color:DIM,marginTop:'0.2rem' }}>Variáveis: $user $valor $msg $months · Deixe vazio para ler título + subtítulo</div>
                 </div>
                 <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0.4rem' }}>
-                  {([['ttsRate','Velocidade',0.5,2,0.05,'x'],['ttsPitch','Tom',0,2,0.1,''],['ttsVol','Volume',0,1,0.05,'']] as const).map(([k,lbl,mn,mx,st,un]) => (
+                  {([['ttsRate','Velocidade',0.5,2,0.05,'x'],['ttsVol','Volume',0,1,0.05,'']] as const).map(([k,lbl,mn,mx,st,un]) => (
                     <div key={k}>
                       <div style={{ display:'flex',justifyContent:'space-between',marginBottom:'0.15rem' }}>
                         <span style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.05em' }}>{lbl}</span>

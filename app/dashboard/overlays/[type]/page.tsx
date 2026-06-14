@@ -543,9 +543,8 @@ export default function OverlayEditorPage({ params }: Ctx) {
               <input value={style.ttsText} onChange={e => upS('ttsText', e.target.value)} placeholder="Ex: $user se inscreveu!" style={{ width: '100%', background: C.inner, border: `1px solid ${C.cardB}`, borderRadius: 7, padding: '0.45rem 0.7rem', color: C.text, fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' as const }} />
               <div style={{ fontSize: '0.62rem', color: C.dim, marginTop: '0.2rem' }}>Variáveis: $user $valor $msg $months</div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <RangeInput label="Velocidade" value={style.ttsRate} min={0.5} max={2} step={0.05} unit="x" onChange={v => upS('ttsRate', v)} />
-              <RangeInput label="Tom" value={style.ttsPitch} min={0} max={2} step={0.1} unit="" onChange={v => upS('ttsPitch', v)} />
               <RangeInput label="Volume" value={style.ttsVol} min={0} max={1} step={0.05} unit="" onChange={v => upS('ttsVol', v)} />
             </div>
           </>

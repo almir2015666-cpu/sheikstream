@@ -176,7 +176,6 @@ function AlertCard({ ev, cfg, onDone, debug }: { ev: AlertEvent; cfg: Cfg; onDon
         buildTtsText(ev, cfg),
         cfg.ttsVoice || 'pt-BR',
         cfg.ttsRate  ?? 0.95,
-        cfg.ttsPitch ?? 1,
         cfg.ttsVol   ?? 1,
       )
     }).catch(() => { /* sound/tts failed silently */ })
@@ -405,7 +404,7 @@ function AlertOverlayContent() {
   // Quick TTS smoke test: open overlay with ?tts_test=1 to verify audio chain
   useEffect(() => {
     if (!ttsTest) return
-    const t = setTimeout(() => playTts('teste de leitura em voz', 'pt-BR', 1, 1, 1), 1000)
+    const t = setTimeout(() => playTts('teste de leitura em voz', 'pt-BR', 1, 1), 1000)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ttsTest])
