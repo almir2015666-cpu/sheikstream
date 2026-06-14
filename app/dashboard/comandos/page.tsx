@@ -1004,6 +1004,9 @@ export default function ComandosPage() {
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [overlayModal, setOverlayModal] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const [cmdOrder, setCmdOrder]   = useState<string[]>([])
+  const [orderDirty, setOrderDirty] = useState(false)
+  const [orderSaving, setOrderSaving] = useState(false)
 
   type DbRow = { id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string; notif_overlay: boolean }
 
@@ -1033,6 +1036,7 @@ export default function ComandosPage() {
 
   useEffect(() => {
     fetch('/api/me').then(r => r.ok ? r.json() : null).then(u => { if (u?.id) setUserId(u.id) }).catch(() => {})
+    fetch('/api/comandos/order').then(r => r.ok ? r.json() : null).then(d => { if (d?.order?.length) setCmdOrder(d.order) }).catch(() => {})
     // One-time migration: disable all commands for existing users
     try {
       if (!localStorage.getItem('sk-cmds-disabled-v1')) {
@@ -1192,7 +1196,45 @@ export default function ComandosPage() {
     }
   }
 
-  const filtered   = cmds.filter(c => (c.label + c.trigger + c.resposta).toLowerCase().includes(search.toLowerCase()))
+  const orderedCmds = cmdOrder.length > 0
+    ? [...cmds].sort((a, b) => {
+        const ai = cmdOrder.indexOf(a.id), bi = cmdOrder.indexOf(b.id)
+        if (ai === -1 && bi === -1) return 0
+        if (ai === -1) return 1
+        if (bi === -1) return -1
+        return ai - bi
+      })
+    : cmds
+
+  const moveCmd = (id: string, dir: 'up' | 'down', sectionIds: string[]) => {
+    const sIdx = sectionIds.indexOf(id)
+    if (dir === 'up' && sIdx === 0) return
+    if (dir === 'down' && sIdx === sectionIds.length - 1) return
+    const swapId = sectionIds[dir === 'up' ? sIdx - 1 : sIdx + 1]
+    const base = cmdOrder.length > 0 ? [...cmdOrder] : orderedCmds.map(c => c.id)
+    const ai = base.indexOf(id), bi = base.indexOf(swapId)
+    if (ai !== -1 && bi !== -1) {
+      ;[base[ai], base[bi]] = [base[bi], base[ai]]
+      setCmdOrder(base)
+    } else {
+      const rebuilt = orderedCmds.map(c => c.id)
+      const ri = rebuilt.indexOf(id), rj = rebuilt.indexOf(swapId)
+      ;[rebuilt[ri], rebuilt[rj]] = [rebuilt[rj], rebuilt[ri]]
+      setCmdOrder(rebuilt)
+    }
+    setOrderDirty(true)
+  }
+
+  const saveOrder = async () => {
+    setOrderSaving(true)
+    const order = orderedCmds.map(c => c.id)
+    await fetch('/api/comandos/order', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order }) }).catch(() => {})
+    setCmdOrder(order)
+    setOrderDirty(false)
+    setOrderSaving(false)
+  }
+
+  const filtered   = orderedCmds.filter(c => (c.label + c.trigger + c.resposta).toLowerCase().includes(search.toLowerCase()))
   const ativos     = cmds.filter(c => c.habilitado).length
   const inativos   = cmds.filter(c => !c.habilitado).length
   const allVars    = form.isEvento ? EVENT_VARS : [...BASE_VARS, ...form.extraVars]
@@ -1260,15 +1302,23 @@ export default function ComandosPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
             <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Comandos</span>
           </div>
-          <div style={{ position: 'relative' }}>
-            <svg style={{ position:'absolute',left:'0.6rem',top:'50%',transform:'translateY(-50%)',pointerEvents:'none' }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar comando..." style={{ ...inp, width: '210px', padding: '0.38rem 0.75rem 0.38rem 2rem', fontSize: '0.8rem' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {orderDirty && (
+              <button onClick={saveOrder} disabled={orderSaving}
+                style={{ padding: '0.35rem 0.8rem', background: 'rgba(155,48,255,0.12)', border: '1px solid rgba(155,48,255,0.35)', color: '#9b30ff', borderRadius: '7px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', opacity: orderSaving ? 0.6 : 1 }}>
+                {orderSaving ? '...' : '✓ Salvar ordem'}
+              </button>
+            )}
+            <div style={{ position: 'relative' }}>
+              <svg style={{ position:'absolute',left:'0.6rem',top:'50%',transform:'translateY(-50%)',pointerEvents:'none' }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar comando..." style={{ ...inp, width: '210px', padding: '0.38rem 0.75rem 0.38rem 2rem', fontSize: '0.8rem' }} />
+            </div>
           </div>
         </div>
 
         {/* Column headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.45rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, fontSize: '0.66rem', fontWeight: 700, color: C.dim, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
-          <span>Comando / Evento</span><span>Resposta</span><span style={{ textAlign: 'right' }}>Ações</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.45rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, fontSize: '0.66rem', fontWeight: 700, color: C.dim, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+          <span></span><span>Comando / Evento</span><span>Resposta</span><span style={{ textAlign: 'right' }}>Ações</span>
         </div>
 
         {/* Eventos automáticos section */}
@@ -1280,12 +1330,17 @@ export default function ComandosPage() {
             </div>
             {filtered.filter(c => c.isEvento).map((cmd, i, arr) => {
               const platColor = PLAT_COLOR[cmd.platform] ?? C.primary
+              const sectionIds = arr.map(c => c.id)
               return (
                 <div key={cmd.id}
-                  style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s' }}
+                  style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.rowHover }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                 >
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                    <button onClick={() => moveCmd(cmd.id, 'up', sectionIds)} disabled={i === 0} style={{ background: 'none', border: 'none', color: i === 0 ? C.dim : C.text, cursor: i === 0 ? 'default' : 'pointer', padding: '1px', lineHeight: 1, opacity: i === 0 ? 0.25 : 0.7 }}>▲</button>
+                    <button onClick={() => moveCmd(cmd.id, 'down', sectionIds)} disabled={i === arr.length - 1} style={{ background: 'none', border: 'none', color: i === arr.length - 1 ? C.dim : C.text, cursor: i === arr.length - 1 ? 'default' : 'pointer', padding: '1px', lineHeight: 1, opacity: i === arr.length - 1 ? 0.25 : 0.7 }}>▼</button>
+                  </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
                       <span style={{ fontWeight: 700, fontSize: '0.88rem', color: platColor }}>{cmd.label}</span>
@@ -1328,14 +1383,19 @@ export default function ComandosPage() {
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.blue, display: 'inline-block', flexShrink: 0 }} />
               <span style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Meus comandos</span>
             </div>
-            {filtered.filter(c => !c.isEvento).map(cmd => {
+            {filtered.filter(c => !c.isEvento).map((cmd, i, arr) => {
               const platColor = PLAT_COLOR[cmd.platform] ?? C.blue
+              const sectionIds = arr.map(c => c.id)
               return (
                 <div key={cmd.id}
-                  style={{ display: 'grid', gridTemplateColumns: '2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s' }}
+                  style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.65rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center', transition: 'background 0.1s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.rowHover }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                 >
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                    <button onClick={() => moveCmd(cmd.id, 'up', sectionIds)} disabled={i === 0} style={{ background: 'none', border: 'none', color: i === 0 ? C.dim : C.text, cursor: i === 0 ? 'default' : 'pointer', padding: '1px', lineHeight: 1, opacity: i === 0 ? 0.25 : 0.7 }}>▲</button>
+                    <button onClick={() => moveCmd(cmd.id, 'down', sectionIds)} disabled={i === arr.length - 1} style={{ background: 'none', border: 'none', color: i === arr.length - 1 ? C.dim : C.text, cursor: i === arr.length - 1 ? 'default' : 'pointer', padding: '1px', lineHeight: 1, opacity: i === arr.length - 1 ? 0.25 : 0.7 }}>▼</button>
+                  </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
                       <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.blue, fontFamily: 'monospace' }}>{cmd.trigger}</span>
