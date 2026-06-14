@@ -39,7 +39,7 @@ const DEF: StyleCfg = {
   entryAnim: 'fade', barAnim: 'ease',
   iconShape: 'circle',
   titleText: '', subtitleText: '', titleColor: '#9146FF', subtitleColor: '#ffffff',
-  ttsEnabled: false, ttsVoice: '', ttsRate: 0.95, ttsPitch: 1, ttsVol: 1, ttsText: '',
+  ttsEnabled: false, ttsVoice: 'pt-BR', ttsRate: 0.95, ttsPitch: 1, ttsVol: 1, ttsText: '',
 }
 
 const TEXT_EFFECTS = [
@@ -426,18 +426,6 @@ export default function OverlayEditorPage({ params }: Ctx) {
   const [newBannerUrl, setNewBannerUrl] = useState('')
   const [subathonActive, setSubathonActive] = useState<boolean | null>(null)
   const [previewAnimKey, setPreviewAnimKey] = useState(0)
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
-  const voicesLoaded = useRef(false)
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
-    const load = () => {
-      const v = window.speechSynthesis.getVoices()
-      if (v.length > 0 && !voicesLoaded.current) { voicesLoaded.current = true; setVoices(v) }
-    }
-    load()
-    window.speechSynthesis.onvoiceschanged = load
-  }, [])
 
   // Auto-loop preview animation when in Efeitos tab
   useEffect(() => {
@@ -543,12 +531,12 @@ export default function OverlayEditorPage({ params }: Ctx) {
                 onChange={e => upS('ttsVoice', e.target.value)}
                 style={{ width: '100%', background: C.inner, border: `1px solid ${C.cardB}`, borderRadius: 7, padding: '0.45rem 0.7rem', color: C.text, fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' as const }}
               >
-                <option value="">Padrão do sistema (pt-BR)</option>
-                {voices.map(v => (
-                  <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
-                ))}
+                <option value="pt-BR">Português (Brasil)</option>
+                <option value="pt-PT">Português (Portugal)</option>
+                <option value="en">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="es">Español</option>
               </select>
-              {voices.length === 0 && <div style={{ fontSize: '0.65rem', color: C.dim, marginTop: '0.25rem' }}>Vozes carregando... se não aparecer, recarregue a página</div>}
             </div>
             <div style={{ marginBottom: '0.6rem' }}>
               <div style={{ fontSize: '0.68rem', color: C.dim, marginBottom: '0.25rem' }}>Texto (deixe vazio para ler título + subtítulo do alerta)</div>

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { playAlertSound } from '@/app/lib/sound'
+import { playAlertSound, playTts } from '@/app/lib/sound'
 
 type AlertEvent = {
   id: string
@@ -166,35 +166,14 @@ function AlertCard({ ev, cfg, onDone, debug }: { ev: AlertEvent; cfg: Cfg; onDon
       soundDataUrl: cfg.soundDataUrl ?? '',
       soundVolume: cfg.soundVolume ?? 70,
     }).then(() => {
-      if (!cfg.ttsEnabled || typeof window === 'undefined' || !window.speechSynthesis) return
-      const utt = new SpeechSynthesisUtterance(buildTtsText(ev, cfg))
-      utt.lang = 'pt-BR'
-      utt.rate  = cfg.ttsRate  ?? 0.95
-      utt.pitch = cfg.ttsPitch ?? 1
-      utt.volume = cfg.ttsVol  ?? 1
-      const doSpeak = () => {
-        window.speechSynthesis.cancel()
-        if (cfg.ttsVoice) {
-          const match = window.speechSynthesis.getVoices().find(v => v.name === cfg.ttsVoice)
-          if (match) utt.voice = match
-        }
-        window.speechSynthesis.speak(utt)
-      }
-      if (window.speechSynthesis.getVoices().length > 0) {
-        doSpeak()
-      } else {
-        let spoke = false
-        const trySpeak = () => {
-          if (spoke) return
-          spoke = true
-          window.speechSynthesis.onvoiceschanged = null
-          doSpeak()
-        }
-        window.speechSynthesis.onvoiceschanged = trySpeak
-        // Fallback: OBS/some browsers never fire onvoiceschanged
-        setTimeout(trySpeak, 500)
-      }
-    }).catch(() => { /* sound failed — skip TTS */ })
+      if (!cfg.ttsEnabled) return
+      return playTts(
+        buildTtsText(ev, cfg),
+        cfg.ttsVoice || 'pt-BR',
+        cfg.ttsRate  ?? 0.95,
+        cfg.ttsVol   ?? 1,
+      )
+    }).catch(() => { /* sound/tts failed silently */ })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible])
 

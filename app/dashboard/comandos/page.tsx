@@ -176,7 +176,7 @@ const OV_DEF: OvCfg = {
   iconShape: 'circle', iconAnim: 'none', cardEffect: 'none',
   icon: '', customArt: '',
   soundEnabled: true, soundDataUrl: '', soundVolume: 70,
-  ttsEnabled: false, ttsVoice: '', ttsRate: 0.95, ttsPitch: 1, ttsVol: 1, ttsText: '',
+  ttsEnabled: false, ttsVoice: 'pt-BR', ttsRate: 0.95, ttsPitch: 1, ttsVol: 1, ttsText: '',
 }
 const OV_ANIMS = [
   { id: 'slide-right', label: 'Slide →',   dur: '0.45s' }, { id: 'slide-left',  label: 'Slide ←',  dur: '0.45s' },
@@ -421,12 +421,6 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
   const [uid, setUid] = useState('')
   const [cfg, setCfg] = useState<OvCfg>(() => slugDefault)
   const [tab, setTab] = useState<'efeitos'|'estilo'|'texto'|'tts'>('efeitos')
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
-    const load = () => { const v = window.speechSynthesis.getVoices(); if (v.length) setVoices(v) }
-    load(); window.speechSynthesis.onvoiceschanged = load
-  }, [])
   const [animKey, setAnimKey] = useState(0)
   const [savedOk, setSavedOk] = useState(false)
   const [testOk, setTestOk] = useState(false)
@@ -970,10 +964,12 @@ function OverlayQuickEdit({ trigger, resposta }: { trigger: string; resposta: st
                 <div>
                   <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.22rem' }}>Voz</div>
                   <select value={cfg.ttsVoice} onChange={e => up('ttsVoice', e.target.value)} style={{ ...inp, fontSize:'0.8rem', padding:'0.5rem 0.75rem' }}>
-                    <option value="">Padrão (pt-BR)</option>
-                    {voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}
+                    <option value="pt-BR">Português (Brasil)</option>
+                    <option value="pt-PT">Português (Portugal)</option>
+                    <option value="en">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="es">Español</option>
                   </select>
-                  {voices.length === 0 && <div style={{ fontSize:'0.62rem',color:DIM,marginTop:'0.2rem' }}>Recarregue a página para carregar as vozes</div>}
                 </div>
                 <div>
                   <div style={{ fontSize:'0.65rem',fontWeight:700,color:DIM,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.22rem' }}>Texto (vazio = lê título + subtítulo)</div>

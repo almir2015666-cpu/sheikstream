@@ -70,6 +70,34 @@ function playNotes(ctx: AudioContext, notes: Note[], vol: number): Promise<void>
   return new Promise(resolve => setTimeout(resolve, maxEnd * 1000 + 100))
 }
 
+export async function playTts(
+  text: string,
+  lang: string,
+  rate: number,
+  vol: number,
+): Promise<void> {
+  if (!text.trim()) return
+  const ctx = getCtx()
+  if (!ctx) return
+  try {
+    if (ctx.state !== 'running') await ctx.resume()
+    const url = `/api/tts?lang=${encodeURIComponent(lang || 'pt-BR')}&text=${encodeURIComponent(text)}`
+    const res = await fetch(url)
+    if (!res.ok) return
+    const decoded = await ctx.decodeAudioData(await res.arrayBuffer())
+    await new Promise<void>(resolve => {
+      const src = ctx.createBufferSource()
+      const gain = ctx.createGain()
+      gain.gain.value = Math.max(0, Math.min(1, vol))
+      src.buffer = decoded
+      src.playbackRate.value = Math.max(0.5, Math.min(2, rate))
+      src.connect(gain); gain.connect(ctx.destination)
+      src.onended = () => resolve()
+      src.start(0)
+    })
+  } catch {}
+}
+
 export async function playAlertSound(
   slug: string | null | undefined,
   cfg: Pick<SoundCfg, 'soundEnabled' | 'soundDataUrl' | 'soundVolume'> & { soundUrl?: string },
