@@ -36,22 +36,26 @@ const PREVIEW_EVENTS = [
 ]
 
 function LivePreview({ uid }: { uid: string }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
   const [firing, setFiring] = useState<string | null>(null)
-  const [overlayUrl, setOverlayUrl] = useState('')
+  const [lastFired, setLastFired] = useState<string | null>(null)
 
-  useEffect(() => {
-    setOverlayUrl(`${window.location.origin}/overlay/alert?uid=${uid}`)
-  }, [uid])
+  // Scale factor: render overlay at 1280×200 and scale down to fit container
+  const OVERLAY_W = 1280
+  const OVERLAY_H = 200
+  const DISPLAY_H = 160
+  const scale = DISPLAY_H / OVERLAY_H
 
   const fireTest = async (slug: string) => {
     setFiring(slug)
+    setLastFired(slug)
     await fetch('/api/overlay/alert/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ eventSlug: slug }),
     }).finally(() => setTimeout(() => setFiring(null), 800))
   }
+
+  const overlayUrl = uid ? `${typeof window !== 'undefined' ? window.location.origin : ''}/overlay/alert?uid=${uid}` : ''
 
   return (
     <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '1.25rem' }}>
@@ -65,9 +69,9 @@ function LivePreview({ uid }: { uid: string }) {
         {PREVIEW_EVENTS.map(ev => (
           <button key={ev.slug} onClick={() => fireTest(ev.slug)} disabled={firing !== null}
             style={{
-              padding: '0.35rem 0.8rem', borderRadius: '7px', border: `1px solid ${S.border}`,
-              background: firing === ev.slug ? S.primaryBg : 'rgba(255,255,255,0.04)',
-              color: firing === ev.slug ? S.primary : S.muted,
+              padding: '0.35rem 0.8rem', borderRadius: '7px', border: `1px solid ${lastFired === ev.slug ? S.borderP : S.border}`,
+              background: firing === ev.slug ? S.primaryBg : lastFired === ev.slug ? 'rgba(155,48,255,0.06)' : 'rgba(255,255,255,0.04)',
+              color: lastFired === ev.slug ? S.primary : S.muted,
               fontWeight: 600, fontSize: '0.78rem', cursor: firing !== null ? 'wait' : 'pointer',
               display: 'flex', alignItems: 'center', gap: '0.3rem', transition: 'all 0.15s',
               opacity: firing !== null && firing !== ev.slug ? 0.5 : 1,
@@ -77,19 +81,28 @@ function LivePreview({ uid }: { uid: string }) {
         ))}
       </div>
 
-      {/* Preview iframe */}
-      <div style={{ background: '#000', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', overflow: 'hidden', position: 'relative', padding: '0 12px' }}>
-        {overlayUrl ? (
-          <iframe
-            ref={iframeRef}
-            src={overlayUrl}
-            style={{ border: 'none', width: '600px', height: '160px', background: 'transparent', flexShrink: 0 }}
-            allow="autoplay"
-          />
+      {/* Preview iframe — scaled down from full overlay dimensions */}
+      <div style={{ background: '#0a0a0a', height: `${DISPLAY_H}px`, position: 'relative', overflow: 'hidden' }}>
+        {uid && overlayUrl ? (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: `${OVERLAY_W}px`, height: `${OVERLAY_H}px`, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
+            <iframe
+              key={uid}
+              src={overlayUrl}
+              style={{ border: 'none', width: `${OVERLAY_W}px`, height: `${OVERLAY_H}px`, background: 'transparent', display: 'block' }}
+              allow="autoplay"
+            />
+          </div>
         ) : (
-          <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.8rem' }}>Carregando pré-visualização...</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.2)', fontSize: '0.8rem' }}>
+            Carregando pré-visualização...
+          </div>
         )}
-        <div style={{ position: 'absolute', bottom: 8, right: 12, fontSize: '0.68rem', color: 'rgba(255,255,255,0.2)' }}>
+        {!lastFired && uid && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.18)', letterSpacing: '0.05em' }}>Clique em um evento acima para testar</span>
+          </div>
+        )}
+        <div style={{ position: 'absolute', bottom: 6, right: 10, fontSize: '0.62rem', color: 'rgba(255,255,255,0.15)' }}>
           Simulação OBS
         </div>
       </div>

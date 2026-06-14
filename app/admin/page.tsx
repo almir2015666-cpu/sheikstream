@@ -2488,94 +2488,120 @@ export default function AdminPage() {
               setNavItemStatus(prev => { const n = { ...prev }; if (val) n[id] = val; else delete n[id]; return n })
             }
 
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
-                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>⠿ Ordem e Status do Menu</h3>
-                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Reordene com ▲/▼ e defina o status de cada item. Em manutenção ou Em breve aparecem desativados na sidebar.</p>
+            const ST_COLOR: Record<string, string> = { '': '#22c55e', maintenance: '#f59e0b', soon: '#818cf8' }
+            const ST_LABEL: Record<string, string> = { '': '● Ativo', maintenance: '🔧 Manutenção', soon: '⏳ Em breve' }
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+            const colGrid = '32px 1fr 148px 180px 64px'
+
+            const renderChildRow = (chId: string, chLabel: string, parentLabel: string, isDb: boolean) => {
+              const cs = navItemStatus[chId] ?? ''
+              return (
+                <div key={chId} style={{ display: 'grid', gridTemplateColumns: colGrid, alignItems: 'center', gap: '0.6rem', padding: '0.55rem 1.2rem 0.55rem 2.6rem', borderBottom: `1px solid ${C.border}`, background: isDb ? `rgba(155,48,255,0.04)` : C.vvdim }}>
+                  <span style={{ fontSize: '0.62rem', color: isDb ? C.primary : C.vdim }}>↳</span>
+                  <span style={{ fontSize: '0.82rem', color: C.muted, fontWeight: 500 }}>{chLabel}</span>
+                  <select value={cs} onChange={e => setStatus(chId, e.target.value as any)}
+                    style={{ padding: '0.25rem 0.4rem', background: cs ? `${ST_COLOR[cs]}12` : 'transparent', border: `1px solid ${cs ? ST_COLOR[cs] + '55' : C.border}`, color: cs ? ST_COLOR[cs] : C.dim, borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                    {Object.entries(ST_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                  <span style={{ fontSize: '0.72rem', color: isDb ? C.primary : C.vdim, opacity: 0.7 }}>📂 {parentLabel}</span>
+                  {isDb && (
+                    <button onClick={() => setNavParents(prev => { const n = { ...prev }; delete n[chId]; return n })}
+                      style={{ padding: '0.2rem 0.45rem', background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '5px', fontSize: '0.68rem', cursor: 'pointer', justifySelf: 'start' }}>✕</button>
+                  )}
+                </div>
+              )
+            }
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                {/* ── Tabela principal de ordem ── */}
+                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                  {/* Header */}
+                  <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>⠿ Ordem e Status do Menu</div>
+                      <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.15rem' }}>Reordene com ▲/▼. Itens em pasta ficam abaixo do pai.</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                      <button onClick={saveNav} style={{ padding: '0.45rem 1.1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>✓ Salvar</button>
+                      <button onClick={resetNav} style={{ padding: '0.45rem 0.85rem', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>↺ Reset</button>
+                    </div>
+                  </div>
+
+                  {/* Column headers */}
+                  <div style={{ display: 'grid', gridTemplateColumns: colGrid, gap: '0.6rem', padding: '0.4rem 1.2rem', background: C.vvdim, borderBottom: `1px solid ${C.border}` }}>
+                    {['#', 'ITEM DO MENU', 'STATUS', 'PASTA', 'ORDEM'].map(h => (
+                      <span key={h} style={{ fontSize: '0.58rem', fontWeight: 800, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</span>
+                    ))}
+                  </div>
+
+                  {/* Rows */}
+                  <div>
                     {rootOrdered.map((item, idx) => {
-                      const hardcodedKids = NAV_CHILDREN[item.id] ?? []
+                      const st = navItemStatus[item.id] ?? ''
+                      const hardKids = NAV_CHILDREN[item.id] ?? []
                       const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
-                      const statusRow = (id: string, label: string, isChild: boolean) => {
-                        const s = navItemStatus[id] ?? ''
-                        return (
-                          <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: isChild ? '0.45rem 1rem 0.45rem 2.2rem' : '0.65rem 1rem', background: s ? 'rgba(245,158,11,0.04)' : (isChild ? C.vvdim : C.cardBgAlt), border: `1px solid ${s ? 'rgba(245,158,11,0.2)' : C.border}`, borderRadius: '8px' }}>
-                            {isChild
-                              ? <span style={{ fontSize: '0.65rem', color: C.vdim, flexShrink: 0 }}>↳</span>
-                              : <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.vdim, width: 18, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
-                            }
-                            <span style={{ flex: 1, fontSize: isChild ? '0.8rem' : '0.88rem', fontWeight: isChild ? 500 : 600, color: s ? C.muted : C.text }}>{label}</span>
-                            <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                              {(['', 'maintenance', 'soon'] as const).map(val => {
-                                const labels: Record<string, string> = { '': 'Ativo', maintenance: '🔧 Manutenção', soon: '⏳ Em breve' }
-                                const isAct = s === val
-                                const colors: Record<string, string> = { '': '#22c55e', maintenance: '#f59e0b', soon: '#818cf8' }
-                                return (
-                                  <button key={val} onClick={() => setStatus(id, val)}
-                                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.68rem', fontWeight: isAct ? 700 : 500, borderRadius: '6px', cursor: 'pointer', border: `1px solid ${isAct ? colors[val] + '66' : C.border}`, background: isAct ? `${colors[val]}18` : 'transparent', color: isAct ? colors[val] : C.vdim, whiteSpace: 'nowrap' }}>
-                                    {labels[val]}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                            {!isChild && (
-                              <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                                <button disabled={idx === 0} onClick={() => moveNav(item.id, 'up')}
-                                  style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
-                                <button disabled={idx === rootOrdered.length - 1} onClick={() => moveNav(item.id, 'down')}
-                                  style={{ width: 28, height: 28, background: 'transparent', border: `1px solid ${C.border}`, color: idx === rootOrdered.length - 1 ? C.vdim : C.muted, borderRadius: '6px', cursor: idx === rootOrdered.length - 1 ? 'default' : 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      }
+                      const hasKids = hardKids.length > 0 || dbKids.length > 0
                       return (
                         <React.Fragment key={item.id}>
-                          {statusRow(item.id, item.label, false)}
-                          {hardcodedKids.map(ch => statusRow(ch.id, ch.label, true))}
-                          {dbKids.map(ch => statusRow(ch.id, ch.label, true))}
+                          <div style={{ display: 'grid', gridTemplateColumns: colGrid, alignItems: 'center', gap: '0.6rem', padding: '0.7rem 1.2rem', borderBottom: `1px solid ${C.border}`, background: hasKids ? `rgba(155,48,255,0.03)` : 'transparent' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.vdim }}>{idx + 1}</span>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              {item.label}
+                              {hasKids && <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '0.1rem 0.4rem', background: C.primaryBg, color: C.primary, borderRadius: '99px', border: `1px solid ${C.borderStrong}` }}>PASTA</span>}
+                            </span>
+                            <select value={st} onChange={e => setStatus(item.id, e.target.value as any)}
+                              style={{ padding: '0.28rem 0.45rem', background: st ? `${ST_COLOR[st]}12` : C.accentBg, border: `1px solid ${st ? ST_COLOR[st] + '55' : C.accentBorder}`, color: ST_COLOR[st], borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+                              {Object.entries(ST_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                            <span style={{ fontSize: '0.72rem', color: C.vdim }}>—</span>
+                            <div style={{ display: 'flex', gap: '0.2rem' }}>
+                              <button disabled={idx === 0} onClick={() => moveNav(item.id, 'up')}
+                                style={{ width: 26, height: 26, background: 'transparent', border: `1px solid ${C.border}`, color: idx === 0 ? C.vdim : C.muted, borderRadius: '5px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.68rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
+                              <button disabled={idx === rootOrdered.length - 1} onClick={() => moveNav(item.id, 'down')}
+                                style={{ width: 26, height: 26, background: 'transparent', border: `1px solid ${C.border}`, color: idx === rootOrdered.length - 1 ? C.vdim : C.muted, borderRadius: '5px', cursor: idx === rootOrdered.length - 1 ? 'default' : 'pointer', fontSize: '0.68rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
+                            </div>
+                          </div>
+                          {hardKids.map(ch => renderChildRow(ch.id, ch.label, item.label, false))}
+                          {dbKids.map(ch => renderChildRow(ch.id, ch.label, item.label, true))}
                         </React.Fragment>
                       )
                     })}
                   </div>
-
-                  <div style={{ display: 'flex', gap: '0.65rem' }}>
-                    <button onClick={saveNav}
-                      style={{ flex: 1, padding: '0.55rem 0', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-                      ✓ Salvar
-                    </button>
-                    <button onClick={resetNav}
-                      style={{ padding: '0.55rem 1rem', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-                      ↺ Reset
-                    </button>
-                  </div>
                 </div>
 
-                {/* Sub-folder configuration */}
-                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '1.5rem' }}>
-                  <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem', fontWeight: 700, color: C.text }}>📂 Configurar Sub-pastas</h3>
-                  <p style={{ margin: '0 0 1.2rem', fontSize: '0.78rem', color: C.muted }}>Defina quais itens aparecem como sub-pastas de outros no menu lateral. Itens com pai saem da lista principal e ficam aninhados.</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    {NAV_ITEMS_LIST.map(item => {
-                      const currentParent = navParents[item.id] ?? ''
+                {/* ── Configurar Pastas ── */}
+                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                  <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>📂 Adicionar em Pasta</div>
+                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.15rem' }}>Escolha uma pasta pai para cada item. Itens numa pasta ficam aninhados na sidebar.</div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '32px 1rem 148px 64px', gap: '0', borderBottom: `1px solid ${C.border}`, padding: '0.4rem 1.5rem', background: C.vvdim }}>
+                    {['', 'ITEM', 'PASTA PAI', ''].map((h, i) => (
+                      <span key={i} style={{ fontSize: '0.58rem', fontWeight: 800, color: C.vdim, textTransform: 'uppercase', letterSpacing: '0.08em', gridColumn: i === 1 ? '2 / 3' : undefined }}>{h}</span>
+                    ))}
+                  </div>
+                  <div>
+                    {NAV_ITEMS_LIST.map((item, idx) => {
+                      const cur = navParents[item.id] ?? ''
+                      const curLabel = cur ? (NAV_ITEMS_LIST.find(i => i.id === cur)?.label ?? cur) : ''
                       return (
-                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 1rem', background: currentParent ? C.primaryBg : C.cardBgAlt, border: `1px solid ${currentParent ? C.borderStrong : C.border}`, borderRadius: '8px' }}>
-                          <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: currentParent ? 500 : 600, color: C.text }}>{item.label}</span>
-                          {currentParent && <span style={{ fontSize: '0.65rem', color: C.vdim }}>↳ filho de</span>}
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.62rem 1.5rem', borderBottom: idx < NAV_ITEMS_LIST.length - 1 ? `1px solid ${C.border}` : 'none', background: cur ? `rgba(155,48,255,0.04)` : 'transparent' }}>
+                          <span style={{ fontSize: '0.65rem', color: cur ? C.primary : C.vdim, width: 16, flexShrink: 0 }}>{cur ? '↳' : '·'}</span>
+                          <span style={{ flex: 1, fontSize: '0.86rem', fontWeight: cur ? 500 : 600, color: C.text }}>{item.label}</span>
+                          {cur && <span style={{ fontSize: '0.72rem', color: C.primary, background: C.primaryBg, border: `1px solid ${C.borderStrong}`, borderRadius: '6px', padding: '0.15rem 0.5rem', whiteSpace: 'nowrap' }}>📂 {curLabel}</span>}
                           <select
-                            value={currentParent}
+                            value={cur}
                             onChange={e => setNavParents(prev => {
                               const n = { ...prev }
                               if (e.target.value) n[item.id] = e.target.value
                               else delete n[item.id]
                               return n
                             })}
-                            style={{ padding: '0.3rem 0.5rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer' }}
-                          >
-                            <option value="">Raiz (item principal)</option>
-                            {NAV_ITEMS_LIST.filter(i => i.id !== item.id && !(navParents[i.id])).map(i => (
+                            style={{ padding: '0.3rem 0.55rem', background: C.inputBg, border: `1px solid ${cur ? C.borderStrong : C.inputBorder}`, color: cur ? C.primary : C.muted, borderRadius: '7px', fontSize: '0.78rem', cursor: 'pointer', flexShrink: 0 }}>
+                            <option value="">Sem pasta (raiz)</option>
+                            {NAV_ITEMS_LIST.filter(i => i.id !== item.id && !navParents[i.id]).map(i => (
                               <option key={i.id} value={i.id}>{i.label}</option>
                             ))}
                           </select>
@@ -2583,9 +2609,11 @@ export default function AdminPage() {
                       )
                     })}
                   </div>
-                  <button onClick={saveNav} style={{ marginTop: '1rem', width: '100%', padding: '0.55rem 0', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-                    ✓ Salvar Sub-pastas
-                  </button>
+                  <div style={{ padding: '0.85rem 1.5rem', borderTop: `1px solid ${C.border}` }}>
+                    <button onClick={saveNav} style={{ width: '100%', padding: '0.55rem 0', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+                      ✓ Salvar Configuração de Pastas
+                    </button>
+                  </div>
                 </div>
               </div>
             )
