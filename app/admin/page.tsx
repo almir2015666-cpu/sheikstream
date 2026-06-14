@@ -2778,6 +2778,13 @@ export default function AdminPage() {
                           <svg width="8" height="14" viewBox="0 0 8 14" fill={C.vdim}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
                           <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 600, color: C.text }}>{item.label}</span>
+                          {colKey === 'visible' && (
+                            <button onClick={() => { const arr = catalogItems.map(x => x.type === item.type ? { ...x, live: !x.live } : x); setCatalogItems(arr) }}
+                              title={item.live ? 'Marcar como Em breve' : 'Marcar como Live'}
+                              style={{ padding: '0.1rem 0.45rem', background: item.live ? 'rgba(29,185,84,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${item.live ? 'rgba(29,185,84,0.3)' : C.border}`, color: item.live ? '#1DB954' : C.vdim, borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                              {item.live ? '● Live' : '○ Em breve'}
+                            </button>
+                          )}
                           {colKey === 'visible'
                             ? <button onClick={() => { const arr = catalogItems.map(x => x.type === item.type ? { ...x, hidden: true } : x); setCatalogItems(arr) }} title="Ocultar" style={{ width: 20, height: 20, background: 'transparent', border: `1px solid ${C.border}`, color: C.vdim, borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
                             : <button onClick={() => { const arr = catalogItems.map(x => x.type === item.type ? { ...x, hidden: false } : x); setCatalogItems(arr) }} title="Mostrar" style={{ padding: '0.1rem 0.4rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '4px', fontSize: '0.62rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>＋</button>
@@ -2830,7 +2837,7 @@ export default function AdminPage() {
                             } else if (inHidden) {
                               setCatalogItems(prev => prev.map(c => c.type === page.id ? { ...c, hidden: false } : c))
                             } else {
-                              const ni: CatalogItem = { type: page.id, label: page.label, href: page.href, desc: '', badge: 'NOVO', color: '#9b30ff', live: true, hidden: false }
+                              const ni: CatalogItem = { type: page.id, label: page.label, href: page.href, desc: '', badge: 'NOVO', color: '#9b30ff', live: false, hidden: false }
                               setCatalogItems(prev => [...prev.filter(i => !i.hidden), ni, ...prev.filter(i => i.hidden)])
                             }
                           }}
@@ -2851,7 +2858,7 @@ export default function AdminPage() {
                       <button disabled={!catalogNewForm.label.trim() || !catalogNewForm.href.trim()}
                         onClick={() => {
                           const slug = catalogNewForm.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `item-${Date.now()}`
-                          const ni: CatalogItem = { ...catalogNewForm, type: slug, badge: 'NOVO', color: '#9b30ff', live: true, hidden: false }
+                          const ni: CatalogItem = { ...catalogNewForm, type: slug, badge: 'NOVO', color: '#9b30ff', live: false, hidden: false }
                           setCatalogItems(prev => [...prev.filter(i => !i.hidden), ni, ...prev.filter(i => i.hidden)])
                           setCatalogNewForm(CATALOG_BLANK)
                         }}
