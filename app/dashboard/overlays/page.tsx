@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useLang } from '@/lib/i18n'
+import type { CatalogItem } from '@/app/api/admin/overlays-catalog/route'
 
 const C = {
   page: '#08090d', card: '#111219', cardB: 'rgba(255,255,255,0.06)',
@@ -15,50 +16,22 @@ function Icon({ type, color }: { type: string; color: string }) {
   if (type === 'subathon')       return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
   if (type === 'meta-subs')      return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill={color}/></svg>
   if (type === 'sorteio')        return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M8 21h8M12 17v4M17 3H7l-2 6h14L17 3z"/><path d="M5 9c0 3.5 2 6 7 6s7-2.5 7-6"/></svg>
-  if (type === 'alert')          return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
   if (type === 'countdown')      return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/></svg>
   if (type === 'polling')        return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
   if (type === 'chat')           return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   if (type === 'goal')           return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill={color}/></svg>
   if (type === 'pedidos-musica') return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-  return                                <svg width="20" height="20" viewBox="0 0 24 24" {...s}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+  if (type === 'meta')           return <svg width="20" height="20" viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><circle cx="12" cy="12" r="3" fill={color} stroke="none"/></svg>
+  return                                <svg width="20" height="20" viewBox="0 0 24 24" {...s}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
 }
-
-const CATALOG: { type: string; label: string; badge: string | null; color: string; live: boolean; desc: string; href?: string }[] = [
-  { type: 'subathon',      label: 'Subathon',        badge: 'NOVO', color: '#60a5fa', live: true,
-    desc: 'Cronômetro de live progressivo — cada contribuição adiciona tempo ao relógio.' },
-  { type: 'meta-subs',     label: 'Meta de Subs',    badge: null,   color: '#34d399', live: true,
-    desc: 'Barra de progresso da meta de inscrições da Twitch em tempo real.' },
-  { type: 'sorteio',       label: 'Meta de Sorteio', badge: null,   color: '#fbbf24', live: true,
-    desc: 'Progresso do sorteio unificado com contadores por fonte.' },
-  { type: 'meta',          label: 'Meta',            badge: 'NOVO', color: '#f87171', live: true,
-    desc: 'Overlay de progresso de uma meta ativa criada pelo streamer.' },
-  { type: 'countdown',     label: 'Countdown',       badge: 'NOVO', color: '#9b30ff', live: true,
-    desc: 'Contagem regressiva para o início da live — compatível com Browser Source no OBS.',
-    href: '/dashboard/countdown' },
-  { type: 'polling',       label: 'Enquete ao vivo', badge: 'NOVO', color: '#22c55e', live: true,
-    desc: 'Crie enquetes e exiba os resultados em tempo real no OBS. Viewers votam pelo navegador.',
-    href: '/dashboard/polling' },
-  { type: 'chat',          label: 'Chat Overlay',    badge: 'NOVO', color: '#60a5fa', live: true,
-    desc: 'Exibe mensagens do chat da Twitch em tempo real sobre a tela — sem banco de dados.',
-    href: '/dashboard/overlays/chat' },
-  { type: 'goal',          label: 'Meta (Goal)',      badge: 'NOVO', color: '#f59e0b', live: true,
-    desc: 'Barra de progresso de meta personalizada: subs, bits, doações ou valor manual.',
-    href: '/dashboard/overlays/goal' },
-  { type: 'patrocinadores',label: 'Patrocinadores',  badge: 'NOVO', color: '#a78bfa', live: false,
-    desc: 'Carrossel de banners de patrocinadores com timing e layout configurável.' },
-  { type: 'pedidos-musica', label: 'Pedidos de Música', badge: 'NOVO', color: '#f472b6', live: true,
-    desc: 'Viewers pedem músicas pelo chat — aprovação manual e fila de reprodução em tempo real.',
-    href: '/dashboard/pedidos-musica' },
-]
 
 export default function OverlaysPage() {
   const { t } = useLang()
-  const [hidden, setHidden] = useState<string[]>([])
+  const [items, setItems] = useState<CatalogItem[]>([])
   useEffect(() => {
-    fetch('/api/admin/overlays-catalog').then(r => r.json()).then(d => setHidden(d?.hidden ?? [])).catch(() => {})
+    fetch('/api/admin/overlays-catalog').then(r => r.json()).then(d => setItems(d?.items ?? [])).catch(() => {})
   }, [])
-  const visible = CATALOG.filter(item => !hidden.includes(item.type))
+  const visible = items.filter(item => !item.hidden)
   return (
     <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
       <div style={{ marginBottom: '1.75rem' }}>
@@ -66,16 +39,14 @@ export default function OverlaysPage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>{t('pt_overlays')}</h2>
         </div>
-        <p style={{ margin: 0, fontSize: '0.82rem', color: C.dim }}>
-          {t('overlays_subtitle')}
-        </p>
+        <p style={{ margin: 0, fontSize: '0.82rem', color: C.dim }}>{t('overlays_subtitle')}</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.9rem' }}>
         {visible.map(item => (
           <div key={item.type} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: 12, padding: '1.1rem 1.2rem', position: 'relative' }}>
             <Link
-              href={item.href ?? `/dashboard/overlays/${item.type}`}
+              href={item.href || `/dashboard/overlays/${item.type}`}
               style={{ position: 'absolute', top: '0.8rem', right: '0.8rem', padding: '0.3rem 0.35rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 6, display: 'flex', alignItems: 'center', color: C.dim, textDecoration: 'none' }}
               title="Editar overlay"
             >

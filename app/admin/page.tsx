@@ -319,20 +319,12 @@ export default function AdminPage() {
   const [inviteVetoLoading, setInviteVetoLoading] = useState<string | null>(null)
   const [quotaEdits, setQuotaEdits] = useState<Record<string, number>>({})
   const [quotaSaving, setQuotaSaving] = useState<string | null>(null)
-  const [catalogHidden, setCatalogHidden] = useState<string[]>([])
+  type CatalogItem = { type: string; label: string; desc: string; badge: string | null; color: string; live: boolean; href: string; hidden: boolean }
+  const CATALOG_BLANK: CatalogItem = { type: '', label: '', desc: '', badge: null, color: '#9b30ff', live: true, href: '', hidden: false }
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
   const [catalogSaving, setCatalogSaving] = useState(false)
-  const OVERLAY_CATALOG_ALL = [
-    { type: 'subathon',       label: 'Subathon' },
-    { type: 'meta-subs',      label: 'Meta de Subs' },
-    { type: 'sorteio',        label: 'Meta de Sorteio' },
-    { type: 'meta',           label: 'Meta' },
-    { type: 'countdown',      label: 'Countdown' },
-    { type: 'polling',        label: 'Enquete ao vivo' },
-    { type: 'chat',           label: 'Chat Overlay' },
-    { type: 'goal',           label: 'Meta (Goal)' },
-    { type: 'patrocinadores', label: 'Patrocinadores' },
-    { type: 'pedidos-musica', label: 'Pedidos de Música' },
-  ]
+  const [catalogNewForm, setCatalogNewForm] = useState<CatalogItem>(CATALOG_BLANK)
+  const [catalogEditIdx, setCatalogEditIdx] = useState<number | null>(null)
   const NAV_ITEMS_LIST = [
     { id: 'dashboard',   label: 'Dashboard' },
     { id: 'subathon',    label: 'Subathon' },
@@ -735,7 +727,7 @@ export default function AdminPage() {
     if (view !== 'overlays-catalog') return
     fetch('/api/admin/overlays-catalog')
       .then(r => r.json())
-      .then(d => setCatalogHidden(d?.hidden ?? []))
+      .then(d => { if (d?.items) setCatalogItems(d.items) })
       .catch(() => {})
   }, [view])
 
@@ -2698,54 +2690,167 @@ export default function AdminPage() {
             )
           })()}
 
-          {view === 'overlays-catalog' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
-                <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>🖥 Catálogo de Overlays</div>
-                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.15rem' }}>Escolha quais overlays aparecem na página /overlays para os usuários.</div>
+          {view === 'overlays-catalog' && (() => {
+            const saveItems = async (items: CatalogItem[]) => {
+              setCatalogSaving(true)
+              try {
+                const res = await fetch('/api/admin/overlays-catalog', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
+                  body: JSON.stringify({ items }),
+                })
+                if (res.ok) { setCatalogItems(items); alert('Salvo!') }
+                else alert('Erro ao salvar.')
+              } catch { alert('Sem conexão.') }
+              finally { setCatalogSaving(false) }
+            }
+            const moveItem = (idx: number, dir: -1 | 1) => {
+              const arr = [...catalogItems]
+              const ni = idx + dir
+              if (ni < 0 || ni >= arr.length) return
+              ;[arr[idx], arr[ni]] = [arr[ni], arr[idx]]
+              setCatalogItems(arr)
+            }
+            const updateItem = (idx: number, patch: Partial<CatalogItem>) =>
+              setCatalogItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it))
+            const deleteItem = (idx: number) =>
+              setCatalogItems(prev => prev.filter((_, i) => i !== idx))
+            const addItem = () => {
+              const slug = catalogNewForm.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `item-${Date.now()}`
+              const newItem: CatalogItem = { ...catalogNewForm, type: slug }
+              setCatalogItems(prev => [...prev, newItem])
+              setCatalogNewForm(CATALOG_BLANK)
+            }
+            const inputStyle = { padding: '0.42rem 0.65rem', background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: '7px', fontSize: '0.82rem', outline: 'none', width: '100%', boxSizing: 'border-box' as const }
+            const editing = catalogEditIdx !== null ? catalogItems[catalogEditIdx] : null
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                {/* Lista atual */}
+                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                  <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>🖥 Catálogo de Overlays</div>
+                      <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.15rem' }}>Reordene, mostre/oculte ou delete. Salve para aplicar.</div>
+                    </div>
+                    <button disabled={catalogSaving} onClick={() => saveItems(catalogItems)}
+                      style={{ padding: '0.45rem 1.1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: catalogSaving ? 'default' : 'pointer', opacity: catalogSaving ? 0.6 : 1 }}>
+                      {catalogSaving ? 'Salvando…' : '✓ Salvar'}
+                    </button>
                   </div>
-                  <button
-                    disabled={catalogSaving}
-                    onClick={async () => {
-                      setCatalogSaving(true)
-                      try {
-                        const res = await fetch('/api/admin/overlays-catalog', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-                          body: JSON.stringify({ hidden: catalogHidden }),
-                        })
-                        if (res.ok) alert('Salvo! Vai refletir para todos os usuários.')
-                        else alert('Erro ao salvar.')
-                      } catch { alert('Sem conexão.') }
-                      finally { setCatalogSaving(false) }
-                    }}
-                    style={{ padding: '0.45rem 1.1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: catalogSaving ? 'default' : 'pointer', opacity: catalogSaving ? 0.6 : 1 }}>
-                    {catalogSaving ? 'Salvando…' : '✓ Salvar'}
-                  </button>
+                  <div>
+                    {catalogItems.length === 0 && (
+                      <div style={{ padding: '1.5rem', color: C.muted, fontSize: '0.84rem', textAlign: 'center' }}>Carregando…</div>
+                    )}
+                    {catalogItems.map((item, idx) => (
+                      <React.Fragment key={item.type + idx}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.7rem 1.2rem', borderBottom: `1px solid ${C.border}`, background: item.hidden ? 'transparent' : `rgba(155,48,255,0.03)` }}>
+                          {/* vis toggle */}
+                          <button onClick={() => updateItem(idx, { hidden: !item.hidden })}
+                            style={{ width: 22, height: 22, borderRadius: '6px', border: `2px solid ${item.hidden ? C.border : C.primary}`, background: item.hidden ? 'transparent' : C.primaryBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {!item.hidden && <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><polyline points="1.5,6 4.5,9 10.5,3" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </button>
+                          {/* color dot */}
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+                          {/* info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: item.hidden ? C.muted : C.text, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              {item.label}
+                              {item.badge && <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.05rem 0.35rem', background: C.primaryBg, color: C.primary, borderRadius: '999px', border: `1px solid ${C.borderStrong}` }}>{item.badge}</span>}
+                              {!item.live && <span style={{ fontSize: '0.6rem', color: C.vdim }}>em breve</span>}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: C.vdim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{item.href}</div>
+                          </div>
+                          {/* actions */}
+                          <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                            <button onClick={() => setCatalogEditIdx(catalogEditIdx === idx ? null : idx)}
+                              style={{ padding: '0.25rem 0.5rem', background: C.accentBg, border: `1px solid ${C.accentBorder}`, color: C.accent, borderRadius: '6px', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}>✎</button>
+                            <button disabled={idx === 0} onClick={() => moveItem(idx, -1)}
+                              style={{ width: 26, height: 26, background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: '5px', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.68rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▲</button>
+                            <button disabled={idx === catalogItems.length - 1} onClick={() => moveItem(idx, 1)}
+                              style={{ width: 26, height: 26, background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: '5px', cursor: idx === catalogItems.length - 1 ? 'default' : 'pointer', fontSize: '0.68rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</button>
+                            <button onClick={() => { if (confirm(`Deletar "${item.label}"?`)) deleteItem(idx) }}
+                              style={{ padding: '0.25rem 0.5rem', background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '6px', fontSize: '0.72rem', cursor: 'pointer' }}>✕</button>
+                          </div>
+                        </div>
+                        {/* inline edit */}
+                        {catalogEditIdx === idx && editing && (
+                          <div style={{ padding: '1rem 1.5rem', background: C.vvdim, borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                              <div><div style={{ fontSize: '0.7rem', color: C.muted, marginBottom: '0.25rem' }}>Nome</div><input value={editing.label} onChange={e => updateItem(idx, { label: e.target.value })} style={inputStyle} /></div>
+                              <div><div style={{ fontSize: '0.7rem', color: C.muted, marginBottom: '0.25rem' }}>Link (href)</div><input value={editing.href} onChange={e => updateItem(idx, { href: e.target.value })} style={inputStyle} placeholder="/dashboard/..." /></div>
+                            </div>
+                            <div><div style={{ fontSize: '0.7rem', color: C.muted, marginBottom: '0.25rem' }}>Descrição</div><input value={editing.desc} onChange={e => updateItem(idx, { desc: e.target.value })} style={inputStyle} /></div>
+                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span style={{ fontSize: '0.7rem', color: C.muted }}>Cor</span>
+                                <input type="color" value={editing.color} onChange={e => updateItem(idx, { color: e.target.value })} style={{ width: 32, height: 28, border: 'none', borderRadius: '6px', background: 'transparent', cursor: 'pointer', padding: 0 }} />
+                              </div>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: C.muted, cursor: 'pointer' }}>
+                                <input type="checkbox" checked={editing.badge === 'NOVO'} onChange={e => updateItem(idx, { badge: e.target.checked ? 'NOVO' : null })} />
+                                Badge NOVO
+                              </label>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: C.muted, cursor: 'pointer' }}>
+                                <input type="checkbox" checked={editing.live} onChange={e => updateItem(idx, { live: e.target.checked })} />
+                                Ao vivo (OBS)
+                              </label>
+                              <button onClick={() => setCatalogEditIdx(null)} style={{ marginLeft: 'auto', padding: '0.3rem 0.8rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '7px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>✓ Fechar</button>
+                            </div>
+                          </div>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  {OVERLAY_CATALOG_ALL.map((item, idx) => {
-                    const isHidden = catalogHidden.includes(item.type)
-                    return (
-                      <div key={item.type} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', padding: '0.75rem 1.5rem', borderBottom: idx < OVERLAY_CATALOG_ALL.length - 1 ? `1px solid ${C.border}` : 'none', background: isHidden ? 'transparent' : `rgba(155,48,255,0.03)` }}>
-                        <button
-                          onClick={() => setCatalogHidden(prev => isHidden ? prev.filter(t => t !== item.type) : [...prev, item.type])}
-                          style={{ width: 22, height: 22, borderRadius: '6px', border: `2px solid ${isHidden ? C.border : C.primary}`, background: isHidden ? 'transparent' : C.primaryBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
-                          {!isHidden && <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><polyline points="1.5,6 4.5,9 10.5,3" stroke={C.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                        </button>
-                        <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600, color: isHidden ? C.muted : C.text }}>{item.label}</span>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '999px', border: `1px solid ${isHidden ? C.border : C.borderStrong}`, background: isHidden ? 'transparent' : C.primaryBg, color: isHidden ? C.vdim : C.primary }}>
-                          {isHidden ? 'Oculto' : 'Visível'}
-                        </span>
+
+                {/* Adicionar novo */}
+                <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                  <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: C.text }}>+ Adicionar ao Catálogo</div>
+                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.15rem' }}>Crie um novo card que aparecerá na página de overlays.</div>
+                  </div>
+                  <div style={{ padding: '1.2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.7rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: '0.3rem' }}>Nome *</div>
+                        <input value={catalogNewForm.label} onChange={e => setCatalogNewForm(p => ({ ...p, label: e.target.value }))} style={inputStyle} placeholder="Ex: Meu Overlay" />
                       </div>
-                    )
-                  })}
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: '0.3rem' }}>Link (href) *</div>
+                        <input value={catalogNewForm.href} onChange={e => setCatalogNewForm(p => ({ ...p, href: e.target.value }))} style={inputStyle} placeholder="/dashboard/..." />
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: '0.3rem' }}>Descrição</div>
+                      <input value={catalogNewForm.desc} onChange={e => setCatalogNewForm(p => ({ ...p, desc: e.target.value }))} style={inputStyle} placeholder="Descreva o que este overlay faz…" />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: C.muted }}>Cor</span>
+                        <input type="color" value={catalogNewForm.color} onChange={e => setCatalogNewForm(p => ({ ...p, color: e.target.value }))} style={{ width: 32, height: 28, border: 'none', borderRadius: '6px', background: 'transparent', cursor: 'pointer', padding: 0 }} />
+                        <span style={{ fontSize: '0.72rem', color: C.vdim }}>{catalogNewForm.color}</span>
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: C.muted, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={catalogNewForm.badge === 'NOVO'} onChange={e => setCatalogNewForm(p => ({ ...p, badge: e.target.checked ? 'NOVO' : null }))} />
+                        Badge NOVO
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: C.muted, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={catalogNewForm.live} onChange={e => setCatalogNewForm(p => ({ ...p, live: e.target.checked }))} />
+                        Ao vivo (OBS)
+                      </label>
+                    </div>
+                    <button
+                      disabled={!catalogNewForm.label.trim() || !catalogNewForm.href.trim()}
+                      onClick={addItem}
+                      style={{ alignSelf: 'flex-start', padding: '0.5rem 1.4rem', background: catalogNewForm.label.trim() && catalogNewForm.href.trim() ? C.primaryBg : C.vvdim, border: `1px solid ${catalogNewForm.label.trim() && catalogNewForm.href.trim() ? C.borderStrong : C.border}`, color: catalogNewForm.label.trim() && catalogNewForm.href.trim() ? C.primary : C.vdim, borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: catalogNewForm.label.trim() && catalogNewForm.href.trim() ? 'pointer' : 'default' }}>
+                      + Adicionar
+                    </button>
+                    <div style={{ fontSize: '0.72rem', color: C.vdim }}>Após adicionar, clique em "✓ Salvar" no topo da lista para publicar.</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {view === 'invites' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
