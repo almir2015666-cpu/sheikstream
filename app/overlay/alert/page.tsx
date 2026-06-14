@@ -344,11 +344,31 @@ function AlertCard({ ev, cfg, onDone, debug }: { ev: AlertEvent; cfg: Cfg; onDon
   )
 }
 
+function buildTtsText(ev: AlertEvent): string {
+  const u = ev.user || 'Alguém'
+  const n = ev.amount ?? 0
+  switch (ev.type) {
+    case 'follow':   return `Novo seguidor: ${u}`
+    case 'sub':      return `${u} se inscreveu no canal!`
+    case 'resub':    return n > 1 ? `${u} está inscrito há ${n} meses!` : `${u} se reinscreveu!`
+    case 'giftsub':  return n > 1 ? `${u} presenteou ${n} inscrições!` : `${u} presenteou uma inscrição!`
+    case 'bits':     return `${u} enviou ${n} bits!`
+    case 'donation': return `${u} fez uma doação de ${n}!`
+    case 'member':   return `${u} se tornou membro!`
+    default:         return ev.extra ? `${u}: ${ev.extra}` : `Evento de ${u}`
+  }
+}
+
 function AlertOverlayContent() {
   const sp = useSearchParams()
   const uid = sp.get('uid') ?? ''
   const eventSlug = sp.get('event') ?? ''
   const debug = sp.get('debug') === '1'
+  const ttsEnabled = sp.get('tts') !== '0'
+  const ttsRate  = parseFloat(sp.get('tts_rate')  ?? '0.95')
+  const ttsPitch = parseFloat(sp.get('tts_pitch') ?? '1')
+  const ttsVol   = parseFloat(sp.get('tts_vol')   ?? '1')
+  const ttsVoice = sp.get('tts_voice') ?? ''
 
   // cfgMap holds one config per event slug (+ '' for the generic fallback)
   // Each entry may also have `variations: Cfg[]` for random selection
@@ -463,6 +483,20 @@ function AlertOverlayContent() {
     const [next, ...rest] = queue
     setCurrent(next)
     setQueue(rest)
+    if (ttsEnabled && typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+      const utt = new SpeechSynthesisUtterance(buildTtsText(next))
+      utt.lang = 'pt-BR'
+      utt.rate = ttsRate
+      utt.pitch = ttsPitch
+      utt.volume = ttsVol
+      if (ttsVoice) {
+        const voices = window.speechSynthesis.getVoices()
+        const match = voices.find(v => v.name === ttsVoice || v.lang === ttsVoice)
+        if (match) utt.voice = match
+      }
+      window.speechSynthesis.speak(utt)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue, current])
 
