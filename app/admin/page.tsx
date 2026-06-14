@@ -733,7 +733,7 @@ export default function AdminPage() {
   }, [view])
 
   useEffect(() => {
-    if (view !== 'overlays-catalog') return
+    if (view !== 'overlays-catalog' && view !== 'navorder') return
     fetch('/api/admin/overlays-catalog')
       .then(r => r.json())
       .then(d => { if (d?.items) setCatalogItems(d.items) })
