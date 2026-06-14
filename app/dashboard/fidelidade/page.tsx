@@ -128,7 +128,7 @@ export default function FidelidadePage() {
   )
 
   return (
-    <div style={{ background: S.bg, minHeight: '100vh', padding: '1.5rem 2rem', color: S.text, fontFamily: "-apple-system,'Inter',system-ui,sans-serif" }}>
+    <div style={{ background: S.bg, minHeight: '100vh', padding: '2.5rem 3.5rem', color: S.text, fontFamily: "-apple-system,'Inter',system-ui,sans-serif" }}>
       <style>{`
         input:focus, textarea:focus, select:focus { outline: none; border-color: rgba(155,48,255,0.5) !important; }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(155,48,255,0.2); border-radius: 2px; }
@@ -144,13 +144,13 @@ export default function FidelidadePage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
         {[
           { label: 'Viewers no ranking', value: totalViewers, color: S.primary, icon: '👥' },
           { label: 'Maior pontuação', value: topPoints.toLocaleString('pt-BR'), color: S.yellow, icon: '🏆' },
           { label: 'Resgates pendentes', value: totalPending, color: totalPending > 0 ? S.yellow : S.green, icon: '🎁' },
         ].map(stat => (
-          <div key={stat.label} style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', padding: '0.9rem 1.1rem' }}>
+          <div key={stat.label} style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.25rem 1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
               <span style={{ fontSize: '1rem' }}>{stat.icon}</span>
               <span style={{ fontSize: '0.73rem', color: S.muted, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.4px' }}>{stat.label}</span>
@@ -177,8 +177,8 @@ export default function FidelidadePage() {
 
       {/* ── Config ── */}
       {tab === 'config' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', padding: '1.25rem 1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '2rem 2.5rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
               {/* Currency name */}
@@ -227,7 +227,7 @@ export default function FidelidadePage() {
           </div>
 
           {/* Overlay URL */}
-          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', padding: '1.1rem 1.25rem' }}>
+          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.5rem 2rem' }}>
             <div style={lbl}>URL do Overlay — Ranking ao vivo (OBS Browser Source)</div>
             <code style={{ fontSize: '0.78rem', color: S.muted, wordBreak: 'break-all', display: 'block', lineHeight: 1.6 }}>
               {typeof window !== 'undefined' ? `${window.location.origin}/overlay/leaderboard?uid=SEU_ID` : '/overlay/leaderboard?uid=SEU_ID'}
@@ -241,9 +241,9 @@ export default function FidelidadePage() {
 
       {/* ── Recompensas ── */}
       {tab === 'recompensas' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Add form */}
-          <div style={{ background: S.card, border: `1px solid ${S.borderP}`, borderRadius: '12px', padding: '1.25rem 1.5rem' }}>
+          <div style={{ background: S.card, border: `1px solid ${S.borderP}`, borderRadius: '14px', padding: '1.75rem 2rem' }}>
             <div style={{ ...lbl, marginBottom: '0.8rem' }}>Nova recompensa</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.75rem', alignItems: 'flex-end' }}>
               <div>
@@ -266,17 +266,17 @@ export default function FidelidadePage() {
           </div>
 
           {/* List */}
-          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-            <div style={{ padding: '0.85rem 1.25rem', borderBottom: `1px solid ${S.border}` }}>
+          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', overflow: 'hidden' }}>
+            <div style={{ padding: '1rem 2rem', borderBottom: `1px solid ${S.border}` }}>
               <span style={{ fontWeight: 700, fontSize: '0.87rem', color: S.text }}>Recompensas cadastradas</span>
             </div>
             {rewards.length === 0 ? (
-              <div style={{ padding: '2.5rem', textAlign: 'center' }}>
+              <div style={{ padding: '3.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem', opacity: 0.4 }}>🎁</div>
                 <div style={{ fontSize: '0.83rem', color: S.muted }}>Nenhuma recompensa criada</div>
               </div>
             ) : rewards.map((r, idx) => (
-              <div key={r.id} style={{ padding: '0.85rem 1.25rem', borderBottom: idx < rewards.length - 1 ? `1px solid ${S.border}` : 'none', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+              <div key={r.id} style={{ padding: '1rem 2rem', borderBottom: idx < rewards.length - 1 ? `1px solid ${S.border}` : 'none', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: r.description ? '0.15rem' : 0 }}>
                     <span style={{ fontWeight: 700, color: S.text, fontSize: '0.875rem' }}>{r.name}</span>
@@ -299,12 +299,12 @@ export default function FidelidadePage() {
 
       {/* ── Resgates ── */}
       {tab === 'resgates' && (
-        <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-          <div style={{ padding: '0.85rem 1.25rem', borderBottom: `1px solid ${S.border}` }}>
+        <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', overflow: 'hidden' }}>
+          <div style={{ padding: '1rem 2rem', borderBottom: `1px solid ${S.border}` }}>
             <span style={{ fontWeight: 700, fontSize: '0.87rem', color: S.text }}>Pedidos de resgate</span>
           </div>
           {redemptions.length === 0 ? (
-            <div style={{ padding: '2.5rem', textAlign: 'center' }}>
+            <div style={{ padding: '3.5rem', textAlign: 'center' }}>
               <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem', opacity: 0.4 }}>📋</div>
               <div style={{ fontSize: '0.83rem', color: S.muted }}>Nenhum resgate ainda</div>
             </div>
@@ -313,7 +313,7 @@ export default function FidelidadePage() {
             const statusColor = rd.status === 'approved' ? S.green : rd.status === 'rejected' ? S.red : S.yellow
             const statusLabel = rd.status === 'approved' ? 'Aprovado' : rd.status === 'rejected' ? 'Rejeitado' : 'Pendente'
             return (
-              <div key={rd.id} style={{ padding: '0.85rem 1.25rem', borderBottom: idx < redemptions.length - 1 ? `1px solid ${S.border}` : 'none', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+              <div key={rd.id} style={{ padding: '1rem 2rem', borderBottom: idx < redemptions.length - 1 ? `1px solid ${S.border}` : 'none', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 700, color: S.text, fontSize: '0.875rem' }}>@{rd.viewer_login}</span>
@@ -353,12 +353,12 @@ export default function FidelidadePage() {
 
       {/* ── Ranking ── */}
       {tab === 'ranking' && (
-        <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-          <div style={{ padding: '0.85rem 1.25rem', borderBottom: `1px solid ${S.border}` }}>
+        <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', overflow: 'hidden' }}>
+          <div style={{ padding: '1rem 2rem', borderBottom: `1px solid ${S.border}` }}>
             <span style={{ fontWeight: 700, fontSize: '0.87rem', color: S.text }}>Top 10 viewers mais fiéis</span>
           </div>
           {leaderboard.length === 0 ? (
-            <div style={{ padding: '2.5rem', textAlign: 'center' }}>
+            <div style={{ padding: '3.5rem', textAlign: 'center' }}>
               <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem', opacity: 0.4 }}>🏆</div>
               <div style={{ fontSize: '0.83rem', color: S.muted }}>Nenhum viewer com pontos ainda</div>
             </div>
@@ -366,7 +366,7 @@ export default function FidelidadePage() {
             const medals = ['🥇', '🥈', '🥉']
             const bar = topPoints > 0 ? (entry.points / topPoints) * 100 : 0
             return (
-              <div key={entry.viewer_login} style={{ padding: '0.75rem 1.25rem', borderBottom: idx < leaderboard.length - 1 ? `1px solid ${S.border}` : 'none' }}>
+              <div key={entry.viewer_login} style={{ padding: '1rem 2rem', borderBottom: idx < leaderboard.length - 1 ? `1px solid ${S.border}` : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.35rem' }}>
                   <span style={{ fontSize: idx < 3 ? '1rem' : '0.73rem', width: '24px', textAlign: 'center', flexShrink: 0, color: idx >= 3 ? S.dim : undefined, fontWeight: 700 }}>
                     {idx < 3 ? medals[idx] : `#${idx + 1}`}

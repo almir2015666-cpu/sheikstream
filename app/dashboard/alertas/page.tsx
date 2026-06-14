@@ -203,7 +203,7 @@ export default function AlertasPage() {
   ]
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ padding: '2.5rem 3.5rem', maxWidth: 1100, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
@@ -233,7 +233,7 @@ export default function AlertasPage() {
           { label: t('alertas_today'), count: playedToday, color: S.green },
           { label: t('alertas_status_failed'), count: failedCount, color: S.red },
         ].map(({ label, count, color }) => (
-          <div key={label} style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', padding: '0.85rem 1rem' }}>
+          <div key={label} style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.25rem 1.5rem' }}>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color, lineHeight: 1 }}>{count}</div>
             <div style={{ color: S.muted, fontSize: '0.75rem', marginTop: '0.25rem' }}>{label}</div>
           </div>

@@ -242,7 +242,7 @@ export default function PedidosMusicaPage() {
   )
 
   return (
-    <div style={{ background: S.bg, minHeight: '100vh', padding: '2rem 2.5rem', color: S.text, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", position: 'relative' }}>
+    <div style={{ background: S.bg, minHeight: '100vh', padding: '2.5rem 3.5rem', color: S.text, fontFamily: "-apple-system,'Inter',system-ui,sans-serif", position: 'relative' }}>
       <style>{`
         input:focus, textarea:focus, select:focus { outline: none; border-color: rgba(155,48,255,0.5) !important; }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(155,48,255,0.2); border-radius: 2px; }
@@ -304,9 +304,9 @@ export default function PedidosMusicaPage() {
       </div>
 
       {tab === 'fila' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Search */}
-          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', padding: '1.25rem 1.5rem' }}>
+          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.5rem 2rem' }}>
             <div style={{ ...lbl, marginBottom: '0.65rem' }}>Adicionar manualmente</div>
             <div style={{ position: 'relative' }}>
               <input value={search} onChange={e => handleSearch(e.target.value)} placeholder="Buscar música ou artista no Spotify..." style={inp} />
@@ -335,8 +335,8 @@ export default function PedidosMusicaPage() {
           </div>
 
           {/* Queue */}
-          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-            <div style={{ padding: '0.9rem 1.5rem', borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', overflow: 'hidden' }}>
+            <div style={{ padding: '1rem 2rem', borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontWeight: 700, fontSize: '0.87rem', color: S.text }}>Fila de pedidos</span>
               {queue.length > 0 && (
                 <button onClick={handleClear} style={{ background: 'transparent', border: 'none', color: S.dim, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>Limpar tudo</button>
@@ -344,7 +344,7 @@ export default function PedidosMusicaPage() {
             </div>
 
             {playing && (
-              <div style={{ padding: '0.85rem 1.5rem', background: 'rgba(29,185,84,0.04)', borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ padding: '1rem 2rem', background: 'rgba(29,185,84,0.04)', borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{ fontSize: '0.68rem', fontWeight: 700, background: S.spotifyBg, color: S.spotify, padding: '0.15rem 0.5rem', borderRadius: '99px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Tocando</span>
                 {playing.thumbnail && <img src={playing.thumbnail} alt="" style={{ width: '32px', height: '32px', borderRadius: '5px', objectFit: 'cover', flexShrink: 0 }} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -356,7 +356,7 @@ export default function PedidosMusicaPage() {
             )}
 
             {pending.length === 0 && !playing ? (
-              <div style={{ padding: '3rem', textAlign: 'center' }}>
+              <div style={{ padding: '3.5rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.6rem', opacity: 0.35 }}>🎵</div>
                 <div style={{ fontSize: '0.83rem', color: S.muted }}>Nenhum pedido na fila</div>
                 <div style={{ fontSize: '0.75rem', color: S.dim, marginTop: '0.25rem' }}>
@@ -367,7 +367,7 @@ export default function PedidosMusicaPage() {
               </div>
             ) : (
               pending.map((item, idx) => (
-                <div key={item.id} style={{ padding: '0.85rem 1.5rem', borderBottom: idx < pending.length - 1 ? `1px solid ${S.border}` : 'none', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div key={item.id} style={{ padding: '1rem 2rem', borderBottom: idx < pending.length - 1 ? `1px solid ${S.border}` : 'none', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{ fontSize: '0.73rem', color: S.vdim, width: '22px', textAlign: 'center', flexShrink: 0, fontWeight: 600 }}>#{idx + 1}</span>
                   {item.thumbnail && <img src={item.thumbnail} alt="" style={{ width: '34px', height: '34px', borderRadius: '5px', objectFit: 'cover', flexShrink: 0 }} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -392,8 +392,8 @@ export default function PedidosMusicaPage() {
       )}
 
       {tab === 'config' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', padding: '1.5rem 1.75rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '2rem 2.5rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
               {/* Enable */}
@@ -451,7 +451,7 @@ export default function PedidosMusicaPage() {
           </div>
 
           {/* Overlay URL */}
-          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '12px', padding: '1.25rem 1.5rem' }}>
+          <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.5rem 2rem' }}>
             <div style={lbl}>URL do Overlay (OBS Browser Source)</div>
             <code style={{ fontSize: '0.78rem', color: S.muted, wordBreak: 'break-all', display: 'block', lineHeight: 1.7, marginBottom: '0.5rem' }}>
               {typeof window !== 'undefined' ? `${window.location.origin}/overlay/song-request?uid=SEU_ID` : '/overlay/song-request?uid=SEU_ID'}
