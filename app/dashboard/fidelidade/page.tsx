@@ -6,7 +6,7 @@ const S = {
   muted: 'rgba(232,230,248,0.65)', dim: 'rgba(232,230,248,0.45)',
   primary: '#f59e0b', primaryBg: 'rgba(245,158,11,0.12)',
   border: 'rgba(255,255,255,0.06)', borderP: 'rgba(245,158,11,0.2)',
-  red: '#ef4444', green: '#22c55e', purple: '#9b30ff',
+  red: '#ef4444', green: '#22c55e', purple: '#9b30ff', yellow: '#f59e0b',
 }
 
 type LoyaltyConfig = {
