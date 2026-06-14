@@ -84,5 +84,5 @@ export async function GET(req: NextRequest) {
       { headers: { 'Content-Type': 'text/html' } }
     )
   }
-  return NextResponse.redirect(`${BASE}/dashboard/conexoes?spotify=connected`)
+  return NextResponse.redirect(`${BASE}/dashboard/pedidos-musica`)
 }
