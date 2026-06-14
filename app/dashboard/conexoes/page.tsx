@@ -117,6 +117,8 @@ export default function ConexoesPage() {
   const [livepixConfigOpen, setLivepixConfigOpen] = useState(false)
   const [tokenStatus, setTokenStatus] = useState<{ twitch: boolean; youtube: boolean; spotify: boolean; spotify_username?: string | null; kick: boolean; kick_username?: string | null; kick_channel_id?: string | null }>({ twitch: false, youtube: false, spotify: false, kick: false })
   const [disconnecting, setDisconnecting] = useState(false)
+  const [botAccountName, setBotAccountName] = useState<string | null>(null)
+  const [botConnecting, setBotConnecting] = useState(false)
   const [spotifyDisconnecting, setSpotifyDisconnecting] = useState(false)
   const [spotifySuccess, setSpotifySuccess] = useState(false)
   const [kickDisconnecting, setKickDisconnecting] = useState(false)
@@ -284,6 +286,48 @@ export default function ConexoesPage() {
     }
   }
 
+  function openBotPopup() {
+    const w = 500, h = 700
+    const left = window.screen.width - w - 20
+    const top = Math.max(0, (window.screen.height - h) / 2)
+    const popup = window.open(
+      '/api/auth/twitch-bot',
+      'twitch_bot_oauth',
+      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`,
+    )
+    if (!popup) return
+    setBotConnecting(true)
+    function onMessage(e: MessageEvent) {
+      if (e.data?.type === 'twitch_bot_connected') {
+        window.removeEventListener('message', onMessage)
+        clearInterval(check)
+        setBotAccountName(e.data.botName ?? null)
+        setBotConnecting(false)
+      } else if (e.data?.type === 'twitch_bot_error') {
+        window.removeEventListener('message', onMessage)
+        clearInterval(check)
+        setBotConnecting(false)
+      }
+    }
+    window.addEventListener('message', onMessage)
+    const check = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(check)
+        window.removeEventListener('message', onMessage)
+        setBotConnecting(false)
+      }
+    }, 500)
+  }
+
+  async function disconnectBotAccount() {
+    await fetch('/api/tokens/disconnect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: 'twitch_bot' }),
+    })
+    setBotAccountName(null)
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const err = params.get('error')
@@ -294,7 +338,10 @@ export default function ConexoesPage() {
       .then(r => r.ok ? r.json() : null)
       .then(u => { if (u) setConnectedUser(u.name) })
       .catch(() => {})
-    const refreshStatus = () => fetch('/api/tokens/status').then(r => r.json()).then(s => setTokenStatus(s)).catch(() => {})
+    const refreshStatus = () => fetch('/api/tokens/status').then(r => r.json()).then(s => {
+      setTokenStatus(s)
+      if (s.bot_username) setBotAccountName(s.bot_username)
+    }).catch(() => {})
     refreshStatus()
     if (params.get('spotify') === 'connected') setTimeout(refreshStatus, 1500)
   }, [])
@@ -523,6 +570,63 @@ export default function ConexoesPage() {
           >
             <PlatIcon id="twitch" color="#fff" />
             Conectar Twitch
+          </button>
+        )}
+      </div>
+
+      {/* Conta bot do chat */}
+      <div style={{
+        background: C.card, border: `1px solid ${C.border}`,
+        borderRadius: '12px', padding: '1rem 1.3rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: '1rem',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(145,71,255,0.12)', border: '1px solid rgba(145,71,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9147ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
+              <path d="M18 14l2 2 4-4" strokeWidth="2.5" stroke="#22c55e"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>Conta Bot</span>
+              {botAccountName
+                ? <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.45rem', background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderRadius: '999px', border: '1px solid rgba(34,197,94,0.2)' }}>conectado</span>
+                : <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.45rem', background: 'rgba(251,191,36,0.12)', color: '#fbbf24', borderRadius: '999px', border: '1px solid rgba(251,191,36,0.2)' }}>não configurado</span>
+              }
+            </div>
+            <div style={{ fontSize: '0.76rem', color: C.dim, marginTop: '0.15rem' }}>
+              {botAccountName
+                ? `Respondendo no chat como @${botAccountName}`
+                : 'Conecte uma conta separada para o bot responder em vez da sua conta principal.'
+              }
+            </div>
+          </div>
+        </div>
+        {botAccountName ? (
+          <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+            <button
+              onClick={openBotPopup}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1rem', background: 'rgba(145,71,255,0.12)', border: '1px solid rgba(145,71,255,0.3)', color: '#9147ff', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              Trocar
+            </button>
+            <button
+              onClick={disconnectBotAccount}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              Remover
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={openBotPopup}
+            disabled={botConnecting}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.1rem', background: '#9147ff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: botConnecting ? 'default' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0, opacity: botConnecting ? 0.6 : 1 }}
+          >
+            <PlatIcon id="twitch" color="#fff" />
+            {botConnecting ? 'Aguardando...' : 'Conectar conta bot'}
           </button>
         )}
       </div>

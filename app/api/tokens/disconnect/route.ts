@@ -12,6 +12,16 @@ export async function POST(req: NextRequest) {
 
   const { platform } = await req.json() as { platform: string }
 
+  if (platform === 'twitch_bot') {
+    const { error } = await getSupabaseAdmin()
+      .from('user_tokens')
+      .delete()
+      .eq('user_id', `${user.id}:bot`)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await logSystem('token.disconnect', `${user.name} desconectou bot account`, user.id, { platform, username: user.name })
+    return NextResponse.json({ ok: true })
+  }
+
   const field: Record<string, string> = {
     twitch:  'twitch_token',
     youtube: 'youtube_token',

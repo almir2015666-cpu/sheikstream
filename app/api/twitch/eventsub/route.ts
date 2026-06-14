@@ -61,15 +61,22 @@ function tierLabel(tier: unknown): string {
 
 async function sendChat(broadcasterId: string, message: string): Promise<void> {
   const db = getSupabaseAdmin()
+  // Prefer dedicated bot account if configured
+  const { data: botTok } = await db.from('user_tokens').select('twitch_token, twitch_channel_id').eq('user_id', `${broadcasterId}:bot`).maybeSingle()
+  if (botTok?.twitch_token && botTok?.twitch_channel_id) {
+    await fetch('https://api.twitch.tv/helix/chat/messages', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${botTok.twitch_token}`, 'Client-Id': process.env.TWITCH_CLIENT_ID!, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botTok.twitch_channel_id, message }),
+    })
+    return
+  }
+  // Fallback: broadcaster's own account
   const { data: tok } = await db.from('user_tokens').select('twitch_token').eq('user_id', broadcasterId).single()
   if (!tok?.twitch_token) return
   await fetch('https://api.twitch.tv/helix/chat/messages', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${tok.twitch_token}`,
-      'Client-Id': process.env.TWITCH_CLIENT_ID!,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${tok.twitch_token}`, 'Client-Id': process.env.TWITCH_CLIENT_ID!, 'Content-Type': 'application/json' },
     body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: broadcasterId, message }),
   })
 }

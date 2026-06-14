@@ -31,6 +31,13 @@ export async function GET(req: NextRequest) {
     .maybeSingle()
     .then(r => r.error ? { data: null } : r)
 
+  const { data: botData } = await getSupabaseAdmin()
+    .from('user_tokens')
+    .select('twitch_username')
+    .eq('user_id', `${user.id}:bot`)
+    .maybeSingle()
+    .then(r => r.error ? { data: null } : r)
+
   return NextResponse.json({
     twitch:           !!baseData?.twitch_token,
     youtube:          !!baseData?.youtube_token,
@@ -39,5 +46,6 @@ export async function GET(req: NextRequest) {
     kick:             !!kickData?.kick_token,
     kick_username:    kickData?.kick_username ?? null,
     kick_channel_id:  kickChannelData?.kick_channel_id ?? null,
+    bot_username:     botData?.twitch_username ?? null,
   })
 }
