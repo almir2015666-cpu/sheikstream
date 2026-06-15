@@ -228,6 +228,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [navOrder, setNavOrder] = useState<string[]>([])
   const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon'>>({})
   const [navChildrenDB, setNavChildrenDB] = useState<Record<string, string[]> | null>(null)
+  const [navRemovedHardChildren, setNavRemovedHardChildren] = useState<string[]>([])
   const [catalogTypes, setCatalogTypes] = useState<Set<string>>(new Set())
   // Suggestion/bug form (global — all pages)
   const [showSugg, setShowSugg] = useState(false)
@@ -303,6 +304,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             setNavChildrenDB(d.children as Record<string, string[]>)
           } else {
             setNavChildrenDB(null)
+          }
+          if (Array.isArray(d?.removedHardChildren)) {
+            setNavRemovedHardChildren(d.removedHardChildren as string[])
           }
         })
         .catch(() => {/* network error — keep current order */})
@@ -508,11 +512,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   })()
 
   const effectiveNavItems = (() => {
-    // Remove from sidebar any item whose href is in the visible overlays catalog
-    // (except 'overlays' itself — the catalog page must always stay)
     const inCatalog = (item: Item) =>
       item.id !== 'overlays' && catalogTypes.size > 0 && catalogTypes.has(item.id)
-    const baseItems = orderedItems.filter(item => !inCatalog(item))
+
+    const removedHardSet = new Set(navRemovedHardChildren)
+    const promotedItems: Item[] = []
+
+    let baseItems = orderedItems
+      .filter(item => !inCatalog(item))
+      .map(item => {
+        if (!item.children || !item.children.some(ch => removedHardSet.has(ch.id))) return item
+        const keptKids = item.children.filter(ch => !removedHardSet.has(ch.id))
+        item.children.filter(ch => removedHardSet.has(ch.id)).forEach(ch => {
+          promotedItems.push({ id: ch.id, label: ch.label, href: ch.href, icon: ch.icon ?? I.arr, badge: ch.badge })
+        })
+        return { ...item, children: keptKids.length > 0 ? keptKids : undefined }
+      })
+
+    // Insert promoted items in navOrder position
+    if (promotedItems.length > 0) {
+      const orderMap = new Map(navOrder.map((id, i) => [id, i]))
+      const result: Item[] = []
+      let pi = 0
+      const sorted = [...promotedItems].sort((a, b) => (orderMap.get(a.id) ?? 9999) - (orderMap.get(b.id) ?? 9999))
+      for (const item of baseItems) {
+        while (pi < sorted.length && (orderMap.get(sorted[pi].id) ?? 9999) < (orderMap.get(item.id) ?? 9999)) {
+          result.push(sorted[pi++])
+        }
+        result.push(item)
+      }
+      while (pi < sorted.length) result.push(sorted[pi++])
+      baseItems = result
+    }
 
     if (!navChildrenDB || Object.keys(navChildrenDB).length === 0) return baseItems
     const dbChildSet = new Set(Object.values(navChildrenDB).flat())
