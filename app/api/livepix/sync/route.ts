@@ -95,30 +95,48 @@ export async function POST(req: NextRequest) {
     .select('username, amount, date')
     .eq('broadcaster_id', broadcasterId)
 
-  const existingSet = new Set(
-    (existing ?? []).map(e =>
-      `${String(e.username).toLowerCase().trim()}|${Math.round(Number(e.amount) * 100)}|${e.date}`
-    )
-  )
+  // Count existing entries per (username, amount_cents, date)
+  const existingCount = new Map<string, number>()
+  for (const e of existing ?? []) {
+    const key = `${String(e.username).toLowerCase().trim()}|${Math.round(Number(e.amount) * 100)}|${e.date}`
+    existingCount.set(key, (existingCount.get(key) ?? 0) + 1)
+  }
 
-  const toInsert = messages
-    .filter(p => {
-      const dateStr = p.created_at.slice(0, 10)
-      const key = `${p.username.toLowerCase().trim()}|${Math.round(p.amount * 100)}|${dateStr}`
-      return !existingSet.has(key)
-    })
-    .map(p => ({
-      broadcaster_id: broadcasterId,
-      username: p.username,
-      amount: p.amount,
-      message: p.message,
-      is_manual: false,
-      tickets: Math.max(1, Math.floor(p.amount)),
-      date: p.created_at.slice(0, 10),
-    }))
+  // Count Livepix messages per group, insert only the excess
+  const livepixCount = new Map<string, number>()
+  for (const p of messages) {
+    const key = `${p.username.toLowerCase().trim()}|${Math.round(p.amount * 100)}|${p.created_at.slice(0, 10)}`
+    livepixCount.set(key, (livepixCount.get(key) ?? 0) + 1)
+  }
 
-  if (toInsert.length > 0) {
-    const { error: insertError } = await db.from('livepix_donors').insert(toInsert)
+  const toInsert: typeof messages[number][] = []
+  for (const [key, lpCount] of livepixCount) {
+    const dbCount = existingCount.get(key) ?? 0
+    const missing = lpCount - dbCount
+    if (missing <= 0) continue
+    // Find `missing` messages for this key to insert
+    const [username, amountCentsStr, dateStr] = key.split('|')
+    const amountCents = Number(amountCentsStr)
+    const matches = messages.filter(p =>
+      p.username.toLowerCase().trim() === username &&
+      p.created_at.slice(0, 10) === dateStr &&
+      Math.round(p.amount * 100) === amountCents
+    ).slice(0, missing)
+    toInsert.push(...matches)
+  }
+
+  const rows = toInsert.map(p => ({
+    broadcaster_id: broadcasterId,
+    username: p.username,
+    amount: p.amount,
+    message: p.message,
+    is_manual: false,
+    tickets: Math.max(1, Math.floor(p.amount)),
+    date: p.created_at.slice(0, 10),
+  }))
+
+  if (rows.length > 0) {
+    const { error: insertError } = await db.from('livepix_donors').insert(rows)
     if (insertError) {
       return NextResponse.json({ error: `Erro ao inserir doações: ${insertError.message}` }, { status: 500 })
     }
