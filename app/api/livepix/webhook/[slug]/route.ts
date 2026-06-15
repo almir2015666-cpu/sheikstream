@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { fireEventCommand } from '@/app/lib/event-commands'
-import { storeDebugPayload } from '@/app/api/livepix/debug/route'
+
+async function getLivepixToken(clientId: string, clientSecret: string): Promise<string | null> {
+  try {
+    const res = await fetch('https://oauth.livepix.gg/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=messages:read`,
+    })
+    const data = await res.json().catch(() => ({}))
+    return data.access_token ? String(data.access_token) : null
+  } catch { return null }
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug: rawSlug } = await params
@@ -17,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   const { data: cfg } = await db
     .from('livepix_config')
-    .select('user_id, channel_id')
+    .select('user_id, channel_id, client_id, client_secret')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -34,36 +45,51 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   const broadcasterId = cfg.channel_id || cfg.user_id
 
-  // Livepix webhook payload — try all known field variants
-  const payment = (body.payment ?? body.data ?? body) as Record<string, unknown>
+  // Livepix sends: { event: "new", resource: { id: "...", type: "message", ... } }
+  // We must fetch payment details from their API using the resource.id
+  const resource = body.resource as { id?: string; type?: string } | undefined
+  const resourceId = resource?.id ?? ''
+  const resourceType = resource?.type ?? ''
+  const eventType = String(body.event ?? '')
 
-  const username = String(
-    payment.username ?? payment.sender_name ?? payment.donor_name ?? payment.name ??
-    body.username ?? body.sender_name ?? 'Anônimo'
-  )
+  if (!resourceId || resourceType !== 'message' || eventType !== 'new') {
+    console.log(`[livepix webhook] skipped: event=${eventType} type=${resourceType} id=${resourceId}`)
+    return NextResponse.json({ ok: true, skipped: 'not a new message event' })
+  }
 
-  // Amount: Livepix sends in cents (always divide by 100)
-  const amountRaw = Number(payment.amount ?? body.amount ?? 0)
+  // Fetch payment details from Livepix API
+  const clientId = cfg.client_id as string | null
+  const clientSecret = cfg.client_secret as string | null
+  if (!clientId || !clientSecret) {
+    console.error('[livepix webhook] no client_id/client_secret configured')
+    return NextResponse.json({ ok: true, skipped: 'no api credentials' })
+  }
+
+  const token = await getLivepixToken(clientId, clientSecret)
+  if (!token) {
+    console.error('[livepix webhook] failed to get OAuth token')
+    return NextResponse.json({ ok: true, skipped: 'token error' })
+  }
+
+  const msgRes = await fetch(`https://api.livepix.gg/v2/messages/${resourceId}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  })
+  const payment = await msgRes.json().catch(() => ({})) as Record<string, unknown>
+
+  console.log('[livepix webhook] payment details:', JSON.stringify(payment).slice(0, 300))
+
+  const username = String(payment.username ?? payment.sender_name ?? 'Anônimo')
+  const amountRaw = Number(payment.amount ?? 0)
   const amount = amountRaw >= 100 ? amountRaw / 100 : amountRaw
-
-  const message = payment.message
-    ? String(payment.message)
-    : body.message ? String(body.message) : null
-
-  const createdAt = String(payment.created_at ?? payment.createdAt ?? body.created_at ?? new Date().toISOString())
+  const message = payment.message ? String(payment.message) : null
+  const createdAt = String(payment.createdAt ?? payment.created_at ?? new Date().toISOString())
   const dateStr = createdAt.slice(0, 10)
 
-  console.log(`[livepix webhook] parsed: slug=${slug} user=${username} amount=${amount} date=${dateStr}`)
-
-  if (!username || username === 'Anônimo' && amount <= 0) {
-    return NextResponse.json({ ok: true, skipped: 'no amount or username' })
-  }
   if (amount <= 0) {
     return NextResponse.json({ ok: true, skipped: 'amount zero' })
   }
 
-  // Dedup: check username + date + amount (allow multiple donations same day)
-  const amountCents = Math.round(amount * 100)
+  // Dedup
   const { data: existing } = await db
     .from('livepix_donors')
     .select('id')
@@ -106,7 +132,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     tickets: String(tickets), nums: '', msg: message ?? '', platform: 'Livepix',
   }).catch(e => console.error('[livepix webhook] event cmd error:', e))
 
-  console.log(`[livepix webhook] ok: ${slug} ${username} R$${amount} cents=${amountCents}`)
+  console.log(`[livepix webhook] ok: ${slug} ${username} R$${amount}`)
   return NextResponse.json({ ok: true })
 }
 
