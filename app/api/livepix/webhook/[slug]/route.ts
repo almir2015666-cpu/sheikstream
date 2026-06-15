@@ -76,7 +76,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const msgRes = await fetch(`https://api.livepix.gg/v2/messages/${resourceId}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
   })
-  const payment = await msgRes.json().catch(() => ({})) as Record<string, unknown>
+  const paymentBody = await msgRes.json().catch(() => ({})) as Record<string, unknown>
+  // Livepix wraps the payment under a "data" key: { data: { username, amount, ... } }
+  const payment = (paymentBody.data ?? paymentBody) as Record<string, unknown>
 
   console.log('[livepix webhook] payment details:', JSON.stringify(payment).slice(0, 300))
 
