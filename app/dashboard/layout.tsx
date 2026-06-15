@@ -525,7 +525,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       item.id !== 'overlays' && catalogTypes.size > 0 && catalogTypes.has(item.id)
 
     const removedHardSet = new Set(navRemovedHardChildren)
-    const promotedItems: Item[] = []
+    const promotedItems: Array<Item & { parentId: string }> = []
+
+    const orderMap = new Map(navOrder.map((id, i) => [id, i]))
 
     let baseItems = orderedItems
       .filter(item => !inCatalog(item))
@@ -533,19 +535,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (!item.children || !item.children.some(ch => removedHardSet.has(ch.id))) return item
         const keptKids = item.children.filter(ch => !removedHardSet.has(ch.id))
         item.children.filter(ch => removedHardSet.has(ch.id)).forEach(ch => {
-          promotedItems.push({ id: ch.id, label: ch.label, href: ch.href, icon: ch.icon ?? I.arr, badge: ch.badge })
+          promotedItems.push({ id: ch.id, label: ch.label, href: ch.href, icon: ch.icon ?? I.arr, badge: ch.badge, parentId: item.id })
         })
         return { ...item, children: keptKids.length > 0 ? keptKids : undefined }
       })
 
-    // Insert promoted items in navOrder position
+    // Insert promoted hard children right after their parent
     if (promotedItems.length > 0) {
-      const orderMap = new Map(navOrder.map((id, i) => [id, i]))
+      const getScore = (p: typeof promotedItems[0]) =>
+        orderMap.has(p.id) ? orderMap.get(p.id)! : (orderMap.get(p.parentId) ?? 9999) + 0.5
+      const sorted = [...promotedItems].sort((a, b) => getScore(a) - getScore(b))
       const result: Item[] = []
       let pi = 0
-      const sorted = [...promotedItems].sort((a, b) => (orderMap.get(a.id) ?? 9999) - (orderMap.get(b.id) ?? 9999))
       for (const item of baseItems) {
-        while (pi < sorted.length && (orderMap.get(sorted[pi].id) ?? 9999) < (orderMap.get(item.id) ?? 9999)) {
+        while (pi < sorted.length && getScore(sorted[pi]) <= (orderMap.get(item.id) ?? 9999)) {
           result.push(sorted[pi++])
         }
         result.push(item)
@@ -554,14 +557,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       baseItems = result
     }
 
-    // Inject catalog items that have showInNav (they're not in NAV_ALL so must be added directly)
+    // Inject catalog showInNav items right after 'overlays' (or at their saved navOrder position)
     if (catalogNavItems.length > 0) {
-      const orderMap = new Map(navOrder.map((id, i) => [id, i]))
+      const overlaysPos = orderMap.get('overlays') ?? 9999
+      const catalogIds = new Set(catalogNavItems.map(i => i.id))
       const existingIds = new Set(baseItems.map(i => i.id))
       const toInject = catalogNavItems.filter(i => !existingIds.has(i.id))
       if (toInject.length > 0) {
+        const getCatalogScore = (id: string) =>
+          orderMap.has(id) ? orderMap.get(id)! : overlaysPos + 0.5
         const merged = [...baseItems, ...toInject]
-        merged.sort((a, b) => (orderMap.get(a.id) ?? 9999) - (orderMap.get(b.id) ?? 9999))
+        merged.sort((a, b) => {
+          const sa = catalogIds.has(a.id) ? getCatalogScore(a.id) : (orderMap.get(a.id) ?? 9999)
+          const sb = catalogIds.has(b.id) ? getCatalogScore(b.id) : (orderMap.get(b.id) ?? 9999)
+          return sa - sb
+        })
         baseItems = merged
       }
     }
