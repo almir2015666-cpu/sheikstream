@@ -45,7 +45,7 @@ type LoyaltyConfig = {
 }
 
 type Reward = { id: string; name: string; description: string; cost: number; enabled: boolean }
-type Redemption = { id: string; viewer_login: string; status: 'pending' | 'approved' | 'rejected'; created_at: string; loyalty_rewards: { name: string; cost: number } | null }
+type Redemption = { id: string; reward_id: string; viewer_login: string; status: 'pending' | 'approved' | 'rejected'; created_at: string; loyalty_rewards: { name: string; cost: number } | null }
 type LeaderEntry = { viewer_login: string; points: number }
 
 const DEFAULT_CFG: LoyaltyConfig = {
@@ -72,15 +72,19 @@ export default function FidelidadePage() {
 
   const [totalViewers, setTotalViewers] = useState(0)
   const [totalPending, setTotalPending] = useState(0)
+  const [uid, setUid] = useState('')
+  const [copiedUrl, setCopiedUrl] = useState(false)
 
   const loadAll = useCallback(async () => {
-    const [cfgRes, rwRes, rdRes, lbRes] = await Promise.all([
+    const [cfgRes, rwRes, rdRes, lbRes, meRes] = await Promise.all([
       fetch('/api/loyalty/config').then(r => r.ok ? r.json() : null),
       fetch('/api/loyalty/rewards').then(r => r.ok ? r.json() : []),
       fetch('/api/loyalty/redemptions').then(r => r.ok ? r.json() : []),
       fetch('/api/loyalty/leaderboard?limit=10').then(r => r.ok ? r.json() : []),
+      fetch('/api/me').then(r => r.ok ? r.json() : null),
     ])
     if (cfgRes) setCfg(cfgRes)
+    if (meRes?.id) setUid(meRes.id)
     setRewards(rwRes ?? [])
     const rds: Redemption[] = rdRes ?? []
     setRedemptions(rds)
@@ -146,6 +150,12 @@ export default function FidelidadePage() {
   }
 
   const topPoints = leaderboard[0]?.points ?? 0
+
+  // Count all (non-rejected) redemptions per reward id
+  const redemptionCountByReward = redemptions.reduce<Record<string, number>>((acc, rd) => {
+    if (rd.status !== 'rejected' && rd.reward_id) acc[rd.reward_id] = (acc[rd.reward_id] ?? 0) + 1
+    return acc
+  }, {})
 
   if (loading) return (
     <div style={{ background: S.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.muted, fontSize: '0.9rem' }}>Carregando...</div>
@@ -235,7 +245,10 @@ export default function FidelidadePage() {
                 <label style={lbl}>Nome da moeda</label>
                 <input value={cfg.currency_name} onChange={e => setCfg(c => ({ ...c, currency_name: e.target.value }))} style={{ ...inp, maxWidth: '260px' }} placeholder="pontos" />
                 <div style={{ marginTop: '0.3rem', fontSize: '0.73rem', color: S.dim }}>
-                  Viewers usam <code style={{ color: S.primary, background: S.primaryBg, padding: '0 3px', borderRadius: '3px' }}>!pontos</code> e <code style={{ color: S.primary, background: S.primaryBg, padding: '0 3px', borderRadius: '3px' }}>!ranking</code> no chat
+                  Viewers usam{' '}
+                  <code style={{ color: S.primary, background: S.primaryBg, padding: '0 3px', borderRadius: '3px' }}>!pontos</code>,{' '}
+                  <code style={{ color: S.primary, background: S.primaryBg, padding: '0 3px', borderRadius: '3px' }}>!ranking</code> e{' '}
+                  <code style={{ color: S.primary, background: S.primaryBg, padding: '0 3px', borderRadius: '3px' }}>!resgatar [nome]</code> no chat
                 </div>
               </div>
 
@@ -278,12 +291,28 @@ export default function FidelidadePage() {
           {/* Overlay URL */}
           <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: '14px', padding: '1.5rem 2rem' }}>
             <div style={lbl}>URL do Overlay — Ranking ao vivo (OBS Browser Source)</div>
-            <code style={{ fontSize: '0.78rem', color: S.muted, wordBreak: 'break-all', display: 'block', lineHeight: 1.6 }}>
-              {typeof window !== 'undefined' ? `${window.location.origin}/overlay/leaderboard?uid=SEU_ID` : '/overlay/leaderboard?uid=SEU_ID'}
-            </code>
-            <div style={{ marginTop: '0.5rem', fontSize: '0.73rem', color: S.dim }}>
-              Parâmetros: <code style={{ color: S.primary }}>limit=5</code> · <code style={{ color: S.primary }}>title=Top Viewers</code> · <code style={{ color: S.primary }}>theme=light</code>
-            </div>
+            {uid ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', border: `1px solid ${S.border}`, borderRadius: '8px', padding: '0.55rem 0.75rem' }}>
+                  <code style={{ fontSize: '0.75rem', color: S.muted, wordBreak: 'break-all', flex: 1, lineHeight: 1.5 }}>
+                    {typeof window !== 'undefined' ? `${window.location.origin}/overlay/leaderboard?uid=${uid}` : `/overlay/leaderboard?uid=${uid}`}
+                  </code>
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/overlay/leaderboard?uid=${uid}`
+                      navigator.clipboard.writeText(url).then(() => { setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000) })
+                    }}
+                    style={{ flexShrink: 0, padding: '0.3rem 0.75rem', background: copiedUrl ? 'rgba(34,197,94,0.12)' : S.primaryBg, border: `1px solid ${copiedUrl ? 'rgba(34,197,94,0.3)' : S.borderP}`, borderRadius: '6px', color: copiedUrl ? S.green : S.primary, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {copiedUrl ? '✓ Copiado!' : '📋 Copiar'}
+                  </button>
+                </div>
+                <div style={{ marginTop: '0.5rem', fontSize: '0.73rem', color: S.dim }}>
+                  Parâmetros opcionais: <code style={{ color: S.primary }}>limit=5</code> · <code style={{ color: S.primary }}>title=Top Viewers</code> · <code style={{ color: S.primary }}>theme=light</code>
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: '0.78rem', color: S.dim }}>Carregando URL...</div>
+            )}
           </div>
         </div>
       )}
@@ -358,11 +387,16 @@ export default function FidelidadePage() {
                   /* View mode */
                   <div style={{ padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: r.description ? '0.15rem' : 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: r.description ? '0.15rem' : 0, flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 700, color: S.text, fontSize: '0.875rem' }}>{r.name}</span>
                         <span style={{ fontSize: '0.73rem', fontWeight: 700, color: S.yellow, background: 'rgba(245,158,11,0.1)', padding: '0.1rem 0.45rem', borderRadius: '99px', border: '1px solid rgba(245,158,11,0.2)' }}>
                           {r.cost.toLocaleString('pt-BR')} {cfg.currency_name || 'pts'}
                         </span>
+                        {(redemptionCountByReward[r.id] ?? 0) > 0 && (
+                          <span style={{ fontSize: '0.73rem', fontWeight: 700, color: '#a78bfa', background: 'rgba(167,139,250,0.1)', padding: '0.1rem 0.45rem', borderRadius: '99px', border: '1px solid rgba(167,139,250,0.2)' }}>
+                            {redemptionCountByReward[r.id]}× resgatado
+                          </span>
+                        )}
                       </div>
                       {r.description && <div style={{ fontSize: '0.75rem', color: S.muted }}>{r.description}</div>}
                     </div>
