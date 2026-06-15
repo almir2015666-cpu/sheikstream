@@ -66,7 +66,7 @@ export default function DiscordPage() {
       const r = await fetch('/api/discord/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isTest: true, color }),
+        body: JSON.stringify({ isTest: true, color, url }),
       })
       if (r.ok) { setTestOk(true) } else { const d = await r.json(); setTestOk(false); setTestErr(d.error ?? 'Erro') }
     } catch { setTestOk(false); setTestErr('Sem conexão') }

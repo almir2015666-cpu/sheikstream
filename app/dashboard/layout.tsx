@@ -522,7 +522,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const effectiveNavItems = (() => {
     const inCatalog = (item: Item) =>
-      item.id !== 'overlays' && catalogTypes.size > 0 && catalogTypes.has(item.id)
+      item.id !== 'overlays' && !item.children?.length && catalogTypes.size > 0 && catalogTypes.has(item.id)
 
     const removedHardSet = new Set(navRemovedHardChildren)
     const promotedItems: Array<Item & { parentId: string }> = []

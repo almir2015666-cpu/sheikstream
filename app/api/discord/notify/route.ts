@@ -17,19 +17,6 @@ export async function POST(req: NextRequest) {
   const uid = await getUid()
   if (!uid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const db = getSupabaseAdmin()
-
-  // Load webhook config
-  const { data: cfgRow } = await db
-    .from('overlay_configs')
-    .select('config')
-    .eq('broadcaster_id', uid)
-    .eq('type', 'discord_webhook')
-    .maybeSingle()
-
-  const webhookUrl = cfgRow?.config?.url as string | undefined
-  if (!webhookUrl) return NextResponse.json({ error: 'Webhook não configurado' }, { status: 400 })
-
   const body = await req.json().catch(() => ({}))
   const {
     title   = '🔴 Live iniciada!',
@@ -37,7 +24,24 @@ export async function POST(req: NextRequest) {
     color   = 0x9b30ff,
     fields  = [] as { name: string; value: string; inline?: boolean }[],
     isTest  = false,
+    url: bodyUrl = '',
   } = body
+
+  // For tests: use the URL passed directly in the body (before save).
+  // For real notifications: load from DB.
+  let webhookUrl = bodyUrl as string
+  if (!webhookUrl) {
+    const db = getSupabaseAdmin()
+    const { data: cfgRow } = await db
+      .from('overlay_configs')
+      .select('config')
+      .eq('broadcaster_id', uid)
+      .eq('type', 'discord_webhook')
+      .maybeSingle()
+    webhookUrl = cfgRow?.config?.url as string ?? ''
+  }
+
+  if (!webhookUrl) return NextResponse.json({ error: 'Webhook não configurado' }, { status: 400 })
 
   const payload = {
     embeds: [{

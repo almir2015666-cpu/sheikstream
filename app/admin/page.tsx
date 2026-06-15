@@ -327,6 +327,7 @@ export default function AdminPage() {
   const [catalogNewForm, setCatalogNewForm] = useState<CatalogItem>(CATALOG_BLANK)
   const [catalogDropTarget, setCatalogDropTarget] = useState<{col: 'visible'|'hidden', idx: number} | null>(null)
   const [navDragOver, setNavDragOver] = useState<number | null>(null)
+  const [navDragOverFolder, setNavDragOverFolder] = useState<string | null>(null)
   const NAV_ITEMS_LIST = [
     { id: 'dashboard',      label: 'Dashboard',           href: '/dashboard' },
     { id: 'subathon',       label: 'Subathon',            href: '/dashboard/subathon' },
@@ -2629,7 +2630,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
                   <div>
                     <div style={{ fontSize: '0.95rem', fontWeight: 800, color: C.text }}>Ordem e Status do Menu</div>
-                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.1rem' }}>Arraste para reordenar · Clique no status para alternar</div>
+                    <div style={{ fontSize: '0.73rem', color: C.muted, marginTop: '0.1rem' }}>Arraste para reordenar · Solte na zona 📁 de uma pasta para adicionar sub-item</div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                     <button onClick={saveNav} style={{ padding: '0.45rem 1.1rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>✓ Salvar</button>
@@ -2639,20 +2640,43 @@ export default function AdminPage() {
 
                 {/* 2-column grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}
-                  onDragEnd={() => setNavDragOver(null)}>
+                  onDragEnd={() => { setNavDragOver(null); setNavDragOverFolder(null) }}>
                   {rootOrdered.map((item, idx) => {
                     const st = navItemStatus[item.id] ?? ''
                     const hardKids = NAV_CHILDREN[item.id] ?? []
                     const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
                     const hasKids = hardKids.length > 0 || dbKids.length > 0
-                    const isDragOver = navDragOver === idx
+                    const isReorderOver = navDragOver === idx
+                    const isFolderOver = navDragOverFolder === item.id
                     return (
                       <div key={item.id}
                         draggable
                         onDragStart={e => { e.dataTransfer.setData('text/plain', String(idx)); e.dataTransfer.effectAllowed = 'move' }}
-                        onDragOver={e => { e.preventDefault(); if (navDragOver !== idx) setNavDragOver(idx) }}
-                        onDrop={e => { e.preventDefault(); setNavDragOver(null); const src = parseInt(e.dataTransfer.getData('text/plain')); reorderByDrag(src, idx) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.6rem 0.85rem', background: isDragOver ? C.primaryBg : C.cardBg, border: `1px solid ${isDragOver ? C.borderStrong : C.border}`, borderLeft: `3px solid ${isDragOver ? C.primary : 'transparent'}`, borderRadius: '10px', cursor: 'grab', transition: 'all 0.1s', userSelect: 'none' }}>
+                        onDragOver={e => {
+                          e.preventDefault()
+                          if (hasKids) {
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                            if ((e.clientY - rect.top) / rect.height > 0.55) {
+                              if (navDragOverFolder !== item.id) { setNavDragOverFolder(item.id); setNavDragOver(null) }
+                              return
+                            }
+                          }
+                          if (navDragOverFolder !== null) setNavDragOverFolder(null)
+                          if (navDragOver !== idx) setNavDragOver(idx)
+                        }}
+                        onDrop={e => {
+                          e.preventDefault()
+                          const src = parseInt(e.dataTransfer.getData('text/plain'))
+                          if (navDragOverFolder === item.id) {
+                            const srcItem = rootOrdered[src]
+                            if (srcItem && srcItem.id !== item.id) setNavParents(prev => ({ ...prev, [srcItem.id]: item.id }))
+                          } else {
+                            reorderByDrag(src, idx)
+                          }
+                          setNavDragOver(null)
+                          setNavDragOverFolder(null)
+                        }}
+                        style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.6rem 0.85rem', background: isFolderOver ? 'rgba(155,48,255,0.12)' : isReorderOver ? C.primaryBg : C.cardBg, border: `1px solid ${isFolderOver ? C.primary : isReorderOver ? C.borderStrong : C.border}`, borderLeft: `3px solid ${isFolderOver || isReorderOver ? C.primary : 'transparent'}`, borderRadius: '10px', cursor: 'grab', transition: 'all 0.1s', userSelect: 'none', minHeight: 44, overflow: 'hidden' }}>
                         <span style={{ fontSize: '0.65rem', fontWeight: 800, color: C.vdim, minWidth: 18, textAlign: 'right', flexShrink: 0 }}>{idx + 1}</span>
                         <svg width="8" height="14" viewBox="0 0 8 14" fill={C.vdim} style={{ flexShrink: 0 }}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
                         <span style={{ flex: 1, fontSize: '0.86rem', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -2663,6 +2687,20 @@ export default function AdminPage() {
                           style={{ padding: '0.18rem 0.5rem', borderRadius: '999px', border: `1px solid ${stColor(st)}55`, background: `${stColor(st)}15`, color: stColor(st), fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                           {stLabel(st)}
                         </button>
+                        {/* Folder drop hint — always visible on folder items */}
+                        {hasKids && !isFolderOver && (
+                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '38%', pointerEvents: 'none', borderTop: `1px dashed rgba(155,48,255,0.18)`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', fontSize: '0.5rem', color: 'rgba(155,48,255,0.35)', fontWeight: 700 }}>
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            soltar aqui
+                          </div>
+                        )}
+                        {/* Folder drop active overlay */}
+                        {isFolderOver && (
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(155,48,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', gap: '0.35rem', fontSize: '0.68rem', fontWeight: 700, color: C.primary }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            Adicionar à pasta
+                          </div>
+                        )}
                       </div>
                     )
                   })}
@@ -2888,7 +2926,7 @@ export default function AdminPage() {
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, marginBottom: '0.3rem' }}>Páginas disponíveis — clique para adicionar ao catálogo</div>
                   <div style={{ fontSize: '0.7rem', color: C.muted, marginBottom: '0.75rem' }}>Itens marcados já estão no catálogo. Clique novamente para remover.</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                    {NAV_ITEMS_LIST.map(page => {
+                    {NAV_ITEMS_LIST.filter(page => !Object.keys(NAV_CHILDREN).includes(page.id)).map(page => {
                       const inCatalog = catalogItems.some(c => c.type === page.id && !c.removed)
                       return (
                         <button key={page.id}
