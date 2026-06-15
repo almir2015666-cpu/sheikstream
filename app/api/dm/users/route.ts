@@ -64,9 +64,16 @@ export async function GET(req: NextRequest) {
       (recent ?? []).map(r => (r.username as string).toLowerCase())
     )
 
-    const usernames = (tokens ?? [])
-      .map(t => t.twitch_username as string)
-      .filter(Boolean)
+    // Deduplicate by twitch_username (some users may have multiple rows)
+    const seenNames = new Set<string>()
+    const uniqueTokens = (tokens ?? []).filter(t => {
+      const name = ((t.twitch_username as string) ?? '').toLowerCase()
+      if (!name || seenNames.has(name)) return false
+      seenNames.add(name)
+      return true
+    })
+
+    const usernames = uniqueTokens.map(t => t.twitch_username as string).filter(Boolean)
 
     // Fetch profile images from Twitch in parallel with the rest
     let profileImages = new Map<string, string>()
@@ -75,7 +82,7 @@ export async function GET(req: NextRequest) {
       if (appToken) profileImages = await fetchProfileImages(usernames, appToken)
     }
 
-    const users = (tokens ?? []).map(t => {
+    const users = uniqueTokens.map(t => {
       const name = (t.twitch_username as string) ?? 'Usuário'
       return {
         id: t.user_id as string,

@@ -286,13 +286,24 @@ export function ChatWidget({
           {view === 'setup' && (
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '10px', padding: '0.85rem', fontSize: '0.8rem', color: '#fcd34d', lineHeight: 1.5 }}>
-                ⚠️ A tabela do chat ainda não foi criada no Supabase. Execute o SQL abaixo uma única vez.
+                ⚠️ A tabela do chat ainda não foi criada no Supabase. Clique em "Abrir SQL Editor" abaixo, cole o SQL e execute.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.85rem', fontSize: '0.72rem', color: '#86efac', fontFamily: 'monospace', lineHeight: 1.6, whiteSpace: 'pre-wrap', userSelect: 'all', overflowX: 'auto' }}>
                 {SETUP_SQL}
               </div>
               <button onClick={copySQL} style={{ background: copied ? 'rgba(34,197,94,0.15)' : S.primaryBg, border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : S.borderP}`, color: copied ? '#86efac' : S.primary, borderRadius: '9px', padding: '0.6rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
                 {copied ? '✓ Copiado!' : '📋 Copiar SQL'}
+              </button>
+              <button
+                onClick={() => {
+                  copySQL()
+                  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+                  const ref = url.replace('https://', '').replace('.supabase.co', '').split('.')[0]
+                  window.open(`https://supabase.com/dashboard/project/${ref}/sql/new`, '_blank')
+                }}
+                style={{ background: 'rgba(62,207,142,0.12)', border: '1px solid rgba(62,207,142,0.3)', color: '#3ecf8e', borderRadius: '9px', padding: '0.6rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}
+              >
+                🔗 Copiar + Abrir SQL Editor
               </button>
               <div style={{ color: S.dim, fontSize: '0.72rem', textAlign: 'center', lineHeight: 1.6 }}>
                 Após executar, volte aqui e clique em ← para tentar novamente.

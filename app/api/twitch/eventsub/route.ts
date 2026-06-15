@@ -11,6 +11,19 @@ export async function GET() {
   })
 }
 
+// In-memory dedup: prevents Twitch webhook retries from firing twice.
+// TTL ~10 min is enough since Twitch stops retrying within a few minutes.
+const _seenMsgIds = new Map<string, number>()
+function isDuplicate(msgId: string): boolean {
+  if (!msgId) return false
+  const now = Date.now()
+  // Clean entries older than 10 minutes
+  for (const [id, t] of _seenMsgIds) { if (now - t > 600_000) _seenMsgIds.delete(id) }
+  if (_seenMsgIds.has(msgId)) return true
+  _seenMsgIds.set(msgId, now)
+  return false
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const msgType  = req.headers.get('Twitch-Eventsub-Message-Type') ?? ''
@@ -38,6 +51,10 @@ export async function POST(req: NextRequest) {
   const payload = JSON.parse(body)
 
   if (msgType === 'notification') {
+    if (isDuplicate(msgId)) {
+      console.log('[eventsub] duplicate msgId — skipping:', msgId.slice(0, 8))
+      return new NextResponse(null, { status: 204 })
+    }
     await handleNotification(payload).catch(e => console.error('[eventsub] handler error:', e))
   }
 
