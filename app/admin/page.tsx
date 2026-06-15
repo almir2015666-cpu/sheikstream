@@ -2585,7 +2585,7 @@ export default function AdminPage() {
 
             const cycleStatus = (id: string) => {
               const cur = navItemStatus[id] ?? ''
-              const next: Record<string, string> = { '': 'soon', soon: 'maintenance', maintenance: '' }
+              const next: Record<string, string> = { '': 'soon', soon: '', maintenance: '' }
               setStatus(id, next[cur] as any)
             }
 
@@ -2640,6 +2640,7 @@ export default function AdminPage() {
                         onDragOver={e => { e.preventDefault(); if (navDragOver !== idx) setNavDragOver(idx) }}
                         onDrop={e => { e.preventDefault(); setNavDragOver(null); const src = parseInt(e.dataTransfer.getData('text/plain')); reorderByDrag(src, idx) }}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.6rem 0.85rem', background: isDragOver ? C.primaryBg : C.cardBg, border: `1px solid ${isDragOver ? C.borderStrong : C.border}`, borderLeft: `3px solid ${isDragOver ? C.primary : 'transparent'}`, borderRadius: '10px', cursor: 'grab', transition: 'all 0.1s', userSelect: 'none' }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: C.vdim, minWidth: 18, textAlign: 'right', flexShrink: 0 }}>{idx + 1}</span>
                         <svg width="8" height="14" viewBox="0 0 8 14" fill={C.vdim} style={{ flexShrink: 0 }}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
                         <span style={{ flex: 1, fontSize: '0.86rem', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                           {item.label}
@@ -2684,7 +2685,7 @@ export default function AdminPage() {
                           <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, color: curParent ? C.text : C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
                           <select value={curParent}
                             onChange={e => setNavParents(prev => { const n = { ...prev }; if (e.target.value) n[item.id] = e.target.value; else delete n[item.id]; return n })}
-                            style={{ padding: '0.2rem 0.35rem', background: curParent ? C.primaryBg : 'transparent', border: `1px solid ${curParent ? C.borderStrong : C.border}`, color: curParent ? C.primary : C.vdim, borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', flexShrink: 0, maxWidth: 110 }}>
+                            style={{ padding: '0.2rem 0.35rem', background: C.inputBg, border: `1px solid ${curParent ? C.borderStrong : C.border}`, color: curParent ? C.primary : C.vdim, borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', flexShrink: 0, maxWidth: 110, colorScheme: 'dark' }}>
                             <option value="">—</option>
                             {rootOrdered.filter(i => i.id !== item.id && !navParents[i.id]).map(i => (
                               <option key={i.id} value={i.id}>{i.label}</option>
