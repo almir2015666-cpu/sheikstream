@@ -2799,6 +2799,8 @@ export default function AdminPage() {
                         })()}
                         <button onClick={() => setCatalogItems(prev => prev.map(x => x.type === item.type ? { ...x, removed: true } : x))}
                           title="Mover para lateral" style={{ width: 20, height: 20, background: 'transparent', border: `1px solid ${C.border}`, color: C.vdim, borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+                        <button onClick={() => setCatalogItems(prev => prev.filter(x => x.type !== item.type))}
+                          title="Remover completamente" style={{ width: 20, height: 20, background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>🗑</button>
                       </div>
                     )
                   })}
