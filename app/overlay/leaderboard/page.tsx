@@ -102,7 +102,7 @@ export default function LeaderboardOverlayPage() {
           font-family: -apple-system, 'Inter', system-ui, sans-serif;
         }
       `}</style>
-      <div style={{ padding: '8px', display: 'inline-block' }}>
+      <div style={{ width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '8px', boxSizing: 'border-box' }}>
         <Suspense fallback={null}>
           <LeaderboardOverlayContent />
         </Suspense>
