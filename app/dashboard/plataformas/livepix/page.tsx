@@ -113,7 +113,7 @@ export default function LivepixDonorsPage() {
       if (!res.ok) { setDebugError(`Erro ${res.status}: ${res.statusText}`); return }
       const d = await res.json()
       setDebugPayloads(d.recent_webhooks ?? [])
-      setDebugSetupSql(d.setup_sql ?? '')
+      setDebugSetupSql('')
     } catch (e) {
       setDebugError(String(e))
     } finally {

@@ -23,8 +23,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!cfg) return NextResponse.json({ error: 'config not found for slug' }, { status: 404 })
 
-  // Store raw payload in DB for debug (fire-and-forget)
-  storeDebugPayload(db, cfg.user_id, slug, body).catch(() => {})
+  // Store raw payload in twitch_events for debug (before any parsing)
+  try {
+    await db.from('twitch_events').insert({
+      broadcaster_id: cfg.user_id,
+      event_type: 'livepix.webhook.raw',
+      event_data: { slug, raw: body, ts: new Date().toISOString() },
+    })
+  } catch { /* ignore */ }
 
   const broadcasterId = cfg.channel_id || cfg.user_id
 

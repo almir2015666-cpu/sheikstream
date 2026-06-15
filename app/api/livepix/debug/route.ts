@@ -2,26 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { decodeSession, COOKIE_NAME } from '@/lib/session'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 
-export const ADD_COLUMN_SQL = `ALTER TABLE public.livepix_config ADD COLUMN IF NOT EXISTS debug_payloads jsonb DEFAULT '[]'::jsonb;`
-
-export async function storeDebugPayload(db: ReturnType<typeof getSupabaseAdmin>, userId: string, slug: string, body: unknown) {
-  try {
-    const { data: cfg } = await db
-      .from('livepix_config')
-      .select('debug_payloads')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    const existing: unknown[] = Array.isArray((cfg as { debug_payloads?: unknown })?.debug_payloads)
-      ? (cfg as { debug_payloads: unknown[] }).debug_payloads
-      : []
-
-    const entry = { ts: new Date().toISOString(), slug, body }
-    const updated = [entry, ...existing].slice(0, 5)
-
-    await db.from('livepix_config').update({ debug_payloads: updated }).eq('user_id', userId)
-  } catch { /* ignore — column may not exist yet */ }
-}
+// Kept for backward compat — no longer used
+export async function storeDebugPayload(
+  _db: ReturnType<typeof getSupabaseAdmin>,
+  _userId: string,
+  _slug: string,
+  _body: unknown,
+) {}
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get(COOKIE_NAME)?.value
@@ -29,27 +16,23 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = getSupabaseAdmin()
+
+  // Read last 5 raw webhook debug events from twitch_events (no migration needed)
   const { data, error } = await db
-    .from('livepix_config')
-    .select('debug_payloads, slug')
-    .eq('user_id', user.id)
-    .maybeSingle()
+    .from('twitch_events')
+    .select('created_at, event_data')
+    .eq('broadcaster_id', user.id)
+    .eq('event_type', 'livepix.webhook.raw')
+    .order('created_at', { ascending: false })
+    .limit(5)
 
-  if (error?.message?.includes('column') || error?.code === 'PGRST204' || (error && !data)) {
-    return NextResponse.json({
-      recent_webhooks: [],
-      setup_sql: ADD_COLUMN_SQL,
-      note: 'Execute o SQL acima no Supabase SQL Editor para ativar o debug persistente.',
-    })
-  }
+  if (error) return NextResponse.json({ error: error.message, recent_webhooks: [] })
 
-  const payloads = Array.isArray((data as { debug_payloads?: unknown })?.debug_payloads)
-    ? (data as { debug_payloads: unknown[] }).debug_payloads
-    : []
+  const recent_webhooks = (data ?? []).map(row => ({
+    ts: row.created_at,
+    slug: (row.event_data as { slug?: string })?.slug ?? '',
+    body: (row.event_data as { raw?: unknown })?.raw ?? row.event_data,
+  }))
 
-  return NextResponse.json({
-    recent_webhooks: payloads,
-    slug: (data as { slug?: string })?.slug ?? '',
-    note: 'Últimos 5 payloads recebidos pelo webhook Livepix',
-  })
+  return NextResponse.json({ recent_webhooks })
 }
