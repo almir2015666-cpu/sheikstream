@@ -37,6 +37,7 @@ export default function LivepixDonorsPage() {
   const [debugPayloads, setDebugPayloads] = useState<{ ts: string; slug: string; body: unknown }[]>([])
   const [debugLoading, setDebugLoading] = useState(false)
   const [debugError, setDebugError] = useState('')
+  const [debugSetupSql, setDebugSetupSql] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -112,6 +113,7 @@ export default function LivepixDonorsPage() {
       if (!res.ok) { setDebugError(`Erro ${res.status}: ${res.statusText}`); return }
       const d = await res.json()
       setDebugPayloads(d.recent_webhooks ?? [])
+      setDebugSetupSql(d.setup_sql ?? '')
     } catch (e) {
       setDebugError(String(e))
     } finally {
@@ -299,9 +301,20 @@ export default function LivepixDonorsPage() {
             </button>
           </div>
           {debugError && <div style={{ color: C.red, fontSize: '0.82rem', marginBottom: '0.75rem' }}>{debugError}</div>}
-          {debugPayloads.length === 0 && !debugLoading && (
+          {debugSetupSql && (
+            <div style={{ background: 'rgba(255,165,0,0.08)', border: '1px solid rgba(255,165,0,0.25)', borderRadius: '10px', padding: '0.9rem 1rem', marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.78rem', color: '#ffa500', fontWeight: 700, marginBottom: '0.4rem' }}>Execute este SQL no Supabase para ativar o debug persistente:</div>
+              <pre style={{ margin: 0, fontSize: '0.72rem', color: C.text, background: '#0b0d1a', borderRadius: '6px', padding: '0.6rem 0.8rem', overflowX: 'auto' }}>{debugSetupSql}</pre>
+            </div>
+          )}
+          {debugPayloads.length === 0 && !debugLoading && !debugSetupSql && (
             <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '2.5rem', textAlign: 'center', color: C.dim, fontSize: '0.85rem' }}>
               Nenhum webhook recebido ainda. Faça uma doação real no Livepix e atualize esta aba.
+            </div>
+          )}
+          {debugPayloads.length === 0 && !debugLoading && debugSetupSql && (
+            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '2rem', textAlign: 'center', color: C.dim, fontSize: '0.85rem' }}>
+              Execute o SQL acima, depois faça uma doação no Livepix e clique Atualizar.
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

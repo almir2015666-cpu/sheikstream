@@ -12,7 +12,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   try { body = await req.json() } catch { return NextResponse.json({ error: 'invalid json' }, { status: 400 }) }
 
   console.log('[livepix webhook] raw body:', JSON.stringify(body).slice(0, 500))
-  storeDebugPayload(slug, body)
 
   const db = getSupabaseAdmin()
 
@@ -23,6 +22,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     .maybeSingle()
 
   if (!cfg) return NextResponse.json({ error: 'config not found for slug' }, { status: 404 })
+
+  // Store raw payload in DB for debug (fire-and-forget)
+  storeDebugPayload(db, cfg.user_id, slug, body).catch(() => {})
 
   const broadcasterId = cfg.channel_id || cfg.user_id
 
