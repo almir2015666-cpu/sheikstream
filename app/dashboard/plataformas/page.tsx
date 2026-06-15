@@ -35,7 +35,7 @@ const PLATS = [
     id: 'livepix', label: 'Livepix', color: '#ff69b4', bg: 'rgba(255,105,180,0.08)',
     desc: 'Doações, histórico de transações e integração com sorteios e metas',
     features: ['Doações recebidas', 'Histórico de transações', 'Integração com sorteios', 'Vaquinhas', 'Metas de doação'],
-    href: '/dashboard/conexoes', badge: null,
+    href: '/dashboard/plataformas/livepix', badge: null,
   },
 ]
 
