@@ -360,7 +360,7 @@ export default function AdminPage() {
     { id: 's-tickets',      label: 'Tickets (Sorteio)',   href: '/dashboard/sorteios/tickets' },
   ]
   const NAV_CHILDREN: Record<string, { id: string; label: string }[]> = {
-    ia:          [{ id: 'ia-chat', label: 'IA de Chat' }, { id: 'ia-imagens', label: 'IA de Imagens' }],
+    ia:          [{ id: 'ia-chat', label: 'IA de Chat' }, { id: 'ia-voz', label: 'IA por Voz' }, { id: 'ia-imagens', label: 'IA de Imagens' }],
     sorteios:    [{ id: 's-criar', label: 'Criar / Editar' }, { id: 's-tickets', label: 'Tickets' }],
     plataformas: [{ id: 'p-twitch', label: 'Twitch' }, { id: 'p-kick', label: 'Kick' }, { id: 'p-livepix', label: 'Livepix' }],
   }
