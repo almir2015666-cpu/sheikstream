@@ -34,7 +34,7 @@ export default function LivepixDonorsPage() {
   const [activeTab, setActiveTab] = useState<'list' | 'add' | 'debug'>('list')
   const [form, setForm] = useState({ ...BLANK })
   const [saving, setSaving] = useState(false)
-  const [debugPayloads, setDebugPayloads] = useState<{ ts: string; slug: string; body: unknown }[]>([])
+  const [debugPayloads, setDebugPayloads] = useState<{ ts: string; type?: string; slug: string; body: unknown }[]>([])
   const [debugLoading, setDebugLoading] = useState(false)
   const [debugError, setDebugError] = useState('')
   const [debugSetupSql, setDebugSetupSql] = useState('')
@@ -322,8 +322,8 @@ export default function LivepixDonorsPage() {
               <div key={i} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', overflow: 'hidden' }}>
                 <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid ${C.cardB}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.45rem', background: C.primaryBg, color: C.primary, border: `1px solid ${C.primaryB}`, borderRadius: 99, fontWeight: 700 }}>#{i + 1}</span>
+                  <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.45rem', background: p.type === 'livepix.webhook.error' ? C.redBg : p.type === 'livepix.webhook.payment' ? C.blueBg : 'rgba(255,255,255,0.05)', color: p.type === 'livepix.webhook.error' ? C.red : p.type === 'livepix.webhook.payment' ? C.blue : C.dim, borderRadius: 99, fontWeight: 700 }}>{p.type?.replace('livepix.webhook.', '') ?? 'raw'}</span>
                   <span style={{ fontSize: '0.78rem', color: C.text, fontWeight: 600 }}>{p.ts}</span>
-                  <span style={{ fontSize: '0.75rem', color: C.dim }}>slug: <code style={{ color: C.primary }}>{p.slug}</code></span>
                 </div>
                 <pre style={{ margin: 0, padding: '0.85rem 1rem', fontSize: '0.72rem', color: C.text, overflowX: 'auto', lineHeight: 1.55, background: 'transparent' }}>
                   {JSON.stringify(p.body, null, 2)}

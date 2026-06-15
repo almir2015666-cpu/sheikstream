@@ -17,21 +17,22 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  // Read last 5 raw webhook debug events from twitch_events (no migration needed)
+  // Read last 10 debug events (raw + payment + error) from twitch_events
   const { data, error } = await db
     .from('twitch_events')
-    .select('created_at, event_data')
+    .select('created_at, event_type, event_data')
     .eq('broadcaster_id', user.id)
-    .eq('event_type', 'livepix.webhook.raw')
+    .in('event_type', ['livepix.webhook.raw', 'livepix.webhook.payment', 'livepix.webhook.error'])
     .order('created_at', { ascending: false })
-    .limit(5)
+    .limit(10)
 
   if (error) return NextResponse.json({ error: error.message, recent_webhooks: [] })
 
   const recent_webhooks = (data ?? []).map(row => ({
     ts: row.created_at,
+    type: row.event_type,
     slug: (row.event_data as { slug?: string })?.slug ?? '',
-    body: (row.event_data as { raw?: unknown })?.raw ?? row.event_data,
+    body: row.event_data,
   }))
 
   return NextResponse.json({ recent_webhooks })

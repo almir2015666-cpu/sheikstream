@@ -34,15 +34,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!cfg) return NextResponse.json({ error: 'config not found for slug' }, { status: 404 })
 
-  // Store raw payload in twitch_events for debug (before any parsing)
-  try {
-    await db.from('twitch_events').insert({
-      broadcaster_id: cfg.user_id,
-      event_type: 'livepix.webhook.raw',
-      event_data: { slug, raw: body, ts: new Date().toISOString() },
-    })
-  } catch { /* ignore */ }
-
   const broadcasterId = cfg.channel_id || cfg.user_id
 
   // Livepix sends: { event: "new", resource: { id: "...", type: "message", ... } }
@@ -51,6 +42,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const resourceId = resource?.id ?? ''
   const resourceType = resource?.type ?? ''
   const eventType = String(body.event ?? '')
+
+  // Store raw payload in twitch_events for debug (includes resource info)
+  try {
+    await db.from('twitch_events').insert({
+      broadcaster_id: cfg.user_id,
+      event_type: 'livepix.webhook.raw',
+      event_data: { slug, raw: body, ts: new Date().toISOString() },
+    })
+  } catch { /* ignore */ }
 
   if (!resourceId || resourceType !== 'message' || eventType !== 'new') {
     console.log(`[livepix webhook] skipped: event=${eventType} type=${resourceType} id=${resourceId}`)
@@ -68,6 +68,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const token = await getLivepixToken(clientId, clientSecret)
   if (!token) {
     console.error('[livepix webhook] failed to get OAuth token')
+    // Store token failure in debug
+    try { await db.from('twitch_events').insert({ broadcaster_id: cfg.user_id, event_type: 'livepix.webhook.error', event_data: { error: 'token_failed', resourceId } }) } catch { /**/ }
     return NextResponse.json({ ok: true, skipped: 'token error' })
   }
 
@@ -78,18 +80,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   console.log('[livepix webhook] payment details:', JSON.stringify(payment).slice(0, 300))
 
+  // Store payment API response in debug
+  try { await db.from('twitch_events').insert({ broadcaster_id: cfg.user_id, event_type: 'livepix.webhook.payment', event_data: { resourceId, status: msgRes.status, payment } }) } catch { /**/ }
+
   const username = String(payment.username ?? payment.sender_name ?? 'Anônimo')
   const amountRaw = Number(payment.amount ?? 0)
-  const amount = amountRaw >= 100 ? amountRaw / 100 : amountRaw
+  const amount = amountRaw / 100  // Livepix always sends in cents
   const message = payment.message ? String(payment.message) : null
   const createdAt = String(payment.createdAt ?? payment.created_at ?? new Date().toISOString())
   const dateStr = createdAt.slice(0, 10)
 
   if (amount <= 0) {
-    return NextResponse.json({ ok: true, skipped: 'amount zero' })
+    return NextResponse.json({ ok: true, skipped: `amount zero (raw=${amountRaw})` })
   }
 
-  // Dedup
+  // Dedup by resource ID first (fastest)
+  const { data: existingById } = await db
+    .from('livepix_donors')
+    .select('id')
+    .eq('broadcaster_id', broadcasterId)
+    .eq('livepix_resource_id', resourceId)
+    .maybeSingle()
+
+  if (existingById) {
+    return NextResponse.json({ ok: true, skipped: 'duplicate resource_id' })
+  }
+
+  // Secondary dedup by username+date+amount
   const { data: existing } = await db
     .from('livepix_donors')
     .select('id')
