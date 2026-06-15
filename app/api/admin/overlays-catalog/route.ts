@@ -12,6 +12,7 @@ export type CatalogItem = {
   badge: string | null
   color: string
   live: boolean
+  status?: 'live' | 'soon' | 'maintenance'
   href: string
   hidden: boolean
 }

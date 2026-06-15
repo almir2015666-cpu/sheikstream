@@ -2592,10 +2592,11 @@ export default function AdminPage() {
             const stColor = (s: string) => s === 'maintenance' ? '#f59e0b' : s === 'soon' ? '#818cf8' : '#22c55e'
             const stLabel = (s: string) => s === 'maintenance' ? '🔧 Manutenção' : s === 'soon' ? '⏳ Em breve' : '● Ativo'
 
-            const renderChildRow = (chId: string, chLabel: string, isDb: boolean) => {
+            const renderChildRow = (chId: string, chLabel: string, isDb: boolean, num: number) => {
               const cs = navItemStatus[chId] ?? ''
               return (
-                <div key={chId} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 1.25rem 0.5rem 2.5rem', borderBottom: `1px solid ${C.border}`, background: 'rgba(155,48,255,0.03)' }}>
+                <div key={chId} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 1rem 0.5rem 1rem', borderBottom: `1px solid ${C.border}`, background: 'rgba(155,48,255,0.03)' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: C.vdim, minWidth: 18, textAlign: 'right', flexShrink: 0 }}>{num}</span>
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1v6h8" stroke={C.vdim} strokeWidth="1.5" strokeLinecap="round"/></svg>
                   <span style={{ flex: 1, fontSize: '0.83rem', color: C.muted, fontWeight: 500 }}>{chLabel}</span>
                   <button onClick={() => cycleStatus(chId)}
@@ -2659,17 +2660,23 @@ export default function AdminPage() {
                 {rootOrdered.some(item => (NAV_CHILDREN[item.id] ?? []).length > 0 || (childrenMap[item.id] ?? []).length > 0) && (
                   <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
                     <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid ${C.border}`, fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sub-itens</div>
-                    {rootOrdered.map(item => {
-                      const hardKids = NAV_CHILDREN[item.id] ?? []
-                      const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
-                      if (!hardKids.length && !dbKids.length) return null
-                      return (
-                        <React.Fragment key={item.id}>
-                          {hardKids.map(ch => renderChildRow(ch.id, ch.label, false))}
-                          {dbKids.map(ch => renderChildRow(ch.id, ch.label, true))}
-                        </React.Fragment>
-                      )
-                    })}
+                    {(() => {
+                      let counter = 0
+                      return rootOrdered.map(item => {
+                        const hardKids = NAV_CHILDREN[item.id] ?? []
+                        const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
+                        if (!hardKids.length && !dbKids.length) return null
+                        return (
+                          <React.Fragment key={item.id}>
+                            <div style={{ padding: '0.3rem 1rem', background: C.primaryBg, borderBottom: `1px solid ${C.border}`, fontSize: '0.65rem', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              📁 {item.label}
+                            </div>
+                            {hardKids.map(ch => renderChildRow(ch.id, ch.label, false, ++counter))}
+                            {dbKids.map(ch => renderChildRow(ch.id, ch.label, true, ++counter))}
+                          </React.Fragment>
+                        )
+                      })
+                    })()}
                   </div>
                 )}
 
