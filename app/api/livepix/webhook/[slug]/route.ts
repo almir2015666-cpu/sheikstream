@@ -64,6 +64,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     date: dateStr,
   })
 
+  // Insert into twitch_events so the overlay alert picks it up
+  try {
+    await db.from('twitch_events').insert({
+      broadcaster_id: broadcasterId,
+      event_type: 'livepix.donation',
+      event_data: {
+        user_name: username,
+        amount,
+        message: message ?? '',
+        platform: 'Livepix',
+      },
+    })
+  } catch { /* ignore */ }
+
   // Fire donation:livepix event command in Twitch chat (async, non-blocking)
   fireEventCommand(cfg.user_id, 'donation:livepix', {
     user:    username,
