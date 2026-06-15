@@ -490,6 +490,36 @@ async function handleNotification(payload: { subscription: { type: string }; eve
         return
       }
 
+      // !clip — creates a Twitch clip
+      if (trigger === 'clip') {
+        const { data: tok } = await db.from('user_tokens').select('twitch_token').eq('user_id', broadcasterId).maybeSingle()
+        if (tok?.twitch_token) {
+          try {
+            const clipRes = await fetch(`https://api.twitch.tv/helix/clips?broadcaster_id=${broadcasterId}`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${tok.twitch_token}`,
+                'Client-Id': process.env.TWITCH_CLIENT_ID!,
+              },
+            })
+            if (clipRes.ok) {
+              const clipData = await clipRes.json()
+              const clipId = clipData.data?.[0]?.id
+              const editUrl = clipData.data?.[0]?.edit_url
+              const clipUrl = editUrl ? editUrl.replace('/edit', '') : `https://clips.twitch.tv/${clipId}`
+              await sendChat(broadcasterId, `📹 Clip criado por @${chatter}! ${clipUrl}`)
+            } else {
+              const errText = await clipRes.text().catch(() => '')
+              console.warn('[eventsub] clip creation failed:', clipRes.status, errText)
+              await sendChat(broadcasterId, `❌ @${chatter} Não foi possível criar o clip agora. Tente novamente mais tarde.`)
+            }
+          } catch (e) {
+            console.error('[eventsub] clip error:', e)
+          }
+        }
+        return
+      }
+
       const { data: cmds } = await db
         .from('comandos')
         .select('id, trigger, resposta, cooldown_s, last_used_at')

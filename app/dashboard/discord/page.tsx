@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 const S = {
   bg: '#08090d', card: '#0f1018', cardB: 'rgba(255,255,255,0.06)',
@@ -20,14 +21,17 @@ const COLORS = [
 ]
 
 export default function DiscordPage() {
+  const router = useRouter()
   const [url,       setUrl]       = useState('')
   const [msgTitle,  setMsgTitle]  = useState('🔴 Estou AO VIVO!')
   const [msgBody,   setMsgBody]   = useState('Bora assistir a live! 👾')
   const [color,     setColor]     = useState(0x9b30ff)
   const [twitchUrl, setTwitchUrl] = useState('')
+  const [giftText,  setGiftText]  = useState('')
+  const [imageUrl,  setImageUrl]  = useState('')
   const [autoLive,  setAutoLive]  = useState(false)
   const [saving,    setSaving]    = useState(false)
-  const [saved,     setSaved]     = useState(false)
+  const [toast,     setToast]     = useState<{ msg: string; ok: boolean } | null>(null)
   const [testing,   setTesting]   = useState(false)
   const [testOk,    setTestOk]    = useState<boolean | null>(null)
   const [testErr,   setTestErr]   = useState('')
@@ -43,20 +47,28 @@ export default function DiscordPage() {
         if (d.msgBody)   setMsgBody(d.msgBody as string)
         if (d.color)     setColor(d.color as number)
         if (d.twitchUrl) setTwitchUrl(d.twitchUrl as string)
+        if (d.giftText)  setGiftText(d.giftText as string)
+        if (d.imageUrl)  setImageUrl(d.imageUrl as string)
         if (d.autoLive)  setAutoLive(d.autoLive as boolean)
       })
       .catch(() => {})
   }, [])
 
+  function showToast(msg: string, ok = true) {
+    setToast({ msg, ok })
+    setTimeout(() => setToast(null), 2800)
+  }
+
   async function save() {
     setSaving(true)
     try {
-      await fetch('/api/discord/webhook', {
+      const r = await fetch('/api/discord/webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, msgTitle, msgBody, color, twitchUrl, autoLive }),
+        body: JSON.stringify({ url, msgTitle, msgBody, color, twitchUrl, giftText, imageUrl, autoLive }),
       })
-      setSaved(true); setTimeout(() => setSaved(false), 2000)
+      if (r.ok) showToast('✓ Configurações salvas!')
+      else showToast('✗ Erro ao salvar', false)
     } finally { setSaving(false) }
   }
 
@@ -75,12 +87,14 @@ export default function DiscordPage() {
 
   async function sendLive() {
     setSending(true); setSendOk(null)
-    const fields = twitchUrl ? [{ name: '📺 Canal', value: `[Assistir agora](${twitchUrl})`, inline: true }] : []
+    const fields: { name: string; value: string; inline?: boolean }[] = []
+    if (twitchUrl) fields.push({ name: '📺 Canal', value: `[Assistir agora](${twitchUrl})`, inline: true })
+    if (giftText)  fields.push({ name: '🎁 Presentes', value: giftText, inline: true })
     try {
       const r = await fetch('/api/discord/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: msgTitle, message: msgBody, color, fields }),
+        body: JSON.stringify({ title: msgTitle, message: msgBody, color, fields, imageUrl }),
       })
       setSendOk(r.ok)
     } catch { setSendOk(false) }
@@ -93,12 +107,23 @@ export default function DiscordPage() {
   const lbl: React.CSSProperties = { fontSize: '0.68rem', fontWeight: 700, color: S.dim, textTransform: 'uppercase', letterSpacing: '0.06em' }
 
   return (
-    <div style={{ background: S.bg, minHeight: '100vh', padding: '1.75rem 2rem', fontFamily: "-apple-system,'Inter',sans-serif", color: S.text }}>
+    <div style={{ background: S.bg, minHeight: '100vh', padding: '1.75rem 2rem', fontFamily: "-apple-system,'Inter',sans-serif", color: S.text, position: 'relative' }}>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: toast.ok ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', border: `1px solid ${toast.ok ? S.greenB : S.redB}`, color: toast.ok ? S.green : S.red, borderRadius: 10, padding: '0.65rem 1.4rem', fontSize: '0.88rem', fontWeight: 700, backdropFilter: 'blur(12px)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+          {toast.msg}
+        </div>
+      )}
+
       <div style={{ maxWidth: 680 }}>
 
         {/* Header */}
         <div style={{ marginBottom: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.35rem' }}>
+            <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: 'rgba(255,255,255,0.05)', border: `1px solid ${S.border}`, borderRadius: 8, cursor: 'pointer', color: S.muted, flexShrink: 0 }} title="Voltar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
             <svg width="18" height="14" viewBox="0 0 71 55" fill={S.dim}><g clipPath="url(#c)"><path d="M60.1 4.9A58.5 58.5 0 0 0 45.6.7a40.7 40.7 0 0 0-1.8 3.7 54.1 54.1 0 0 0-16.3 0A39.7 39.7 0 0 0 25.7.7 58.4 58.4 0 0 0 11 5C1.6 18.8-1 32.3.3 45.6a58.9 58.9 0 0 0 18 9.1 42.3 42.3 0 0 0 3.7-6l-.1-.1a38.6 38.6 0 0 1-5.8-2.8l1-.7a42.2 42.2 0 0 0 36 0l1 .7a38.4 38.4 0 0 1-5.8 2.8 42.2 42.2 0 0 0 3.7 6 58.7 58.7 0 0 0 18-9C71.7 30.4 67.6 17 60.1 5ZM23.8 37.8c-3.5 0-6.4-3.2-6.4-7.2 0-3.9 2.8-7.2 6.4-7.2 3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Zm23.4 0c-3.5 0-6.4-3.2-6.4-7.2 0-3.9 2.8-7.2 6.4-7.2 3.6 0 6.5 3.3 6.4 7.2 0 4-2.8 7.2-6.4 7.2Z"/></g><defs><clipPath id="c"><path fill="#fff" d="M0 0h71v55H0z"/></clipPath></defs></svg>
             <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Discord Webhook</h2>
           </div>
@@ -164,15 +189,53 @@ export default function DiscordPage() {
           </div>
         </div>
 
+        {/* Extras: Gift + Image */}
+        <div style={{ background: S.card, border: `1px solid ${S.cardB}`, borderRadius: 12, padding: '1.25rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: S.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Extras</div>
+
+          <div style={row}>
+            <span style={lbl}>🎁 Texto de presentes / gifts (opcional)</span>
+            <input
+              value={giftText} onChange={e => setGiftText(e.target.value)}
+              placeholder="ex: Gift sub disponível para doações acima de R$20!"
+              style={inp}
+            />
+            <span style={{ fontSize: '0.7rem', color: S.dim }}>Aparece como campo extra no embed do Discord</span>
+          </div>
+
+          <div style={row}>
+            <span style={lbl}>🖼 URL da imagem (opcional)</span>
+            <input
+              value={imageUrl} onChange={e => setImageUrl(e.target.value)}
+              placeholder="https://i.imgur.com/sua-imagem.jpg"
+              style={inp}
+            />
+            <span style={{ fontSize: '0.7rem', color: S.dim }}>Imagem grande exibida no final do embed</span>
+          </div>
+        </div>
+
         {/* Preview */}
         <div style={{ background: S.card, border: `1px solid ${S.cardB}`, borderRadius: 12, padding: '1.25rem', marginBottom: '1.25rem' }}>
           <div style={{ fontSize: '0.68rem', fontWeight: 700, color: S.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>Preview</div>
           <div style={{ borderLeft: `4px solid ${hexColor}`, background: 'rgba(255,255,255,0.03)', borderRadius: '0 6px 6px 0', padding: '0.75rem 1rem' }}>
             <div style={{ fontWeight: 700, fontSize: '0.92rem', color: S.text, marginBottom: '0.35rem' }}>{msgTitle || 'Título…'}</div>
             <div style={{ fontSize: '0.8rem', color: S.muted, lineHeight: 1.5 }}>{msgBody || 'Descrição…'}</div>
-            {twitchUrl && (
-              <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#5865F2', textDecoration: 'underline', cursor: 'default' }}>
-                📺 Assistir agora
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '0.55rem' }}>
+              {twitchUrl && (
+                <div style={{ fontSize: '0.78rem', color: '#5865F2', textDecoration: 'underline', cursor: 'default' }}>
+                  📺 Assistir agora
+                </div>
+              )}
+              {giftText && (
+                <div style={{ fontSize: '0.78rem', color: '#f59e0b' }}>
+                  🎁 {giftText}
+                </div>
+              )}
+            </div>
+            {imageUrl && (
+              <div style={{ marginTop: '0.6rem', width: '100%', maxHeight: 80, overflow: 'hidden', borderRadius: 4, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imageUrl} alt="preview" style={{ width: '100%', objectFit: 'cover', borderRadius: 4, maxHeight: 80 }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
               </div>
             )}
             <div style={{ marginTop: '0.6rem', fontSize: '0.65rem', color: S.dim }}>SheikStream • Dashboard</div>
@@ -190,12 +253,12 @@ export default function DiscordPage() {
             {sending ? 'Enviando…' : sendOk === true ? '✓ Enviado!' : sendOk === false ? '✗ Falhou' : '📣 Notificar agora'}
           </button>
           <button onClick={save} disabled={saving} style={{
-            padding: '0.6rem 1.5rem', background: saved ? S.greenBg : S.primaryBg,
-            border: `1px solid ${saved ? S.greenB : S.primaryB}`,
-            color: saved ? S.green : S.primary,
+            padding: '0.6rem 1.5rem', background: S.primaryBg,
+            border: `1px solid ${S.primaryB}`,
+            color: S.primary,
             borderRadius: 9, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
           }}>
-            {saving ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar'}
+            {saving ? 'Salvando…' : 'Salvar'}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 const S = {
   bg: '#08090d', card: '#0f1018', cardB: 'rgba(255,255,255,0.06)',
@@ -7,15 +8,14 @@ const S = {
   primary: '#9b30ff', primaryBg: 'rgba(155,48,255,0.12)', primaryB: 'rgba(155,48,255,0.35)',
   green: '#22c55e', greenBg: 'rgba(34,197,94,0.1)', greenB: 'rgba(34,197,94,0.3)',
   red: '#ef4444', redBg: 'rgba(239,68,68,0.1)', redB: 'rgba(239,68,68,0.3)',
-  yellow: '#f59e0b', yellowBg: 'rgba(245,158,11,0.1)', yellowB: 'rgba(245,158,11,0.3)',
   border: 'rgba(255,255,255,0.07)',
 }
 
 const ACTIONS = [
-  { value: 'navigate',      label: 'Abrir página',     icon: '🔗', desc: 'Navega para uma URL do dashboard' },
-  { value: 'discord-live',  label: 'Notificar Discord', icon: '💬', desc: 'Envia notificação de live no Discord' },
-  { value: 'alert',         label: 'Mostrar alerta',   icon: '📢', desc: 'Exibe texto na tela por alguns segundos' },
-  { value: 'timer-start',   label: 'Iniciar timer',    icon: '⏱️', desc: 'Inicia um timer com minutos definidos' },
+  { value: 'navigate',     label: 'Abrir página',      icon: '🔗', desc: 'Navega para uma URL do dashboard' },
+  { value: 'discord-live', label: 'Notificar Discord', icon: '💬', desc: 'Envia notificação de live no Discord' },
+  { value: 'alert',        label: 'Mostrar alerta',    icon: '📢', desc: 'Exibe texto na tela por alguns segundos' },
+  { value: 'timer-start',  label: 'Iniciar timer',     icon: '⏱️', desc: 'Inicia um timer com minutos definidos' },
 ]
 
 type Cmd = { id: string; keyword: string; action: string; param: string; enabled: boolean }
@@ -34,18 +34,26 @@ declare global {
 }
 
 export default function ComandosVozPage() {
-  const [cmds,      setCmds]      = useState<Cmd[]>([])
-  const [listening, setListening] = useState(false)
-  const [transcript,setTranscript]= useState('')
-  const [matched,   setMatched]   = useState<string | null>(null)
-  const [saving,    setSaving]    = useState(false)
-  const [saved,     setSaved]     = useState(false)
-  const [supported, setSupported] = useState(true)
-  const [lang,      setLang]      = useState('pt-BR')
-  const [alert,     setAlert]     = useState('')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recogRef = useRef<any>(null)
-  const alertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const router = useRouter()
+  const [cmds,       setCmds]       = useState<Cmd[]>([])
+  const [listening,  setListening]  = useState(false)
+  const [transcript, setTranscript] = useState('')
+  const [matched,    setMatched]    = useState<string | null>(null)
+  const [saving,     setSaving]     = useState(false)
+  const [toast,      setToast]      = useState<{ msg: string; ok: boolean } | null>(null)
+  const [supported,  setSupported]  = useState(true)
+  const [lang,       setLang]       = useState('pt-BR')
+  const [alertMsg,   setAlertMsg]   = useState('')
+
+  // Refs so closures always see latest values
+  const recogRef      = useRef<any>(null)
+  const listeningRef  = useRef(false)
+  const cmdsRef       = useRef<Cmd[]>([])
+  const alertTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const langRef       = useRef(lang)
+
+  useEffect(() => { cmdsRef.current = cmds }, [cmds])
+  useEffect(() => { langRef.current = lang }, [lang])
 
   useEffect(() => {
     const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
@@ -56,18 +64,29 @@ export default function ComandosVozPage() {
       .catch(() => {})
   }, [])
 
-  function startListening() {
+  function buildRecognition() {
     const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
-    if (!SR) return
+    if (!SR) return null
     const r = new SR()
-    r.lang = lang
+    r.lang = langRef.current
     r.continuous = true
     r.interimResults = true
-    recogRef.current = r
+
     r.onstart = () => setListening(true)
-    r.onend   = () => setListening(false)
-    r.onerror = () => setListening(false)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.onerror = (e: any) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        listeningRef.current = false
+        setListening(false)
+      }
+    }
+    r.onend = () => {
+      // Auto-restart if we still want to be listening (continuous mode)
+      if (listeningRef.current) {
+        try { r.start() } catch { /* already started */ }
+      } else {
+        setListening(false)
+      }
+    }
     r.onresult = (e: any) => {
       let final = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -76,7 +95,8 @@ export default function ComandosVozPage() {
       const text = final.toLowerCase().trim()
       if (!text) return
       setTranscript(text)
-      const enabledCmds = cmds.filter(c => c.enabled && c.keyword)
+      // Use ref so we always see latest commands (no stale closure)
+      const enabledCmds = cmdsRef.current.filter(c => c.enabled && c.keyword)
       for (const cmd of enabledCmds) {
         if (text.includes(cmd.keyword.toLowerCase())) {
           setMatched(cmd.keyword)
@@ -86,34 +106,58 @@ export default function ComandosVozPage() {
         }
       }
     }
-    r.start()
+    return r
+  }
+
+  function startListening() {
+    const r = buildRecognition()
+    if (!r) return
+    listeningRef.current = true
+    recogRef.current = r
+    try { r.start() } catch { /* already started */ }
   }
 
   function stopListening() {
-    recogRef.current?.stop()
+    listeningRef.current = false
+    try { recogRef.current?.abort() } catch {}
     recogRef.current = null
+    setListening(false)
   }
 
   function execAction(cmd: Cmd) {
     if (cmd.action === 'navigate' && cmd.param) {
       window.open(cmd.param, '_blank')
     } else if (cmd.action === 'discord-live') {
-      fetch('/api/discord/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).catch(() => {})
+      fetch('/api/discord/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      }).catch(() => {})
     } else if (cmd.action === 'alert') {
       if (alertTimer.current) clearTimeout(alertTimer.current)
-      setAlert(cmd.param || cmd.keyword)
-      alertTimer.current = setTimeout(() => setAlert(''), 4000)
+      setAlertMsg(cmd.param || cmd.keyword)
+      alertTimer.current = setTimeout(() => setAlertMsg(''), 4000)
     } else if (cmd.action === 'timer-start') {
       const mins = parseInt(cmd.param) || 5
       window.open(`/dashboard/timers?start=${mins}`, '_blank')
     }
   }
 
+  function showToast(msg: string, ok = true) {
+    setToast({ msg, ok })
+    setTimeout(() => setToast(null), 2800)
+  }
+
   async function save() {
     setSaving(true)
     try {
-      await fetch('/api/voice-commands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commands: cmds }) })
-      setSaved(true); setTimeout(() => setSaved(false), 2000)
+      const r = await fetch('/api/voice-commands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commands: cmds }),
+      })
+      if (r.ok) showToast('✓ Comandos salvos!')
+      else showToast('✗ Erro ao salvar', false)
     } finally { setSaving(false) }
   }
 
@@ -122,18 +166,28 @@ export default function ComandosVozPage() {
   return (
     <div style={{ background: S.bg, minHeight: '100vh', padding: '1.75rem 2rem', fontFamily: "-apple-system,'Inter',sans-serif", color: S.text, position: 'relative' }}>
 
-      {/* Alert overlay */}
-      {alert && (
-        <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(155,48,255,0.95)', border: `1px solid ${S.primaryB}`, borderRadius: 12, padding: '0.75rem 1.5rem', zIndex: 999, fontSize: '1rem', fontWeight: 700, color: '#fff', backdropFilter: 'blur(8px)', boxShadow: '0 8px 32px rgba(155,48,255,0.4)', animation: 'alertIn 0.3s ease' }}>
-          📢 {alert}
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: toast.ok ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', border: `1px solid ${toast.ok ? S.greenB : S.redB}`, color: toast.ok ? S.green : S.red, borderRadius: 10, padding: '0.65rem 1.4rem', fontSize: '0.88rem', fontWeight: 700, backdropFilter: 'blur(12px)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+          {toast.msg}
         </div>
       )}
-      <style>{`@keyframes alertIn { from { opacity:0; transform:translateX(-50%) translateY(-8px) } to { opacity:1; transform:translateX(-50%) translateY(0) } }`}</style>
+
+      {/* Alert overlay */}
+      {alertMsg && (
+        <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(155,48,255,0.95)', border: `1px solid ${S.primaryB}`, borderRadius: 12, padding: '0.75rem 1.5rem', zIndex: 9998, fontSize: '1rem', fontWeight: 700, color: '#fff', backdropFilter: 'blur(8px)', boxShadow: '0 8px 32px rgba(155,48,255,0.4)' }}>
+          📢 {alertMsg}
+        </div>
+      )}
+      <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0)} }`}</style>
 
       <div style={{ maxWidth: 720 }}>
         {/* Header */}
         <div style={{ marginBottom: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+            <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: 'rgba(255,255,255,0.05)', border: `1px solid ${S.border}`, borderRadius: 8, cursor: 'pointer', color: S.muted, flexShrink: 0 }} title="Voltar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={S.dim} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
             <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Comandos de Voz</h2>
           </div>
@@ -158,7 +212,8 @@ export default function ComandosVozPage() {
               background: listening ? 'rgba(239,68,68,0.15)' : S.primaryBg,
               border: `2px solid ${listening ? S.red : S.primary}`,
               color: listening ? S.red : S.primary,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: supported ? 'pointer' : 'not-allowed',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               animation: listening ? 'pulse 1.5s ease infinite' : 'none',
             }}
           >
@@ -167,21 +222,20 @@ export default function ComandosVozPage() {
               : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
             }
           </button>
-          <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0)} }`}</style>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: '0.9rem', color: listening ? S.red : S.muted, marginBottom: '0.25rem' }}>
               {listening ? '🔴 Ouvindo…' : 'Microfone desligado'}
             </div>
             {transcript && (
               <div style={{ fontSize: '0.8rem', color: matched ? S.green : S.dim, fontStyle: 'italic' }}>
-                {matched ? `✓ Comando reconhecido: "${matched}"` : `"${transcript}"`}
+                {matched ? `✓ Comando: "${matched}"` : `"${transcript}"`}
               </div>
             )}
             {!transcript && !listening && <div style={{ fontSize: '0.78rem', color: S.dim }}>Clique no botão para ativar</div>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', alignItems: 'flex-end' }}>
             <span style={{ fontSize: '0.65rem', color: S.dim, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Idioma</span>
-            <select value={lang} onChange={e => setLang(e.target.value)} style={{ ...inp, paddingRight: '0.6rem', colorScheme: 'dark' }}>
+            <select value={lang} onChange={e => { setLang(e.target.value); langRef.current = e.target.value }} style={{ ...inp, paddingRight: '0.6rem', colorScheme: 'dark' }}>
               <option value="pt-BR">Português (BR)</option>
               <option value="en-US">English (US)</option>
               <option value="es-ES">Español</option>
@@ -249,10 +303,10 @@ export default function ComandosVozPage() {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button onClick={save} disabled={saving} style={{
-            padding: '0.6rem 1.5rem', background: saved ? S.greenBg : S.primaryBg, border: `1px solid ${saved ? S.greenB : S.primaryB}`,
-            color: saved ? S.green : S.primary, borderRadius: 9, fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer',
+            padding: '0.6rem 1.5rem', background: S.primaryBg, border: `1px solid ${S.primaryB}`,
+            color: S.primary, borderRadius: 9, fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer',
           }}>
-            {saving ? 'Salvando…' : saved ? '✓ Salvo!' : 'Salvar comandos'}
+            {saving ? 'Salvando…' : 'Salvar comandos'}
           </button>
         </div>
       </div>

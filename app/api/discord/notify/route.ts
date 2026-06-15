@@ -19,12 +19,13 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const {
-    title   = '🔴 Live iniciada!',
-    message = '',
-    color   = 0x9b30ff,
-    fields  = [] as { name: string; value: string; inline?: boolean }[],
-    isTest  = false,
+    title    = '🔴 Live iniciada!',
+    message  = '',
+    color    = 0x9b30ff,
+    fields   = [] as { name: string; value: string; inline?: boolean }[],
+    isTest   = false,
     url: bodyUrl = '',
+    imageUrl = '',
   } = body
 
   // For tests: use the URL passed directly in the body (before save).
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       description: message || undefined,
       color,
       fields,
+      image: imageUrl ? { url: imageUrl } : undefined,
       footer: { text: 'SheikStream • Dashboard' },
       timestamp: new Date().toISOString(),
     }],
