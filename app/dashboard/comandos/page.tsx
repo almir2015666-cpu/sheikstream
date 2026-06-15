@@ -1501,6 +1501,36 @@ export default function ComandosPage() {
         {filtered.length === 0 && (
           <div style={{ padding: '3rem', textAlign: 'center', fontSize: '0.84rem', color: C.dim }}>Nenhum comando encontrado</div>
         )}
+
+        {/* Comandos do sistema (built-in, always active) */}
+        {!search && (
+          <>
+            <div style={{ padding: '0.5rem 1.25rem 0.3rem', display: 'flex', alignItems: 'center', gap: '0.45rem', borderTop: `1px solid ${C.rowBorder}` }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.63rem', fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Comandos do sistema</span>
+              <span style={{ fontSize: '0.6rem', color: C.dim, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 4, padding: '0.05rem 0.4rem', marginLeft: 2 }}>sempre ativos</span>
+            </div>
+            {([
+              { cmd: '!clip',     icon: '📹', desc: 'Cria um clipe do momento na Twitch e responde com o link no chat' },
+              { cmd: '!pontos',   icon: '🏆', desc: 'Mostra a quantidade de pontos de fidelidade do usuário' },
+              { cmd: '!ranking',  icon: '📊', desc: 'Exibe o top 5 de pontos do canal' },
+              { cmd: '!resgatar', icon: '🎁', desc: 'Resgata uma recompensa de fidelidade (!resgatar <nome>)' },
+              { cmd: '!sr',       icon: '🎵', desc: 'Solicita uma música para a fila (Song Request)' },
+            ] as { cmd: string; icon: string; desc: string }[]).map(item => (
+              <div key={item.cmd} style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.6rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>{item.icon}</div>
+                <div>
+                  <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f59e0b', fontFamily: 'monospace' }}>{item.cmd}</span>
+                </div>
+                <span style={{ fontSize: '0.79rem', color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.75rem' }}>{item.desc}</span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <span style={{ fontSize: '0.62rem', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 5, padding: '0.12rem 0.5rem', fontWeight: 700 }}>sistema</span>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
       </div>
       </div>
     </div>
