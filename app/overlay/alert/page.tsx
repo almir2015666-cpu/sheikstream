@@ -566,7 +566,7 @@ export default function AlertOverlayPage() {
           to   { width: 0% }
         }
       `}</style>
-      <div style={{ padding: '12px', display: 'inline-block', position: 'relative' }}>
+      <div style={{ width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '12px', boxSizing: 'border-box' }}>
         <Suspense fallback={null}>
           <AlertOverlayContent />
         </Suspense>
