@@ -2518,7 +2518,7 @@ export default function AdminPage() {
               ? [...navOrder.filter(id => NAV_ITEMS_LIST.some(i => i.id === id)).map(id => NAV_ITEMS_LIST.find(i => i.id === id)!),
                  ...NAV_ITEMS_LIST.filter(i => !navOrder.includes(i.id))]
               : NAV_ITEMS_LIST
-            ).filter(i => !catalogVisible.has(i.id))
+            ).filter(i => !catalogVisible.has(i.id) || Object.keys(NAV_CHILDREN).includes(i.id))
 
             const moveNav = (id: string, dir: 'up' | 'down') => {
               const arr = [...ordered.map(i => i.id)]
@@ -2546,7 +2546,7 @@ export default function AdminPage() {
                 childrenMap[parentId].push(id)
               }
             })
-            const rootOrdered = ordered.filter(i => !childSet.has(i.id))
+            const rootOrdered = ordered.filter(i => !childSet.has(i.id) || Object.keys(NAV_CHILDREN).includes(i.id))
 
             const saveNav = async () => {
               const arr = rootOrdered.map(i => i.id)

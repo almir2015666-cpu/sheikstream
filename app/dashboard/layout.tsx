@@ -577,7 +577,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     if (!navChildrenDB || Object.keys(navChildrenDB).length === 0) return baseItems
-    const dbChildSet = new Set(Object.values(navChildrenDB).flat())
+    const folderIds = new Set(NAV_ALL.filter(i => i.children?.length).map(i => i.id))
+    const dbChildSet = new Set(Object.values(navChildrenDB).flat().filter(id => !folderIds.has(id)))
     return baseItems
       .filter(item => !dbChildSet.has(item.id))
       .map(item => {
