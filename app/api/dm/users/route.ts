@@ -50,10 +50,11 @@ export async function GET(req: NextRequest) {
 
     const [{ data: tokens }, { data: recent }, { data: meTok }] = await Promise.all([
       db.from('user_tokens')
-        .select('user_id, twitch_username')
+        .select('user_id, twitch_username, updated_at')
         .not('twitch_token', 'is', null)
         .neq('user_id', user.id)
-        .limit(100),
+        .order('updated_at', { ascending: false })
+        .limit(200),
       db.from('activity_logs')
         .select('username')
         .gte('performed_at', fiveMinAgo)

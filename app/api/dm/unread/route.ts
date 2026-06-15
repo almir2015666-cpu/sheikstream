@@ -8,15 +8,24 @@ function getUser(req: NextRequest) {
   return decodeSession(token)
 }
 
+async function getAllMyIds(db: ReturnType<typeof getSupabaseAdmin>, userId: string): Promise<string[]> {
+  const { data: me } = await db.from('user_tokens').select('twitch_username').eq('user_id', userId).maybeSingle()
+  if (!me?.twitch_username) return [userId]
+  const { data: rows } = await db.from('user_tokens').select('user_id').eq('twitch_username', me.twitch_username as string)
+  const ids = (rows ?? []).map(r => r.user_id as string).filter(Boolean)
+  return ids.length > 0 ? ids : [userId]
+}
+
 export async function GET(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json([], { status: 401 })
   try {
     const db = getSupabaseAdmin()
+    const myIds = await getAllMyIds(db, user.id)
     const { data, error } = await db
       .from('dm_messages')
       .select('sender_id')
-      .eq('receiver_id', user.id)
+      .in('receiver_id', myIds)
       .is('read_at', null)
     if (error) return NextResponse.json([], { status: 200 })
     const counts: Record<string, number> = {}
