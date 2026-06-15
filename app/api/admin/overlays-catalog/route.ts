@@ -30,7 +30,9 @@ const DEFAULTS: CatalogItem[] = [
   { type: 'goal',           label: 'Meta (Goal)',        badge: 'NOVO', color: '#f59e0b', live: true,  hidden: false, desc: 'Barra de progresso de meta personalizada: subs, bits, doações ou valor manual.',                href: '/dashboard/overlays/goal' },
   { type: 'patrocinadores', label: 'Patrocinadores',    badge: 'NOVO', color: '#a78bfa', live: false, hidden: false, desc: 'Carrossel de banners de patrocinadores com timing e layout configurável.',                      href: '/dashboard/overlays/patrocinadores' },
   { type: 'pedidos-musica',  label: 'Pedidos de Música', badge: 'NOVO', color: '#f472b6', live: true,  hidden: false, desc: 'Viewers pedem músicas pelo chat — aprovação manual e fila de reprodução em tempo real.',              href: '/dashboard/pedidos-musica' },
-  { type: 'clip-display',   label: 'Clip Display',      badge: 'NOVO', color: '#60a5fa', live: true,  hidden: false, desc: 'Notificação automática no OBS quando alguém cria um clipe durante a live — com thumbnail e título.', href: '/dashboard/overlays/clip-display' },
+  { type: 'clip-display',    label: 'Clip Display',       badge: 'NOVO', color: '#60a5fa', live: true,  hidden: false, desc: 'Notificação automática no OBS quando alguém cria um clipe durante a live — com thumbnail e título.',  href: '/dashboard/overlays/clip-display' },
+  { type: 'discord',         label: 'Discord Webhook',    badge: 'NOVO', color: '#5865F2', live: true,  hidden: false, desc: 'Envie notificações automáticas para o seu servidor Discord quando iniciar a live.',                    href: '/dashboard/discord' },
+  { type: 'comandos-voz',   label: 'Comandos de Voz',   badge: 'NOVO', color: '#22c55e', live: true,  hidden: false, desc: 'Acione ações do dashboard por reconhecimento de voz durante a live — sorteio, timer, alertas e mais.', href: '/dashboard/comandos-voz' },
 ]
 
 export async function GET() {

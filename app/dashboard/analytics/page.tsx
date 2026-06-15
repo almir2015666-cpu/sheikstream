@@ -6,6 +6,25 @@ const S = {
   muted: 'rgba(232,230,248,0.65)', dim: 'rgba(232,230,248,0.4)',
   vdim: 'rgba(232,230,248,0.2)', primary: '#9b30ff',
   border: 'rgba(255,255,255,0.07)', accent: '#39ff14',
+  green: '#22c55e', blue: '#3b82f6', yellow: '#f59e0b',
+}
+
+type RevenueData = {
+  months: string[]
+  subsByMonth: Record<string, number>
+  bitsByMonth: Record<string, number>
+  donsByMonth: Record<string, number>
+  totalSubs: number
+  totalBits: number
+  totalDons: number
+  total: number
+}
+
+function fmt(v: number) { return `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` }
+function monthLabel(m: string) {
+  const [y, mo] = m.split('-')
+  const names = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+  return names[parseInt(mo) - 1] + (y !== new Date().getFullYear().toString() ? ` '${y.slice(2)}` : '')
 }
 
 const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -26,15 +45,18 @@ type HeatData = {
 function pad(n: number) { return String(n).padStart(2, '0') }
 
 export default function AnalyticsPage() {
-  const [data, setData] = useState<HeatData | null>(null)
+  const [data,    setData]    = useState<HeatData | null>(null)
+  const [revenue, setRevenue] = useState<RevenueData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/analytics/heatmap')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setData(d) })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetch('/api/analytics/heatmap').then(r => r.ok ? r.json() : null),
+      fetch('/api/analytics/revenue').then(r => r.ok ? r.json() : null),
+    ]).then(([h, r]) => {
+      if (h) setData(h)
+      if (r) setRevenue(r)
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   const maxHeat = data ? Math.max(1, ...Object.values(data.heat)) : 1
@@ -158,6 +180,58 @@ export default function AnalyticsPage() {
               })}
             </div>
           </div>
+
+          {/* Revenue chart */}
+          {revenue && revenue.total > 0 && (() => {
+            const maxVal = Math.max(1, ...revenue.months.map(m =>
+              (revenue.subsByMonth[m] ?? 0) + (revenue.bitsByMonth[m] ?? 0) + (revenue.donsByMonth[m] ?? 0)
+            ))
+            return (
+              <div style={{ background: S.card, border: `1px solid ${S.border}`, borderRadius: 12, padding: '20px', marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: S.text }}>Receita estimada (6 meses)</div>
+                  <div style={{ display: 'flex', gap: 16, fontSize: '0.72rem', color: S.dim, flexWrap: 'wrap' }}>
+                    {[['Subs', S.primary], ['Bits', S.blue], ['Doações', S.green]].map(([l, c]) => (
+                      <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: c as string, display: 'inline-block' }} />{l}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 130, marginBottom: 8 }}>
+                  {revenue.months.map(m => {
+                    const subs = revenue.subsByMonth[m] ?? 0
+                    const bits = revenue.bitsByMonth[m] ?? 0
+                    const dons = revenue.donsByMonth[m] ?? 0
+                    const total = subs + bits + dons
+                    const hSubs = Math.round((subs / maxVal) * 100)
+                    const hBits = Math.round((bits / maxVal) * 100)
+                    const hDons = Math.round((dons / maxVal) * 100)
+                    return (
+                      <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        {total > 0 && <div style={{ fontSize: '0.58rem', color: S.vdim, whiteSpace: 'nowrap' }}>{fmt(total)}</div>}
+                        <div style={{ width: '100%', display: 'flex', alignItems: 'flex-end', gap: 1, height: 100 }}>
+                          {[[hSubs, S.primary], [hBits, S.blue], [hDons, S.green]].filter(([h]) => (h as number) > 0).map(([h, c], i) => (
+                            <div key={i} style={{ flex: 1, height: `${h}%`, background: c as string, borderRadius: '3px 3px 0 0', minHeight: 2, opacity: 0.85 }} />
+                          ))}
+                          {total === 0 && <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }} />}
+                        </div>
+                        <div style={{ fontSize: '0.62rem', color: S.vdim, whiteSpace: 'nowrap' }}>{monthLabel(m)}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 8, paddingTop: 12, borderTop: `1px solid ${S.border}` }}>
+                  {[['Subs', revenue.totalSubs, S.primary], ['Bits (BRL)', revenue.totalBits, S.blue], ['Doações', revenue.totalDons, S.green]].map(([l, v, c]) => (
+                    <div key={l as string} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.68rem', color: S.dim, marginBottom: 3 }}>{l}</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: c as string }}>{fmt(v as number)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Category breakdown */}
           {Object.keys(data.categoryCount).length > 0 && (
