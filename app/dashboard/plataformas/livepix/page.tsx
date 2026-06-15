@@ -31,9 +31,12 @@ export default function LivepixDonorsPage() {
   const [syncMsg, setSyncMsg] = useState('')
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<'tickets' | 'amount' | 'newest'>('tickets')
-  const [activeTab, setActiveTab] = useState<'list' | 'add'>('list')
+  const [activeTab, setActiveTab] = useState<'list' | 'add' | 'debug'>('list')
   const [form, setForm] = useState({ ...BLANK })
   const [saving, setSaving] = useState(false)
+  const [debugPayloads, setDebugPayloads] = useState<{ ts: string; slug: string; body: unknown }[]>([])
+  const [debugLoading, setDebugLoading] = useState(false)
+  const [debugError, setDebugError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -101,6 +104,21 @@ export default function LivepixDonorsPage() {
     }
   }
 
+  async function loadDebug() {
+    setDebugLoading(true)
+    setDebugError('')
+    try {
+      const res = await fetch('/api/livepix/debug')
+      if (!res.ok) { setDebugError(`Erro ${res.status}: ${res.statusText}`); return }
+      const d = await res.json()
+      setDebugPayloads(d.recent_webhooks ?? [])
+    } catch (e) {
+      setDebugError(String(e))
+    } finally {
+      setDebugLoading(false)
+    }
+  }
+
   async function removeDonor(id: string, username: string) {
     if (!confirm(`Remover ${username}?`)) return
     const res = await fetch(`/api/livepix/donors/${id}`, { method: 'DELETE' })
@@ -138,9 +156,9 @@ export default function LivepixDonorsPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${C.cardB}`, marginBottom: '1rem' }}>
-        {(['list', 'add'] as const).map(t => (
-          <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '0.6rem 1.1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.88rem', fontWeight: activeTab === t ? 700 : 400, color: activeTab === t ? C.text : C.dim, borderBottom: activeTab === t ? `2px solid ${C.primary}` : '2px solid transparent' }}>
-            {t === 'list' ? 'Doadores' : 'Adicionar Doador'}
+        {(['list', 'add', 'debug'] as const).map(t => (
+          <button key={t} onClick={() => { setActiveTab(t); if (t === 'debug') loadDebug() }} style={{ padding: '0.6rem 1.1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.88rem', fontWeight: activeTab === t ? 700 : 400, color: activeTab === t ? C.text : C.dim, borderBottom: activeTab === t ? `2px solid ${C.primary}` : '2px solid transparent' }}>
+            {t === 'list' ? 'Doadores' : t === 'add' ? 'Adicionar Doador' : 'Debug Webhook'}
           </button>
         ))}
       </div>
@@ -270,6 +288,37 @@ export default function LivepixDonorsPage() {
             </div>
           )}
         </>
+      )}
+
+      {activeTab === 'debug' && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div style={{ fontSize: '0.82rem', color: C.dim }}>Últimos 5 payloads recebidos pelo webhook Livepix (memória do servidor).</div>
+            <button onClick={loadDebug} disabled={debugLoading} style={{ padding: '0.4rem 0.9rem', background: 'transparent', border: `1px solid ${C.primaryB}`, color: C.primary, borderRadius: '8px', fontSize: '0.78rem', fontWeight: 600, cursor: debugLoading ? 'default' : 'pointer', opacity: debugLoading ? 0.6 : 1 }}>
+              {debugLoading ? 'Atualizando...' : 'Atualizar'}
+            </button>
+          </div>
+          {debugError && <div style={{ color: C.red, fontSize: '0.82rem', marginBottom: '0.75rem' }}>{debugError}</div>}
+          {debugPayloads.length === 0 && !debugLoading && (
+            <div style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', padding: '2.5rem', textAlign: 'center', color: C.dim, fontSize: '0.85rem' }}>
+              Nenhum webhook recebido ainda. Faça uma doação real no Livepix e atualize esta aba.
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {debugPayloads.map((p, i) => (
+              <div key={i} style={{ background: C.card, border: `1px solid ${C.cardB}`, borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid ${C.cardB}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.45rem', background: C.primaryBg, color: C.primary, border: `1px solid ${C.primaryB}`, borderRadius: 99, fontWeight: 700 }}>#{i + 1}</span>
+                  <span style={{ fontSize: '0.78rem', color: C.text, fontWeight: 600 }}>{p.ts}</span>
+                  <span style={{ fontSize: '0.75rem', color: C.dim }}>slug: <code style={{ color: C.primary }}>{p.slug}</code></span>
+                </div>
+                <pre style={{ margin: 0, padding: '0.85rem 1rem', fontSize: '0.72rem', color: C.text, overflowX: 'auto', lineHeight: 1.55, background: 'transparent' }}>
+                  {JSON.stringify(p.body, null, 2)}
+                </pre>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {activeTab === 'add' && (

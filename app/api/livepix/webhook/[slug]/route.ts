@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/app/lib/supabase'
 import { fireEventCommand } from '@/app/lib/event-commands'
+import { storeDebugPayload } from '@/app/api/livepix/debug/route'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug: rawSlug } = await params
@@ -11,6 +12,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   try { body = await req.json() } catch { return NextResponse.json({ error: 'invalid json' }, { status: 400 }) }
 
   console.log('[livepix webhook] raw body:', JSON.stringify(body).slice(0, 500))
+  storeDebugPayload(slug, body)
 
   const db = getSupabaseAdmin()
 
