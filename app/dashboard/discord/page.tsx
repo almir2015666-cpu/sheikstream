@@ -37,13 +37,13 @@ export default function DiscordPage() {
   useEffect(() => {
     fetch('/api/discord/webhook')
       .then(r => r.ok ? r.json() : {})
-      .then(d => {
-        if (d.url)       setUrl(d.url)
-        if (d.msgTitle)  setMsgTitle(d.msgTitle)
-        if (d.msgBody)   setMsgBody(d.msgBody)
-        if (d.color)     setColor(d.color)
-        if (d.twitchUrl) setTwitchUrl(d.twitchUrl)
-        if (d.autoLive)  setAutoLive(d.autoLive)
+      .then((d: Record<string, unknown>) => {
+        if (d.url)       setUrl(d.url as string)
+        if (d.msgTitle)  setMsgTitle(d.msgTitle as string)
+        if (d.msgBody)   setMsgBody(d.msgBody as string)
+        if (d.color)     setColor(d.color as number)
+        if (d.twitchUrl) setTwitchUrl(d.twitchUrl as string)
+        if (d.autoLive)  setAutoLive(d.autoLive as boolean)
       })
       .catch(() => {})
   }, [])
