@@ -2831,6 +2831,26 @@ export default function AdminPage() {
                     ))}
                   </div>
                 )}
+
+                {/* Archived items */}
+                {catalogItems.some(i => i.hidden) && (
+                  <div style={{ background: C.cardBg, border: `1px solid rgba(255,68,68,0.18)`, borderRadius: '12px', overflow: 'hidden' }}>
+                    <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid rgba(255,68,68,0.12)`, fontSize: '0.72rem', fontWeight: 700, color: C.danger, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      🗄 Arquivados — invisíveis para usuários
+                    </div>
+                    {catalogItems.filter(i => i.hidden).map(item => (
+                      <div key={item.type} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 1rem', borderBottom: `1px solid rgba(255,68,68,0.08)`, background: 'rgba(255,68,68,0.03)' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0, opacity: 0.5 }} />
+                        <span style={{ flex: 1, fontSize: '0.83rem', color: C.dim }}>{item.label}</span>
+                        <button onClick={() => setCatalogItems(prev => prev.map(x => x.type === item.type ? { ...x, hidden: false, removed: true } : x))}
+                          style={{ padding: '0.18rem 0.6rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '5px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          ↩ Desarquivar
+                        </button>
+                      </div>
+                    ))}
+                    <div style={{ padding: '0.4rem 1rem', fontSize: '0.65rem', color: C.vdim }}>Clique em Desarquivar para mover de volta para "Removidos" e depois Restaurar para o catálogo ativo.</div>
+                  </div>
+                )}
                 {/* Page picker */}
                 <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, marginBottom: '0.3rem' }}>Páginas disponíveis — clique para adicionar ao catálogo</div>
