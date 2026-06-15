@@ -360,7 +360,7 @@ export default function AdminPage() {
     { id: 's-tickets',      label: 'Tickets (Sorteio)',   href: '/dashboard/sorteios/tickets' },
   ]
   const NAV_CHILDREN: Record<string, { id: string; label: string }[]> = {
-    ia:          [{ id: 'ia-chat', label: 'IA de Chat' }, { id: 'ia-voz', label: 'IA por Voz' }, { id: 'ia-imagens', label: 'IA de Imagens' }],
+    ia:          [{ id: 'ia-chat', label: 'IA de Chat' }, { id: 'ia-imagens', label: 'IA de Imagens' }],
     sorteios:    [{ id: 's-criar', label: 'Criar / Editar' }, { id: 's-tickets', label: 'Tickets' }],
     plataformas: [{ id: 'p-twitch', label: 'Twitch' }, { id: 'p-kick', label: 'Kick' }, { id: 'p-livepix', label: 'Livepix' }],
   }
@@ -2667,6 +2667,30 @@ export default function AdminPage() {
                     )
                   })}
                 </div>
+
+                {/* Removed hard children — restore section */}
+                {removedHardChildren.size > 0 && (() => {
+                  const allHard = Object.values(NAV_CHILDREN).flat()
+                  const removed = allHard.filter(ch => removedHardChildren.has(ch.id))
+                  if (!removed.length) return null
+                  return (
+                    <div style={{ background: C.cardBg, border: `1px solid rgba(245,158,11,0.25)`, borderRadius: '12px', overflow: 'hidden' }}>
+                      <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid rgba(245,158,11,0.2)`, fontSize: '0.72rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Sub-itens removidos das pastas
+                      </div>
+                      {removed.map(ch => (
+                        <div key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 1rem', borderBottom: `1px solid ${C.border}`, background: 'rgba(245,158,11,0.03)' }}>
+                          <span style={{ flex: 1, fontSize: '0.83rem', color: C.muted, fontWeight: 500 }}>{ch.label}</span>
+                          <button
+                            onClick={() => setRemovedHardChildren(prev => { const n = new Set(prev); n.delete(ch.id); return n })}
+                            style={{ padding: '0.2rem 0.65rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '5px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}>
+                            ↩ Restaurar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
 
                 {/* Children */}
                 {rootOrdered.some(item => (NAV_CHILDREN[item.id] ?? []).length > 0 || (childrenMap[item.id] ?? []).length > 0) && (
