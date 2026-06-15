@@ -319,7 +319,7 @@ export default function AdminPage() {
   const [inviteVetoLoading, setInviteVetoLoading] = useState<string | null>(null)
   const [quotaEdits, setQuotaEdits] = useState<Record<string, number>>({})
   const [quotaSaving, setQuotaSaving] = useState<string | null>(null)
-  type CatalogItem = { type: string; label: string; desc: string; badge: string | null; color: string; live: boolean; status?: 'live' | 'soon' | 'maintenance'; href: string; hidden: boolean; removed?: boolean }
+  type CatalogItem = { type: string; label: string; desc: string; badge: string | null; color: string; live: boolean; status?: 'live' | 'soon' | 'maintenance'; href: string; hidden: boolean; removed?: boolean; showInNav?: boolean }
   const CATALOG_BLANK: CatalogItem = { type: '', label: '', desc: '', badge: null, color: '#9b30ff', live: true, status: 'live', href: '', hidden: false }
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
   const [catalogDefaults, setCatalogDefaults] = useState<CatalogItem[]>([])
@@ -2797,6 +2797,12 @@ export default function AdminPage() {
                             </button>
                           )
                         })()}
+                        <button
+                          onClick={() => setCatalogItems(prev => prev.map(x => x.type === item.type ? { ...x, showInNav: !x.showInNav } : x))}
+                          title={item.showInNav ? 'Remover da barra lateral' : 'Mostrar na barra lateral'}
+                          style={{ width: 20, height: 20, background: item.showInNav ? C.primaryBg : 'transparent', border: `1px solid ${item.showInNav ? C.borderStrong : C.border}`, color: item.showInNav ? C.primary : C.vdim, borderRadius: '4px', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="6" height="18" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="11" width="8" height="5" rx="1"/></svg>
+                        </button>
                         <button onClick={() => setCatalogItems(prev => prev.map(x => x.type === item.type ? { ...x, removed: true } : x))}
                           title="Mover para lateral" style={{ width: 20, height: 20, background: 'transparent', border: `1px solid ${C.border}`, color: C.vdim, borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
                         <button onClick={() => setCatalogItems(prev => prev.filter(x => x.type !== item.type))}

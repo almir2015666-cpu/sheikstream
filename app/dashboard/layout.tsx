@@ -230,6 +230,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [navChildrenDB, setNavChildrenDB] = useState<Record<string, string[]> | null>(null)
   const [navRemovedHardChildren, setNavRemovedHardChildren] = useState<string[]>([])
   const [catalogTypes, setCatalogTypes] = useState<Set<string>>(new Set())
+  const [catalogShowInNav, setCatalogShowInNav] = useState<Set<string>>(new Set())
   // Suggestion/bug form (global — all pages)
   const [showSugg, setShowSugg] = useState(false)
   const [suggType, setSuggType] = useState<'suggestion' | 'bug'>('suggestion')
@@ -314,10 +315,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       fetch('/api/admin/overlays-catalog')
         .then(r => r.ok ? r.json() : null)
         .then(d => {
-          const types = new Set<string>(
-            ((d?.items ?? []) as { type: string }[]).map(i => i.type)
-          )
-          setCatalogTypes(types)
+          const allItems = (d?.items ?? []) as { type: string; showInNav?: boolean }[]
+          setCatalogTypes(new Set(allItems.map(i => i.type)))
+          setCatalogShowInNav(new Set(allItems.filter(i => i.showInNav).map(i => i.type)))
         })
         .catch(() => {})
     fetchNavOrder()
@@ -513,7 +513,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const effectiveNavItems = (() => {
     const inCatalog = (item: Item) =>
-      item.id !== 'overlays' && catalogTypes.size > 0 && catalogTypes.has(item.id)
+      item.id !== 'overlays' && catalogTypes.size > 0 && catalogTypes.has(item.id) && !catalogShowInNav.has(item.id)
 
     const removedHardSet = new Set(navRemovedHardChildren)
     const promotedItems: Item[] = []

@@ -16,6 +16,7 @@ export type CatalogItem = {
   href: string
   hidden: boolean
   removed?: boolean
+  showInNav?: boolean
 }
 
 const DEFAULTS: CatalogItem[] = [
