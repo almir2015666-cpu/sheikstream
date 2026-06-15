@@ -319,7 +319,7 @@ export default function AdminPage() {
   const [inviteVetoLoading, setInviteVetoLoading] = useState<string | null>(null)
   const [quotaEdits, setQuotaEdits] = useState<Record<string, number>>({})
   const [quotaSaving, setQuotaSaving] = useState<string | null>(null)
-  type CatalogItem = { type: string; label: string; desc: string; badge: string | null; color: string; live: boolean; status?: 'live' | 'soon' | 'maintenance'; href: string; hidden: boolean }
+  type CatalogItem = { type: string; label: string; desc: string; badge: string | null; color: string; live: boolean; status?: 'live' | 'soon' | 'maintenance'; href: string; hidden: boolean; removed?: boolean }
   const CATALOG_BLANK: CatalogItem = { type: '', label: '', desc: '', badge: null, color: '#9b30ff', live: true, status: 'live', href: '', hidden: false }
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
   const [catalogSaving, setCatalogSaving] = useState(false)
@@ -363,10 +363,11 @@ export default function AdminPage() {
     sorteios:    [{ id: 's-criar', label: 'Criar / Editar' }, { id: 's-tickets', label: 'Tickets' }],
     plataformas: [{ id: 'p-twitch', label: 'Twitch' }, { id: 'p-kick', label: 'Kick' }, { id: 'p-livepix', label: 'Livepix' }],
   }
-  const [navOrder, setNavOrder]           = useState<string[]>(NAV_ITEMS_LIST.map(i => i.id))
-  const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon' | ''>>({})
+  const [navOrder, setNavOrder]              = useState<string[]>(NAV_ITEMS_LIST.map(i => i.id))
+  const [navItemStatus, setNavItemStatus]   = useState<Record<string, 'maintenance' | 'soon' | ''>>({})
   const [navStatusLoaded, setNavStatusLoaded] = useState(false)
-  const [navParents, setNavParents]       = useState<Record<string, string>>({})
+  const [navParents, setNavParents]          = useState<Record<string, string>>({})
+  const [removedHardChildren, setRemovedHardChildren] = useState<Set<string>>(new Set())
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -726,6 +727,9 @@ export default function AdminPage() {
             childIds.forEach(childId => { parents[childId] = parentId })
           })
           setNavParents(parents)
+        }
+        if (Array.isArray(d?.removedHardChildren)) {
+          setRemovedHardChildren(new Set(d.removedHardChildren as string[]))
         }
       })
       .catch(() => {})
@@ -2526,7 +2530,13 @@ export default function AdminPage() {
             const cleanStatus: Record<string, 'maintenance' | 'soon'> = {}
             Object.entries(navItemStatus).forEach(([k, v]) => { if (v === 'maintenance' || v === 'soon') cleanStatus[k] = v })
 
-            const childSet = new Set(Object.keys(navParents).filter(id => navParents[id]))
+            const allHardChildIds = new Set(
+              Object.values(NAV_CHILDREN).flatMap(kids => kids.map(c => c.id)).filter(id => !removedHardChildren.has(id))
+            )
+            const childSet = new Set([
+              ...Object.keys(navParents).filter(id => navParents[id]),
+              ...allHardChildIds,
+            ])
             const childrenMap: Record<string, string[]> = {}
             Object.entries(navParents).forEach(([id, parentId]) => {
               if (parentId) {
@@ -2543,7 +2553,7 @@ export default function AdminPage() {
                 const res = await fetch('/api/admin/nav-order', {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json', 'x-admin-password': storedPw },
-                  body: JSON.stringify({ order: arr, itemStatus: cleanStatus, children: childrenMap }),
+                  body: JSON.stringify({ order: arr, itemStatus: cleanStatus, children: childrenMap, removedHardChildren: [...removedHardChildren] }),
                 })
                 if (res.ok) alert('Salvo! Vai refletir para todos os usuários.')
                 else alert('Salvo localmente. Erro ao salvar no banco.')
@@ -2594,6 +2604,9 @@ export default function AdminPage() {
 
             const renderChildRow = (chId: string, chLabel: string, isDb: boolean, num: number) => {
               const cs = navItemStatus[chId] ?? ''
+              const removeChild = isDb
+                ? () => setNavParents(prev => { const n = { ...prev }; delete n[chId]; return n })
+                : () => setRemovedHardChildren(prev => new Set([...prev, chId]))
               return (
                 <div key={chId} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 1rem 0.5rem 1rem', borderBottom: `1px solid ${C.border}`, background: 'rgba(155,48,255,0.03)' }}>
                   <span style={{ fontSize: '0.65rem', fontWeight: 800, color: C.vdim, minWidth: 18, textAlign: 'right', flexShrink: 0 }}>{num}</span>
@@ -2603,10 +2616,8 @@ export default function AdminPage() {
                     style={{ padding: '0.18rem 0.55rem', borderRadius: '999px', border: `1px solid ${stColor(cs)}55`, background: `${stColor(cs)}15`, color: stColor(cs), fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     {stLabel(cs)}
                   </button>
-                  {isDb && (
-                    <button onClick={() => setNavParents(prev => { const n = { ...prev }; delete n[chId]; return n })}
-                      style={{ width: 22, height: 22, background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '5px', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
-                  )}
+                  <button onClick={removeChild}
+                    style={{ width: 22, height: 22, background: 'transparent', border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '5px', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title="Remover da pasta">✕</button>
                 </div>
               )
             }
@@ -2663,7 +2674,7 @@ export default function AdminPage() {
                     {(() => {
                       let counter = 0
                       return rootOrdered.map(item => {
-                        const hardKids = NAV_CHILDREN[item.id] ?? []
+                        const hardKids = (NAV_CHILDREN[item.id] ?? []).filter(ch => !removedHardChildren.has(ch.id))
                         const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
                         if (!hardKids.length && !dbKids.length) return null
                         return (
@@ -2684,7 +2695,7 @@ export default function AdminPage() {
                 <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
                   <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid ${C.border}`, fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pasta pai</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
-                    {rootOrdered.map((item, idx, arr) => {
+                    {rootOrdered.filter(item => !allHardChildIds.has(item.id)).map((item, idx, arr) => {
                       const curParent = navParents[item.id] ?? ''
                       const isLast = idx >= arr.length - 2
                       return (
@@ -2694,7 +2705,7 @@ export default function AdminPage() {
                             onChange={e => setNavParents(prev => { const n = { ...prev }; if (e.target.value) n[item.id] = e.target.value; else delete n[item.id]; return n })}
                             style={{ padding: '0.2rem 0.35rem', background: C.inputBg, border: `1px solid ${curParent ? C.borderStrong : C.border}`, color: curParent ? C.primary : C.vdim, borderRadius: '6px', fontSize: '0.7rem', cursor: 'pointer', flexShrink: 0, maxWidth: 110, colorScheme: 'dark' }}>
                             <option value="">—</option>
-                            {rootOrdered.filter(i => i.id !== item.id && !navParents[i.id]).map(i => (
+                            {rootOrdered.filter(i => i.id !== item.id && !navParents[i.id] && !allHardChildIds.has(i.id)).map(i => (
                               <option key={i.id} value={i.id}>{i.label}</option>
                             ))}
                           </select>
@@ -2753,19 +2764,20 @@ export default function AdminPage() {
                     {catalogSaving ? 'Salvando…' : '✓ Salvar'}
                   </button>
                 </div>
-                {/* Single list */}
+                {/* Active list */}
                 <div
                   onDragOver={e => { e.preventDefault(); if (!isListOver) setCatalogDropTarget({ col: 'visible', idx: catalogItems.length }) }}
                   onDrop={e => onDrop(e, catalogItems.length)}
                   style={{ minHeight: 80, borderRadius: '12px', border: `2px dashed ${isListOver ? C.primary : C.border}`, padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', background: isListOver ? 'rgba(155,48,255,0.04)' : 'transparent', transition: 'all 0.12s' }}>
-                  {catalogItems.map((item, idx) => {
-                    const isTgt = catalogDropTarget?.col === 'visible' && catalogDropTarget?.idx === idx
+                  {catalogItems.filter(i => !i.removed).map((item, idx) => {
+                    const realIdx = catalogItems.indexOf(item)
+                    const isTgt = catalogDropTarget?.col === 'visible' && catalogDropTarget?.idx === realIdx
                     return (
-                      <div key={item.type + idx}
+                      <div key={item.type + realIdx}
                         draggable
-                        onDragStart={e => onDragStart(e, idx)}
-                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (!isTgt) setCatalogDropTarget({ col: 'visible', idx }) }}
-                        onDrop={e => onDrop(e, idx)}
+                        onDragStart={e => onDragStart(e, realIdx)}
+                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (!isTgt) setCatalogDropTarget({ col: 'visible', idx: realIdx }) }}
+                        onDrop={e => onDrop(e, realIdx)}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', padding: '0.55rem 0.75rem', borderRadius: '8px', background: isTgt ? C.primaryBg : C.cardBgAlt, border: `1px solid ${isTgt ? C.borderStrong : C.border}`, cursor: 'grab', userSelect: 'none', transition: 'all 0.1s' }}>
                         <svg width="8" height="14" viewBox="0 0 8 14" fill={C.vdim}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
@@ -2784,17 +2796,40 @@ export default function AdminPage() {
                             </button>
                           )
                         })()}
-                        <button onClick={() => setCatalogItems(prev => prev.filter(x => x.type !== item.type))}
-                          title="Remover" style={{ width: 20, height: 20, background: 'transparent', border: `1px solid ${C.border}`, color: C.vdim, borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+                        <button onClick={() => setCatalogItems(prev => prev.map(x => x.type === item.type ? { ...x, removed: true } : x))}
+                          title="Mover para lateral" style={{ width: 20, height: 20, background: 'transparent', border: `1px solid ${C.border}`, color: C.vdim, borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
                       </div>
                     )
                   })}
-                  {catalogItems.length === 0 && (
+                  {catalogItems.filter(i => !i.removed).length === 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.vdim, fontSize: '0.76rem', minHeight: 60 }}>
                       Clique nas páginas abaixo para adicionar ao catálogo
                     </div>
                   )}
                 </div>
+
+                {/* Removed items sidebar */}
+                {catalogItems.some(i => i.removed) && (
+                  <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
+                    <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid ${C.border}`, fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Removidos do catálogo
+                    </div>
+                    {catalogItems.filter(i => i.removed).map(item => (
+                      <div key={item.type} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 1rem', borderBottom: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.02)' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: '0.83rem', color: C.muted }}>{item.label}</span>
+                        <button onClick={() => setCatalogItems(prev => prev.map(x => x.type === item.type ? { ...x, removed: false } : x))}
+                          style={{ padding: '0.18rem 0.6rem', background: C.primaryBg, border: `1px solid ${C.borderStrong}`, color: C.primary, borderRadius: '5px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          ↩ Restaurar
+                        </button>
+                        <button onClick={() => setCatalogItems(prev => prev.map(x => x.type === item.type ? { ...x, hidden: true, removed: false } : x))}
+                          style={{ padding: '0.18rem 0.6rem', background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.danger, borderRadius: '5px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          🗄 Arquivar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {/* Page picker */}
                 <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '1rem 1.2rem' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: C.text, marginBottom: '0.3rem' }}>Páginas disponíveis — clique para adicionar ao catálogo</div>

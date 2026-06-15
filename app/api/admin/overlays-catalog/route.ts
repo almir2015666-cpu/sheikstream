@@ -15,6 +15,7 @@ export type CatalogItem = {
   status?: 'live' | 'soon' | 'maintenance'
   href: string
   hidden: boolean
+  removed?: boolean
 }
 
 const DEFAULTS: CatalogItem[] = [

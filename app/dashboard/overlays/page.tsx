@@ -43,7 +43,7 @@ export default function OverlaysPage() {
     }).catch(() => {})
   }, [])
 
-  const visible = items.filter(item => !item.hidden)
+  const visible = items.filter(item => !item.hidden && !item.removed)
 
   return (
     <div style={{ background: C.page, minHeight: '100vh', padding: '1.5rem 2rem', fontFamily: "-apple-system,'Inter',system-ui,sans-serif", color: C.text }}>
