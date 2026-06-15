@@ -43,7 +43,8 @@ export default function ComandosVozPage() {
   const [supported, setSupported] = useState(true)
   const [lang,      setLang]      = useState('pt-BR')
   const [alert,     setAlert]     = useState('')
-  const recogRef = useRef<SpeechRecognition | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recogRef = useRef<any>(null)
   const alertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -66,7 +67,8 @@ export default function ComandosVozPage() {
     r.onstart = () => setListening(true)
     r.onend   = () => setListening(false)
     r.onerror = () => setListening(false)
-    r.onresult = (e: SpeechRecognitionEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.onresult = (e: any) => {
       let final = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) final += e.results[i][0].transcript
