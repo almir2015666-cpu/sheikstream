@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     const db = getSupabaseAdmin()
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
 
-    const [{ data: tokens }, { data: recent }] = await Promise.all([
+    const [{ data: tokens }, { data: recent }, { data: meTok }] = await Promise.all([
       db.from('user_tokens')
         .select('user_id, twitch_username')
         .not('twitch_token', 'is', null)
@@ -58,14 +58,21 @@ export async function GET(req: NextRequest) {
         .select('username')
         .gte('performed_at', fiveMinAgo)
         .not('username', 'is', null),
+      db.from('user_tokens')
+        .select('twitch_username')
+        .eq('user_id', user.id)
+        .maybeSingle(),
     ])
+
+    const myUsername = ((meTok?.twitch_username as string) ?? '').toLowerCase()
 
     const onlineSet = new Set<string>(
       (recent ?? []).map(r => (r.username as string).toLowerCase())
     )
 
-    // Deduplicate by twitch_username (some users may have multiple rows)
+    // Deduplicate by twitch_username and exclude the current user (by name, in case they have multiple rows)
     const seenNames = new Set<string>()
+    if (myUsername) seenNames.add(myUsername)
     const uniqueTokens = (tokens ?? []).filter(t => {
       const name = ((t.twitch_username as string) ?? '').toLowerCase()
       if (!name || seenNames.has(name)) return false
