@@ -226,7 +226,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [navOrder, setNavOrder] = useState<string[]>([])
-  const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon'>>({})
+  const [navItemStatus, setNavItemStatus] = useState<Record<string, 'maintenance' | 'soon' | 'hidden'>>({})
   const [navChildrenDB, setNavChildrenDB] = useState<Record<string, string[]> | null>(null)
   const [navRemovedHardChildren, setNavRemovedHardChildren] = useState<string[]>([])
   const [catalogTypes, setCatalogTypes] = useState<Set<string>>(new Set())
@@ -776,6 +776,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             const isExp = open.has(item.id)
             const hasCh = !!item.children
             const itemSt = navItemStatus[item.id]
+            if (itemSt === 'hidden') return null
             if (itemSt) {
               const isMaint = itemSt === 'maintenance'
               return (

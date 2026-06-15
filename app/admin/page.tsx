@@ -328,6 +328,7 @@ export default function AdminPage() {
   const [catalogDropTarget, setCatalogDropTarget] = useState<{col: 'visible'|'hidden', idx: number} | null>(null)
   const [navDragOver, setNavDragOver] = useState<number | null>(null)
   const [navDragOverFolder, setNavDragOverFolder] = useState<string | null>(null)
+  const [subDragOver, setSubDragOver] = useState<string | null>(null)
   const NAV_ITEMS_LIST = [
     { id: 'dashboard',      label: 'Dashboard',           href: '/dashboard' },
     { id: 'subathon',       label: 'Subathon',            href: '/dashboard/subathon' },
@@ -353,8 +354,8 @@ export default function AdminPage() {
     { id: 'perfil',         label: 'Meu Perfil',          href: '/dashboard/perfil' },
     { id: 'countdown',      label: 'Countdown',           href: '/dashboard/countdown' },
     { id: 'polling',        label: 'Enquete ao vivo',     href: '/dashboard/polling' },
-    { id: 'overlay-chat',   label: 'Chat Overlay',        href: '/dashboard/overlays/chat' },
-    { id: 'overlay-goal',   label: 'Meta (Goal)',         href: '/dashboard/overlays/goal' },
+    { id: 'chat',           label: 'Chat Overlay',        href: '/dashboard/overlays/chat' },
+    { id: 'goal',           label: 'Meta (Goal)',         href: '/dashboard/overlays/goal' },
     { id: 'ia-chat',        label: 'IA de Chat',          href: '/dashboard/ia-chat' },
     { id: 'ia-voz',         label: 'IA por Voz',          href: '/dashboard/ia-chat/voz' },
     { id: 'ia-imagens',     label: 'IA de Imagens',       href: '/dashboard/ia-imagens' },
@@ -366,7 +367,7 @@ export default function AdminPage() {
     plataformas: [{ id: 'p-twitch', label: 'Twitch' }, { id: 'p-kick', label: 'Kick' }, { id: 'p-livepix', label: 'Livepix' }],
   }
   const [navOrder, setNavOrder]              = useState<string[]>(NAV_ITEMS_LIST.map(i => i.id))
-  const [navItemStatus, setNavItemStatus]   = useState<Record<string, 'maintenance' | 'soon' | ''>>({})
+  const [navItemStatus, setNavItemStatus]   = useState<Record<string, 'maintenance' | 'soon' | 'hidden' | ''>>({})
   const [navStatusLoaded, setNavStatusLoaded] = useState(false)
   const [navParents, setNavParents]          = useState<Record<string, string>>({})
   const [removedHardChildren, setRemovedHardChildren] = useState<Set<string>>(new Set())
@@ -2529,8 +2530,8 @@ export default function AdminPage() {
               setNavOrder(arr)
             }
 
-            const cleanStatus: Record<string, 'maintenance' | 'soon'> = {}
-            Object.entries(navItemStatus).forEach(([k, v]) => { if (v === 'maintenance' || v === 'soon') cleanStatus[k] = v })
+            const cleanStatus: Record<string, 'maintenance' | 'soon' | 'hidden'> = {}
+            Object.entries(navItemStatus).forEach(([k, v]) => { if (v === 'maintenance' || v === 'soon' || v === 'hidden') cleanStatus[k] = v })
 
             const allHardChildIds = new Set(
               Object.values(NAV_CHILDREN).flatMap(kids => kids.map(c => c.id)).filter(id => !removedHardChildren.has(id))
@@ -2597,12 +2598,12 @@ export default function AdminPage() {
 
             const cycleStatus = (id: string) => {
               const cur = navItemStatus[id] ?? ''
-              const next: Record<string, string> = { '': 'soon', soon: 'maintenance', maintenance: '' }
+              const next: Record<string, string> = { '': 'soon', soon: 'maintenance', maintenance: 'hidden', hidden: '' }
               setStatus(id, next[cur] as any)
             }
 
-            const stColor = (s: string) => s === 'maintenance' ? '#f59e0b' : s === 'soon' ? '#818cf8' : '#22c55e'
-            const stLabel = (s: string) => s === 'maintenance' ? '🔧 Manutenção' : s === 'soon' ? '⏳ Em breve' : '● Ativo'
+            const stColor = (s: string) => s === 'maintenance' ? '#f59e0b' : s === 'soon' ? '#818cf8' : s === 'hidden' ? 'rgba(240,238,252,0.25)' : '#22c55e'
+            const stLabel = (s: string) => s === 'maintenance' ? '🔧 Manutenção' : s === 'soon' ? '⏳ Em breve' : s === 'hidden' ? '○ Invisível' : '● Ativo'
 
             const renderChildRow = (chId: string, chLabel: string, isDb: boolean, num: number) => {
               const cs = navItemStatus[chId] ?? ''
@@ -2640,7 +2641,7 @@ export default function AdminPage() {
 
                 {/* 2-column grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}
-                  onDragEnd={() => { setNavDragOver(null); setNavDragOverFolder(null) }}>
+                  onDragEnd={() => { setNavDragOver(null); setNavDragOverFolder(null); setSubDragOver(null) }}>
                   {rootOrdered.map((item, idx) => {
                     const st = navItemStatus[item.id] ?? ''
                     const hardKids = NAV_CHILDREN[item.id] ?? []
@@ -2730,29 +2731,54 @@ export default function AdminPage() {
                   )
                 })()}
 
-                {/* Children */}
-                {rootOrdered.some(item => (NAV_CHILDREN[item.id] ?? []).length > 0 || (childrenMap[item.id] ?? []).length > 0) && (
-                  <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-                    <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid ${C.border}`, fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sub-itens</div>
-                    {(() => {
-                      let counter = 0
-                      return rootOrdered.map(item => {
+                {/* Children / Sub-items — droppable from main grid */}
+                {(() => {
+                  const folderIds = new Set(Object.keys(NAV_CHILDREN))
+                  const hasFolders = rootOrdered.some(i => folderIds.has(i.id) || (childrenMap[i.id] ?? []).length > 0)
+                  if (!hasFolders) return null
+                  let counter = 0
+                  const allFolderItems = rootOrdered.filter(i => folderIds.has(i.id) || (childrenMap[i.id] ?? []).length > 0)
+                  return (
+                    <div style={{ background: C.cardBg, border: `1px solid ${subDragOver ? C.borderStrong : C.border}`, borderRadius: '12px', overflow: 'hidden', transition: 'border-color 0.15s' }}>
+                      <div style={{ padding: '0.6rem 1rem', borderBottom: `1px solid ${C.border}`, fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Sub-itens {subDragOver === null && <span style={{ fontWeight: 400, color: C.vdim, textTransform: 'none', fontSize: '0.65rem' }}>— arraste itens do grid para uma pasta</span>}
+                      </div>
+                      {allFolderItems.map(item => {
                         const hardKids = (NAV_CHILDREN[item.id] ?? []).filter(ch => !removedHardChildren.has(ch.id))
                         const dbKids = (childrenMap[item.id] ?? []).map(id => NAV_ITEMS_LIST.find(i => i.id === id)).filter(Boolean) as typeof NAV_ITEMS_LIST
-                        if (!hardKids.length && !dbKids.length) return null
+                        const isHover = subDragOver === item.id
+                        const dropOnFolder = (e: React.DragEvent) => {
+                          e.preventDefault()
+                          setSubDragOver(null)
+                          const src = parseInt(e.dataTransfer.getData('text/plain'))
+                          if (!isNaN(src)) {
+                            const srcItem = rootOrdered[src]
+                            if (srcItem && srcItem.id !== item.id) setNavParents(prev => ({ ...prev, [srcItem.id]: item.id }))
+                          }
+                        }
                         return (
-                          <React.Fragment key={item.id}>
-                            <div style={{ padding: '0.3rem 1rem', background: C.primaryBg, borderBottom: `1px solid ${C.border}`, fontSize: '0.65rem', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          <div key={item.id}
+                            onDragOver={e => { e.preventDefault(); if (subDragOver !== item.id) setSubDragOver(item.id) }}
+                            onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setSubDragOver(null) }}
+                            onDrop={dropOnFolder}
+                            style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <div style={{ padding: '0.3rem 1rem', background: isHover ? 'rgba(155,48,255,0.22)' : C.primaryBg, borderBottom: `1px solid ${isHover ? C.borderStrong : C.border}`, fontSize: '0.65rem', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'background 0.1s' }}>
                               📁 {item.label}
+                              {isHover && <span style={{ marginLeft: 'auto', fontSize: '0.6rem', fontWeight: 700, color: C.primary, opacity: 0.8, textTransform: 'none' }}>← soltar para adicionar</span>}
                             </div>
                             {hardKids.map(ch => renderChildRow(ch.id, ch.label, false, ++counter))}
                             {dbKids.map(ch => renderChildRow(ch.id, ch.label, true, ++counter))}
-                          </React.Fragment>
+                            {!hardKids.length && !dbKids.length && (
+                              <div style={{ padding: '0.6rem 1rem', fontSize: '0.72rem', color: isHover ? C.primary : C.vdim, textAlign: 'center', fontStyle: 'italic', transition: 'color 0.1s' }}>
+                                {isHover ? '← Soltar aqui' : 'Pasta vazia — arraste itens para cá'}
+                              </div>
+                            )}
+                          </div>
                         )
-                      })
-                    })()}
-                  </div>
-                )}
+                      })}
+                    </div>
+                  )
+                })()}
 
                 {/* Folder assignment */}
                 <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
