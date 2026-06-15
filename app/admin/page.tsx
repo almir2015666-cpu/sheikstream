@@ -2859,15 +2859,20 @@ export default function AdminPage() {
                   <div style={{ fontSize: '0.7rem', color: C.muted, marginBottom: '0.75rem' }}>Itens marcados já estão no catálogo. Clique novamente para remover.</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
                     {NAV_ITEMS_LIST.map(page => {
-                      const inCatalog = catalogItems.some(c => c.type === page.id)
+                      const inCatalog = catalogItems.some(c => c.type === page.id && !c.removed)
                       return (
                         <button key={page.id}
                           onClick={() => {
                             if (inCatalog) {
-                              setCatalogItems(prev => prev.filter(c => c.type !== page.id))
+                              setCatalogItems(prev => prev.map(c => c.type === page.id ? { ...c, removed: true } : c))
                             } else {
-                              const ni: CatalogItem = { type: page.id, label: page.label, href: page.href, desc: '', badge: 'NOVO', color: '#9b30ff', live: false, hidden: false }
-                              setCatalogItems(prev => [...prev, ni])
+                              const existing = catalogItems.find(c => c.type === page.id)
+                              if (existing) {
+                                setCatalogItems(prev => prev.map(c => c.type === page.id ? { ...c, removed: false } : c))
+                              } else {
+                                const ni: CatalogItem = { type: page.id, label: page.label, href: page.href, desc: '', badge: 'NOVO', color: '#9b30ff', live: false, hidden: false }
+                                setCatalogItems(prev => [...prev, ni])
+                              }
                             }
                           }}
                           style={{ padding: '0.35rem 0.8rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${inCatalog ? C.primary : C.border}`, background: inCatalog ? C.primaryBg : 'transparent', color: inCatalog ? C.primary : C.muted, display: 'flex', alignItems: 'center', gap: '0.3rem', transition: 'all 0.12s' }}>
