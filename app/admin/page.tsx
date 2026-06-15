@@ -322,6 +322,7 @@ export default function AdminPage() {
   type CatalogItem = { type: string; label: string; desc: string; badge: string | null; color: string; live: boolean; status?: 'live' | 'soon' | 'maintenance'; href: string; hidden: boolean; removed?: boolean }
   const CATALOG_BLANK: CatalogItem = { type: '', label: '', desc: '', badge: null, color: '#9b30ff', live: true, status: 'live', href: '', hidden: false }
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
+  const [catalogDefaults, setCatalogDefaults] = useState<CatalogItem[]>([])
   const [catalogSaving, setCatalogSaving] = useState(false)
   const [catalogNewForm, setCatalogNewForm] = useState<CatalogItem>(CATALOG_BLANK)
   const [catalogDropTarget, setCatalogDropTarget] = useState<{col: 'visible'|'hidden', idx: number} | null>(null)
@@ -740,7 +741,7 @@ export default function AdminPage() {
     if (view !== 'overlays-catalog' && view !== 'navorder') return
     fetch('/api/admin/overlays-catalog')
       .then(r => r.json())
-      .then(d => { if (d?.items) setCatalogItems(d.items) })
+      .then(d => { if (d?.items) setCatalogItems(d.items); if (d?.defaults) setCatalogDefaults(d.defaults) })
       .catch(() => {})
   }, [view])
 
@@ -2874,6 +2875,22 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div style={{ fontSize: '0.68rem', color: C.vdim, marginTop: '0.6rem' }}>Após qualquer mudança, clique "✓ Salvar" no topo para publicar.</div>
+
+                  {/* Restore defaults section */}
+                  {catalogDefaults.some(d => !catalogItems.some(c => c.type === d.type)) && (
+                    <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: C.muted, marginBottom: '0.5rem' }}>Overlays padrão removidos — clique para restaurar:</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                        {catalogDefaults.filter(d => !catalogItems.some(c => c.type === d.type)).map(def => (
+                          <button key={def.type}
+                            onClick={() => setCatalogItems(prev => [...prev, { ...def, removed: false }])}
+                            style={{ padding: '0.35rem 0.8rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', border: `1px solid rgba(245,158,11,0.4)`, background: 'rgba(245,158,11,0.08)', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            ↩ {def.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )

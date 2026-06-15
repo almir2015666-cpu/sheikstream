@@ -40,9 +40,9 @@ export async function GET() {
       .eq('type', TYPE)
       .single()
     const items: CatalogItem[] = data?.config?.items ?? DEFAULTS
-    return NextResponse.json({ items })
+    return NextResponse.json({ items, defaults: DEFAULTS })
   } catch {
-    return NextResponse.json({ items: DEFAULTS })
+    return NextResponse.json({ items: DEFAULTS, defaults: DEFAULTS })
   }
 }
 
