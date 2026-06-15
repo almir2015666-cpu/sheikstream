@@ -29,7 +29,8 @@ const DEFAULTS: CatalogItem[] = [
   { type: 'chat',           label: 'Chat Overlay',      badge: 'NOVO', color: '#60a5fa', live: true,  hidden: false, desc: 'Exibe mensagens do chat da Twitch em tempo real sobre a tela — sem banco de dados.',             href: '/dashboard/overlays/chat' },
   { type: 'goal',           label: 'Meta (Goal)',        badge: 'NOVO', color: '#f59e0b', live: true,  hidden: false, desc: 'Barra de progresso de meta personalizada: subs, bits, doações ou valor manual.',                href: '/dashboard/overlays/goal' },
   { type: 'patrocinadores', label: 'Patrocinadores',    badge: 'NOVO', color: '#a78bfa', live: false, hidden: false, desc: 'Carrossel de banners de patrocinadores com timing e layout configurável.',                      href: '/dashboard/overlays/patrocinadores' },
-  { type: 'pedidos-musica', label: 'Pedidos de Música', badge: 'NOVO', color: '#f472b6', live: true,  hidden: false, desc: 'Viewers pedem músicas pelo chat — aprovação manual e fila de reprodução em tempo real.',        href: '/dashboard/pedidos-musica' },
+  { type: 'pedidos-musica',  label: 'Pedidos de Música', badge: 'NOVO', color: '#f472b6', live: true,  hidden: false, desc: 'Viewers pedem músicas pelo chat — aprovação manual e fila de reprodução em tempo real.',              href: '/dashboard/pedidos-musica' },
+  { type: 'clip-display',   label: 'Clip Display',      badge: 'NOVO', color: '#60a5fa', live: true,  hidden: false, desc: 'Notificação automática no OBS quando alguém cria um clipe durante a live — com thumbnail e título.', href: '/dashboard/overlays/clip-display' },
 ]
 
 export async function GET() {
