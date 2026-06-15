@@ -319,8 +319,8 @@ export default function AdminPage() {
   const [inviteVetoLoading, setInviteVetoLoading] = useState<string | null>(null)
   const [quotaEdits, setQuotaEdits] = useState<Record<string, number>>({})
   const [quotaSaving, setQuotaSaving] = useState<string | null>(null)
-  type CatalogItem = { type: string; label: string; desc: string; badge: string | null; color: string; live: boolean; href: string; hidden: boolean }
-  const CATALOG_BLANK: CatalogItem = { type: '', label: '', desc: '', badge: null, color: '#9b30ff', live: true, href: '', hidden: false }
+  type CatalogItem = { type: string; label: string; desc: string; badge: string | null; color: string; live: boolean; status?: 'live' | 'soon' | 'maintenance'; href: string; hidden: boolean }
+  const CATALOG_BLANK: CatalogItem = { type: '', label: '', desc: '', badge: null, color: '#9b30ff', live: true, status: 'live', href: '', hidden: false }
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
   const [catalogSaving, setCatalogSaving] = useState(false)
   const [catalogNewForm, setCatalogNewForm] = useState<CatalogItem>(CATALOG_BLANK)
@@ -2585,7 +2585,7 @@ export default function AdminPage() {
 
             const cycleStatus = (id: string) => {
               const cur = navItemStatus[id] ?? ''
-              const next: Record<string, string> = { '': 'soon', soon: '', maintenance: '' }
+              const next: Record<string, string> = { '': 'soon', soon: 'maintenance', maintenance: '' }
               setStatus(id, next[cur] as any)
             }
 
@@ -2763,11 +2763,20 @@ export default function AdminPage() {
                         <svg width="8" height="14" viewBox="0 0 8 14" fill={C.vdim}><circle cx="2" cy="2" r="1.5"/><circle cx="6" cy="2" r="1.5"/><circle cx="2" cy="7" r="1.5"/><circle cx="6" cy="7" r="1.5"/><circle cx="2" cy="12" r="1.5"/><circle cx="6" cy="12" r="1.5"/></svg>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
                         <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 600, color: C.text }}>{item.label}</span>
-                        <button onClick={() => { const arr = catalogItems.map(x => x.type === item.type ? { ...x, live: !x.live } : x); setCatalogItems(arr) }}
-                          title={item.live ? 'Marcar como Em breve' : 'Marcar como Live'}
-                          style={{ padding: '0.1rem 0.45rem', background: item.live ? 'rgba(29,185,84,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${item.live ? 'rgba(29,185,84,0.3)' : C.border}`, color: item.live ? '#1DB954' : C.vdim, borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                          {item.live ? '● Live' : '○ Em breve'}
-                        </button>
+                        {(() => {
+                          const st = item.status ?? (item.live ? 'live' : 'soon')
+                          const nextSt: Record<string, 'live' | 'soon' | 'maintenance'> = { live: 'soon', soon: 'maintenance', maintenance: 'live' }
+                          const stColor = st === 'live' ? '#1DB954' : st === 'maintenance' ? '#f59e0b' : C.vdim
+                          const stBg = st === 'live' ? 'rgba(29,185,84,0.1)' : st === 'maintenance' ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.04)'
+                          const stBorder = st === 'live' ? 'rgba(29,185,84,0.3)' : st === 'maintenance' ? 'rgba(245,158,11,0.3)' : C.border
+                          const stLabel = st === 'live' ? '● Live' : st === 'maintenance' ? '🔧 Manutenção' : '○ Em breve'
+                          return (
+                            <button onClick={() => { const ns = nextSt[st]; const arr = catalogItems.map(x => x.type === item.type ? { ...x, status: ns, live: ns === 'live' } : x); setCatalogItems(arr) }}
+                              style={{ padding: '0.1rem 0.45rem', background: stBg, border: `1px solid ${stBorder}`, color: stColor, borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                              {stLabel}
+                            </button>
+                          )
+                        })()}
                         <button onClick={() => setCatalogItems(prev => prev.filter(x => x.type !== item.type))}
                           title="Remover" style={{ width: 20, height: 20, background: 'transparent', border: `1px solid ${C.border}`, color: C.vdim, borderRadius: '4px', fontSize: '0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
                       </div>
