@@ -74,6 +74,8 @@ export default function FidelidadePage() {
   const [totalPending, setTotalPending] = useState(0)
   const [uid, setUid] = useState('')
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [resetConfirm, setResetConfirm] = useState(false)
 
   const loadAll = useCallback(async () => {
     const [cfgRes, rwRes, rdRes, lbRes, meRes] = await Promise.all([
@@ -313,6 +315,45 @@ export default function FidelidadePage() {
             ) : (
               <div style={{ fontSize: '0.78rem', color: S.dim }}>Carregando URL...</div>
             )}
+          </div>
+        </div>
+
+          {/* Zona de perigo */}
+          <div style={{ background: S.card, border: '1px solid rgba(239,68,68,0.2)', borderRadius: '14px', padding: '1.5rem 2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Zona de perigo</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: S.text, marginBottom: '0.2rem' }}>Resetar todos os pontos</div>
+                <div style={{ fontSize: '0.75rem', color: S.dim }}>Zera os pontos de todos os viewers. Essa ação é irreversível.</div>
+              </div>
+              {!resetConfirm ? (
+                <button onClick={() => setResetConfirm(true)}
+                  style={{ flexShrink: 0, padding: '0.55rem 1.2rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', color: '#ef4444', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  Resetar pontos
+                </button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>Tem certeza?</span>
+                  <button onClick={async () => {
+                    setResetting(true)
+                    const r = await fetch('/api/loyalty/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: 'RESETAR' }) })
+                    setResetting(false)
+                    setResetConfirm(false)
+                    if (r.ok) { setLeaderboard([]); setTotalViewers(0) }
+                  }} disabled={resetting}
+                    style={{ padding: '0.5rem 0.9rem', background: '#ef4444', border: 'none', borderRadius: '7px', color: '#fff', fontWeight: 700, fontSize: '0.8rem', cursor: resetting ? 'not-allowed' : 'pointer', opacity: resetting ? 0.6 : 1 }}>
+                    {resetting ? '...' : 'Sim, resetar'}
+                  </button>
+                  <button onClick={() => setResetConfirm(false)}
+                    style={{ padding: '0.5rem 0.9rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: S.muted, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
+                    Cancelar
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

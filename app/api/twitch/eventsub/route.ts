@@ -466,6 +466,21 @@ async function handleNotification(payload: { subscription: { type: string }; eve
         return
       }
 
+      if (trigger === 'recompensas' || trigger === 'rewards') {
+        const { data: lcfg } = await db.from('loyalty_config').select('currency_name, enabled').eq('broadcaster_id', broadcasterId).maybeSingle()
+        if (lcfg?.enabled !== false) {
+          const { data: rewards } = await db.from('loyalty_rewards').select('name, cost').eq('broadcaster_id', broadcasterId).eq('active', true).order('cost', { ascending: true }).limit(5)
+          const currency = (lcfg as { currency_name?: string } | null)?.currency_name ?? 'pontos'
+          if (rewards && rewards.length > 0) {
+            const list = rewards.map((r: { name: string; cost: number }) => `${r.name} (${r.cost} ${currency})`).join(' | ')
+            await sendChat(broadcasterId, `🎁 Recompensas disponíveis: ${list} — use !resgatar <nome>`)
+          } else {
+            await sendChat(broadcasterId, `🎁 Nenhuma recompensa disponível no momento.`)
+          }
+        }
+        return
+      }
+
       if (trigger === 'resgatar' || trigger === 'redeem') {
         const rewardName = args.join(' ').trim()
         const { data: lcfg } = await db.from('loyalty_config').select('currency_name, enabled').eq('broadcaster_id', broadcasterId).maybeSingle()

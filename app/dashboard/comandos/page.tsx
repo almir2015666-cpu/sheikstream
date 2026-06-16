@@ -1516,7 +1516,8 @@ export default function ComandosPage() {
               { cmd: '!clip',     icon: '📹', desc: 'Cria um clipe do momento na Twitch e responde com o link no chat' },
               { cmd: '!pontos',   icon: '🏆', desc: 'Mostra a quantidade de pontos de fidelidade do usuário' },
               { cmd: '!ranking',  icon: '📊', desc: 'Exibe o top 5 de pontos do canal' },
-              { cmd: '!resgatar', icon: '🎁', desc: 'Resgata uma recompensa de fidelidade (!resgatar <nome>)' },
+              { cmd: '!resgatar',    icon: '🎁', desc: 'Resgata uma recompensa de fidelidade (!resgatar <nome>)' },
+              { cmd: '!recompensas', icon: '📋', desc: 'Lista as recompensas disponíveis e seus custos em pontos' },
               { cmd: `!${srCmd}`,  icon: '🎵', desc: 'Solicita uma música para a fila (Song Request)' },
             ] as { cmd: string; icon: string; desc: string }[]).map(item => (
               <div key={item.cmd} style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.6rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center' }}>
