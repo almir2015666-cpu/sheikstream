@@ -316,7 +316,6 @@ export default function FidelidadePage() {
               <div style={{ fontSize: '0.78rem', color: S.dim }}>Carregando URL...</div>
             )}
           </div>
-        </div>
 
           {/* Zona de perigo */}
           <div style={{ background: S.card, border: '1px solid rgba(239,68,68,0.2)', borderRadius: '14px', padding: '1.5rem 2rem' }}>
