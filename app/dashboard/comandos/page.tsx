@@ -1066,6 +1066,7 @@ export default function ComandosPage() {
   const [cmdOrder, setCmdOrder]   = useState<string[]>([])
   const [orderDirty, setOrderDirty] = useState(false)
   const [orderSaving, setOrderSaving] = useState(false)
+  const [srCmd, setSrCmd] = useState('sr')
 
   type DbRow = { id: string; trigger: string; resposta: string; cooldown_s: number; habilitado: boolean; permissao: string; platform: string; notif_overlay: boolean }
 
@@ -1171,6 +1172,7 @@ export default function ComandosPage() {
     }
 
     loadAndSeed()
+    fetch('/api/song-requests/config').then(r => r.ok ? r.json() : null).then(d => { if (d?.command) setSrCmd(d.command) }).catch(() => {})
   }, [applyDbRows])
 
   function insertVar(v: string) {
@@ -1515,7 +1517,7 @@ export default function ComandosPage() {
               { cmd: '!pontos',   icon: '🏆', desc: 'Mostra a quantidade de pontos de fidelidade do usuário' },
               { cmd: '!ranking',  icon: '📊', desc: 'Exibe o top 5 de pontos do canal' },
               { cmd: '!resgatar', icon: '🎁', desc: 'Resgata uma recompensa de fidelidade (!resgatar <nome>)' },
-              { cmd: '!sr',       icon: '🎵', desc: 'Solicita uma música para a fila (Song Request)' },
+              { cmd: `!${srCmd}`,  icon: '🎵', desc: 'Solicita uma música para a fila (Song Request)' },
             ] as { cmd: string; icon: string; desc: string }[]).map(item => (
               <div key={item.cmd} style={{ display: 'grid', gridTemplateColumns: '36px 2.5fr 3fr 100px', padding: '0.6rem 1.25rem', borderBottom: `1px solid ${C.rowBorder}`, alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>{item.icon}</div>
