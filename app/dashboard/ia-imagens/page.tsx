@@ -324,12 +324,11 @@ export default function IAImagensPage() {
   )
 
   if (denied) return (
-    <div style={{ maxWidth: 480, margin: '5rem auto', textAlign: 'center', padding: '0 1.5rem' }}>
-      <style>{CSS}</style>
-      <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(155,48,255,.1)', border: '1px solid rgba(155,48,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '2.2rem' }}>🔒</div>
-      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#e8e6f8', marginBottom: '.6rem' }}>{t('ia_img_no_access')}</div>
-      <div style={{ fontSize: '.9rem', color: 'rgba(232,230,248,.5)', lineHeight: 1.7 }}>
-        {t('ia_img_no_access_desc')}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '65vh', padding: '2rem', textAlign: 'center', fontFamily: "-apple-system,'Inter',system-ui,sans-serif" }}>
+      <div style={{ fontSize: '2.8rem', marginBottom: '1rem', lineHeight: 1 }}>🔒</div>
+      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'rgba(239,68,68,.9)', marginBottom: '.55rem' }}>Sem acesso a IA de Imagens</div>
+      <div style={{ fontSize: '.82rem', color: 'rgba(232,230,248,.4)', lineHeight: 1.7, maxWidth: 380 }}>
+        Seu grupo atual não tem permissão para usar esta funcionalidade. Entre em contato com o administrador.
       </div>
     </div>
   )
