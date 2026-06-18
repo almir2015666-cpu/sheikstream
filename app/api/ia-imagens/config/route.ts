@@ -31,7 +31,10 @@ export async function GET(req: NextRequest) {
   const ids = [wlRow?.id, session.id].filter(Boolean) as string[]
 
   const { data: roleRow } = await db.from('user_roles').select('role').in('user_id', ids).maybeSingle()
-  const userRole = roleRow?.role ?? null
+  let userRole: string | null = null
+  if (roleRow?.role) {
+    try { const p = JSON.parse(roleRow.role); userRole = Array.isArray(p) ? (p[0] ?? null) : roleRow.role } catch { userRole = roleRow.role }
+  }
 
   // Cooldown remaining (skip if tables don't exist yet)
   let cooldownRemaining = 0
